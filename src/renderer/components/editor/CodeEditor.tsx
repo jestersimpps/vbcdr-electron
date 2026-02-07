@@ -32,9 +32,9 @@ function detectLanguage(filename: string): string {
   return EXT_LANG[ext] ?? 'plaintext'
 }
 
-export function CodeEditor(): React.ReactElement {
-  const openFiles = useEditorStore((s) => s.openFiles)
-  const activeFilePath = useEditorStore((s) => s.activeFilePath)
+export function CodeEditor({ projectId }: { projectId: string }): React.ReactElement {
+  const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? [])
+  const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
   const { setActiveFile, closeFile } = useEditorStore()
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath)
@@ -50,14 +50,14 @@ export function CodeEditor(): React.ReactElement {
                 ? 'bg-zinc-950 text-zinc-200'
                 : 'text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300'
             }`}
-            onClick={() => setActiveFile(file.path)}
+            onClick={() => setActiveFile(projectId, file.path)}
           >
             <span className="truncate max-w-[120px]">{file.name}</span>
             <button
               className="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-zinc-700"
               onClick={(e) => {
                 e.stopPropagation()
-                closeFile(file.path)
+                closeFile(projectId, file.path)
               }}
             >
               <X size={12} />

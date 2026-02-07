@@ -5,10 +5,14 @@ import { TerminalPanel } from '@/components/terminal/TerminalPanel'
 import { BrowserPanel } from '@/components/browser/BrowserPanel'
 import { CodeEditor } from '@/components/editor/CodeEditor'
 import { useEditorStore } from '@/stores/editor-store'
+import { useProjectStore } from '@/stores/project-store'
 import { GitTree } from '@/components/git/GitTree'
 
 export function AppLayout(): React.ReactElement {
-  const hasOpenFile = useEditorStore((s) => s.activeFilePath !== null)
+  const activeProjectId = useProjectStore((s) => s.activeProjectId)
+  const hasOpenFile = useEditorStore(
+    (s) => activeProjectId ? (s.statePerProject[activeProjectId]?.activeFilePath ?? null) !== null : false
+  )
 
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
@@ -32,7 +36,7 @@ export function AppLayout(): React.ReactElement {
         <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
 
         <Panel defaultSize={52} minSize={20}>
-          {hasOpenFile ? <CodeEditor /> : <BrowserPanel />}
+          {hasOpenFile && activeProjectId ? <CodeEditor projectId={activeProjectId} /> : <BrowserPanel />}
         </Panel>
 
         <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />

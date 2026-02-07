@@ -17,7 +17,7 @@ function TreeNode({
   const expandedPaths = useFileTreeStore((s) => s.expandedPerProject[projectId])
   const { toggleExpanded } = useFileTreeStore()
   const { openFile } = useEditorStore()
-  const activeFilePath = useEditorStore((s) => s.activeFilePath)
+  const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
   const isExpanded = expandedPaths?.has(node.path) ?? false
 
   if (!node.isDirectory) {
@@ -28,7 +28,7 @@ function TreeNode({
           isActive ? 'bg-zinc-800/70 text-zinc-200' : 'text-zinc-400'
         }`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
-        onClick={() => openFile(node.path, node.name)}
+        onClick={() => openFile(projectId, node.path, node.name)}
       >
         <File size={14} className="shrink-0 text-zinc-600" />
         <span className="truncate">{node.name}</span>
