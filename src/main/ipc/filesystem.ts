@@ -1,5 +1,5 @@
 import { ipcMain, BrowserWindow } from 'electron'
-import { readTree, startWatching, stopWatching } from '@main/services/file-watcher'
+import { readTree, readFileContents, startWatching, stopWatching } from '@main/services/file-watcher'
 import type { FileNode } from '@main/models/types'
 
 export function registerFilesystemHandlers(): void {
@@ -10,6 +10,10 @@ export function registerFilesystemHandlers(): void {
   ipcMain.handle('fs:watch', (event, rootPath: string): void => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) startWatching(rootPath, win)
+  })
+
+  ipcMain.handle('fs:read-file', (_event, filePath: string): string => {
+    return readFileContents(filePath)
   })
 
   ipcMain.handle('fs:unwatch', (): void => {

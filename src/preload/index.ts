@@ -9,6 +9,7 @@ const api = {
 
   fs: {
     readTree: (rootPath: string) => ipcRenderer.invoke('fs:read-tree', rootPath),
+    readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
     watch: (rootPath: string) => ipcRenderer.invoke('fs:watch', rootPath),
     unwatch: () => ipcRenderer.invoke('fs:unwatch'),
     onTreeChanged: (callback: (tree: unknown) => void) => {

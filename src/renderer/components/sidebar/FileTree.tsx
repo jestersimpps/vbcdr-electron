@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { useProjectStore } from '@/stores/project-store'
+import { useEditorStore } from '@/stores/editor-store'
 import { ChevronRight, ChevronDown, File, Folder } from 'lucide-react'
 import type { FileNode } from '@/models/types'
 
@@ -15,13 +16,19 @@ function TreeNode({
 }): React.ReactElement {
   const expandedPaths = useFileTreeStore((s) => s.expandedPerProject[projectId])
   const { toggleExpanded } = useFileTreeStore()
+  const { openFile } = useEditorStore()
+  const activeFilePath = useEditorStore((s) => s.activeFilePath)
   const isExpanded = expandedPaths?.has(node.path) ?? false
 
   if (!node.isDirectory) {
+    const isActive = node.path === activeFilePath
     return (
       <div
-        className="flex cursor-default items-center gap-1.5 rounded-sm px-1 py-0.5 text-sm text-zinc-400 hover:bg-zinc-800/50"
+        className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-sm hover:bg-zinc-800/50 ${
+          isActive ? 'bg-zinc-800/70 text-zinc-200' : 'text-zinc-400'
+        }`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
+        onClick={() => openFile(node.path, node.name)}
       >
         <File size={14} className="shrink-0 text-zinc-600" />
         <span className="truncate">{node.name}</span>

@@ -52,3 +52,9 @@ export interface GitBranch {
   name: string
   current: boolean
 }
+
+export interface OpenFile {
+  path: string
+  name: string
+  content: string
+}

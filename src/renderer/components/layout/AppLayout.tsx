@@ -3,9 +3,13 @@ import { ProjectSelector } from '@/components/sidebar/ProjectSelector'
 import { FileTree } from '@/components/sidebar/FileTree'
 import { TerminalPanel } from '@/components/terminal/TerminalPanel'
 import { BrowserPanel } from '@/components/browser/BrowserPanel'
+import { CodeEditor } from '@/components/editor/CodeEditor'
+import { useEditorStore } from '@/stores/editor-store'
 import { GitTree } from '@/components/git/GitTree'
 
 export function AppLayout(): React.ReactElement {
+  const hasOpenFile = useEditorStore((s) => s.activeFilePath !== null)
+
   return (
     <div className="flex h-screen flex-col bg-zinc-950 text-zinc-100">
       <div className="flex h-10 items-center border-b border-zinc-800 bg-zinc-900/80 pl-20 pr-4"
@@ -28,7 +32,7 @@ export function AppLayout(): React.ReactElement {
         <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
 
         <Panel defaultSize={52} minSize={20}>
-          <BrowserPanel />
+          {hasOpenFile ? <CodeEditor /> : <BrowserPanel />}
         </Panel>
 
         <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />

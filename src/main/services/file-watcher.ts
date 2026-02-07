@@ -89,6 +89,10 @@ export function startWatching(rootPath: string, win: BrowserWindow): void {
   })
 }
 
+export function readFileContents(filePath: string): string {
+  return fs.readFileSync(filePath, 'utf-8')
+}
+
 export function stopWatching(): void {
   if (watcher) {
     watcher.close()
