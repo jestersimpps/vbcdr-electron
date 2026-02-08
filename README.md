@@ -13,6 +13,12 @@ VibeCoder flips that — terminals and browser previews take the main stage, bec
 
 The editor is still there when you need to peek at something, but it's intentionally secondary
 
+## Screenshots
+
+![Editor view with file explorer, code, git graph, Claude terminal, and dev terminals](docs/screenshot-editor.png)
+
+![Integrated browser with devtools console, Claude terminal, and dev terminals](docs/screenshot-browser.png)
+
 ## Features
 
 - **Multi-project workspace** — switch between projects in one click, all state travels with you (terminals, browser tabs, file tree)
