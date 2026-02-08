@@ -191,6 +191,7 @@ export function searchTerminal(tabId: string, query: string, direction: 'next' |
 export function focusTerminal(tabId: string): void {
   const entry = terminalsMap.get(tabId)
   if (!entry) return
+  entry.fitAddon.fit()
   entry.terminal.scrollToBottom()
   entry.terminal.focus()
 }

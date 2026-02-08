@@ -177,8 +177,8 @@ export function TerminalPanel(): React.ReactElement {
             style={{
               position: 'absolute',
               inset: 0,
-              display:
-                tab.projectId === activeProjectId && activeTabId === tab.id ? 'block' : 'none'
+              visibility:
+                tab.projectId === activeProjectId && activeTabId === tab.id ? 'visible' : 'hidden'
             }}
           >
             <TerminalInstance

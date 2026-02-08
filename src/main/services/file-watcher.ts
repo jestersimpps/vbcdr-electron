@@ -21,7 +21,7 @@ function loadGitignore(rootPath: string): Ignore {
   return ig
 }
 
-export function readTree(rootPath: string, maxDepth: number = 3): FileNode {
+export function readTree(rootPath: string, maxDepth: number = 10): FileNode {
   const ig = loadGitignore(rootPath)
 
   function walk(dirPath: string, depth: number): FileNode[] {
