@@ -59,35 +59,31 @@ function TreeNode({
   )
 }
 
-export function FileTree(): React.ReactElement {
-  const activeProjectId = useProjectStore((s) => s.activeProjectId)
-  const activeProject = useProjectStore((s) => {
-    const id = s.activeProjectId
-    return id ? s.projects.find((p) => p.id === id) : undefined
-  })
-  const tree = useFileTreeStore((s) =>
-    activeProjectId ? s.treePerProject[activeProjectId] : undefined
+export function FileTree({ projectId }: { projectId: string }): React.ReactElement {
+  const activeProject = useProjectStore((s) =>
+    s.projects.find((p) => p.id === projectId)
   )
+  const tree = useFileTreeStore((s) => s.treePerProject[projectId])
   const { loadTree, setTree } = useFileTreeStore()
 
   useEffect(() => {
     if (!activeProject) return
 
     if (!tree) {
-      loadTree(activeProject.id, activeProject.path)
+      loadTree(projectId, activeProject.path)
     }
 
     window.api.fs.watch(activeProject.path)
 
     const unsub = window.api.fs.onTreeChanged((newTree) => {
-      setTree(activeProject.id, newTree as FileNode)
+      setTree(projectId, newTree as FileNode)
     })
 
     return () => {
       unsub()
       window.api.fs.unwatch()
     }
-  }, [activeProject?.id])
+  }, [projectId])
 
   if (!activeProject) {
     return (
@@ -102,7 +98,7 @@ export function FileTree(): React.ReactElement {
   return (
     <div className="flex flex-col overflow-y-auto p-1">
       {tree.children?.map((child) => (
-        <TreeNode key={child.path} node={child} depth={0} projectId={activeProject.id} />
+        <TreeNode key={child.path} node={child} depth={0} projectId={projectId} />
       ))}
     </div>
   )

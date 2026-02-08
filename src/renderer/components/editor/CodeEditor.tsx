@@ -3,6 +3,7 @@ import { useEditorStore } from '@/stores/editor-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-themes'
 import { X } from 'lucide-react'
+import type { OpenFile } from '@/models/types'
 
 const EXT_LANG: Record<string, string> = {
   ts: 'typescript',
@@ -38,9 +39,11 @@ function handleBeforeMount(monaco: Monaco): void {
   registerMonacoThemes(monaco)
 }
 
+const EMPTY_FILES: OpenFile[] = []
+
 export function CodeEditor({ projectId }: { projectId: string }): React.ReactElement {
   const theme = useThemeStore((s) => s.theme)
-  const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? [])
+  const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? EMPTY_FILES)
   const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
   const { setActiveFile, closeFile } = useEditorStore()
 
