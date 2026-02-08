@@ -66,7 +66,7 @@ export function getTerminalTheme(theme: 'dark' | 'light'): ITheme {
   return theme === 'dark' ? darkTheme : lightTheme
 }
 
-const terminalsMap = new Map<string, { terminal: Terminal; fitAddon: FitAddon; searchAddon: SearchAddon }>()
+const terminalsMap = new Map<string, { terminal: Terminal; fitAddon: FitAddon; searchAddon: SearchAddon; unsubData?: () => void }>()
 
 export function applyThemeToAll(theme: 'dark' | 'light'): void {
   const xtermTheme = getTerminalTheme(theme)
@@ -126,6 +126,13 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         window.api.terminal.resize(tabId, cols, rows)
       })
 
+      const unsubData = window.api.terminal.onData((incomingTabId: string, data: string) => {
+        if (incomingTabId === tabId) {
+          terminal.write(data)
+        }
+      })
+      terminalsMap.get(tabId)!.unsubData = unsubData
+
       setTimeout(() => {
         fitAddon.fit()
         terminal.scrollToBottom()
@@ -139,12 +146,16 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       }, 200)
     }
 
-    const { fitAddon } = entry
+    const { terminal, fitAddon } = entry
     let resizeTimer: ReturnType<typeof setTimeout> | null = null
     const observer = new ResizeObserver(() => {
       if (resizeTimer) clearTimeout(resizeTimer)
       resizeTimer = setTimeout(() => {
-        try { fitAddon.fit() } catch { /* */ }
+        try {
+          const atBottom = terminal.buffer.active.viewportY === terminal.buffer.active.baseY
+          fitAddon.fit()
+          if (atBottom) terminal.scrollToBottom()
+        } catch { /* */ }
       }, 80)
     })
     observer.observe(el)
@@ -165,7 +176,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
 export function getTerminalInstance(
   tabId: string
-): { terminal: Terminal; fitAddon: FitAddon; searchAddon: SearchAddon } | undefined {
+): { terminal: Terminal; fitAddon: FitAddon; searchAddon: SearchAddon; unsubData?: () => void } | undefined {
   return terminalsMap.get(tabId)
 }
 
@@ -187,6 +198,7 @@ export function focusTerminal(tabId: string): void {
 export function disposeTerminal(tabId: string): void {
   const entry = terminalsMap.get(tabId)
   if (entry) {
+    entry.unsubData?.()
     entry.terminal.dispose()
     terminalsMap.delete(tabId)
   }

@@ -59,6 +59,8 @@ export interface GitBranch {
   current: boolean
 }
 
+export type GitFileStatus = 'modified' | 'added' | 'untracked' | 'deleted' | 'renamed' | 'conflict'
+
 export const DEVICE_CONFIGS: Record<DeviceMode, DeviceConfig> = {
   desktop: {
     mode: 'desktop',

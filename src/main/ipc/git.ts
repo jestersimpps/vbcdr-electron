@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
-import { isGitRepo, getCommits, getBranches } from '@main/services/git-service'
-import type { GitCommit, GitBranch } from '@main/models/types'
+import { isGitRepo, getCommits, getBranches, getStatus } from '@main/services/git-service'
+import type { GitCommit, GitBranch, GitFileStatus } from '@main/models/types'
 
 export function registerGitHandlers(): void {
   ipcMain.handle('git:is-repo', (_event, cwd: string): boolean => {
@@ -14,4 +14,11 @@ export function registerGitHandlers(): void {
   ipcMain.handle('git:branches', (_event, cwd: string): GitBranch[] => {
     return getBranches(cwd)
   })
+
+  ipcMain.handle(
+    'git:status',
+    (_event, cwd: string): Record<string, GitFileStatus> => {
+      return getStatus(cwd)
+    }
+  )
 }

@@ -1,5 +1,6 @@
 import { execSync } from 'child_process'
-import type { GitCommit, GitBranch } from '@main/models/types'
+import path from 'path'
+import type { GitCommit, GitBranch, GitFileStatus } from '@main/models/types'
 
 const SEPARATOR = '<<SEP>>'
 const FORMAT = ['%H', '%h', '%s', '%an', '%ar', '%D', '%P'].join(SEPARATOR)
@@ -44,5 +45,58 @@ export function getBranches(cwd: string): GitBranch[] {
     }))
   } catch {
     return []
+  }
+}
+
+const STATUS_PRIORITY: Record<GitFileStatus, number> = {
+  untracked: 0,
+  added: 1,
+  renamed: 2,
+  modified: 3,
+  deleted: 4,
+  conflict: 5
+}
+
+function parseFileStatus(x: string, y: string): GitFileStatus {
+  if (x === '?' && y === '?') return 'untracked'
+  if (x === 'U' || y === 'U' || (x === 'D' && y === 'D') || (x === 'A' && y === 'A'))
+    return 'conflict'
+  if (x === 'D' || y === 'D') return 'deleted'
+  if (x === 'R' || y === 'R') return 'renamed'
+  if (x === 'A') return 'added'
+  return 'modified'
+}
+
+export function getStatus(cwd: string): Record<string, GitFileStatus> {
+  try {
+    const raw = runGit(cwd, 'status --porcelain')
+    if (!raw) return {}
+
+    const statusMap: Record<string, GitFileStatus> = {}
+
+    for (const line of raw.split('\n')) {
+      if (line.length < 4) continue
+
+      const x = line[0]
+      const y = line[1]
+      const filePath = line.slice(3).split(' -> ').pop()!
+      const status = parseFileStatus(x, y)
+
+      const absPath = path.join(cwd, filePath)
+      statusMap[absPath] = status
+
+      let dir = path.dirname(absPath)
+      while (dir !== cwd && dir.startsWith(cwd)) {
+        const existing = statusMap[dir]
+        if (!existing || STATUS_PRIORITY[status] > STATUS_PRIORITY[existing]) {
+          statusMap[dir] = status
+        }
+        dir = path.dirname(dir)
+      }
+    }
+
+    return statusMap
+  } catch {
+    return {}
   }
 }

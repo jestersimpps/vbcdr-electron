@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
-import { TerminalInstance, getTerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, focusTerminal } from './TerminalInstance'
+import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, focusTerminal } from './TerminalInstance'
 import { Plus, X, ChevronUp, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -66,20 +66,11 @@ export function TerminalPanel(): React.ReactElement {
   }, [activeProject?.id])
 
   useEffect(() => {
-    const unsubData = window.api.terminal.onData((tabId, data) => {
-      const entry = getTerminalInstance(tabId)
-      entry?.terminal.write(data)
-    })
-
-    const unsubExit = window.api.terminal.onExit((tabId) => {
+    const unsubExit = window.api.terminal.onExit((tabId: string) => {
       disposeTerminal(tabId)
       useTerminalStore.getState().closeTab(tabId)
     })
-
-    return () => {
-      unsubData()
-      unsubExit()
-    }
+    return () => unsubExit()
   }, [])
 
   const handleNewTab = (): void => {

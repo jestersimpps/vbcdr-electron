@@ -44,7 +44,8 @@ const api = {
   git: {
     isRepo: (cwd: string) => ipcRenderer.invoke('git:is-repo', cwd),
     commits: (cwd: string, maxCount?: number) => ipcRenderer.invoke('git:commits', cwd, maxCount),
-    branches: (cwd: string) => ipcRenderer.invoke('git:branches', cwd)
+    branches: (cwd: string) => ipcRenderer.invoke('git:branches', cwd),
+    status: (cwd: string) => ipcRenderer.invoke('git:status', cwd)
   },
 
   browser: {
