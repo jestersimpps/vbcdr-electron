@@ -5,23 +5,25 @@ import type { TerminalTab } from '@/models/types'
 interface TerminalStore {
   tabs: TerminalTab[]
   activeTabPerProject: Record<string, string>
-  createTab: (projectId: string, cwd: string) => string
+  createTab: (projectId: string, cwd: string, initialCommand?: string) => string
   closeTab: (tabId: string) => void
   setActiveTab: (projectId: string, tabId: string) => void
+  initProject: (projectId: string, cwd: string) => void
 }
 
 export const useTerminalStore = create<TerminalStore>((set, get) => ({
   tabs: [],
   activeTabPerProject: {},
 
-  createTab: (projectId: string, cwd: string) => {
+  createTab: (projectId: string, cwd: string, initialCommand?: string) => {
     const tabId = uuid()
     const projectTabs = get().tabs.filter((t) => t.projectId === projectId)
     const tab: TerminalTab = {
       id: tabId,
-      title: `Terminal ${projectTabs.length + 1}`,
+      title: initialCommand ? 'Claude' : `Terminal ${projectTabs.length + 1}`,
       projectId,
-      cwd
+      cwd,
+      initialCommand
     }
     set((state) => ({
       tabs: [...state.tabs, tab],
@@ -49,5 +51,11 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     set((state) => ({
       activeTabPerProject: { ...state.activeTabPerProject, [projectId]: tabId }
     }))
+  },
+
+  initProject: (projectId: string, cwd: string) => {
+    const existing = get().tabs.filter((t) => t.projectId === projectId)
+    if (existing.length > 0) return
+    get().createTab(projectId, cwd, 'claude')
   }
 }))

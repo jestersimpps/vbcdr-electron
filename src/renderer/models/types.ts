@@ -17,6 +17,7 @@ export interface TerminalTab {
   title: string
   projectId: string
   cwd: string
+  initialCommand?: string
 }
 
 export type DeviceMode = 'desktop' | 'ipad' | 'mobile'

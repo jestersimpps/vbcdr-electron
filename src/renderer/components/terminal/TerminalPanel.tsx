@@ -15,7 +15,7 @@ export function TerminalPanel(): React.ReactElement {
 
   const tabs = useTerminalStore((s) => s.tabs)
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
-  const { createTab, closeTab, setActiveTab } = useTerminalStore()
+  const { createTab, closeTab, setActiveTab, initProject } = useTerminalStore()
 
   const theme = useThemeStore((s) => s.theme)
 
@@ -52,6 +52,12 @@ export function TerminalPanel(): React.ReactElement {
   useEffect(() => {
     applyThemeToAll(theme)
   }, [theme])
+
+  useEffect(() => {
+    if (activeProject) {
+      initProject(activeProject.id, activeProject.path)
+    }
+  }, [activeProject?.id])
 
   useEffect(() => {
     const unsubData = window.api.terminal.onData((tabId, data) => {
@@ -182,6 +188,7 @@ export function TerminalPanel(): React.ReactElement {
               tabId={tab.id}
               projectId={tab.projectId}
               cwd={tab.cwd}
+              initialCommand={tab.initialCommand}
             />
           </div>
         ))}

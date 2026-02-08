@@ -11,6 +11,7 @@ interface TerminalInstanceProps {
   tabId: string
   projectId: string
   cwd: string
+  initialCommand?: string
 }
 
 const darkTheme: ITheme = {
@@ -74,7 +75,7 @@ export function applyThemeToAll(theme: 'dark' | 'light'): void {
   })
 }
 
-export function TerminalInstance({ tabId, projectId, cwd }: TerminalInstanceProps): React.ReactElement {
+export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: TerminalInstanceProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -129,6 +130,11 @@ export function TerminalInstance({ tabId, projectId, cwd }: TerminalInstanceProp
         fitAddon.fit()
         terminal.focus()
         window.api.terminal.create(tabId, projectId, cwd, terminal.cols, terminal.rows)
+        if (initialCommand) {
+          setTimeout(() => {
+            window.api.terminal.write(tabId, initialCommand + '\n')
+          }, 500)
+        }
       }, 200)
     }
 
@@ -146,7 +152,7 @@ export function TerminalInstance({ tabId, projectId, cwd }: TerminalInstanceProp
       if (resizeTimer) clearTimeout(resizeTimer)
       observer.disconnect()
     }
-  }, [tabId, projectId, cwd])
+  }, [tabId, projectId, cwd, initialCommand])
 
   return (
     <div

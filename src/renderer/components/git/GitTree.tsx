@@ -233,7 +233,7 @@ export function GitTree(): React.ReactElement {
 
   const handleFeatureSubmit = useCallback(() => {
     if (!activeTerminalTabId || !featureDescription.trim()) return
-    sendToTerminal(activeTerminalTabId, featureDescription.trim())
+    sendToTerminal(activeTerminalTabId, `Create a new git feature branch for: ${featureDescription.trim()}. Create the branch name from the description using kebab-case prefixed with feature/. Switch to the new branch.`)
     setFeatureDescription('')
     setFeatureModalOpen(false)
   }, [activeTerminalTabId, featureDescription])
