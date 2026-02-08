@@ -12,15 +12,9 @@ export interface FileNode {
   children?: FileNode[]
 }
 
-export interface TerminalTab {
-  id: string
-  title: string
-  projectId: string
-}
-
 export type DeviceMode = 'desktop' | 'ipad' | 'mobile'
 
-export interface DeviceConfig {
+interface DeviceConfig {
   mode: DeviceMode
   width: number
   height: number

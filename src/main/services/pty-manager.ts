@@ -93,15 +93,6 @@ export function killPty(tabId: string): void {
   }
 }
 
-export function killAllForProject(projectId: string): void {
-  for (const [tabId, instance] of instances) {
-    if (instance.projectId === projectId) {
-      instance.process.kill()
-      instances.delete(tabId)
-    }
-  }
-}
-
 export function killAll(): void {
   for (const [, instance] of instances) {
     instance.process.kill()

@@ -189,17 +189,6 @@ function GraphSvg({ rows }: { rows: GraphRow[] }): React.ReactElement {
   )
 }
 
-const REF_COLORS: Record<string, string> = {
-  HEAD: 'bg-red-500/20 text-red-400 border-red-500/30',
-  default: 'bg-zinc-700/40 text-zinc-300 border-zinc-600/30'
-}
-
-function getRefColor(ref: string, index: number): string {
-  if (ref.startsWith('HEAD')) return REF_COLORS.HEAD
-  const c = LANE_COLORS[index % LANE_COLORS.length]
-  return `border-[${c}]/30`
-}
-
 function RefBadge({ label, index }: { label: string; index: number }): React.ReactElement {
   const isHead = label.startsWith('HEAD')
   const base = isHead

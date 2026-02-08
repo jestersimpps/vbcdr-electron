@@ -155,7 +155,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           const atBottom = terminal.buffer.active.viewportY === terminal.buffer.active.baseY
           fitAddon.fit()
           if (atBottom) terminal.scrollToBottom()
-        } catch { /* */ }
+        } catch { /* element may be unmounted during resize */ }
       }, 80)
     })
     observer.observe(el)
