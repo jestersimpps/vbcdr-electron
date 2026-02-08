@@ -260,11 +260,12 @@ export function GitTree(): React.ReactElement {
               if (!entry) return
               entry.terminal.paste('/commit')
               setTimeout(() => {
+
                 const textarea = entry.terminal.textarea
                 if (!textarea) return
                 textarea.focus()
                 textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }))
-              }, 100)
+              }, 500)
             }}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
             title="Commit"
