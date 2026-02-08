@@ -73,7 +73,7 @@ export function setDevice(tabId: string, mode: DeviceMode): void {
 
   if (mode === 'desktop') {
     wc.disableDeviceEmulation()
-    wc.setUserAgent('')
+    wc.setUserAgent(wc.session.getUserAgent())
   } else {
     wc.enableDeviceEmulation({
       screenPosition: mode === 'mobile' ? 'mobile' : 'desktop',
