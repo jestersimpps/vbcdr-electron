@@ -1,10 +1,22 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { getTerminalInstance } from '@/components/terminal/TerminalInstance'
-import { GitBranch as GitBranchIcon, GitCommitHorizontal, RefreshCw } from 'lucide-react'
+import { GitBranch as GitBranchIcon, GitCommitHorizontal, Sparkles, RefreshCw, X } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
+
+function sendToTerminal(tabId: string, text: string): void {
+  const entry = getTerminalInstance(tabId)
+  if (!entry) return
+  entry.terminal.paste(text)
+  setTimeout(() => {
+    const textarea = entry.terminal.textarea
+    if (!textarea) return
+    textarea.focus()
+    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }))
+  }, 500)
+}
 
 const LANE_COLORS = [
   '#4ade80', // green
@@ -215,6 +227,21 @@ export function GitTree(): React.ReactElement {
   const branches = useGitStore((s) => activeProjectId ? s.branchesPerProject[activeProjectId] : undefined)
   const { loadGitData } = useGitStore()
 
+  const [featureModalOpen, setFeatureModalOpen] = useState(false)
+  const [featureDescription, setFeatureDescription] = useState('')
+  const featureInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFeatureSubmit = useCallback(() => {
+    if (!activeTerminalTabId || !featureDescription.trim()) return
+    sendToTerminal(activeTerminalTabId, featureDescription.trim())
+    setFeatureDescription('')
+    setFeatureModalOpen(false)
+  }, [activeTerminalTabId, featureDescription])
+
+  useEffect(() => {
+    if (featureModalOpen) setTimeout(() => featureInputRef.current?.focus(), 50)
+  }, [featureModalOpen])
+
   useEffect(() => {
     if (!activeProject) return
     loadGitData(activeProject.id, activeProject.path)
@@ -240,7 +267,7 @@ export function GitTree(): React.ReactElement {
   }
 
   return (
-    <div className="flex h-full flex-col bg-zinc-950">
+    <div className="relative flex h-full flex-col bg-zinc-950">
       <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3 py-1.5">
         <div className="flex items-center gap-2">
           <GitBranchIcon size={14} className="text-zinc-500" />
@@ -251,26 +278,22 @@ export function GitTree(): React.ReactElement {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           <button
             disabled={!activeTerminalTabId}
-            onClick={() => {
-              if (!activeTerminalTabId) return
-              const entry = getTerminalInstance(activeTerminalTabId)
-              if (!entry) return
-              entry.terminal.paste('/commit')
-              setTimeout(() => {
-
-                const textarea = entry.terminal.textarea
-                if (!textarea) return
-                textarea.focus()
-                textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }))
-              }, 500)
-            }}
-            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
-            title="Commit"
+            onClick={() => activeTerminalTabId && sendToTerminal(activeTerminalTabId, '/commit')}
+            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
           >
             <GitCommitHorizontal size={12} />
+            <span>Commit</span>
+          </button>
+          <button
+            disabled={!activeTerminalTabId}
+            onClick={() => setFeatureModalOpen(true)}
+            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
+          >
+            <Sparkles size={12} />
+            <span>New Feature</span>
           </button>
           <button
             onClick={() => activeProject && loadGitData(activeProject.id, activeProject.path)}
@@ -318,6 +341,38 @@ export function GitTree(): React.ReactElement {
           <div className="p-4 text-center text-xs text-zinc-600">No commits yet</div>
         )}
       </div>
+
+      {featureModalOpen && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="mx-4 w-full max-w-sm rounded-lg border border-zinc-700 bg-zinc-900 p-4 shadow-xl">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-sm font-medium text-zinc-200">New Feature</span>
+              <button
+                onClick={() => { setFeatureModalOpen(false); setFeatureDescription('') }}
+                className="rounded p-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <input
+              ref={featureInputRef}
+              type="text"
+              value={featureDescription}
+              onChange={(e) => setFeatureDescription(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleFeatureSubmit(); if (e.key === 'Escape') { setFeatureModalOpen(false); setFeatureDescription('') } }}
+              placeholder="Describe the feature..."
+              className="mb-3 w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-zinc-500"
+            />
+            <button
+              disabled={!featureDescription.trim()}
+              onClick={handleFeatureSubmit}
+              className="w-full rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              Send to Claude
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
