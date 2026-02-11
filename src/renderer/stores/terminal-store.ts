@@ -7,6 +7,7 @@ interface TerminalStore {
   activeTabPerProject: Record<string, string>
   createTab: (projectId: string, cwd: string, initialCommand?: string) => string
   closeTab: (tabId: string) => void
+  replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => string
   setActiveTab: (projectId: string, tabId: string) => void
   initProject: (projectId: string, cwd: string) => void
 }
@@ -45,6 +46,22 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
 
       return { tabs, activeTabPerProject }
     })
+  },
+
+  replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => {
+    const newTabId = uuid()
+    const tab: TerminalTab = {
+      id: newTabId,
+      title: initialCommand ? 'Claude' : 'Terminal',
+      projectId,
+      cwd,
+      initialCommand
+    }
+    set((state) => ({
+      tabs: [...state.tabs.filter((t) => t.id !== oldTabId), tab],
+      activeTabPerProject: { ...state.activeTabPerProject, [projectId]: newTabId }
+    }))
+    return newTabId
   },
 
   setActiveTab: (projectId: string, tabId: string) => {

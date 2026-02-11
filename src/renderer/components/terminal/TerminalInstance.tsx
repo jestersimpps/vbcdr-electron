@@ -254,12 +254,27 @@ export function getTerminalInstance(
   return terminalsMap.get(tabId)
 }
 
+const SEARCH_DECORATIONS = {
+  matchBackground: '#3b82f680',
+  matchBorder: '#3b82f6',
+  matchOverviewRuler: '#3b82f6',
+  activeMatchBackground: '#f59e0b',
+  activeMatchBorder: '#f59e0b',
+  activeMatchColorOverviewRuler: '#f59e0b'
+}
+
 export function searchTerminal(tabId: string, query: string, direction: 'next' | 'previous' = 'next'): boolean {
   const entry = terminalsMap.get(tabId)
   if (!entry) return false
+  const opts = { decorations: SEARCH_DECORATIONS }
   return direction === 'next'
-    ? entry.searchAddon.findNext(query)
-    : entry.searchAddon.findPrevious(query)
+    ? entry.searchAddon.findNext(query, opts)
+    : entry.searchAddon.findPrevious(query, opts)
+}
+
+export function clearTerminalSearch(tabId: string): void {
+  const entry = terminalsMap.get(tabId)
+  if (entry) entry.searchAddon.clearDecorations()
 }
 
 export function focusTerminal(tabId: string): void {
@@ -274,7 +289,7 @@ export function disposeTerminal(tabId: string): void {
   const entry = terminalsMap.get(tabId)
   if (entry) {
     entry.unsubData?.()
-    entry.terminal.dispose()
+    try { entry.terminal.dispose() } catch { /* WebGL addon may throw during dispose */ }
     terminalsMap.delete(tabId)
   }
 }

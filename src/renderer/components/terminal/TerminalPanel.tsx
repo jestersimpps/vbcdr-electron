@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
-import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, focusTerminal, getTerminalInstance } from './TerminalInstance'
-import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine } from 'lucide-react'
+import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
+import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function TerminalPanel(): React.ReactElement {
@@ -15,7 +15,7 @@ export function TerminalPanel(): React.ReactElement {
 
   const tabs = useTerminalStore((s) => s.tabs)
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
-  const { createTab, closeTab, setActiveTab, initProject } = useTerminalStore()
+  const { createTab, closeTab, replaceTab, setActiveTab, initProject } = useTerminalStore()
 
   const theme = useThemeStore((s) => s.theme)
 
@@ -129,8 +129,12 @@ export function TerminalPanel(): React.ReactElement {
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value)
-            if (activeTabId && e.target.value) {
-              searchTerminal(activeTabId, e.target.value)
+            if (activeTabId) {
+              if (e.target.value) {
+                searchTerminal(activeTabId, e.target.value)
+              } else {
+                clearTerminalSearch(activeTabId)
+              }
             }
           }}
           onKeyDown={(e) => {
@@ -139,7 +143,10 @@ export function TerminalPanel(): React.ReactElement {
             }
             if (e.key === 'Escape') {
               setSearchQuery('')
-              if (activeTabId) focusTerminal(activeTabId)
+              if (activeTabId) {
+                clearTerminalSearch(activeTabId)
+                focusTerminal(activeTabId)
+              }
             }
           }}
           placeholder="Search..."
@@ -167,6 +174,38 @@ export function TerminalPanel(): React.ReactElement {
           title="Scroll to bottom"
         >
           <ArrowDownToLine size={14} />
+        </button>
+        <button
+          onClick={() => {
+            if (!activeTabId) return
+            const entry = getTerminalInstance(activeTabId)
+            if (!entry) return
+            entry.terminal.paste('/clear')
+            setTimeout(() => {
+              const textarea = entry.terminal.textarea
+              if (!textarea) return
+              textarea.focus()
+              textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }))
+            }, 500)
+          }}
+          disabled={!activeTabId}
+          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          title="Clear context"
+        >
+          <Trash2 size={14} />
+        </button>
+        <button
+          onClick={() => {
+            if (!activeTabId || !activeProject) return
+            window.api.terminal.kill(activeTabId)
+            disposeTerminal(activeTabId)
+            replaceTab(activeTabId, activeProject.id, activeProject.path, 'claude')
+          }}
+          disabled={!activeTabId}
+          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          title="Restart terminal"
+        >
+          <RotateCw size={14} />
         </button>
       </div>
 
