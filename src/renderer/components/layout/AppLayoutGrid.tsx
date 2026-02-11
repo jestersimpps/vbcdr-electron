@@ -30,6 +30,7 @@ export function AppLayoutGrid(): React.ReactElement {
   )
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
   const { getLayout, isLocked, saveLayout, resetLayout } = useLayoutStore()
+  const resetVersion = useLayoutStore((s) => s.resetVersion)
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [height, setHeight] = useState(0)
@@ -184,6 +185,7 @@ export function AppLayoutGrid(): React.ReactElement {
       <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden">
         {width > 0 && height > 0 && (
           <ReactGridLayout
+            key={resetVersion}
             layout={gridLayout}
             cols={GRID_COLS}
             rowHeight={(height - 2 * CONTAINER_PADDING - (GRID_ROWS - 1) * MARGIN) / GRID_ROWS}

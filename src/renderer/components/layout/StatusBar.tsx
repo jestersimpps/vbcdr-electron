@@ -1,13 +1,15 @@
-import { FolderOpen, GitBranch, Sun, Moon } from 'lucide-react'
+import { FolderOpen, GitBranch, Sun, Moon, LayoutGrid } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useGitStore } from '@/stores/git-store'
 import { useThemeStore } from '@/stores/theme-store'
+import { useLayoutStore } from '@/stores/layout-store'
 
 export function StatusBar(): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => s.activeProject)
   const branchesPerProject = useGitStore((s) => s.branchesPerProject)
   const { theme, toggleTheme } = useThemeStore()
+  const resetLayout = useLayoutStore((s) => s.resetLayout)
 
   const project = activeProject()
   const branches = activeProjectId ? branchesPerProject[activeProjectId] : undefined
@@ -30,13 +32,25 @@ export function StatusBar(): React.ReactElement {
         )}
       </div>
 
-      <button
-        onClick={toggleTheme}
-        className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
-      >
-        {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-        <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
-      </button>
+      <div className="flex shrink-0 items-center gap-1">
+        {activeProjectId && (
+          <button
+            onClick={() => resetLayout(activeProjectId)}
+            className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+            title="Reset layout"
+          >
+            <LayoutGrid size={13} />
+            <span>Reset</span>
+          </button>
+        )}
+        <button
+          onClick={toggleTheme}
+          className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+        >
+          {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+          <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+        </button>
+      </div>
     </div>
   )
 }

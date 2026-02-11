@@ -21,16 +21,17 @@ export const panelConfigs: PanelConfig[] = [
 ]
 
 export const defaultLayout: Layout[] = [
-  { i: 'browser-editor', x: 0, y: 0, w: 8, h: 7 },
-  { i: 'dev-tools', x: 8, y: 0, w: 4, h: 4 },
-  { i: 'dev-terminals', x: 8, y: 4, w: 4, h: 3 },
-  { i: 'git', x: 0, y: 7, w: 5, h: 5 },
-  { i: 'claude-terminals', x: 5, y: 7, w: 7, h: 5 }
+  { i: 'browser-editor', x: 0, y: 0, w: 4, h: 12, minW: 3, minH: 3 },
+  { i: 'dev-tools', x: 4, y: 0, w: 4, h: 7, minW: 3, minH: 2 },
+  { i: 'dev-terminals', x: 4, y: 7, w: 4, h: 5, minW: 3, minH: 2 },
+  { i: 'git', x: 8, y: 0, w: 4, h: 9, minW: 3, minH: 3 },
+  { i: 'claude-terminals', x: 8, y: 9, w: 4, h: 3, minW: 3, minH: 2 }
 ]
 
 interface LayoutState {
   layoutsPerProject: Record<string, Layout[]>
   locksPerProject: Record<string, Record<string, boolean>>
+  resetVersion: number
   getLayout: (projectId: string) => Layout[]
   isLocked: (projectId: string, panelId: PanelId) => boolean
   saveLayout: (projectId: string, newLayout: Layout[]) => void
@@ -49,6 +50,7 @@ export const useLayoutStore = create<LayoutState>()(
     (set, get) => ({
       layoutsPerProject: {},
       locksPerProject: {},
+      resetVersion: 0,
 
       getLayout: (projectId: string) => {
         return ensureComplete(get().layoutsPerProject[projectId] ?? defaultLayout)
@@ -79,7 +81,7 @@ export const useLayoutStore = create<LayoutState>()(
         const lkp = { ...get().locksPerProject }
         delete lpp[projectId]
         delete lkp[projectId]
-        set({ layoutsPerProject: lpp, locksPerProject: lkp })
+        set({ layoutsPerProject: lpp, locksPerProject: lkp, resetVersion: get().resetVersion + 1 })
       }
     }),
     { name: 'vibecoder-layout-v4' }
