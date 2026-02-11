@@ -149,6 +149,149 @@ body {
   border-color: #d4d4d8;
 }
 
+:root.psychedelic body {
+  background: #0a0a0f;
+  color: #f0e0ff;
+}
+
+:root.psychedelic ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff2d95, #bf5af2, #00ffff);
+  border-radius: 3px;
+}
+
+:root.psychedelic ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ff6eb4, #d88aff, #80ffff);
+}
+
+:root.psychedelic .bg-zinc-950 {
+  background-color: #08060e;
+}
+
+:root.psychedelic .bg-zinc-900\/80 {
+  background-color: rgba(16, 10, 30, 0.92);
+}
+
+:root.psychedelic .bg-zinc-900\/50 {
+  background-color: rgba(16, 10, 30, 0.65);
+}
+
+:root.psychedelic .bg-zinc-900\/30 {
+  background-color: rgba(16, 10, 30, 0.45);
+}
+
+:root.psychedelic .bg-zinc-900 {
+  background-color: #100a1e;
+}
+
+:root.psychedelic .bg-zinc-800 {
+  background-color: #1a1235;
+}
+
+:root.psychedelic .bg-zinc-800\/50 {
+  background-color: rgba(26, 18, 53, 0.5);
+}
+
+:root.psychedelic .hover\:bg-zinc-800:hover {
+  background-color: #251848;
+}
+
+:root.psychedelic .hover\:bg-zinc-700:hover {
+  background-color: #321e5c;
+}
+
+:root.psychedelic .hover\:bg-zinc-800\/50:hover {
+  background-color: rgba(37, 24, 72, 0.55);
+}
+
+:root.psychedelic .hover\:bg-zinc-800\/30:hover {
+  background-color: rgba(37, 24, 72, 0.35);
+}
+
+:root.psychedelic .hover\:text-zinc-400:hover {
+  color: #ff2d95;
+}
+
+:root.psychedelic .hover\:text-zinc-300:hover {
+  color: #00ffff;
+}
+
+:root.psychedelic .text-zinc-100 {
+  color: #f0e0ff;
+}
+
+:root.psychedelic .text-zinc-200 {
+  color: #d0b8f0;
+}
+
+:root.psychedelic .text-zinc-300 {
+  color: #b090e0;
+}
+
+:root.psychedelic .text-zinc-400 {
+  color: #9070c0;
+}
+
+:root.psychedelic .text-zinc-500 {
+  color: #7858a8;
+}
+
+:root.psychedelic .hover\:text-zinc-200:hover {
+  color: #39ff14;
+}
+
+:root.psychedelic .hover\:text-zinc-100:hover {
+  color: #ffffff;
+}
+
+:root.psychedelic .border-zinc-800 {
+  border-color: #ff2d9540;
+}
+
+:root.psychedelic .border-zinc-700 {
+  border-color: #bf5af260;
+}
+
+:root.psychedelic .text-blue-400 {
+  color: #00ffff;
+}
+
+:root.psychedelic .text-red-400,
+:root.psychedelic .hover\:text-red-400:hover {
+  color: #ff2d95;
+}
+
+:root.psychedelic .text-green-400 {
+  color: #39ff14;
+}
+
+:root.psychedelic .text-yellow-400 {
+  color: #ffff00;
+}
+
+:root.psychedelic .bg-blue-500\/10 {
+  background-color: rgba(0, 255, 255, 0.1);
+}
+
+:root.psychedelic .border-blue-500\/30 {
+  border-color: rgba(0, 255, 255, 0.3);
+}
+
+:root.psychedelic input,
+:root.psychedelic select {
+  caret-color: #ff2d95;
+}
+
+:root.psychedelic input:focus,
+:root.psychedelic select:focus {
+  border-color: #bf5af2 !important;
+  box-shadow: 0 0 6px rgba(191, 90, 242, 0.3);
+}
+
+:root.psychedelic ::selection {
+  background: rgba(191, 90, 242, 0.35);
+  color: #ffffff;
+}
+
 .react-grid-item {
   transition: all 150ms ease;
   transition-property: left, top, width, height;

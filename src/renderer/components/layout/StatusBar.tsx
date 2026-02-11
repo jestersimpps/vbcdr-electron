@@ -1,4 +1,4 @@
-import { FolderOpen, GitBranch, Sun, Moon, LayoutGrid } from 'lucide-react'
+import { FolderOpen, GitBranch, Sun, Moon, Sparkles, LayoutGrid } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useGitStore } from '@/stores/git-store'
 import { useThemeStore } from '@/stores/theme-store'
@@ -48,8 +48,8 @@ export function StatusBar(): React.ReactElement {
           className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
           title="Toggle theme"
         >
-          {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
-          <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+          {theme === 'dark' ? <Sun size={13} /> : theme === 'light' ? <Sparkles size={13} /> : <Moon size={13} />}
+          <span>{theme === 'dark' ? 'Light' : theme === 'light' ? 'Psychedelic' : 'Dark'}</span>
         </button>
       </div>
     </div>

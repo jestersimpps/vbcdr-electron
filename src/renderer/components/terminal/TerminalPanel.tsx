@@ -84,7 +84,7 @@ export function TerminalPanel(): React.ReactElement {
   }
 
   return (
-    <div data-terminal-panel style={{ display: 'flex', flexDirection: 'column', height: '100%', background: theme === 'dark' ? '#09090b' : '#ffffff' }}>
+    <div data-terminal-panel style={{ display: 'flex', flexDirection: 'column', height: '100%', background: theme === 'light' ? '#ffffff' : theme === 'psychedelic' ? '#08060e' : '#09090b' }}>
       <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex flex-1 items-center gap-0.5 overflow-x-auto px-1">
           {projectTabs.map((tab) => (

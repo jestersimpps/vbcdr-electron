@@ -6,7 +6,7 @@ export function App(): React.ReactElement {
   const theme = useThemeStore((s) => s.theme)
 
   useEffect(() => {
-    document.documentElement.classList.remove('dark', 'light')
+    document.documentElement.classList.remove('dark', 'light', 'psychedelic')
     document.documentElement.classList.add(theme)
   }, [theme])
 

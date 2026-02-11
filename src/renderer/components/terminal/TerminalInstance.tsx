@@ -62,13 +62,38 @@ const lightTheme: ITheme = {
   brightWhite: '#fafafa'
 }
 
-export function getTerminalTheme(theme: 'dark' | 'light'): ITheme {
+const psychedelicTheme: ITheme = {
+  background: '#08060e',
+  foreground: '#f0e0ff',
+  cursor: '#ff2d95',
+  cursorAccent: '#08060e',
+  selectionBackground: '#bf5af244',
+  black: '#1a1235',
+  red: '#ff2d95',
+  green: '#39ff14',
+  yellow: '#ffff00',
+  blue: '#00bbff',
+  magenta: '#bf5af2',
+  cyan: '#00ffff',
+  white: '#f0e0ff',
+  brightBlack: '#7858a8',
+  brightRed: '#ff6eb4',
+  brightGreen: '#7fff7f',
+  brightYellow: '#ffff80',
+  brightBlue: '#80ddff',
+  brightMagenta: '#d88aff',
+  brightCyan: '#80ffff',
+  brightWhite: '#ffffff'
+}
+
+export function getTerminalTheme(theme: 'dark' | 'light' | 'psychedelic'): ITheme {
+  if (theme === 'psychedelic') return psychedelicTheme
   return theme === 'dark' ? darkTheme : lightTheme
 }
 
 const terminalsMap = new Map<string, { terminal: Terminal; fitAddon: FitAddon; searchAddon: SearchAddon; unsubData?: () => void }>()
 
-export function applyThemeToAll(theme: 'dark' | 'light'): void {
+export function applyThemeToAll(theme: 'dark' | 'light' | 'psychedelic'): void {
   const xtermTheme = getTerminalTheme(theme)
   terminalsMap.forEach(({ terminal }) => {
     terminal.options.theme = xtermTheme
