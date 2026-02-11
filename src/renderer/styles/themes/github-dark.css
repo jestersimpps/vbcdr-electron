@@ -1,0 +1,92 @@
+:root.github-dark body {
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+:root.github-dark ::-webkit-scrollbar-thumb {
+  background: #30363d;
+}
+
+:root.github-dark ::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+:root.github-dark .bg-zinc-950 {
+  background-color: #09090b;
+}
+
+:root.github-dark .bg-zinc-900\/80 {
+  background-color: rgba(22, 27, 34, 0.9);
+}
+
+:root.github-dark .bg-zinc-900\/50 {
+  background-color: rgba(22, 27, 34, 0.6);
+}
+
+:root.github-dark .bg-zinc-900\/30 {
+  background-color: rgba(22, 27, 34, 0.5);
+}
+
+:root.github-dark .bg-zinc-900 {
+  background-color: #161b22;
+}
+
+:root.github-dark .bg-zinc-800 {
+  background-color: #21262d;
+}
+
+:root.github-dark .bg-zinc-800\/50 {
+  background-color: rgba(33, 38, 45, 0.5);
+}
+
+:root.github-dark .hover\:bg-zinc-800:hover {
+  background-color: #21262d;
+}
+
+:root.github-dark .hover\:bg-zinc-700:hover {
+  background-color: #30363d;
+}
+
+:root.github-dark .hover\:bg-zinc-800\/50:hover {
+  background-color: rgba(33, 38, 45, 0.5);
+}
+
+:root.github-dark .border-zinc-800 {
+  border-color: #30363d;
+}
+
+:root.github-dark .border-zinc-700 {
+  border-color: #484f58;
+}
+
+:root.github-dark .text-zinc-50 {
+  color: #e6edf3;
+}
+
+:root.github-dark .text-zinc-200 {
+  color: #c9d1d9;
+}
+
+:root.github-dark .text-zinc-300 {
+  color: #b1bac4;
+}
+
+:root.github-dark .text-zinc-400 {
+  color: #8b949e;
+}
+
+:root.github-dark .text-zinc-500 {
+  color: #6e7681;
+}
+
+:root.github-dark .text-zinc-600 {
+  color: #484f58;
+}
+
+:root.github-dark .hover\:text-zinc-200:hover {
+  color: #c9d1d9;
+}
+
+:root.github-dark .hover\:text-zinc-300:hover {
+  color: #b1bac4;
+}

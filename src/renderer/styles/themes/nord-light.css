@@ -1,0 +1,45 @@
+:root.nord-light body {
+  background: #eceff4;
+  color: #2e3440;
+}
+
+:root.nord-light ::-webkit-scrollbar-thumb {
+  background: #c0c5ce;
+}
+
+:root.nord-light ::-webkit-scrollbar-thumb:hover {
+  background: #a0a4ad;
+}
+
+:root.nord-light .bg-zinc-950 { background-color: #eceff4; }
+:root.nord-light .bg-zinc-900\/80 { background-color: #e5e9f0e6; }
+:root.nord-light .bg-zinc-900\/50 { background-color: #e5e9f080; }
+:root.nord-light .bg-zinc-900\/30 { background-color: #e5e9f04d; }
+:root.nord-light .bg-zinc-900 { background-color: #e5e9f0; }
+:root.nord-light .bg-zinc-800 { background-color: #d8dee9; }
+:root.nord-light .bg-zinc-800\/70 { background-color: #d8dee9b3; }
+:root.nord-light .bg-zinc-800\/50 { background-color: #d8dee980; }
+:root.nord-light .bg-zinc-800\/30 { background-color: #d8dee94d; }
+:root.nord-light .bg-zinc-700 { background-color: #c0c5ce; }
+:root.nord-light .bg-zinc-700\/30 { background-color: #c0c5ce4d; }
+
+:root.nord-light .hover\:bg-zinc-800:hover { background-color: #d8dee9; }
+:root.nord-light .hover\:bg-zinc-800\/50:hover { background-color: #d8dee980; }
+:root.nord-light .hover\:bg-zinc-800\/30:hover { background-color: #d8dee94d; }
+:root.nord-light .hover\:bg-zinc-700:hover { background-color: #c0c5ce; }
+
+:root.nord-light .border-zinc-800 { border-color: #c0c5ce; }
+:root.nord-light .border-zinc-700 { border-color: #a8adb8; }
+:root.nord-light .border-zinc-600 { border-color: #a8adb8; }
+:root.nord-light .border-zinc-600\/40 { border-color: #a8adb866; }
+
+:root.nord-light .text-zinc-100 { color: #2e3440; }
+:root.nord-light .text-zinc-200 { color: #2e3440; }
+:root.nord-light .text-zinc-300 { color: #4c566a; }
+:root.nord-light .text-zinc-400 { color: #8791a5; }
+:root.nord-light .text-zinc-500 { color: #8791a5; }
+:root.nord-light .text-zinc-600 { color: #8791a5; }
+
+:root.nord-light .hover\:text-zinc-200:hover { color: #2e3440; }
+:root.nord-light .hover\:text-zinc-300:hover { color: #4c566a; }
+:root.nord-light .hover\:text-zinc-400:hover { color: #8791a5; }

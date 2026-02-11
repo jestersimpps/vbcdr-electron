@@ -1,0 +1,45 @@
+:root.dracula-light body {
+  background: #f8f8f2;
+  color: #363c4a;
+}
+
+:root.dracula-light ::-webkit-scrollbar-thumb {
+  background: #d0d0c0;
+}
+
+:root.dracula-light ::-webkit-scrollbar-thumb:hover {
+  background: #c0c0b0;
+}
+
+:root.dracula-light .bg-zinc-950 { background-color: #f8f8f2; }
+:root.dracula-light .bg-zinc-900\/80 { background-color: #f0f0ebe6; }
+:root.dracula-light .bg-zinc-900\/50 { background-color: #f0f0eb80; }
+:root.dracula-light .bg-zinc-900\/30 { background-color: #f0f0eb4d; }
+:root.dracula-light .bg-zinc-900 { background-color: #f0f0eb; }
+:root.dracula-light .bg-zinc-800 { background-color: #e8e8e0; }
+:root.dracula-light .bg-zinc-800\/70 { background-color: #e8e8e0b3; }
+:root.dracula-light .bg-zinc-800\/50 { background-color: #e8e8e080; }
+:root.dracula-light .bg-zinc-800\/30 { background-color: #e8e8e04d; }
+:root.dracula-light .bg-zinc-700 { background-color: #d0d0c0; }
+:root.dracula-light .bg-zinc-700\/30 { background-color: #d0d0c04d; }
+
+:root.dracula-light .hover\:bg-zinc-800:hover { background-color: #e8e8e0; }
+:root.dracula-light .hover\:bg-zinc-800\/50:hover { background-color: #e8e8e080; }
+:root.dracula-light .hover\:bg-zinc-800\/30:hover { background-color: #e8e8e04d; }
+:root.dracula-light .hover\:bg-zinc-700:hover { background-color: #d0d0c0; }
+
+:root.dracula-light .border-zinc-800 { border-color: #d0d0c0; }
+:root.dracula-light .border-zinc-700 { border-color: #c0c0b0; }
+:root.dracula-light .border-zinc-600 { border-color: #c0c0b0; }
+:root.dracula-light .border-zinc-600\/40 { border-color: #c0c0b066; }
+
+:root.dracula-light .text-zinc-100 { color: #363c4a; }
+:root.dracula-light .text-zinc-200 { color: #363c4a; }
+:root.dracula-light .text-zinc-300 { color: #4d5566; }
+:root.dracula-light .text-zinc-400 { color: #7c8897; }
+:root.dracula-light .text-zinc-500 { color: #7c8897; }
+:root.dracula-light .text-zinc-600 { color: #7c8897; }
+
+:root.dracula-light .hover\:text-zinc-200:hover { color: #363c4a; }
+:root.dracula-light .hover\:text-zinc-300:hover { color: #4d5566; }
+:root.dracula-light .hover\:text-zinc-400:hover { color: #7c8897; }

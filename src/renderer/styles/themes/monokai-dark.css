@@ -1,0 +1,45 @@
+:root.monokai-dark body {
+  background: #1e1f1c;
+  color: #f8f8f2;
+}
+
+:root.monokai-dark ::-webkit-scrollbar-thumb {
+  background: #3e3d32;
+}
+
+:root.monokai-dark ::-webkit-scrollbar-thumb:hover {
+  background: #5e5d52;
+}
+
+:root.monokai-dark .bg-zinc-950 { background-color: #1e1f1c; }
+:root.monokai-dark .bg-zinc-900\/80 { background-color: #272822e6; }
+:root.monokai-dark .bg-zinc-900\/50 { background-color: #27282280; }
+:root.monokai-dark .bg-zinc-900\/30 { background-color: #2728224d; }
+:root.monokai-dark .bg-zinc-900 { background-color: #272822; }
+:root.monokai-dark .bg-zinc-800 { background-color: #2d2e27; }
+:root.monokai-dark .bg-zinc-800\/70 { background-color: #2d2e27b3; }
+:root.monokai-dark .bg-zinc-800\/50 { background-color: #2d2e2780; }
+:root.monokai-dark .bg-zinc-800\/30 { background-color: #2d2e274d; }
+:root.monokai-dark .bg-zinc-700 { background-color: #3e3d32; }
+:root.monokai-dark .bg-zinc-700\/30 { background-color: #3e3d324d; }
+
+:root.monokai-dark .hover\:bg-zinc-800:hover { background-color: #2d2e27; }
+:root.monokai-dark .hover\:bg-zinc-800\/50:hover { background-color: #2d2e2780; }
+:root.monokai-dark .hover\:bg-zinc-800\/30:hover { background-color: #2d2e274d; }
+:root.monokai-dark .hover\:bg-zinc-700:hover { background-color: #3e3d32; }
+
+:root.monokai-dark .border-zinc-800 { border-color: #3e3d32; }
+:root.monokai-dark .border-zinc-700 { border-color: #5e5d52; }
+:root.monokai-dark .border-zinc-600 { border-color: #5e5d52; }
+:root.monokai-dark .border-zinc-600\/40 { border-color: #5e5d5266; }
+
+:root.monokai-dark .text-zinc-100 { color: #f8f8f2; }
+:root.monokai-dark .text-zinc-200 { color: #f8f8f2; }
+:root.monokai-dark .text-zinc-300 { color: #cfcfc2; }
+:root.monokai-dark .text-zinc-400 { color: #a6a390; }
+:root.monokai-dark .text-zinc-500 { color: #a6a390; }
+:root.monokai-dark .text-zinc-600 { color: #a6a390; }
+
+:root.monokai-dark .hover\:text-zinc-200:hover { color: #f8f8f2; }
+:root.monokai-dark .hover\:text-zinc-300:hover { color: #cfcfc2; }
+:root.monokai-dark .hover\:text-zinc-400:hover { color: #a6a390; }

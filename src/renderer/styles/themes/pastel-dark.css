@@ -1,0 +1,45 @@
+:root.pastel-dark body {
+  background: #1e1e2e;
+  color: #e0d0f0;
+}
+
+:root.pastel-dark ::-webkit-scrollbar-thumb {
+  background: #3a3a4a;
+}
+
+:root.pastel-dark ::-webkit-scrollbar-thumb:hover {
+  background: #4a4a5a;
+}
+
+:root.pastel-dark .bg-zinc-950 { background-color: #1e1e2e; }
+:root.pastel-dark .bg-zinc-900\/80 { background-color: #252535e6; }
+:root.pastel-dark .bg-zinc-900\/50 { background-color: #25253580; }
+:root.pastel-dark .bg-zinc-900\/30 { background-color: #2525354d; }
+:root.pastel-dark .bg-zinc-900 { background-color: #252535; }
+:root.pastel-dark .bg-zinc-800 { background-color: #2f2f3f; }
+:root.pastel-dark .bg-zinc-800\/70 { background-color: #2f2f3fb3; }
+:root.pastel-dark .bg-zinc-800\/50 { background-color: #2f2f3f80; }
+:root.pastel-dark .bg-zinc-800\/30 { background-color: #2f2f3f4d; }
+:root.pastel-dark .bg-zinc-700 { background-color: #3a3a4a; }
+:root.pastel-dark .bg-zinc-700\/30 { background-color: #3a3a4a4d; }
+
+:root.pastel-dark .hover\:bg-zinc-800:hover { background-color: #2f2f3f; }
+:root.pastel-dark .hover\:bg-zinc-800\/50:hover { background-color: #2f2f3f80; }
+:root.pastel-dark .hover\:bg-zinc-800\/30:hover { background-color: #2f2f3f4d; }
+:root.pastel-dark .hover\:bg-zinc-700:hover { background-color: #3a3a4a; }
+
+:root.pastel-dark .border-zinc-800 { border-color: #3a3a4a; }
+:root.pastel-dark .border-zinc-700 { border-color: #4a4a5a; }
+:root.pastel-dark .border-zinc-600 { border-color: #4a4a5a; }
+:root.pastel-dark .border-zinc-600\/40 { border-color: #4a4a5a66; }
+
+:root.pastel-dark .text-zinc-100 { color: #e0d0f0; }
+:root.pastel-dark .text-zinc-200 { color: #e0d0f0; }
+:root.pastel-dark .text-zinc-300 { color: #c8b8e0; }
+:root.pastel-dark .text-zinc-400 { color: #a898c8; }
+:root.pastel-dark .text-zinc-500 { color: #a898c8; }
+:root.pastel-dark .text-zinc-600 { color: #a898c8; }
+
+:root.pastel-dark .hover\:text-zinc-200:hover { color: #e0d0f0; }
+:root.pastel-dark .hover\:text-zinc-300:hover { color: #c8b8e0; }
+:root.pastel-dark .hover\:text-zinc-400:hover { color: #a898c8; }

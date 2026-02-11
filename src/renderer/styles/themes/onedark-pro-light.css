@@ -1,0 +1,45 @@
+:root.onedark-pro-light body {
+  background: #fafafa;
+  color: #383a42;
+}
+
+:root.onedark-pro-light ::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+}
+
+:root.onedark-pro-light ::-webkit-scrollbar-thumb:hover {
+  background: #b0b0b0;
+}
+
+:root.onedark-pro-light .bg-zinc-950 { background-color: #fafafa; }
+:root.onedark-pro-light .bg-zinc-900\/80 { background-color: #f0f0f0e6; }
+:root.onedark-pro-light .bg-zinc-900\/50 { background-color: #f0f0f080; }
+:root.onedark-pro-light .bg-zinc-900\/30 { background-color: #f0f0f04d; }
+:root.onedark-pro-light .bg-zinc-900 { background-color: #f0f0f0; }
+:root.onedark-pro-light .bg-zinc-800 { background-color: #e5e5e5; }
+:root.onedark-pro-light .bg-zinc-800\/70 { background-color: #e5e5e5b3; }
+:root.onedark-pro-light .bg-zinc-800\/50 { background-color: #e5e5e580; }
+:root.onedark-pro-light .bg-zinc-800\/30 { background-color: #e5e5e54d; }
+:root.onedark-pro-light .bg-zinc-700 { background-color: #d0d0d0; }
+:root.onedark-pro-light .bg-zinc-700\/30 { background-color: #d0d0d04d; }
+
+:root.onedark-pro-light .hover\:bg-zinc-800:hover { background-color: #e5e5e5; }
+:root.onedark-pro-light .hover\:bg-zinc-800\/50:hover { background-color: #e5e5e580; }
+:root.onedark-pro-light .hover\:bg-zinc-800\/30:hover { background-color: #e5e5e54d; }
+:root.onedark-pro-light .hover\:bg-zinc-700:hover { background-color: #d0d0d0; }
+
+:root.onedark-pro-light .border-zinc-800 { border-color: #d0d0d0; }
+:root.onedark-pro-light .border-zinc-700 { border-color: #c0c0c0; }
+:root.onedark-pro-light .border-zinc-600 { border-color: #c0c0c0; }
+:root.onedark-pro-light .border-zinc-600\/40 { border-color: #c0c0c066; }
+
+:root.onedark-pro-light .text-zinc-100 { color: #383a42; }
+:root.onedark-pro-light .text-zinc-200 { color: #383a42; }
+:root.onedark-pro-light .text-zinc-300 { color: #5c6370; }
+:root.onedark-pro-light .text-zinc-400 { color: #9d9d9f; }
+:root.onedark-pro-light .text-zinc-500 { color: #9d9d9f; }
+:root.onedark-pro-light .text-zinc-600 { color: #9d9d9f; }
+
+:root.onedark-pro-light .hover\:text-zinc-200:hover { color: #383a42; }
+:root.onedark-pro-light .hover\:text-zinc-300:hover { color: #5c6370; }
+:root.onedark-pro-light .hover\:text-zinc-400:hover { color: #9d9d9f; }

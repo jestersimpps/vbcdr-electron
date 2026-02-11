@@ -1,0 +1,45 @@
+:root.material-light body {
+  background: #fafafa;
+  color: #272727;
+}
+
+:root.material-light ::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+}
+
+:root.material-light ::-webkit-scrollbar-thumb:hover {
+  background: #b0b0b0;
+}
+
+:root.material-light .bg-zinc-950 { background-color: #fafafa; }
+:root.material-light .bg-zinc-900\/80 { background-color: #f5f5f5e6; }
+:root.material-light .bg-zinc-900\/50 { background-color: #f5f5f580; }
+:root.material-light .bg-zinc-900\/30 { background-color: #f5f5f54d; }
+:root.material-light .bg-zinc-900 { background-color: #f5f5f5; }
+:root.material-light .bg-zinc-800 { background-color: #e7e7e8; }
+:root.material-light .bg-zinc-800\/70 { background-color: #e7e7e8b3; }
+:root.material-light .bg-zinc-800\/50 { background-color: #e7e7e880; }
+:root.material-light .bg-zinc-800\/30 { background-color: #e7e7e84d; }
+:root.material-light .bg-zinc-700 { background-color: #d0d0d0; }
+:root.material-light .bg-zinc-700\/30 { background-color: #d0d0d04d; }
+
+:root.material-light .hover\:bg-zinc-800:hover { background-color: #e7e7e8; }
+:root.material-light .hover\:bg-zinc-800\/50:hover { background-color: #e7e7e880; }
+:root.material-light .hover\:bg-zinc-800\/30:hover { background-color: #e7e7e84d; }
+:root.material-light .hover\:bg-zinc-700:hover { background-color: #d0d0d0; }
+
+:root.material-light .border-zinc-800 { border-color: #d0d0d0; }
+:root.material-light .border-zinc-700 { border-color: #c0c0c0; }
+:root.material-light .border-zinc-600 { border-color: #c0c0c0; }
+:root.material-light .border-zinc-600\/40 { border-color: #c0c0c066; }
+
+:root.material-light .text-zinc-100 { color: #272727; }
+:root.material-light .text-zinc-200 { color: #272727; }
+:root.material-light .text-zinc-300 { color: #5a5a5a; }
+:root.material-light .text-zinc-400 { color: #9e9e9e; }
+:root.material-light .text-zinc-500 { color: #9e9e9e; }
+:root.material-light .text-zinc-600 { color: #9e9e9e; }
+
+:root.material-light .hover\:text-zinc-200:hover { color: #272727; }
+:root.material-light .hover\:text-zinc-300:hover { color: #5a5a5a; }
+:root.material-light .hover\:text-zinc-400:hover { color: #9e9e9e; }

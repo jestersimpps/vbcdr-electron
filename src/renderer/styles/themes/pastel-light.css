@@ -1,0 +1,45 @@
+:root.pastel-light body {
+  background: #fffbf5;
+  color: #5c5470;
+}
+
+:root.pastel-light ::-webkit-scrollbar-thumb {
+  background: #fde2cc;
+}
+
+:root.pastel-light ::-webkit-scrollbar-thumb:hover {
+  background: #f0d5b8;
+}
+
+:root.pastel-light .bg-zinc-950 { background-color: #fffbf5; }
+:root.pastel-light .bg-zinc-900\/80 { background-color: #fff5ebe6; }
+:root.pastel-light .bg-zinc-900\/50 { background-color: #fff5eb80; }
+:root.pastel-light .bg-zinc-900\/30 { background-color: #fff5eb4d; }
+:root.pastel-light .bg-zinc-900 { background-color: #fff5eb; }
+:root.pastel-light .bg-zinc-800 { background-color: #ffeee0; }
+:root.pastel-light .bg-zinc-800\/70 { background-color: #ffeee0b3; }
+:root.pastel-light .bg-zinc-800\/50 { background-color: #ffeee080; }
+:root.pastel-light .bg-zinc-800\/30 { background-color: #ffeee04d; }
+:root.pastel-light .bg-zinc-700 { background-color: #fde2cc; }
+:root.pastel-light .bg-zinc-700\/30 { background-color: #fde2cc4d; }
+
+:root.pastel-light .hover\:bg-zinc-800:hover { background-color: #ffeee0; }
+:root.pastel-light .hover\:bg-zinc-800\/50:hover { background-color: #ffeee080; }
+:root.pastel-light .hover\:bg-zinc-800\/30:hover { background-color: #ffeee04d; }
+:root.pastel-light .hover\:bg-zinc-700:hover { background-color: #fde2cc; }
+
+:root.pastel-light .border-zinc-800 { border-color: #fde2cc; }
+:root.pastel-light .border-zinc-700 { border-color: #f0d5b8; }
+:root.pastel-light .border-zinc-600 { border-color: #f0d5b8; }
+:root.pastel-light .border-zinc-600\/40 { border-color: #f0d5b866; }
+
+:root.pastel-light .text-zinc-100 { color: #5c5470; }
+:root.pastel-light .text-zinc-200 { color: #5c5470; }
+:root.pastel-light .text-zinc-300 { color: #7d728a; }
+:root.pastel-light .text-zinc-400 { color: #9d92aa; }
+:root.pastel-light .text-zinc-500 { color: #9d92aa; }
+:root.pastel-light .text-zinc-600 { color: #9d92aa; }
+
+:root.pastel-light .hover\:text-zinc-200:hover { color: #5c5470; }
+:root.pastel-light .hover\:text-zinc-300:hover { color: #7d728a; }
+:root.pastel-light .hover\:text-zinc-400:hover { color: #9d92aa; }

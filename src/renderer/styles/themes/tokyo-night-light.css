@@ -1,0 +1,45 @@
+:root.tokyo-night-light body {
+  background: #d5d6db;
+  color: #343b58;
+}
+
+:root.tokyo-night-light ::-webkit-scrollbar-thumb {
+  background: #c4c6cd;
+}
+
+:root.tokyo-night-light ::-webkit-scrollbar-thumb:hover {
+  background: #b0b2ba;
+}
+
+:root.tokyo-night-light .bg-zinc-950 { background-color: #d5d6db; }
+:root.tokyo-night-light .bg-zinc-900\/80 { background-color: #e1e2e7e6; }
+:root.tokyo-night-light .bg-zinc-900\/50 { background-color: #e1e2e780; }
+:root.tokyo-night-light .bg-zinc-900\/30 { background-color: #e1e2e74d; }
+:root.tokyo-night-light .bg-zinc-900 { background-color: #e1e2e7; }
+:root.tokyo-night-light .bg-zinc-800 { background-color: #dfe0e5; }
+:root.tokyo-night-light .bg-zinc-800\/70 { background-color: #dfe0e5b3; }
+:root.tokyo-night-light .bg-zinc-800\/50 { background-color: #dfe0e580; }
+:root.tokyo-night-light .bg-zinc-800\/30 { background-color: #dfe0e54d; }
+:root.tokyo-night-light .bg-zinc-700 { background-color: #c4c6cd; }
+:root.tokyo-night-light .bg-zinc-700\/30 { background-color: #c4c6cd4d; }
+
+:root.tokyo-night-light .hover\:bg-zinc-800:hover { background-color: #dfe0e5; }
+:root.tokyo-night-light .hover\:bg-zinc-800\/50:hover { background-color: #dfe0e580; }
+:root.tokyo-night-light .hover\:bg-zinc-800\/30:hover { background-color: #dfe0e54d; }
+:root.tokyo-night-light .hover\:bg-zinc-700:hover { background-color: #c4c6cd; }
+
+:root.tokyo-night-light .border-zinc-800 { border-color: #c4c6cd; }
+:root.tokyo-night-light .border-zinc-700 { border-color: #b0b2ba; }
+:root.tokyo-night-light .border-zinc-600 { border-color: #b0b2ba; }
+:root.tokyo-night-light .border-zinc-600\/40 { border-color: #b0b2ba66; }
+
+:root.tokyo-night-light .text-zinc-100 { color: #343b58; }
+:root.tokyo-night-light .text-zinc-200 { color: #343b58; }
+:root.tokyo-night-light .text-zinc-300 { color: #565a6e; }
+:root.tokyo-night-light .text-zinc-400 { color: #6172b0; }
+:root.tokyo-night-light .text-zinc-500 { color: #6172b0; }
+:root.tokyo-night-light .text-zinc-600 { color: #6172b0; }
+
+:root.tokyo-night-light .hover\:text-zinc-200:hover { color: #343b58; }
+:root.tokyo-night-light .hover\:text-zinc-300:hover { color: #565a6e; }
+:root.tokyo-night-light .hover\:text-zinc-400:hover { color: #6172b0; }

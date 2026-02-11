@@ -1,0 +1,45 @@
+:root.catppuccin-dark body {
+  background: #1e1e2e;
+  color: #cdd6f4;
+}
+
+:root.catppuccin-dark ::-webkit-scrollbar-thumb {
+  background: #45475a;
+}
+
+:root.catppuccin-dark ::-webkit-scrollbar-thumb:hover {
+  background: #585b70;
+}
+
+:root.catppuccin-dark .bg-zinc-950 { background-color: #1e1e2e; }
+:root.catppuccin-dark .bg-zinc-900\/80 { background-color: #181825e6; }
+:root.catppuccin-dark .bg-zinc-900\/50 { background-color: #18182580; }
+:root.catppuccin-dark .bg-zinc-900\/30 { background-color: #1818254d; }
+:root.catppuccin-dark .bg-zinc-900 { background-color: #181825; }
+:root.catppuccin-dark .bg-zinc-800 { background-color: #313244; }
+:root.catppuccin-dark .bg-zinc-800\/70 { background-color: #313244b3; }
+:root.catppuccin-dark .bg-zinc-800\/50 { background-color: #31324480; }
+:root.catppuccin-dark .bg-zinc-800\/30 { background-color: #3132444d; }
+:root.catppuccin-dark .bg-zinc-700 { background-color: #45475a; }
+:root.catppuccin-dark .bg-zinc-700\/30 { background-color: #45475a4d; }
+
+:root.catppuccin-dark .hover\:bg-zinc-800:hover { background-color: #313244; }
+:root.catppuccin-dark .hover\:bg-zinc-800\/50:hover { background-color: #31324480; }
+:root.catppuccin-dark .hover\:bg-zinc-800\/30:hover { background-color: #3132444d; }
+:root.catppuccin-dark .hover\:bg-zinc-700:hover { background-color: #45475a; }
+
+:root.catppuccin-dark .border-zinc-800 { border-color: #45475a; }
+:root.catppuccin-dark .border-zinc-700 { border-color: #585b70; }
+:root.catppuccin-dark .border-zinc-600 { border-color: #585b70; }
+:root.catppuccin-dark .border-zinc-600\/40 { border-color: #585b7066; }
+
+:root.catppuccin-dark .text-zinc-100 { color: #cdd6f4; }
+:root.catppuccin-dark .text-zinc-200 { color: #cdd6f4; }
+:root.catppuccin-dark .text-zinc-300 { color: #bac2de; }
+:root.catppuccin-dark .text-zinc-400 { color: #9399b2; }
+:root.catppuccin-dark .text-zinc-500 { color: #9399b2; }
+:root.catppuccin-dark .text-zinc-600 { color: #9399b2; }
+
+:root.catppuccin-dark .hover\:text-zinc-200:hover { color: #cdd6f4; }
+:root.catppuccin-dark .hover\:text-zinc-300:hover { color: #bac2de; }
+:root.catppuccin-dark .hover\:text-zinc-400:hover { color: #9399b2; }

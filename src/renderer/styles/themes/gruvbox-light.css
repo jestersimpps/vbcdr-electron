@@ -1,0 +1,45 @@
+:root.gruvbox-light body {
+  background: #fbf1c7;
+  color: #3c3836;
+}
+
+:root.gruvbox-light ::-webkit-scrollbar-thumb {
+  background: #ebdbb2;
+}
+
+:root.gruvbox-light ::-webkit-scrollbar-thumb:hover {
+  background: #d5c4a1;
+}
+
+:root.gruvbox-light .bg-zinc-950 { background-color: #fbf1c7; }
+:root.gruvbox-light .bg-zinc-900\/80 { background-color: #f9f5d7e6; }
+:root.gruvbox-light .bg-zinc-900\/50 { background-color: #f9f5d780; }
+:root.gruvbox-light .bg-zinc-900\/30 { background-color: #f9f5d74d; }
+:root.gruvbox-light .bg-zinc-900 { background-color: #f9f5d7; }
+:root.gruvbox-light .bg-zinc-800 { background-color: #f2e5bc; }
+:root.gruvbox-light .bg-zinc-800\/70 { background-color: #f2e5bcb3; }
+:root.gruvbox-light .bg-zinc-800\/50 { background-color: #f2e5bc80; }
+:root.gruvbox-light .bg-zinc-800\/30 { background-color: #f2e5bc4d; }
+:root.gruvbox-light .bg-zinc-700 { background-color: #ebdbb2; }
+:root.gruvbox-light .bg-zinc-700\/30 { background-color: #ebdbb24d; }
+
+:root.gruvbox-light .hover\:bg-zinc-800:hover { background-color: #f2e5bc; }
+:root.gruvbox-light .hover\:bg-zinc-800\/50:hover { background-color: #f2e5bc80; }
+:root.gruvbox-light .hover\:bg-zinc-800\/30:hover { background-color: #f2e5bc4d; }
+:root.gruvbox-light .hover\:bg-zinc-700:hover { background-color: #ebdbb2; }
+
+:root.gruvbox-light .border-zinc-800 { border-color: #ebdbb2; }
+:root.gruvbox-light .border-zinc-700 { border-color: #d5c4a1; }
+:root.gruvbox-light .border-zinc-600 { border-color: #d5c4a1; }
+:root.gruvbox-light .border-zinc-600\/40 { border-color: #d5c4a166; }
+
+:root.gruvbox-light .text-zinc-100 { color: #3c3836; }
+:root.gruvbox-light .text-zinc-200 { color: #3c3836; }
+:root.gruvbox-light .text-zinc-300 { color: #504945; }
+:root.gruvbox-light .text-zinc-400 { color: #7c6f64; }
+:root.gruvbox-light .text-zinc-500 { color: #7c6f64; }
+:root.gruvbox-light .text-zinc-600 { color: #7c6f64; }
+
+:root.gruvbox-light .hover\:text-zinc-200:hover { color: #3c3836; }
+:root.gruvbox-light .hover\:text-zinc-300:hover { color: #504945; }
+:root.gruvbox-light .hover\:text-zinc-400:hover { color: #7c6f64; }

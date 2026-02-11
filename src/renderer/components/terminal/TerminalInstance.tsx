@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Terminal, type ITheme } from '@xterm/xterm'
+import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { useThemeStore } from '@/stores/theme-store'
+import { getTerminalTheme } from '@/config/terminal-theme-registry'
 
 interface TerminalInstanceProps {
   tabId: string
@@ -14,87 +15,10 @@ interface TerminalInstanceProps {
   initialCommand?: string
 }
 
-const darkTheme: ITheme = {
-  background: '#09090b',
-  foreground: '#fafafa',
-  cursor: '#fafafa',
-  cursorAccent: '#09090b',
-  selectionBackground: '#27272a',
-  black: '#27272a',
-  red: '#f87171',
-  green: '#4ade80',
-  yellow: '#facc15',
-  blue: '#60a5fa',
-  magenta: '#c084fc',
-  cyan: '#22d3ee',
-  white: '#fafafa',
-  brightBlack: '#52525b',
-  brightRed: '#fca5a5',
-  brightGreen: '#86efac',
-  brightYellow: '#fde68a',
-  brightBlue: '#93c5fd',
-  brightMagenta: '#d8b4fe',
-  brightCyan: '#67e8f9',
-  brightWhite: '#ffffff'
-}
-
-const lightTheme: ITheme = {
-  background: '#ffffff',
-  foreground: '#18181b',
-  cursor: '#18181b',
-  cursorAccent: '#ffffff',
-  selectionBackground: '#d4d4d8',
-  black: '#18181b',
-  red: '#dc2626',
-  green: '#16a34a',
-  yellow: '#ca8a04',
-  blue: '#2563eb',
-  magenta: '#9333ea',
-  cyan: '#0891b2',
-  white: '#e4e4e7',
-  brightBlack: '#71717a',
-  brightRed: '#ef4444',
-  brightGreen: '#22c55e',
-  brightYellow: '#eab308',
-  brightBlue: '#3b82f6',
-  brightMagenta: '#a855f7',
-  brightCyan: '#06b6d4',
-  brightWhite: '#fafafa'
-}
-
-const psychedelicTheme: ITheme = {
-  background: '#08060e',
-  foreground: '#f0e0ff',
-  cursor: '#ff2d95',
-  cursorAccent: '#08060e',
-  selectionBackground: '#bf5af244',
-  black: '#1a1235',
-  red: '#ff2d95',
-  green: '#39ff14',
-  yellow: '#ffff00',
-  blue: '#00bbff',
-  magenta: '#bf5af2',
-  cyan: '#00ffff',
-  white: '#f0e0ff',
-  brightBlack: '#7858a8',
-  brightRed: '#ff6eb4',
-  brightGreen: '#7fff7f',
-  brightYellow: '#ffff80',
-  brightBlue: '#80ddff',
-  brightMagenta: '#d88aff',
-  brightCyan: '#80ffff',
-  brightWhite: '#ffffff'
-}
-
-export function getTerminalTheme(theme: 'dark' | 'light' | 'psychedelic'): ITheme {
-  if (theme === 'psychedelic') return psychedelicTheme
-  return theme === 'dark' ? darkTheme : lightTheme
-}
-
 const terminalsMap = new Map<string, { terminal: Terminal; fitAddon: FitAddon; searchAddon: SearchAddon; unsubData?: () => void }>()
 
-export function applyThemeToAll(theme: 'dark' | 'light' | 'psychedelic'): void {
-  const xtermTheme = getTerminalTheme(theme)
+export function applyThemeToAll(themeId: string): void {
+  const xtermTheme = getTerminalTheme(themeId)
   terminalsMap.forEach(({ terminal }) => {
     terminal.options.theme = xtermTheme
   })
@@ -126,7 +50,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         cols: 80,
         rows: 24,
         allowProposedApi: true,
-        theme: getTerminalTheme(useThemeStore.getState().theme)
+        theme: getTerminalTheme(useThemeStore.getState().getFullThemeId())
       })
 
       const fitAddon = new FitAddon()

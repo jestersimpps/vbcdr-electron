@@ -3,6 +3,28 @@
 @import "react-grid-layout/css/styles.css";
 @import "react-resizable/css/styles.css";
 
+@import "./styles/themes/github-dark.css";
+@import "./styles/themes/github-light.css";
+@import "./styles/themes/onedark-pro-dark.css";
+@import "./styles/themes/onedark-pro-light.css";
+@import "./styles/themes/dracula-dark.css";
+@import "./styles/themes/dracula-light.css";
+@import "./styles/themes/material-dark.css";
+@import "./styles/themes/material-light.css";
+@import "./styles/themes/nord-dark.css";
+@import "./styles/themes/nord-light.css";
+@import "./styles/themes/tokyo-night-dark.css";
+@import "./styles/themes/tokyo-night-light.css";
+@import "./styles/themes/catppuccin-dark.css";
+@import "./styles/themes/catppuccin-light.css";
+@import "./styles/themes/pastel-dark.css";
+@import "./styles/themes/pastel-light.css";
+@import "./styles/themes/gruvbox-dark.css";
+@import "./styles/themes/gruvbox-light.css";
+@import "./styles/themes/monokai-dark.css";
+@import "./styles/themes/monokai-light.css";
+@import "./styles/themes/psychedelic-dark.css";
+
 body {
   margin: 0;
   padding: 0;

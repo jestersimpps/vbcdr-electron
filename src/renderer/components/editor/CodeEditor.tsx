@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import Editor, { DiffEditor, type Monaco } from '@monaco-editor/react'
 import { useEditorStore } from '@/stores/editor-store'
 import { useThemeStore } from '@/stores/theme-store'
-import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-themes'
+import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
 import { X } from 'lucide-react'
 import type { OpenFile } from '@/models/types'
 
@@ -43,12 +43,14 @@ function handleBeforeMount(monaco: Monaco): void {
 const EMPTY_FILES: OpenFile[] = []
 
 export function CodeEditor({ projectId }: { projectId: string }): React.ReactElement {
-  const theme = useThemeStore((s) => s.theme)
+  const getFullThemeId = useThemeStore((s) => s.getFullThemeId)
   const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? EMPTY_FILES)
   const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
   const { setActiveFile, closeFile } = useEditorStore()
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath)
+  const themeId = getFullThemeId()
+  const monacoTheme = MONACO_THEME_NAME[themeId] ?? 'github-dark'
 
   useEffect(() => {
     return window.api.fs.onFileChanged((path, content) => {
@@ -92,7 +94,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
               original={activeFile.originalContent}
               modified={activeFile.content}
               language={detectLanguage(activeFile.name)}
-              theme={MONACO_THEME_NAME[theme]}
+              theme={monacoTheme}
               beforeMount={handleBeforeMount}
               options={{
                 readOnly: true,
@@ -110,7 +112,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
               key={activeFile.path}
               value={activeFile.content}
               language={detectLanguage(activeFile.name)}
-              theme={MONACO_THEME_NAME[theme]}
+              theme={monacoTheme}
               beforeMount={handleBeforeMount}
               options={{
                 readOnly: true,

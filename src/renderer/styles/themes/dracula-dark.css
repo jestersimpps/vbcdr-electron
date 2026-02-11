@@ -1,0 +1,92 @@
+:root.dracula-dark body {
+  background: #282a36;
+  color: #f8f8f2;
+}
+
+:root.dracula-dark ::-webkit-scrollbar-thumb {
+  background: #44475a;
+}
+
+:root.dracula-dark ::-webkit-scrollbar-thumb:hover {
+  background: #6272a4;
+}
+
+:root.dracula-dark .bg-zinc-950 {
+  background-color: #282a36;
+}
+
+:root.dracula-dark .bg-zinc-900\/80 {
+  background-color: rgba(33, 34, 44, 0.9);
+}
+
+:root.dracula-dark .bg-zinc-900\/50 {
+  background-color: rgba(33, 34, 44, 0.6);
+}
+
+:root.dracula-dark .bg-zinc-900\/30 {
+  background-color: rgba(33, 34, 44, 0.5);
+}
+
+:root.dracula-dark .bg-zinc-900 {
+  background-color: #21222c;
+}
+
+:root.dracula-dark .bg-zinc-800 {
+  background-color: #343746;
+}
+
+:root.dracula-dark .bg-zinc-800\/50 {
+  background-color: rgba(52, 55, 70, 0.5);
+}
+
+:root.dracula-dark .hover\:bg-zinc-800:hover {
+  background-color: #343746;
+}
+
+:root.dracula-dark .hover\:bg-zinc-700:hover {
+  background-color: #44475a;
+}
+
+:root.dracula-dark .hover\:bg-zinc-800\/50:hover {
+  background-color: rgba(52, 55, 70, 0.5);
+}
+
+:root.dracula-dark .border-zinc-800 {
+  border-color: #44475a;
+}
+
+:root.dracula-dark .border-zinc-700 {
+  border-color: #6272a4;
+}
+
+:root.dracula-dark .text-zinc-50 {
+  color: #f8f8f2;
+}
+
+:root.dracula-dark .text-zinc-200 {
+  color: #f8f8f2;
+}
+
+:root.dracula-dark .text-zinc-300 {
+  color: #e9e9f4;
+}
+
+:root.dracula-dark .text-zinc-400 {
+  color: #c8c8d6;
+}
+
+:root.dracula-dark .text-zinc-500 {
+  color: #9999b3;
+}
+
+:root.dracula-dark .text-zinc-600 {
+  color: #6272a4;
+}
+
+:root.dracula-dark .hover\:text-zinc-200:hover {
+  color: #f8f8f2;
+}
+
+:root.dracula-dark .hover\:text-zinc-300:hover {
+  color: #e9e9f4;
+}
