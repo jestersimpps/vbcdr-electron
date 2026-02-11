@@ -167,6 +167,30 @@ export const TERMINAL_THEMES: Record<string, ITheme> = {
     brightMagenta: '#d88aff',
     brightCyan: '#80ffff',
     brightWhite: '#ffffff'
+  },
+
+  'psychedelic-light': {
+    background: '#faf0ff',
+    foreground: '#2a1040',
+    cursor: '#d41876',
+    cursorAccent: '#faf0ff',
+    selectionBackground: '#bf5af240',
+    black: '#2a1040',
+    red: '#d41876',
+    green: '#1a8a00',
+    yellow: '#b5a000',
+    blue: '#0066cc',
+    magenta: '#8b2fc9',
+    cyan: '#0088aa',
+    white: '#7848a0',
+    brightBlack: '#4a2868',
+    brightRed: '#e02080',
+    brightGreen: '#22a500',
+    brightYellow: '#c8b200',
+    brightBlue: '#0077dd',
+    brightMagenta: '#a040e0',
+    brightCyan: '#009dbb',
+    brightWhite: '#faf0ff'
   }
 }
 

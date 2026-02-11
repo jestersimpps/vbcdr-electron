@@ -17,7 +17,7 @@ export function TerminalPanel(): React.ReactElement {
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
   const { createTab, closeTab, replaceTab, setActiveTab, initProject } = useTerminalStore()
 
-  const theme = useThemeStore((s) => s.theme)
+  const fullThemeId = useThemeStore((s) => s.getFullThemeId())
 
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -49,8 +49,8 @@ export function TerminalPanel(): React.ReactElement {
   }, [activeTabId])
 
   useEffect(() => {
-    applyThemeToAll(theme)
-  }, [theme])
+    applyThemeToAll(fullThemeId)
+  }, [fullThemeId])
 
   useEffect(() => {
     if (!activeTabId) return
@@ -84,7 +84,7 @@ export function TerminalPanel(): React.ReactElement {
   }
 
   return (
-    <div data-terminal-panel style={{ display: 'flex', flexDirection: 'column', height: '100%', background: theme === 'light' ? '#ffffff' : theme === 'psychedelic' ? '#08060e' : '#09090b' }}>
+    <div data-terminal-panel className="bg-zinc-950" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex flex-1 items-center gap-0.5 overflow-x-auto px-1">
           {projectTabs.map((tab) => (

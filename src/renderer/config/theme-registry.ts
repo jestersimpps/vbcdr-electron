@@ -16,7 +16,7 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
   { id: 'pastel', name: 'Pastel', category: 'popular', supportsLightMode: true },
   { id: 'gruvbox', name: 'Gruvbox', category: 'classic', supportsLightMode: true },
   { id: 'monokai', name: 'Monokai', category: 'classic', supportsLightMode: true },
-  { id: 'psychedelic', name: 'Psychedelic', category: 'experimental', supportsLightMode: false },
+  { id: 'psychedelic', name: 'Psychedelic', category: 'experimental', supportsLightMode: true },
 ]
 
 export function getThemeById(id: string): ThemeDefinition | undefined {

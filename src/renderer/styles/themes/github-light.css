@@ -11,82 +11,36 @@
   background: #afb8c1;
 }
 
-:root.github-light .bg-zinc-950 {
-  background-color: #ffffff;
-}
+:root.github-light .bg-zinc-950 { background-color: #ffffff; }
+:root.github-light .bg-zinc-900\/80 { background-color: rgba(246, 248, 250, 0.9); }
+:root.github-light .bg-zinc-900\/50 { background-color: rgba(246, 248, 250, 0.6); }
+:root.github-light .bg-zinc-900\/30 { background-color: rgba(246, 248, 250, 0.5); }
+:root.github-light .bg-zinc-900 { background-color: #f6f8fa; }
+:root.github-light .bg-zinc-800 { background-color: #eaeef2; }
+:root.github-light .bg-zinc-800\/70 { background-color: rgba(234, 238, 242, 0.7); }
+:root.github-light .bg-zinc-800\/50 { background-color: rgba(234, 238, 242, 0.5); }
+:root.github-light .bg-zinc-800\/30 { background-color: rgba(234, 238, 242, 0.3); }
+:root.github-light .bg-zinc-700 { background-color: #d8dee4; }
+:root.github-light .bg-zinc-700\/30 { background-color: rgba(216, 222, 228, 0.3); }
 
-:root.github-light .bg-zinc-900\/80 {
-  background-color: rgba(246, 248, 250, 0.9);
-}
+:root.github-light .hover\:bg-zinc-800:hover { background-color: #eaeef2; }
+:root.github-light .hover\:bg-zinc-800\/50:hover { background-color: rgba(234, 238, 242, 0.5); }
+:root.github-light .hover\:bg-zinc-800\/30:hover { background-color: rgba(234, 238, 242, 0.3); }
+:root.github-light .hover\:bg-zinc-700:hover { background-color: #d8dee4; }
 
-:root.github-light .bg-zinc-900\/50 {
-  background-color: rgba(246, 248, 250, 0.6);
-}
+:root.github-light .border-zinc-800 { border-color: #d0d7de; }
+:root.github-light .border-zinc-700 { border-color: #afb8c1; }
+:root.github-light .border-zinc-600 { border-color: #afb8c1; }
+:root.github-light .border-zinc-600\/40 { border-color: rgba(175, 184, 193, 0.4); }
 
-:root.github-light .bg-zinc-900\/30 {
-  background-color: rgba(246, 248, 250, 0.5);
-}
+:root.github-light .text-zinc-50 { color: #1f2328; }
+:root.github-light .text-zinc-100 { color: #1f2328; }
+:root.github-light .text-zinc-200 { color: #24292f; }
+:root.github-light .text-zinc-300 { color: #57606a; }
+:root.github-light .text-zinc-400 { color: #656d76; }
+:root.github-light .text-zinc-500 { color: #6e7781; }
+:root.github-light .text-zinc-600 { color: #8c959f; }
 
-:root.github-light .bg-zinc-900 {
-  background-color: #f6f8fa;
-}
-
-:root.github-light .bg-zinc-800 {
-  background-color: #eaeef2;
-}
-
-:root.github-light .bg-zinc-800\/50 {
-  background-color: rgba(234, 238, 242, 0.5);
-}
-
-:root.github-light .hover\:bg-zinc-800:hover {
-  background-color: #eaeef2;
-}
-
-:root.github-light .hover\:bg-zinc-700:hover {
-  background-color: #d8dee4;
-}
-
-:root.github-light .hover\:bg-zinc-800\/50:hover {
-  background-color: rgba(234, 238, 242, 0.5);
-}
-
-:root.github-light .border-zinc-800 {
-  border-color: #d0d7de;
-}
-
-:root.github-light .border-zinc-700 {
-  border-color: #afb8c1;
-}
-
-:root.github-light .text-zinc-50 {
-  color: #1f2328;
-}
-
-:root.github-light .text-zinc-200 {
-  color: #24292f;
-}
-
-:root.github-light .text-zinc-300 {
-  color: #57606a;
-}
-
-:root.github-light .text-zinc-400 {
-  color: #656d76;
-}
-
-:root.github-light .text-zinc-500 {
-  color: #6e7781;
-}
-
-:root.github-light .text-zinc-600 {
-  color: #8c959f;
-}
-
-:root.github-light .hover\:text-zinc-200:hover {
-  color: #24292f;
-}
-
-:root.github-light .hover\:text-zinc-300:hover {
-  color: #57606a;
-}
+:root.github-light .hover\:text-zinc-200:hover { color: #24292f; }
+:root.github-light .hover\:text-zinc-300:hover { color: #57606a; }
+:root.github-light .hover\:text-zinc-400:hover { color: #656d76; }

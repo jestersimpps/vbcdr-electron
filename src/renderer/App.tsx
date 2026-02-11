@@ -10,14 +10,13 @@ export function App(): React.ReactElement {
   useEffect(() => {
     const classes = Array.from(document.documentElement.classList)
     classes.forEach((cls) => {
-      if (cls.endsWith('-dark') || cls.endsWith('-light') || ['dark', 'light', 'psychedelic'].includes(cls)) {
+      if (cls.endsWith('-dark') || cls.endsWith('-light')) {
         document.documentElement.classList.remove(cls)
       }
     })
 
     const fullThemeId = `${themeName}-${variant}`
     document.documentElement.classList.add(fullThemeId)
-    document.documentElement.classList.add(variant)
 
     applyThemeToAll(fullThemeId)
   }, [themeName, variant])
