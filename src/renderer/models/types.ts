@@ -33,10 +33,17 @@ export interface NetworkEntry {
   method: string
   url: string
   status: number
+  statusText: string
   type: string
   size: number
   duration: number
   timestamp: number
+  mimeType: string
+  remoteAddress: string
+  protocol: string
+  requestHeaders: Record<string, string>
+  responseHeaders: Record<string, string>
+  postData?: string
 }
 
 export interface BrowserTab {

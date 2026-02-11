@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useBrowserStore } from '@/stores/browser-store'
 import { useProjectStore } from '@/stores/project-store'
-import { Trash2 } from 'lucide-react'
+import { Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { NetworkEntry } from '@/models/types'
 
@@ -18,9 +19,93 @@ function statusColor(status: number): string {
   return 'text-zinc-400'
 }
 
+function HeadersTable({ headers }: { headers: Record<string, string> }): React.ReactElement {
+  const entries = Object.entries(headers)
+  if (entries.length === 0) return <span className="text-zinc-600">None</span>
+  return (
+    <div className="grid grid-cols-[minmax(120px,auto)_1fr] gap-x-3 gap-y-0.5">
+      {entries.map(([key, value]) => (
+        <div key={key} className="contents">
+          <span className="text-zinc-400 select-text">{key}</span>
+          <span className="text-zinc-300 break-all select-text">{value}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function NetworkDetail({ entry }: { entry: NetworkEntry }): React.ReactElement {
+  const [activeTab, setActiveTab] = useState<'general' | 'request' | 'response'>('general')
+
+  const tabs: { key: typeof activeTab; label: string }[] = [
+    { key: 'general', label: 'General' },
+    { key: 'request', label: 'Request Headers' },
+    { key: 'response', label: 'Response Headers' }
+  ]
+
+  return (
+    <div className="border-b border-zinc-800 bg-zinc-950">
+      <div className="flex gap-0 border-b border-zinc-800">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              'px-3 py-1 text-xs',
+              activeTab === tab.key
+                ? 'text-zinc-200 border-b-2 border-zinc-400'
+                : 'text-zinc-500 hover:text-zinc-400'
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="p-3 text-xs max-h-64 overflow-y-auto">
+        {activeTab === 'general' && (
+          <div className="grid grid-cols-[minmax(120px,auto)_1fr] gap-x-3 gap-y-1">
+            <span className="text-zinc-500">Request URL</span>
+            <span className="text-zinc-300 break-all select-text">{entry.url}</span>
+            <span className="text-zinc-500">Request Method</span>
+            <span className="text-zinc-300 select-text">{entry.method}</span>
+            <span className="text-zinc-500">Status Code</span>
+            <span className={cn(statusColor(entry.status), 'select-text')}>
+              {entry.status} {entry.statusText}
+            </span>
+            <span className="text-zinc-500">Type</span>
+            <span className="text-zinc-300 select-text">{entry.type}</span>
+            <span className="text-zinc-500">MIME Type</span>
+            <span className="text-zinc-300 select-text">{entry.mimeType || '-'}</span>
+            <span className="text-zinc-500">Protocol</span>
+            <span className="text-zinc-300 select-text">{entry.protocol || '-'}</span>
+            <span className="text-zinc-500">Remote Address</span>
+            <span className="text-zinc-300 select-text">{entry.remoteAddress || '-'}</span>
+            <span className="text-zinc-500">Size</span>
+            <span className="text-zinc-300 select-text">{formatSize(entry.size)}</span>
+            <span className="text-zinc-500">Duration</span>
+            <span className="text-zinc-300 select-text">{entry.duration.toFixed(0)}ms</span>
+            {entry.postData && (
+              <>
+                <span className="text-zinc-500">Request Body</span>
+                <pre className="text-zinc-300 whitespace-pre-wrap break-all select-text font-mono">
+                  {entry.postData}
+                </pre>
+              </>
+            )}
+          </div>
+        )}
+        {activeTab === 'request' && <HeadersTable headers={entry.requestHeaders} />}
+        {activeTab === 'response' && <HeadersTable headers={entry.responseHeaders} />}
+      </div>
+    </div>
+  )
+}
+
 const EMPTY: NetworkEntry[] = []
 
 export function NetworkPanel(): React.ReactElement {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeTabId = useBrowserStore((s) =>
     activeProjectId ? s.activeTabPerProject[activeProjectId] : null
@@ -38,7 +123,10 @@ export function NetworkPanel(): React.ReactElement {
       <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-1">
         <span className="text-xs font-medium text-zinc-500">Network</span>
         <button
-          onClick={() => activeTabId && clearNetwork(activeTabId)}
+          onClick={() => {
+            activeTabId && clearNetwork(activeTabId)
+            setExpandedId(null)
+          }}
           className="rounded p-1 text-zinc-600 hover:text-zinc-400"
           title="Clear"
         >
@@ -46,10 +134,12 @@ export function NetworkPanel(): React.ReactElement {
         </button>
       </div>
 
-      <div className="grid grid-cols-[60px_60px_1fr_60px_60px] gap-x-2 border-b border-zinc-800 px-3 py-1 text-xs font-medium text-zinc-500">
+      <div className="grid grid-cols-[16px_60px_60px_1fr_70px_60px_60px] gap-x-2 border-b border-zinc-800 px-3 py-1 text-xs font-medium text-zinc-500">
+        <span />
         <span>Method</span>
         <span>Status</span>
         <span>URL</span>
+        <span>Type</span>
         <span>Size</span>
         <span>Time</span>
       </div>
@@ -58,20 +148,33 @@ export function NetworkPanel(): React.ReactElement {
         {networkEntries.length === 0 ? (
           <div className="p-3 text-zinc-600">No network requests</div>
         ) : (
-          networkEntries.map((entry) => (
-            <div
-              key={entry.id}
-              className="grid grid-cols-[60px_60px_1fr_60px_60px] gap-x-2 border-b border-zinc-900 px-3 py-1"
-            >
-              <span className="text-zinc-400">{entry.method}</span>
-              <span className={cn(statusColor(entry.status))}>{entry.status}</span>
-              <span className="truncate text-zinc-300" title={entry.url}>
-                {entry.url}
-              </span>
-              <span className="text-zinc-500">{formatSize(entry.size)}</span>
-              <span className="text-zinc-500">{entry.duration.toFixed(0)}ms</span>
-            </div>
-          ))
+          networkEntries.map((entry) => {
+            const isExpanded = expandedId === entry.id
+            return (
+              <div key={entry.id}>
+                <div
+                  onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                  className={cn(
+                    'grid grid-cols-[16px_60px_60px_1fr_70px_60px_60px] gap-x-2 border-b border-zinc-900 px-3 py-1 cursor-pointer hover:bg-zinc-800/50',
+                    isExpanded && 'bg-zinc-800/50'
+                  )}
+                >
+                  <span className="text-zinc-600 flex items-center">
+                    {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                  </span>
+                  <span className="text-zinc-400">{entry.method}</span>
+                  <span className={cn(statusColor(entry.status))}>{entry.status}</span>
+                  <span className="truncate text-zinc-300" title={entry.url}>
+                    {entry.url}
+                  </span>
+                  <span className="truncate text-zinc-500">{entry.type}</span>
+                  <span className="text-zinc-500">{formatSize(entry.size)}</span>
+                  <span className="text-zinc-500">{entry.duration.toFixed(0)}ms</span>
+                </div>
+                {isExpanded && <NetworkDetail entry={entry} />}
+              </div>
+            )
+          })
         )}
       </div>
     </div>
