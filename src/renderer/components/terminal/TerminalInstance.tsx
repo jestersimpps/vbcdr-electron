@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Terminal, type ITheme } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
@@ -112,55 +112,6 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
   const [isDragOver, setIsDragOver] = useState(false)
   const dragCounter = useRef(0)
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    e.dataTransfer.dropEffect = 'copy'
-  }, [])
-
-  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    dragCounter.current++
-    if (e.dataTransfer.types.includes('Files')) {
-      setIsDragOver(true)
-    }
-  }, [])
-
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    dragCounter.current--
-    if (dragCounter.current === 0) {
-      setIsDragOver(false)
-    }
-  }, [])
-
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    dragCounter.current = 0
-    setIsDragOver(false)
-
-    const files = e.dataTransfer.files
-    if (files.length === 0) return
-
-    const paths: string[] = []
-    for (let i = 0; i < files.length; i++) {
-      const filePath = (files[i] as File & { path: string }).path
-      if (filePath) {
-        paths.push(shellEscape(filePath))
-      }
-    }
-
-    if (paths.length > 0) {
-      const entry = terminalsMap.get(tabId)
-      if (entry) {
-        entry.terminal.paste(paths.join(' '))
-      }
-    }
-  }, [tabId])
-
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -247,19 +198,70 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
     })
     observer.observe(el)
 
+    const onDragOver = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+    }
+    const onDragEnter = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      dragCounter.current++
+      if (e.dataTransfer?.types.includes('Files')) {
+        setIsDragOver(true)
+      }
+    }
+    const onDragLeave = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      dragCounter.current--
+      if (dragCounter.current === 0) {
+        setIsDragOver(false)
+      }
+    }
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      dragCounter.current = 0
+      setIsDragOver(false)
+
+      const files = e.dataTransfer?.files
+      if (!files || files.length === 0) return
+
+      const paths: string[] = []
+      for (let i = 0; i < files.length; i++) {
+        const filePath = (files[i] as File & { path: string }).path
+        if (filePath) {
+          paths.push(shellEscape(filePath))
+        }
+      }
+
+      if (paths.length > 0) {
+        const mapEntry = terminalsMap.get(tabId)
+        if (mapEntry) {
+          mapEntry.terminal.paste(paths.join(' '))
+        }
+      }
+    }
+
+    el.addEventListener('dragover', onDragOver)
+    el.addEventListener('dragenter', onDragEnter)
+    el.addEventListener('dragleave', onDragLeave)
+    el.addEventListener('drop', onDrop)
+
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
       observer.disconnect()
+      el.removeEventListener('dragover', onDragOver)
+      el.removeEventListener('dragenter', onDragEnter)
+      el.removeEventListener('dragleave', onDragLeave)
+      el.removeEventListener('drop', onDrop)
     }
   }, [tabId, projectId, cwd, initialCommand])
 
   return (
     <div
       ref={containerRef}
-      onDragOver={handleDragOver}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
       style={{
         width: '100%',
         height: '100%',

@@ -110,7 +110,14 @@ export function BrowserPanel(): React.ReactElement {
     (tabId: string, webview: Electron.WebviewTag) => {
       webviewRefs.current.set(tabId, webview)
 
+      const fixShadowIframe = (): void => {
+        const iframe = webview.shadowRoot?.querySelector('iframe')
+        if (iframe) iframe.style.height = '100%'
+      }
+      fixShadowIframe()
+
       const onDomReady = (): void => {
+        fixShadowIframe()
         const wcId = webview.getWebContentsId()
         if (!attachedTabs.current.has(tabId)) {
           attachedTabs.current.add(tabId)
