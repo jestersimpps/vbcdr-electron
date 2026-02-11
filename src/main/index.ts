@@ -74,9 +74,9 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
   const isMac = process.platform === 'darwin'
 
   const appMenu: Electron.MenuItemConstructorOptions = {
-    label: 'VibeCoder',
+    label: 'vbcdr',
     submenu: [
-      { role: 'about', label: 'About VibeCoder' },
+      { role: 'about', label: 'About vbcdr' },
       { type: 'separator' },
       {
         label: 'Settings...',
@@ -84,11 +84,11 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
         click: () => mainWindow?.webContents.send('menu:action', 'settings')
       },
       { type: 'separator' },
-      { role: 'hide', label: 'Hide VibeCoder' },
+      { role: 'hide', label: 'Hide vbcdr' },
       { role: 'hideOthers' },
       { role: 'unhide' },
       { type: 'separator' },
-      { role: 'quit', label: 'Quit VibeCoder' }
+      { role: 'quit', label: 'Quit vbcdr' }
     ]
   }
 

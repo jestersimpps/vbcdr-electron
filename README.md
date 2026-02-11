@@ -1,4 +1,4 @@
-# VibeCoder
+# vbcdr
 
 **An AIDE for developers who vibe**
 
@@ -9,7 +9,7 @@ A desktop environment built around terminal AI agents, not traditional code edit
 AIDE stands for AI-Integrated Development Environment
 
 Traditional IDEs put the code editor front and center
-VibeCoder flips that — terminals and browser previews take the main stage, because in a vibe coding workflow the AI writes the code and you steer, review, and test
+vbcdr flips that — terminals and browser previews take the main stage, because in a vibe coding workflow the AI writes the code and you steer, review, and test
 
 The editor is still there when you need to peek at something, but it's intentionally secondary
 
@@ -27,6 +27,7 @@ The editor is still there when you need to peek at something, but it's intention
 - **11 themes with dark/light variants** — GitHub, Dracula, Catppuccin, Nord, Monokai, Gruvbox, Tokyo Night, One Dark Pro, Material, Pastel, Psychedelic — with a built-in theme picker
 - **Device emulation** — preview your app in mobile and tablet viewports directly in the browser panel
 - **Network inspector** — expandable request details with headers, type, and accurate response sizes
+- **Send to Claude** — one-click send console errors/warnings and network failures straight to the active Claude terminal for instant debugging
 - **File drag-and-drop** — drag files into terminals for quick context; images are auto-attached to Claude via clipboard
 - **Shift+Enter newlines** — insert newlines in Claude Code input without submitting
 - **Terminal search** — search highlights, clear/restart buttons, scroll-to-bottom, and tooltips on all controls
@@ -48,8 +49,6 @@ npm run dev
 ## Still on the roadmap
 
 - One-button collapse for dev terminal and console to maximize browser preview
-- Console errors with "send to Claude" button
-- Network call details with "send to Claude"
 - Click files and folders in the project tree to send to Claude for easy context input
 - Give Claude access to the webview browser so it can manipulate and test the preview
 - Many more ideas
