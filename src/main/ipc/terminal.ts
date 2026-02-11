@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, nativeImage, clipboard } from 'electron'
 import { createPty, writePty, resizePty, killPty } from '@main/services/pty-manager'
 
 export function registerTerminalHandlers(): void {
@@ -20,5 +20,13 @@ export function registerTerminalHandlers(): void {
 
   ipcMain.handle('terminal:kill', (_event, tabId: string): void => {
     killPty(tabId)
+  })
+
+  ipcMain.handle('terminal:paste-image', (_event, tabId: string, filePath: string): void => {
+    const image = nativeImage.createFromPath(filePath)
+    if (!image.isEmpty()) {
+      clipboard.writeImage(image)
+      writePty(tabId, '\x16')
+    }
   })
 }

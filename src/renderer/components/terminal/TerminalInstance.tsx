@@ -31,6 +31,8 @@ function shellEscape(path: string): string {
   return path
 }
 
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'])
+
 export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: TerminalInstanceProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -75,6 +77,14 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
       entry = { terminal, fitAddon, searchAddon }
       terminalsMap.set(tabId, entry)
+
+      terminal.attachCustomKeyEventHandler((e) => {
+        if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
+          window.api.terminal.write(tabId, '\n')
+          return false
+        }
+        return true
+      })
 
       terminal.onData((data) => {
         window.api.terminal.write(tabId, data)
@@ -152,19 +162,26 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       const files = e.dataTransfer?.files
       if (!files || files.length === 0) return
 
-      const paths: string[] = []
+      const imagePaths: string[] = []
+      const otherPaths: string[] = []
+
       for (let i = 0; i < files.length; i++) {
-        const filePath = (files[i] as File & { path: string }).path
-        if (filePath) {
-          paths.push(shellEscape(filePath))
+        const filePath = window.api.getPathForFile(files[i])
+        if (!filePath) continue
+        const ext = filePath.slice(filePath.lastIndexOf('.')).toLowerCase()
+        if (IMAGE_EXTENSIONS.has(ext)) {
+          imagePaths.push(filePath)
+        } else {
+          otherPaths.push(shellEscape(filePath))
         }
       }
 
-      if (paths.length > 0) {
-        const mapEntry = terminalsMap.get(tabId)
-        if (mapEntry) {
-          mapEntry.terminal.paste(paths.join(' '))
-        }
+      for (const imgPath of imagePaths) {
+        window.api.terminal.pasteImage(tabId, imgPath)
+      }
+
+      if (otherPaths.length > 0) {
+        terminalsMap.get(tabId)?.terminal.paste(otherPaths.join(' '))
       }
     }
 

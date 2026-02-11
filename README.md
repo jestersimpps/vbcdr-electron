@@ -27,7 +27,8 @@ The editor is still there when you need to peek at something, but it's intention
 - **11 themes with dark/light variants** — GitHub, Dracula, Catppuccin, Nord, Monokai, Gruvbox, Tokyo Night, One Dark Pro, Material, Pastel, Psychedelic — with a built-in theme picker
 - **Device emulation** — preview your app in mobile and tablet viewports directly in the browser panel
 - **Network inspector** — expandable request details with headers, type, and accurate response sizes
-- **File drag-and-drop** — drag files from your system into terminals for quick context
+- **File drag-and-drop** — drag files into terminals for quick context; images are auto-attached to Claude via clipboard
+- **Shift+Enter newlines** — insert newlines in Claude Code input without submitting
 - **Terminal search** — search highlights, clear/restart buttons, scroll-to-bottom, and tooltips on all controls
 
 ## Tech Stack

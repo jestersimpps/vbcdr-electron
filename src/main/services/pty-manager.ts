@@ -33,6 +33,7 @@ function defaultShell(): string {
 function shellEnv(): Record<string, string> {
   const env = { ...process.env } as Record<string, string>
   env.TERM = 'xterm-256color'
+  env.TERM_PROGRAM = 'vibecoder'
   if (!env.PATH || !env.PATH.includes('/usr/local/bin')) {
     try {
       const loginPath = execSync('/bin/bash -ilc "echo $PATH"', { encoding: 'utf-8' }).trim()

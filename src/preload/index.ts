@@ -1,6 +1,8 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 const api = {
+  getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+
   projects: {
     list: () => ipcRenderer.invoke('projects:list'),
     add: () => ipcRenderer.invoke('projects:add'),
@@ -33,6 +35,8 @@ const api = {
     resize: (tabId: string, cols: number, rows: number) =>
       ipcRenderer.invoke('terminal:resize', tabId, cols, rows),
     kill: (tabId: string) => ipcRenderer.invoke('terminal:kill', tabId),
+    pasteImage: (tabId: string, filePath: string) =>
+      ipcRenderer.invoke('terminal:paste-image', tabId, filePath),
     onData: (callback: (tabId: string, data: string) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, tabId: string, data: string) =>
         callback(tabId, data)
