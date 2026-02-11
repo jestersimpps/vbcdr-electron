@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { AppLayout } from '@/components/layout/AppLayout'
+import { AppLayoutGrid } from '@/components/layout/AppLayoutGrid'
 import { useThemeStore } from '@/stores/theme-store'
 
 export function App(): React.ReactElement {
@@ -10,5 +10,5 @@ export function App(): React.ReactElement {
     document.documentElement.classList.add(theme)
   }, [theme])
 
-  return <AppLayout />
+  return <AppLayoutGrid />
 }

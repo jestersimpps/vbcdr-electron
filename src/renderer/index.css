@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "@xterm/xterm/css/xterm.css";
+@import "react-grid-layout/css/styles.css";
+@import "react-resizable/css/styles.css";
 
 body {
   margin: 0;
@@ -145,4 +147,76 @@ body {
 
 :root.light .border-zinc-700 {
   border-color: #d4d4d8;
+}
+
+.react-grid-item {
+  transition: all 150ms ease;
+  transition-property: left, top, width, height;
+}
+
+.react-grid-item > div {
+  height: 100%;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: rgba(96, 165, 250, 0.08);
+  border-radius: 6px;
+  border: 2px dashed rgba(96, 165, 250, 0.3);
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 100;
+  opacity: 0.85;
+}
+
+.react-grid-item.resizing {
+  transition: none;
+  z-index: 100;
+}
+
+.react-grid-item.resizing webview,
+.react-grid-item.resizing iframe,
+.react-grid-item.react-draggable-dragging webview,
+.react-grid-item.react-draggable-dragging iframe {
+  pointer-events: none;
+}
+
+.react-grid-item > .react-resizable-handle {
+  z-index: 50;
+}
+
+.react-grid-item > .react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+.react-grid-item > .react-resizable-handle-s {
+  bottom: 0;
+  left: 0;
+  width: 100% !important;
+  height: 8px !important;
+  cursor: s-resize;
+}
+
+.react-grid-item > .react-resizable-handle-e {
+  right: 0;
+  top: 0;
+  width: 8px !important;
+  height: 100% !important;
+  cursor: e-resize;
+}
+
+.react-grid-item > .react-resizable-handle-s::after,
+.react-grid-item > .react-resizable-handle-e::after {
+  display: none !important;
+}
+
+.react-grid-item > .react-resizable-handle-se::after {
+  border-color: #52525b !important;
+}
+
+.react-grid-item.static > .react-resizable-handle {
+  display: none;
 }
