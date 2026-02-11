@@ -24,8 +24,8 @@ export const defaultLayout: Layout[] = [
   { i: 'browser-editor', x: 0, y: 0, w: 4, h: 12, minW: 3, minH: 3 },
   { i: 'dev-tools', x: 4, y: 0, w: 4, h: 7, minW: 3, minH: 2 },
   { i: 'dev-terminals', x: 4, y: 7, w: 4, h: 5, minW: 3, minH: 2 },
-  { i: 'git', x: 8, y: 0, w: 4, h: 9, minW: 3, minH: 3 },
-  { i: 'claude-terminals', x: 8, y: 9, w: 4, h: 3, minW: 3, minH: 2 }
+  { i: 'git', x: 8, y: 0, w: 4, h: 5, minW: 3, minH: 3 },
+  { i: 'claude-terminals', x: 8, y: 5, w: 4, h: 7, minW: 3, minH: 2 }
 ]
 
 interface LayoutState {
