@@ -402,8 +402,25 @@ function WebviewTab({ tabId, url, projectId, isActive, deviceMode, onSetup }: We
   useEffect(() => {
     const webview = webviewRef.current
     if (!webview) return
-    return onSetup(tabId, webview)
-  }, [tabId])
+    const cleanup = onSetup(tabId, webview)
+
+    const statusBar = deviceMode === 'mobile' ? FRAME.mobile.statusBar : 0
+    if (statusBar > 0) {
+      const pushIframe = (): void => {
+        const iframe = webview.shadowRoot?.querySelector('iframe')
+        if (!iframe) return
+        iframe.style.marginTop = `${statusBar}px`
+        iframe.style.height = `calc(100% - ${statusBar}px)`
+      }
+      pushIframe()
+      webview.addEventListener('dom-ready', pushIframe)
+      return () => {
+        cleanup?.()
+        webview.removeEventListener('dom-ready', pushIframe)
+      }
+    }
+    return cleanup
+  }, [tabId, deviceMode])
 
   const dims = DEVICE_DIMENSIONS[deviceMode]
   const frame = deviceMode !== 'desktop' ? FRAME[deviceMode] : null
