@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
-import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, focusTerminal } from './TerminalInstance'
-import { Plus, X, ChevronUp, ChevronDown } from 'lucide-react'
+import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, focusTerminal, getTerminalInstance } from './TerminalInstance'
+import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function TerminalPanel(): React.ReactElement {
@@ -19,7 +19,6 @@ export function TerminalPanel(): React.ReactElement {
 
   const theme = useThemeStore((s) => s.theme)
 
-  const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
@@ -27,27 +26,27 @@ export function TerminalPanel(): React.ReactElement {
   const activeTabId = activeProjectId ? (activeTabPerProject[activeProjectId] || null) : null
   const activeTab = projectTabs.find((t) => t.id === activeTabId)
 
-  const closeSearch = useCallback(() => {
-    setSearchOpen(false)
-    setSearchQuery('')
-  }, [])
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         const el = (e.target as HTMLElement)?.closest?.('[data-terminal-panel]')
         if (!el) return
         e.preventDefault()
-        setSearchOpen(true)
-        setTimeout(() => searchInputRef.current?.focus(), 0)
-      }
-      if (e.key === 'Escape' && searchOpen) {
-        closeSearch()
+        searchInputRef.current?.focus()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [searchOpen, closeSearch])
+  }, [])
+
+  const scrollToBottom = useCallback(() => {
+    if (!activeTabId) return
+    const entry = getTerminalInstance(activeTabId)
+    if (entry) {
+      entry.terminal.scrollToBottom()
+      entry.terminal.focus()
+    }
+  }, [activeTabId])
 
   useEffect(() => {
     applyThemeToAll(theme)
@@ -121,49 +120,53 @@ export function TerminalPanel(): React.ReactElement {
         </button>
       </div>
 
-      {searchOpen && (
-        <div className="flex items-center gap-1 border-b border-zinc-800 bg-zinc-900/80 px-2 py-1">
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value)
-              if (activeTabId && e.target.value) {
-                searchTerminal(activeTabId, e.target.value)
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && activeTabId && searchQuery) {
-                searchTerminal(activeTabId, searchQuery, e.shiftKey ? 'previous' : 'next')
-              }
-              if (e.key === 'Escape') {
-                closeSearch()
-              }
-            }}
-            placeholder="Search..."
-            className="h-6 flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 text-xs text-zinc-200 outline-none focus:border-zinc-500"
-          />
-          <button
-            onClick={() => activeTabId && searchQuery && searchTerminal(activeTabId, searchQuery, 'previous')}
-            className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
-          >
-            <ChevronUp size={14} />
-          </button>
-          <button
-            onClick={() => activeTabId && searchQuery && searchTerminal(activeTabId, searchQuery, 'next')}
-            className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
-          >
-            <ChevronDown size={14} />
-          </button>
-          <button
-            onClick={closeSearch}
-            className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
+      <div className="flex items-center gap-1 border-b border-zinc-800 bg-zinc-900/80 px-2 py-1">
+        <input
+          ref={searchInputRef}
+          type="text"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value)
+            if (activeTabId && e.target.value) {
+              searchTerminal(activeTabId, e.target.value)
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && activeTabId && searchQuery) {
+              searchTerminal(activeTabId, searchQuery, e.shiftKey ? 'previous' : 'next')
+            }
+            if (e.key === 'Escape') {
+              setSearchQuery('')
+              if (activeTabId) focusTerminal(activeTabId)
+            }
+          }}
+          placeholder="Search..."
+          className="h-6 flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 text-xs text-zinc-200 outline-none focus:border-zinc-500"
+        />
+        <button
+          onClick={() => activeTabId && searchQuery && searchTerminal(activeTabId, searchQuery, 'previous')}
+          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+          title="Previous match"
+        >
+          <ChevronUp size={14} />
+        </button>
+        <button
+          onClick={() => activeTabId && searchQuery && searchTerminal(activeTabId, searchQuery, 'next')}
+          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+          title="Next match"
+        >
+          <ChevronDown size={14} />
+        </button>
+        <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
+        <button
+          onClick={scrollToBottom}
+          disabled={!activeTabId}
+          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          title="Scroll to bottom"
+        >
+          <ArrowDownToLine size={14} />
+        </button>
+      </div>
 
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         {projectTabs.length === 0 && (
