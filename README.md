@@ -41,3 +41,13 @@ The editor is still there when you need to peek at something, but it's intention
 npm install
 npm run dev
 ```
+
+## Still on the roadmap
+
+- Drag and drop files into Claude terminals (yes there's multiple per project)
+- One-button collapse for dev terminal and console to maximize browser preview
+- Console errors with "send to Claude" button
+- Detailed network call inspection with "send to Claude"
+- Click files and folders in the project tree to send to Claude for easy context input
+- Give Claude access to the webview browser so it can manipulate and test the preview
+- Many more ideas
