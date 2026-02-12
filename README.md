@@ -1,4 +1,4 @@
-# vbcdr
+# vbcdr — the first AIDE
 
 **An AIDE for developers who vibe**
 
