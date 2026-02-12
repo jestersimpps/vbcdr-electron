@@ -118,8 +118,25 @@ function NetworkDetail({ entry }: { entry: NetworkEntry }): React.ReactElement {
 
 const EMPTY: NetworkEntry[] = []
 
+const TYPE_FILTERS = ['All', 'XHR', 'Fetch', 'Doc', 'JS', 'CSS', 'Img', 'Font', 'Media', 'WS', 'Other'] as const
+type TypeFilter = (typeof TYPE_FILTERS)[number]
+
+const TYPE_FILTER_MAP: Record<Exclude<TypeFilter, 'All'>, (e: NetworkEntry) => boolean> = {
+  XHR: (e) => e.type === 'XHR',
+  Fetch: (e) => e.type === 'Fetch',
+  Doc: (e) => e.type === 'Document',
+  JS: (e) => e.type === 'Script',
+  CSS: (e) => e.type === 'Stylesheet',
+  Img: (e) => e.type === 'Image',
+  Font: (e) => e.type === 'Font',
+  Media: (e) => e.type === 'Media',
+  WS: (e) => e.type === 'WebSocket',
+  Other: (e) => !['XHR', 'Fetch', 'Document', 'Script', 'Stylesheet', 'Image', 'Font', 'Media', 'WebSocket'].includes(e.type)
+}
+
 export function NetworkPanel(): React.ReactElement {
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [activeFilter, setActiveFilter] = useState<TypeFilter>('All')
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeTabId = useBrowserStore((s) =>
     activeProjectId ? s.activeTabPerProject[activeProjectId] : null
@@ -135,16 +152,35 @@ export function NetworkPanel(): React.ReactElement {
   })
   const { clearNetwork } = useBrowserStore()
 
+  const filteredEntries = activeFilter === 'All'
+    ? networkEntries
+    : networkEntries.filter(TYPE_FILTER_MAP[activeFilter])
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-1">
-        <span className="text-xs font-medium text-zinc-500">Network</span>
+      <div className="flex items-center gap-2 border-b border-zinc-800 px-3 py-1">
+        <div className="flex items-center gap-1 flex-1 overflow-x-auto">
+          {TYPE_FILTERS.map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={cn(
+                'px-1.5 py-0.5 text-[10px] rounded whitespace-nowrap',
+                activeFilter === filter
+                  ? 'bg-zinc-700 text-zinc-200'
+                  : 'text-zinc-500 hover:text-zinc-400 hover:bg-zinc-800'
+              )}
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
         <button
           onClick={() => {
             activeTabId && clearNetwork(activeTabId)
             setExpandedId(null)
           }}
-          className="rounded p-1 text-zinc-600 hover:text-zinc-400"
+          className="rounded p-1 text-zinc-600 hover:text-zinc-400 shrink-0"
           title="Clear"
         >
           <Trash2 size={12} />
@@ -163,10 +199,12 @@ export function NetworkPanel(): React.ReactElement {
       </div>
 
       <div className="flex-1 overflow-y-auto font-mono text-xs">
-        {networkEntries.length === 0 ? (
-          <div className="p-3 text-zinc-600">No network requests</div>
+        {filteredEntries.length === 0 ? (
+          <div className="p-3 text-zinc-600">
+            {networkEntries.length === 0 ? 'No network requests' : 'No matching requests'}
+          </div>
         ) : (
-          networkEntries.map((entry) => {
+          filteredEntries.map((entry) => {
             const isExpanded = expandedId === entry.id
             return (
               <div key={entry.id}>

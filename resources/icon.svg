@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <filter id="neon-cyan" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 0.95  0 0 0 0 0.95  0 0 0 1 0" result="cyan"/>
+      <feMerge><feMergeNode in="cyan"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="neon-purple" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.6  0 0 0 0 0.2  0 0 0 0 1  0 0 0 1 0" result="purp"/>
+      <feMerge><feMergeNode in="purp"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="neon-green" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 1  0 0 0 0 0.4  0 0 0 0.8 0" result="grn"/>
+      <feMerge><feMergeNode in="grn"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="outer-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 0.9  0 0 0 0 0.9  0 0 0 0.4 0"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="108" fill="#08090D"/>
+
+  <g filter="url(#outer-glow)">
+    <rect x="56" y="72" width="400" height="368" rx="16" stroke="#00F0F0" stroke-width="1.5" fill="none"/>
+  </g>
+  <rect x="56" y="72" width="400" height="368" rx="16" fill="#0A0E17" stroke="#00F0F0" stroke-width="1" opacity="0.7"/>
+
+  <line x1="56" y1="108" x2="456" y2="108" stroke="#00F0F0" stroke-width="0.5" opacity="0.3"/>
+  <circle cx="82" cy="90" r="5" fill="none" stroke="#FF5F57" stroke-width="1.5" opacity="0.8"/>
+  <circle cx="100" cy="90" r="5" fill="none" stroke="#FEBC2E" stroke-width="1.5" opacity="0.8"/>
+  <circle cx="118" cy="90" r="5" fill="none" stroke="#28C840" stroke-width="1.5" opacity="0.8"/>
+
+  <g filter="url(#neon-cyan)">
+    <polyline points="100,170 136,200 100,230" fill="none" stroke="#00F0F0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g filter="url(#neon-green)">
+    <line x1="156" y1="200" x2="220" y2="200" stroke="#00FF66" stroke-width="3" stroke-linecap="round"/>
+  </g>
+
+  <g filter="url(#neon-purple)">
+    <polyline points="100,280 136,310 100,340" fill="none" stroke="#A855F7" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g filter="url(#neon-cyan)" opacity="0.7">
+    <line x1="156" y1="310" x2="280" y2="310" stroke="#00F0F0" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+
+  <g filter="url(#neon-cyan)">
+    <rect x="296" y="304" width="12" height="20" rx="1" fill="#00F0F0" opacity="0.9"/>
+  </g>
+
+  <g filter="url(#neon-purple)" opacity="0.4">
+    <text x="280" y="178" font-family="monospace" font-size="14" fill="#A855F7" letter-spacing="2">vbcdr v1.0</text>
+  </g>
+
+  <g opacity="0.15">
+    <line x1="56" y1="140" x2="456" y2="140" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="56" y1="172" x2="456" y2="172" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="56" y1="204" x2="456" y2="204" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="56" y1="236" x2="456" y2="236" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="56" y1="268" x2="456" y2="268" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="56" y1="300" x2="456" y2="300" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="56" y1="332" x2="456" y2="332" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="56" y1="364" x2="456" y2="364" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="56" y1="396" x2="456" y2="396" stroke="#00F0F0" stroke-width="0.5"/>
+  </g>
+
+  <g opacity="0.08">
+    <line x1="120" y1="72" x2="120" y2="440" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="184" y1="72" x2="184" y2="440" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="248" y1="72" x2="248" y2="440" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="312" y1="72" x2="312" y2="440" stroke="#00F0F0" stroke-width="0.5"/>
+    <line x1="376" y1="72" x2="376" y2="440" stroke="#00F0F0" stroke-width="0.5"/>
+  </g>
+
+  <g opacity="0.25">
+    <line x1="320" y1="150" x2="420" y2="150" stroke="#00FF66" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 6"/>
+    <line x1="320" y1="170" x2="390" y2="170" stroke="#A855F7" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 6"/>
+    <line x1="320" y1="190" x2="410" y2="190" stroke="#00F0F0" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 6"/>
+    <line x1="320" y1="210" x2="370" y2="210" stroke="#00FF66" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 6"/>
+    <line x1="320" y1="230" x2="430" y2="230" stroke="#A855F7" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 6"/>
+    <line x1="320" y1="250" x2="400" y2="250" stroke="#00F0F0" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 6"/>
+  </g>
+</svg>

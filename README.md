@@ -51,6 +51,7 @@ npm run dev
 ## Still on the roadmap
 
 - **Visual skills manager** — browse, enable/disable, and configure LLM coding agent skills and slash commands from a dedicated UI panel instead of managing config files manually
+- **Browser experience overhaul** — the integrated browser is still very basic and needs a significant upgrade (navigation, tabs, devtools, general polish)
 - **Password & browser favorites overhaul** — the current password storage and browser favorites system needs a redesign for better UX and reliability
 - Click files and folders in the project tree to send to the LLM for easy context input
 - Give the LLM access to the webview browser so it can manipulate and test the preview
