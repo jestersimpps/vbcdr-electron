@@ -33,7 +33,7 @@
       "target": [
         "dmg"
       ],
-      "notarize": false
+      "notarize": true
     },
     "linux": {
       "target": [
