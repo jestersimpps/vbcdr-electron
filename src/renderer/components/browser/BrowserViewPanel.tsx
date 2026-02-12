@@ -160,7 +160,9 @@ export function BrowserViewPanel(): React.ReactElement {
   useEffect(() => {
     const unsub = window.api.browser.onReload(() => {
       const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
-      if (wv && activeTabId && attachedTabs.current.has(activeTabId)) wv.reload()
+      if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
+        try { wv.reload() } catch {}
+      }
     })
     return unsub
   }, [activeTabId])
@@ -536,7 +538,9 @@ export function BrowserViewPanel(): React.ReactElement {
         <button
           onClick={() => {
             const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
-            if (wv && activeTabId && attachedTabs.current.has(activeTabId)) wv.goBack()
+            if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
+              try { wv.goBack() } catch {}
+            }
           }}
           disabled={!canGoBack}
           className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
@@ -547,7 +551,9 @@ export function BrowserViewPanel(): React.ReactElement {
         <button
           onClick={() => {
             const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
-            if (wv && activeTabId && attachedTabs.current.has(activeTabId)) wv.goForward()
+            if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
+              try { wv.goForward() } catch {}
+            }
           }}
           disabled={!canGoForward}
           className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
@@ -558,7 +564,9 @@ export function BrowserViewPanel(): React.ReactElement {
         <button
           onClick={() => {
             const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
-            if (wv && activeTabId && attachedTabs.current.has(activeTabId)) wv.reload()
+            if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
+              try { wv.reload() } catch {}
+            }
           }}
           disabled={!activeTabId}
           className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
@@ -571,7 +579,7 @@ export function BrowserViewPanel(): React.ReactElement {
           onClick={() => {
             const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
             if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
-              window.api.browser.openDevTools(wv.getWebContentsId())
+              try { window.api.browser.openDevTools(wv.getWebContentsId()) } catch {}
             }
           }}
           disabled={!activeTabId || !activeTab?.url}

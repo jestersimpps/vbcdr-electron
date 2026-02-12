@@ -58,7 +58,9 @@ export function BrowserPanel(): React.ReactElement {
   useEffect(() => {
     const unsub = window.api.browser.onReload(() => {
       const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
-      if (wv && activeTabId && attachedTabs.current.has(activeTabId)) wv.reload()
+      if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
+        try { wv.reload() } catch {}
+      }
     })
     return unsub
   }, [activeTabId])
@@ -277,8 +279,8 @@ export function BrowserPanel(): React.ReactElement {
             <button
               onClick={() => {
                 const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
-                if (wv) {
-                  wv.goBack()
+                if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
+                  try { wv.goBack() } catch {}
                 }
               }}
               disabled={!canGoBack}
@@ -289,8 +291,8 @@ export function BrowserPanel(): React.ReactElement {
             <button
               onClick={() => {
                 const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
-                if (wv) {
-                  wv.goForward()
+                if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
+                  try { wv.goForward() } catch {}
                 }
               }}
               disabled={!canGoForward}
@@ -302,7 +304,7 @@ export function BrowserPanel(): React.ReactElement {
               onClick={() => {
                 const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
                 if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
-                  wv.reload()
+                  try { wv.reload() } catch {}
                 }
               }}
               disabled={!activeTabId}
@@ -315,7 +317,7 @@ export function BrowserPanel(): React.ReactElement {
               onClick={() => {
                 const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
                 if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
-                  window.api.browser.openDevTools(wv.getWebContentsId())
+                  try { window.api.browser.openDevTools(wv.getWebContentsId()) } catch {}
                 }
               }}
               disabled={!activeTabId || !activeTab?.url}

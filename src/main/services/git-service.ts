@@ -1,17 +1,17 @@
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 import path from 'path'
 import type { GitCommit, GitBranch, GitFileStatus } from '@main/models/types'
 
 const SEPARATOR = '<<SEP>>'
 const FORMAT = ['%H', '%h', '%s', '%an', '%ar', '%D', '%P'].join(SEPARATOR)
 
-function runGit(cwd: string, args: string): string {
-  return execSync(`git ${args}`, { cwd, encoding: 'utf-8', timeout: 5000 }).trim()
+function runGit(cwd: string, args: string[]): string {
+  return execFileSync('git', args, { cwd, encoding: 'utf-8', timeout: 5000 }).trim()
 }
 
 export function isGitRepo(cwd: string): boolean {
   try {
-    runGit(cwd, 'rev-parse --is-inside-work-tree')
+    runGit(cwd, ['rev-parse', '--is-inside-work-tree'])
     return true
   } catch {
     return false
@@ -20,7 +20,8 @@ export function isGitRepo(cwd: string): boolean {
 
 export function getCommits(cwd: string, maxCount: number = 50): GitCommit[] {
   try {
-    const raw = runGit(cwd, `log --all --format="${FORMAT}" --max-count=${maxCount}`)
+    const safeMax = Math.max(1, Math.min(Math.floor(maxCount), 1000))
+    const raw = runGit(cwd, ['log', '--all', `--format=${FORMAT}`, `--max-count=${safeMax}`])
     if (!raw) return []
 
     return raw.split('\n').map((line) => {
@@ -36,7 +37,7 @@ export function getCommits(cwd: string, maxCount: number = 50): GitCommit[] {
 
 export function getBranches(cwd: string): GitBranch[] {
   try {
-    const raw = runGit(cwd, 'branch --no-color')
+    const raw = runGit(cwd, ['branch', '--no-color'])
     if (!raw) return []
 
     return raw.split('\n').map((line) => ({
@@ -70,7 +71,8 @@ function parseFileStatus(x: string, y: string): GitFileStatus {
 export function getFileAtHead(cwd: string, absolutePath: string): string | null {
   try {
     const relativePath = path.relative(cwd, absolutePath)
-    return runGit(cwd, `show HEAD:${relativePath}`)
+    if (relativePath.startsWith('..')) return null
+    return runGit(cwd, ['show', `HEAD:${relativePath}`])
   } catch {
     return null
   }
@@ -78,7 +80,7 @@ export function getFileAtHead(cwd: string, absolutePath: string): string | null 
 
 export function getStatus(cwd: string): Record<string, GitFileStatus> {
   try {
-    const raw = runGit(cwd, 'status --porcelain')
+    const raw = runGit(cwd, ['status', '--porcelain'])
     if (!raw) return {}
 
     const statusMap: Record<string, GitFileStatus> = {}
