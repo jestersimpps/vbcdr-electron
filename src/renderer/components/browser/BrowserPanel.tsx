@@ -58,7 +58,7 @@ export function BrowserPanel(): React.ReactElement {
   useEffect(() => {
     const unsub = window.api.browser.onReload(() => {
       const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
-      if (wv) wv.reload()
+      if (wv && activeTabId && attachedTabs.current.has(activeTabId)) wv.reload()
     })
     return unsub
   }, [activeTabId])
@@ -301,7 +301,7 @@ export function BrowserPanel(): React.ReactElement {
             <button
               onClick={() => {
                 const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
-                if (wv) {
+                if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
                   wv.reload()
                 }
               }}
@@ -314,7 +314,7 @@ export function BrowserPanel(): React.ReactElement {
             <button
               onClick={() => {
                 const wv = activeTabId ? webviewRefs.current.get(activeTabId) : null
-                if (wv) {
+                if (wv && activeTabId && attachedTabs.current.has(activeTabId)) {
                   window.api.browser.openDevTools(wv.getWebContentsId())
                 }
               }}
