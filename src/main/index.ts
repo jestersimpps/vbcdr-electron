@@ -6,6 +6,7 @@ import { registerTerminalHandlers } from '@main/ipc/terminal'
 import { registerBrowserHandlers } from '@main/ipc/browser'
 import { registerGitHandlers } from '@main/ipc/git'
 import { registerPasswordHandlers } from '@main/ipc/passwords'
+import { registerClaudeConfigHandlers } from '@main/ipc/claude-config'
 import { killAll, killOrphanedPtys } from '@main/services/pty-manager'
 import { stopWatching } from '@main/services/file-watcher'
 import { detachAllTabs } from '@main/services/browser-view'
@@ -72,6 +73,7 @@ registerTerminalHandlers()
 registerBrowserHandlers()
 registerGitHandlers()
 registerPasswordHandlers()
+registerClaudeConfigHandlers()
 
 function buildMenu(): Electron.MenuItemConstructorOptions[] {
   const isMac = process.platform === 'darwin'
@@ -142,6 +144,11 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
         label: 'Toggle Editor',
         accelerator: 'CmdOrCtrl+2',
         click: () => mainWindow?.webContents.send('menu:action', 'center-tab-editor')
+      },
+      {
+        label: 'Toggle Claude Config',
+        accelerator: 'CmdOrCtrl+3',
+        click: () => mainWindow?.webContents.send('menu:action', 'center-tab-claude')
       },
       { type: 'separator' },
       {

@@ -2,12 +2,38 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useBrowserStore } from '@/stores/browser-store'
 import { useProjectStore } from '@/stores/project-store'
 import { usePasswordStore } from '@/stores/password-store'
+import { useTerminalStore } from '@/stores/terminal-store'
+import { sendToTerminal } from '@/lib/send-to-terminal'
 import { DeviceToolbar } from './DeviceToolbar'
 import { PasswordSavePrompt } from './PasswordSavePrompt'
+import { FindBar } from './FindBar'
 import { getDetectionScript, getAutoFillScript } from '@/lib/password-injection'
-import { ArrowLeft, ArrowRight, RotateCw, Plus, X, Inspect } from 'lucide-react'
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent
+} from '@dnd-kit/core'
+import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  ArrowLeft,
+  ArrowRight,
+  RotateCw,
+  Plus,
+  X,
+  Inspect,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Star,
+  ChevronDown,
+  Send
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { ConsoleEntry, NetworkEntry, DeviceMode } from '@/models/types'
+import type { ConsoleEntry, NetworkEntry, DeviceMode, HistoryEntry, Bookmark } from '@/models/types'
 
 const DEVICE_DIMENSIONS: Record<DeviceMode, { width: number; height: number } | null> = {
   desktop: null,

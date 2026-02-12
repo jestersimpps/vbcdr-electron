@@ -52,8 +52,23 @@ export interface BrowserTab {
   projectId: string
   url: string
   deviceMode: DeviceMode
+  zoomLevel: number
   consoleEntries: ConsoleEntry[]
   networkEntries: NetworkEntry[]
+}
+
+export interface HistoryEntry {
+  url: string
+  title: string
+  visitCount: number
+  lastVisited: number
+}
+
+export interface Bookmark {
+  id: string
+  url: string
+  title: string
+  createdAt: number
 }
 
 export interface PersistedBrowserTab {
@@ -101,4 +116,12 @@ export interface PasswordPromptData {
   domain: string
   username: string
   password: string
+}
+
+export type ClaudeSection = 'global' | 'skills' | 'commands' | 'project'
+
+export interface ClaudeFileEntry {
+  name: string
+  path: string
+  section: ClaudeSection
 }

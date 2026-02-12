@@ -15,6 +15,7 @@ export function TerminalPanel(): React.ReactElement {
 
   const tabs = useTerminalStore((s) => s.tabs)
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
+  const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const { createTab, closeTab, replaceTab, setActiveTab, initProject } = useTerminalStore()
 
   const fullThemeId = useThemeStore((s) => s.getFullThemeId())
@@ -74,7 +75,7 @@ export function TerminalPanel(): React.ReactElement {
 
   const handleNewTab = (): void => {
     if (!activeProject) return
-    createTab(activeProject.id, activeProject.path)
+    createTab(activeProject.id, activeProject.path, 'claude')
   }
 
   const handleCloseTab = (tabId: string): void => {
@@ -98,6 +99,12 @@ export function TerminalPanel(): React.ReactElement {
               )}
               onClick={() => activeProjectId && setActiveTab(activeProjectId, tab.id)}
             >
+              {tab.initialCommand && tabStatuses[tab.id] === 'busy' && (
+                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+              )}
+              {tab.initialCommand && tabStatuses[tab.id] === 'idle' && (
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+              )}
               <span>{tab.title}</span>
               <button
                 onClick={(e) => {

@@ -46,6 +46,9 @@ interface BrowserStore {
   setDevToolsTab: (tab: 'console' | 'network' | 'passwords') => void
   clearConsole: (tabId: string) => void
   clearNetwork: (tabId: string) => void
+  setZoomLevel: (tabId: string, level: number) => void
+  setTitle: (tabId: string, title: string) => void
+  reorderTabs: (projectId: string, fromIndex: number, toIndex: number) => void
   loadTabsForProject: (projectId: string) => Promise<void>
 }
 
@@ -63,6 +66,7 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
       projectId,
       url: '',
       deviceMode: 'desktop',
+      zoomLevel: 0,
       consoleEntries: [],
       networkEntries: []
     }
@@ -147,6 +151,31 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
     }))
   },
 
+  setZoomLevel: (tabId: string, level: number) => {
+    set((state) => ({
+      tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, zoomLevel: level } : t))
+    }))
+  },
+
+  setTitle: (tabId: string, title: string) => {
+    set((state) => ({
+      tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, title } : t))
+    }))
+    const tab = get().tabs.find((t) => t.id === tabId)
+    if (tab) debouncedSave(tab.projectId)
+  },
+
+  reorderTabs: (projectId: string, fromIndex: number, toIndex: number) => {
+    set((state) => {
+      const projectTabs = state.tabs.filter((t) => t.projectId === projectId)
+      const otherTabs = state.tabs.filter((t) => t.projectId !== projectId)
+      const [moved] = projectTabs.splice(fromIndex, 1)
+      projectTabs.splice(toIndex, 0, moved)
+      return { tabs: [...otherTabs, ...projectTabs] }
+    })
+    debouncedSave(projectId)
+  },
+
   loadTabsForProject: async (projectId: string): Promise<void> => {
     const existing = get().tabs.filter((t) => t.projectId === projectId)
     if (existing.length > 0) return
@@ -163,6 +192,7 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
       projectId,
       url: p.url,
       deviceMode: p.deviceMode,
+      zoomLevel: 0,
       consoleEntries: [],
       networkEntries: []
     }))

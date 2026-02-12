@@ -9,9 +9,15 @@ const api = {
     remove: (id: string) => ipcRenderer.invoke('projects:remove', id)
   },
 
+  claude: {
+    scanFiles: (projectPath: string) => ipcRenderer.invoke('claude:scan-files', projectPath)
+  },
+
   fs: {
     readTree: (rootPath: string) => ipcRenderer.invoke('fs:read-tree', rootPath),
     readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
+    writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:write-file', filePath, content),
+    deleteFile: (filePath: string) => ipcRenderer.invoke('fs:delete-file', filePath),
     watch: (rootPath: string) => ipcRenderer.invoke('fs:watch', rootPath),
     unwatch: () => ipcRenderer.invoke('fs:unwatch'),
     onTreeChanged: (callback: (tree: unknown) => void) => {

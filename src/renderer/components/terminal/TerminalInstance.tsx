@@ -6,6 +6,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { useThemeStore } from '@/stores/theme-store'
+import { useTerminalStore } from '@/stores/terminal-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 
 interface TerminalInstanceProps {
@@ -105,6 +106,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         window.api.terminal.resize(tabId, cols, rows)
       })
 
+      let idleTimer: ReturnType<typeof setTimeout> | null = null
+      const isLlm = !!initialCommand
+
       const unsubData = window.api.terminal.onData((incomingTabId: string, data: string) => {
         if (incomingTabId === tabId) {
           const buf = terminal.buffer.active
@@ -112,6 +116,17 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           terminal.write(data, () => {
             if (atBottom) terminal.scrollToBottom()
           })
+
+          if (isLlm) {
+            const store = useTerminalStore.getState()
+            if (store.tabStatuses[tabId] !== 'busy') {
+              store.setTabStatus(tabId, 'busy')
+            }
+            if (idleTimer) clearTimeout(idleTimer)
+            idleTimer = setTimeout(() => {
+              useTerminalStore.getState().setTabStatus(tabId, 'idle')
+            }, 3000)
+          }
         }
       })
       terminalsMap.get(tabId)!.unsubData = unsubData

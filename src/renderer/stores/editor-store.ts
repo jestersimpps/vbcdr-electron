@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { OpenFile, GitFileStatus } from '@/models/types'
 
-type CenterTab = 'browser' | 'editor'
+type CenterTab = 'browser' | 'editor' | 'claude'
 
 interface ProjectEditorState {
   openFiles: OpenFile[]

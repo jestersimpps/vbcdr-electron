@@ -1,22 +1,10 @@
 import { useBrowserStore } from '@/stores/browser-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { getTerminalInstance } from '@/components/terminal/TerminalInstance'
+import { sendToTerminal } from '@/lib/send-to-terminal'
 import { Trash2, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ConsoleEntry } from '@/models/types'
-
-function sendToTerminal(tabId: string, text: string): void {
-  const entry = getTerminalInstance(tabId)
-  if (!entry) return
-  entry.terminal.paste(text)
-  setTimeout(() => {
-    const textarea = entry.terminal.textarea
-    if (!textarea) return
-    textarea.focus()
-    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }))
-  }, 500)
-}
 
 const levelColors: Record<string, string> = {
   log: 'text-zinc-300',

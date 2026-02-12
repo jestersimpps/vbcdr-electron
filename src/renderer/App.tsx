@@ -42,6 +42,9 @@ export function App(): React.ReactElement {
         case 'center-tab-editor':
           if (activeId) editorStore.setCenterTab(activeId, 'editor')
           break
+        case 'center-tab-claude':
+          if (activeId) editorStore.setCenterTab(activeId, 'claude')
+          break
       }
     })
   }, [])

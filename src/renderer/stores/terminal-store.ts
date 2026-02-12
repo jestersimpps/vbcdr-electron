@@ -2,19 +2,24 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import type { TerminalTab } from '@/models/types'
 
+type TabStatus = 'idle' | 'busy'
+
 interface TerminalStore {
   tabs: TerminalTab[]
   activeTabPerProject: Record<string, string>
+  tabStatuses: Record<string, TabStatus>
   createTab: (projectId: string, cwd: string, initialCommand?: string) => string
   closeTab: (tabId: string) => void
   replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => string
   setActiveTab: (projectId: string, tabId: string) => void
+  setTabStatus: (tabId: string, status: TabStatus) => void
   initProject: (projectId: string, cwd: string) => void
 }
 
 export const useTerminalStore = create<TerminalStore>((set, get) => ({
   tabs: [],
   activeTabPerProject: {},
+  tabStatuses: {},
 
   createTab: (projectId: string, cwd: string, initialCommand?: string) => {
     const tabId = uuid()
@@ -44,7 +49,10 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
         activeTabPerProject[tab.projectId] = remaining[remaining.length - 1]?.id ?? ''
       }
 
-      return { tabs, activeTabPerProject }
+      const tabStatuses = { ...state.tabStatuses }
+      delete tabStatuses[tabId]
+
+      return { tabs, activeTabPerProject, tabStatuses }
     })
   },
 
@@ -62,6 +70,12 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       activeTabPerProject: { ...state.activeTabPerProject, [projectId]: newTabId }
     }))
     return newTabId
+  },
+
+  setTabStatus: (tabId: string, status: TabStatus) => {
+    set((state) => ({
+      tabStatuses: { ...state.tabStatuses, [tabId]: status }
+    }))
   },
 
   setActiveTab: (projectId: string, tabId: string) => {

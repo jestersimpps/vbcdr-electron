@@ -1,23 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useBrowserStore } from '@/stores/browser-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { getTerminalInstance } from '@/components/terminal/TerminalInstance'
+import { sendToTerminal } from '@/lib/send-to-terminal'
 import { Trash2, ChevronDown, ChevronRight, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { NetworkEntry } from '@/models/types'
-
-function sendToTerminal(tabId: string, text: string): void {
-  const entry = getTerminalInstance(tabId)
-  if (!entry) return
-  entry.terminal.paste(text)
-  setTimeout(() => {
-    const textarea = entry.terminal.textarea
-    if (!textarea) return
-    textarea.focus()
-    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }))
-  }, 500)
-}
 
 function formatSize(bytes: number): string {
   if (bytes === 0) return '-'

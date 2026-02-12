@@ -1,3 +1,4 @@
+import fs from 'fs'
 import { ipcMain, BrowserWindow } from 'electron'
 import { readTree, readFileContents, startWatching, stopWatching } from '@main/services/file-watcher'
 import type { FileReadResult } from '@main/services/file-watcher'
@@ -19,5 +20,13 @@ export function registerFilesystemHandlers(): void {
 
   ipcMain.handle('fs:unwatch', (): void => {
     stopWatching()
+  })
+
+  ipcMain.handle('fs:write-file', (_event, filePath: string, content: string): void => {
+    fs.writeFileSync(filePath, content, 'utf-8')
+  })
+
+  ipcMain.handle('fs:delete-file', (_event, filePath: string): void => {
+    fs.unlinkSync(filePath)
   })
 }

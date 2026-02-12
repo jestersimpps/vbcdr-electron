@@ -45,6 +45,20 @@ export interface NetworkEntry {
   postData?: string
 }
 
+export interface HistoryEntry {
+  url: string
+  title: string
+  visitCount: number
+  lastVisited: number
+}
+
+export interface Bookmark {
+  id: string
+  url: string
+  title: string
+  createdAt: number
+}
+
 export interface GitCommit {
   hash: string
   shortHash: string
@@ -69,6 +83,14 @@ export interface EncryptedCredential {
   encryptedPassword: string
   createdAt: number
   updatedAt: number
+}
+
+export type ClaudeSection = 'global' | 'skills' | 'commands' | 'project'
+
+export interface ClaudeFileEntry {
+  name: string
+  path: string
+  section: ClaudeSection
 }
 
 export const DEVICE_CONFIGS: Record<DeviceMode, DeviceConfig> = {

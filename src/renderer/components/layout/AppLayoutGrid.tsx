@@ -12,9 +12,12 @@ import { FileTree } from '@/components/sidebar/FileTree'
 import { CodeEditor } from '@/components/editor/CodeEditor'
 import { useEditorStore } from '@/stores/editor-store'
 import { useProjectStore } from '@/stores/project-store'
+import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore, panelConfigs, GRID_COLS, GRID_ROWS } from '@/stores/layout-store'
 import { StatusBar } from '@/components/layout/StatusBar'
-import { Globe, Code, Plus, X, FolderOpen, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
+import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
+import { Globe, Code, Bot, Plus, X, FolderOpen, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -30,6 +33,8 @@ export function AppLayoutGrid(): React.ReactElement {
   )
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
   const { getLayout, isLocked, saveLayout, isDevToolsCollapsed, setDevToolsCollapsed } = useLayoutStore()
+  const termTabs = useTerminalStore((s) => s.tabs)
+  const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const resetVersion = useLayoutStore((s) => s.resetVersion)
   const containerRef = useRef<HTMLDivElement>(null)
   const devToolsPanelRef = useRef<ImperativePanelHandle>(null)
@@ -126,6 +131,18 @@ export function AppLayoutGrid(): React.ReactElement {
                 Editor
               </button>
               <button
+                onClick={() => activeProjectId && setCenterTab(activeProjectId, 'claude')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+                  centerTab === 'claude'
+                    ? 'border-b-2 border-zinc-400 text-zinc-200'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                )}
+              >
+                <Bot size={12} />
+                Claude
+              </button>
+              <button
                 onClick={toggleDevTools}
                 className="ml-auto flex items-center gap-1 px-2 py-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
                 title={collapsed ? 'Show DevTools' : 'Hide DevTools'}
@@ -152,6 +169,21 @@ export function AppLayoutGrid(): React.ReactElement {
                           <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
                           <Panel defaultSize={75} minSize={30}>
                             <CodeEditor projectId={activeProjectId} />
+                          </Panel>
+                        </PanelGroup>
+                      )}
+                    </div>
+                    <div className={cn('absolute inset-0', centerTab === 'claude' ? 'z-10' : 'z-0 invisible')}>
+                      {activeProjectId && (
+                        <PanelGroup direction="horizontal">
+                          <Panel defaultSize={25} minSize={15} maxSize={40}>
+                            <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900/30">
+                              <ClaudeFileList projectId={activeProjectId} />
+                            </div>
+                          </Panel>
+                          <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+                          <Panel defaultSize={75} minSize={30}>
+                            <ClaudeEditor projectId={activeProjectId} />
                           </Panel>
                         </PanelGroup>
                       )}
@@ -208,6 +240,15 @@ export function AppLayoutGrid(): React.ReactElement {
             >
               <FolderOpen size={12} className="shrink-0" />
               <span className="truncate max-w-[120px]">{project.name}</span>
+              {(() => {
+                const llmTabs = termTabs.filter((t) => t.projectId === project.id && t.initialCommand)
+                if (llmTabs.length === 0) return null
+                const anyBusy = llmTabs.some((t) => tabStatuses[t.id] === 'busy')
+                if (anyBusy) return <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400 shrink-0" />
+                const allIdle = llmTabs.every((t) => tabStatuses[t.id] === 'idle')
+                if (allIdle) return <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
+                return null
+              })()}
               <span
                 onClick={(e) => {
                   e.stopPropagation()
