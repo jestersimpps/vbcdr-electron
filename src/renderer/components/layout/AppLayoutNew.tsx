@@ -122,7 +122,7 @@ export function AppLayoutNew(): React.ReactElement {
         return <DevTerminalsPanel />
       case 'git':
         return <GitTree />
-      case 'claude-terminals':
+      case 'llm-terminals':
         return <TerminalPanel />
       default:
         return null

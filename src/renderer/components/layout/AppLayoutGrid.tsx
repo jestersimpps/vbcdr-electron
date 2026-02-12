@@ -178,7 +178,7 @@ export function AppLayoutGrid(): React.ReactElement {
         )
       case 'git':
         return <GitTree />
-      case 'claude-terminals':
+      case 'llm-terminals':
         return <TerminalPanel />
       default:
         return null

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Layout } from 'react-grid-layout'
 
-export type PanelId = 'browser-editor' | 'git' | 'claude-terminals'
+export type PanelId = 'browser-editor' | 'git' | 'llm-terminals'
 
 export const GRID_COLS = 12
 export const GRID_ROWS = 12
@@ -14,7 +14,7 @@ export interface PanelConfig {
 export const panelConfigs: PanelConfig[] = [
   { id: 'browser-editor', title: 'Browser / Editor' },
   { id: 'git', title: 'Git' },
-  { id: 'claude-terminals', title: 'Claude Terminals' }
+  { id: 'llm-terminals', title: 'LLM Coding Terminals' }
 ]
 
 const validPanelIds = new Set<string>(panelConfigs.map((p) => p.id))
@@ -22,7 +22,7 @@ const validPanelIds = new Set<string>(panelConfigs.map((p) => p.id))
 export const defaultLayout: Layout[] = [
   { i: 'browser-editor', x: 0, y: 0, w: 8, h: 12, minW: 4, minH: 3 },
   { i: 'git', x: 8, y: 0, w: 4, h: 5, minW: 3, minH: 3 },
-  { i: 'claude-terminals', x: 8, y: 5, w: 4, h: 7, minW: 3, minH: 2 }
+  { i: 'llm-terminals', x: 8, y: 5, w: 4, h: 7, minW: 3, minH: 2 }
 ]
 
 interface LayoutState {

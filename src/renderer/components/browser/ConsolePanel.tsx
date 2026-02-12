@@ -84,7 +84,7 @@ export function ConsolePanel(): React.ReactElement {
                   }
                   disabled={!activeTerminalTabId}
                   className="ml-2 shrink-0 rounded p-1 text-zinc-600 hover:text-zinc-400 disabled:opacity-30 disabled:hover:text-zinc-600"
-                  title="Send to Claude"
+                  title="Send to LLM"
                 >
                   <Send size={12} />
                 </button>

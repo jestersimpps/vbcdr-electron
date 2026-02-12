@@ -21,7 +21,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     const projectTabs = get().tabs.filter((t) => t.projectId === projectId)
     const tab: TerminalTab = {
       id: tabId,
-      title: initialCommand ? 'Claude' : `Terminal ${projectTabs.length + 1}`,
+      title: initialCommand ? 'LLM' : `Terminal ${projectTabs.length + 1}`,
       projectId,
       cwd,
       initialCommand
@@ -52,7 +52,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     const newTabId = uuid()
     const tab: TerminalTab = {
       id: newTabId,
-      title: initialCommand ? 'Claude' : 'Terminal',
+      title: initialCommand ? 'LLM' : 'Terminal',
       projectId,
       cwd,
       initialCommand

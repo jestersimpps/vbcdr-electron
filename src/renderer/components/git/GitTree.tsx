@@ -358,7 +358,7 @@ export function GitTree(): React.ReactElement {
               onClick={handleFeatureSubmit}
               className="w-full rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-40 disabled:pointer-events-none"
             >
-              Send to Claude
+              Send to LLM
             </button>
           </div>
         </div>
