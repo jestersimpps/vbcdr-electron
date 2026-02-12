@@ -152,7 +152,10 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
     if (existing.length > 0) return
 
     const { tabs: persisted, activeTabId } = await window.api.browser.loadTabs(projectId)
-    if (persisted.length === 0) return
+    if (persisted.length === 0) {
+      get().createTab(projectId)
+      return
+    }
 
     const hydrated: BrowserTab[] = persisted.map((p) => ({
       id: p.id,
