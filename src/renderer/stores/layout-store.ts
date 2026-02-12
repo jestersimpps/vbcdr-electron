@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Layout } from 'react-grid-layout'
 
-export type PanelId = 'browser-editor' | 'dev-tools' | 'dev-terminals' | 'git' | 'claude-terminals'
+export type PanelId = 'browser-editor' | 'git' | 'claude-terminals'
 
 export const GRID_COLS = 12
 export const GRID_ROWS = 12
@@ -13,16 +13,14 @@ export interface PanelConfig {
 
 export const panelConfigs: PanelConfig[] = [
   { id: 'browser-editor', title: 'Browser / Editor' },
-  { id: 'dev-tools', title: 'DevTools' },
-  { id: 'dev-terminals', title: 'Dev Terminals' },
   { id: 'git', title: 'Git' },
   { id: 'claude-terminals', title: 'Claude Terminals' }
 ]
 
+const validPanelIds = new Set<string>(panelConfigs.map((p) => p.id))
+
 export const defaultLayout: Layout[] = [
-  { i: 'browser-editor', x: 0, y: 0, w: 4, h: 12, minW: 3, minH: 3 },
-  { i: 'dev-tools', x: 4, y: 0, w: 4, h: 7, minW: 3, minH: 2 },
-  { i: 'dev-terminals', x: 4, y: 7, w: 4, h: 5, minW: 3, minH: 2 },
+  { i: 'browser-editor', x: 0, y: 0, w: 8, h: 12, minW: 4, minH: 3 },
   { i: 'git', x: 8, y: 0, w: 4, h: 5, minW: 3, minH: 3 },
   { i: 'claude-terminals', x: 8, y: 5, w: 4, h: 7, minW: 3, minH: 2 }
 ]
@@ -30,23 +28,28 @@ export const defaultLayout: Layout[] = [
 interface LayoutState {
   layoutsPerProject: Record<string, Layout[]>
   locksPerProject: Record<string, Record<string, boolean>>
+  devToolsCollapsedPerProject: Record<string, boolean>
   resetVersion: number
   getLayout: (projectId: string) => Layout[]
   isLocked: (projectId: string, panelId: PanelId) => boolean
+  isDevToolsCollapsed: (projectId: string) => boolean
   saveLayout: (projectId: string, newLayout: Layout[]) => void
   togglePanelLock: (projectId: string, id: PanelId) => void
+  setDevToolsCollapsed: (projectId: string, collapsed: boolean) => void
   resetLayout: (projectId: string) => void
 }
 
 function ensureComplete(layout: Layout[]): Layout[] {
-  const ids = new Set(layout.map((l) => l.i))
+  const filtered = layout.filter((l) => validPanelIds.has(l.i))
+  const ids = new Set(filtered.map((l) => l.i))
   const missing = defaultLayout.filter((d) => !ids.has(d.i))
-  return missing.length > 0 ? [...layout, ...missing] : layout
+  return missing.length > 0 ? [...filtered, ...missing] : filtered
 }
 
 export const useLayoutStore = create<LayoutState>()((set, get) => ({
   layoutsPerProject: {},
   locksPerProject: {},
+  devToolsCollapsedPerProject: {},
   resetVersion: 0,
 
   getLayout: (projectId: string) => {
@@ -55,6 +58,10 @@ export const useLayoutStore = create<LayoutState>()((set, get) => ({
 
   isLocked: (projectId: string, panelId: PanelId) => {
     return get().locksPerProject[projectId]?.[panelId] ?? false
+  },
+
+  isDevToolsCollapsed: (projectId: string) => {
+    return get().devToolsCollapsedPerProject[projectId] ?? false
   },
 
   saveLayout: (projectId: string, newLayout: Layout[]) => {
@@ -73,11 +80,27 @@ export const useLayoutStore = create<LayoutState>()((set, get) => ({
     })
   },
 
+  setDevToolsCollapsed: (projectId: string, collapsed: boolean) => {
+    set({
+      devToolsCollapsedPerProject: {
+        ...get().devToolsCollapsedPerProject,
+        [projectId]: collapsed
+      }
+    })
+  },
+
   resetLayout: (projectId: string) => {
     const lpp = { ...get().layoutsPerProject }
     const lkp = { ...get().locksPerProject }
+    const dcp = { ...get().devToolsCollapsedPerProject }
     delete lpp[projectId]
     delete lkp[projectId]
-    set({ layoutsPerProject: lpp, locksPerProject: lkp, resetVersion: get().resetVersion + 1 })
+    delete dcp[projectId]
+    set({
+      layoutsPerProject: lpp,
+      locksPerProject: lkp,
+      devToolsCollapsedPerProject: dcp,
+      resetVersion: get().resetVersion + 1
+    })
   }
 }))

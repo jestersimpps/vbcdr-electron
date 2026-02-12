@@ -43,7 +43,7 @@ interface BrowserStore {
   setDeviceMode: (tabId: string, mode: DeviceMode) => void
   addConsoleEntry: (tabId: string, entry: ConsoleEntry) => void
   addNetworkEntry: (tabId: string, entry: NetworkEntry) => void
-  setDevToolsTab: (tab: 'console' | 'network') => void
+  setDevToolsTab: (tab: 'console' | 'network' | 'passwords') => void
   clearConsole: (tabId: string) => void
   clearNetwork: (tabId: string) => void
   loadTabsForProject: (projectId: string) => Promise<void>
@@ -133,7 +133,7 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
     }))
   },
 
-  setDevToolsTab: (tab: 'console' | 'network') => set({ devToolsTab: tab }),
+  setDevToolsTab: (tab: 'console' | 'network' | 'passwords') => set({ devToolsTab: tab }),
 
   clearConsole: (tabId: string) => {
     set((state) => ({

@@ -2,10 +2,10 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import ReactGridLayout from 'react-grid-layout/legacy'
 import type { Layout } from 'react-grid-layout/legacy'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+import type { ImperativePanelHandle } from 'react-resizable-panels'
 import { DraggablePanel } from '@/components/layout/DraggablePanel'
 import { BrowserViewPanel } from '@/components/browser/BrowserViewPanel'
 import { DevToolsPanel } from '@/components/browser/DevToolsPanel'
-import { DevTerminalsPanel } from '@/components/browser/DevTerminalsPanel'
 import { GitTree } from '@/components/git/GitTree'
 import { TerminalPanel } from '@/components/terminal/TerminalPanel'
 import { FileTree } from '@/components/sidebar/FileTree'
@@ -14,7 +14,7 @@ import { useEditorStore } from '@/stores/editor-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useLayoutStore, panelConfigs, GRID_COLS, GRID_ROWS } from '@/stores/layout-store'
 import { StatusBar } from '@/components/layout/StatusBar'
-import { Globe, Code, Plus, X, FolderOpen, RotateCcw } from 'lucide-react'
+import { Globe, Code, Plus, X, FolderOpen, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -29,14 +29,16 @@ export function AppLayoutGrid(): React.ReactElement {
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'browser' : 'browser')
   )
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
-  const { getLayout, isLocked, saveLayout, resetLayout } = useLayoutStore()
+  const { getLayout, isLocked, saveLayout, resetLayout, isDevToolsCollapsed, setDevToolsCollapsed } = useLayoutStore()
   const resetVersion = useLayoutStore((s) => s.resetVersion)
   const containerRef = useRef<HTMLDivElement>(null)
+  const devToolsPanelRef = useRef<ImperativePanelHandle>(null)
   const [width, setWidth] = useState(0)
   const [height, setHeight] = useState(0)
 
   const projectId = activeProjectId ?? '__default__'
   const layout = getLayout(projectId)
+  const collapsed = isDevToolsCollapsed(projectId)
 
   useEffect(() => {
     loadProjects()
@@ -56,9 +58,37 @@ export function AppLayoutGrid(): React.ReactElement {
     return () => ro.disconnect()
   }, [])
 
+  useEffect(() => {
+    const panel = devToolsPanelRef.current
+    if (!panel) return
+    if (collapsed) {
+      panel.collapse()
+    } else {
+      panel.expand()
+    }
+  }, [collapsed, resetVersion])
+
   const handleStop = (newLayout: Layout[]): void => {
     saveLayout(projectId, newLayout)
   }
+
+  const toggleDevTools = useCallback(() => {
+    const panel = devToolsPanelRef.current
+    if (!panel) return
+    if (panel.isCollapsed()) {
+      panel.expand()
+    } else {
+      panel.collapse()
+    }
+  }, [])
+
+  const handleDevToolsCollapse = useCallback(() => {
+    setDevToolsCollapsed(projectId, true)
+  }, [projectId, setDevToolsCollapsed])
+
+  const handleDevToolsExpand = useCallback(() => {
+    setDevToolsCollapsed(projectId, false)
+  }, [projectId, setDevToolsCollapsed])
 
   const gridLayout = layout.map((item) => ({
     ...item,
@@ -95,33 +125,57 @@ export function AppLayoutGrid(): React.ReactElement {
                 <Code size={12} />
                 Editor
               </button>
+              <button
+                onClick={toggleDevTools}
+                className="ml-auto flex items-center gap-1 px-2 py-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                title={collapsed ? 'Show DevTools' : 'Hide DevTools'}
+              >
+                {collapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+                <span className="text-[10px]">DevTools</span>
+              </button>
             </div>
-            <div className="flex-1 relative overflow-hidden">
-              <div className={cn('absolute inset-0', centerTab === 'browser' ? 'z-10' : 'z-0 invisible')}>
-                <BrowserViewPanel />
-              </div>
-              <div className={cn('absolute inset-0', centerTab === 'editor' ? 'z-10' : 'z-0 invisible')}>
-                {activeProjectId && (
-                  <PanelGroup direction="horizontal">
-                    <Panel defaultSize={25} minSize={15} maxSize={40}>
-                      <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900/30">
-                        <FileTree projectId={activeProjectId} />
-                      </div>
-                    </Panel>
-                    <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-                    <Panel defaultSize={75} minSize={30}>
-                      <CodeEditor projectId={activeProjectId} />
-                    </Panel>
-                  </PanelGroup>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <PanelGroup direction="horizontal">
+                <Panel defaultSize={65} minSize={20}>
+                  <div className="relative h-full overflow-hidden">
+                    <div className={cn('absolute inset-0', centerTab === 'browser' ? 'z-10' : 'z-0 invisible')}>
+                      <BrowserViewPanel />
+                    </div>
+                    <div className={cn('absolute inset-0', centerTab === 'editor' ? 'z-10' : 'z-0 invisible')}>
+                      {activeProjectId && (
+                        <PanelGroup direction="horizontal">
+                          <Panel defaultSize={25} minSize={15} maxSize={40}>
+                            <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900/30">
+                              <FileTree projectId={activeProjectId} />
+                            </div>
+                          </Panel>
+                          <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+                          <Panel defaultSize={75} minSize={30}>
+                            <CodeEditor projectId={activeProjectId} />
+                          </Panel>
+                        </PanelGroup>
+                      )}
+                    </div>
+                  </div>
+                </Panel>
+                {!collapsed && (
+                  <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
                 )}
-              </div>
+                <Panel
+                  ref={devToolsPanelRef}
+                  defaultSize={35}
+                  minSize={15}
+                  collapsible
+                  collapsedSize={0}
+                  onCollapse={handleDevToolsCollapse}
+                  onExpand={handleDevToolsExpand}
+                >
+                  <DevToolsPanel />
+                </Panel>
+              </PanelGroup>
             </div>
           </div>
         )
-      case 'dev-tools':
-        return <DevToolsPanel />
-      case 'dev-terminals':
-        return <DevTerminalsPanel />
       case 'git':
         return <GitTree />
       case 'claude-terminals':
