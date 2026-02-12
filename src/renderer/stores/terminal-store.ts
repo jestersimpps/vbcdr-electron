@@ -13,6 +13,7 @@ interface TerminalStore {
   replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => string
   setActiveTab: (projectId: string, tabId: string) => void
   setTabStatus: (tabId: string, status: TabStatus) => void
+  setTabTitle: (tabId: string, title: string) => void
   initProject: (projectId: string, cwd: string) => void
 }
 
@@ -75,6 +76,12 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   setTabStatus: (tabId: string, status: TabStatus) => {
     set((state) => ({
       tabStatuses: { ...state.tabStatuses, [tabId]: status }
+    }))
+  },
+
+  setTabTitle: (tabId: string, title: string) => {
+    set((state) => ({
+      tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, title } : t))
     }))
   },
 

@@ -106,6 +106,10 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         window.api.terminal.resize(tabId, cols, rows)
       })
 
+      terminal.onTitleChange((title) => {
+        useTerminalStore.getState().setTabTitle(tabId, title)
+      })
+
       let idleTimer: ReturnType<typeof setTimeout> | null = null
       const isLlm = !!initialCommand
 
