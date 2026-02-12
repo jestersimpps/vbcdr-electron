@@ -192,7 +192,7 @@ export function AppLayoutGrid(): React.ReactElement {
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div
-          className="flex items-center gap-0.5 h-full flex-1"
+          className="flex items-center gap-0.5 h-full"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           {projects.map((project) => (
