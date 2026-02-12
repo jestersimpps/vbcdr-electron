@@ -1,0 +1,47 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            args: --mac --arm64
+          - os: ubuntu-latest
+            platform: linux
+            args: --linux --x64
+          - os: windows-latest
+            platform: win
+            args: --win --x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx electron-vite build
+
+      - run: npx electron-builder ${{ matrix.args }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vbcdr-${{ matrix.platform }}
+          path: |
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.exe
+          if-no-files-found: error
