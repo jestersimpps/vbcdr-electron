@@ -7,7 +7,48 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
+    "build:mac": "electron-vite build && electron-builder --mac --arm64",
     "postinstall": "npx @electron/rebuild -f -w node-pty --arch arm64"
+  },
+  "build": {
+    "appId": "com.vbcdr.app",
+    "productName": "vbcdr",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "resources/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "resources/entitlements.mac.plist",
+      "entitlementsInherit": "resources/entitlements.mac.plist",
+      "target": [
+        "dmg"
+      ],
+      "notarize": true
+    },
+    "dmg": {
+      "title": "vbcdr",
+      "iconSize": 80,
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -42,7 +83,9 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
+    "dmg-license": "^1.0.11",
     "electron": "^34.0.2",
+    "electron-builder": "^26.7.0",
     "electron-vite": "^3.0.0",
     "lucide-react": "^0.474.0",
     "postcss": "^8.5.1",
