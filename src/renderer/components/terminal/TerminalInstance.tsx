@@ -88,8 +88,10 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       terminalsMap.set(tabId, entry)
 
       terminal.attachCustomKeyEventHandler((e) => {
-        if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
-          window.api.terminal.write(tabId, '\n')
+        if (e.key === 'Enter' && e.shiftKey && (e.type === 'keydown' || e.type === 'keypress')) {
+          if (e.type === 'keydown') {
+            window.api.terminal.write(tabId, '\x1b[13;2u')
+          }
           return false
         }
         return true
