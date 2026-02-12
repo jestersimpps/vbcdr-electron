@@ -34,6 +34,5 @@ export const useDevTerminalStore = create<DevTerminalStore>((set, get) => ({
     if (existing.length > 0) return
     const { createTab } = get()
     createTab(projectId, cwd)
-    createTab(projectId, cwd)
   }
 }))

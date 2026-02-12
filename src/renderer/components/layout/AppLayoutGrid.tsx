@@ -14,7 +14,7 @@ import { useEditorStore } from '@/stores/editor-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useLayoutStore, panelConfigs, GRID_COLS, GRID_ROWS } from '@/stores/layout-store'
 import { StatusBar } from '@/components/layout/StatusBar'
-import { Globe, Code, Plus, X, FolderOpen, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Globe, Code, Plus, X, FolderOpen, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -29,7 +29,7 @@ export function AppLayoutGrid(): React.ReactElement {
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'browser' : 'browser')
   )
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
-  const { getLayout, isLocked, saveLayout, resetLayout, isDevToolsCollapsed, setDevToolsCollapsed } = useLayoutStore()
+  const { getLayout, isLocked, saveLayout, isDevToolsCollapsed, setDevToolsCollapsed } = useLayoutStore()
   const resetVersion = useLayoutStore((s) => s.resetVersion)
   const containerRef = useRef<HTMLDivElement>(null)
   const devToolsPanelRef = useRef<ImperativePanelHandle>(null)
@@ -227,14 +227,6 @@ export function AppLayoutGrid(): React.ReactElement {
             <Plus size={14} />
           </button>
         </div>
-        <button
-          onClick={() => resetLayout(projectId)}
-          className="flex items-center gap-1.5 px-3 h-full text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          title="Reset layout"
-        >
-          <RotateCcw size={12} />
-        </button>
       </div>
 
       <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden">

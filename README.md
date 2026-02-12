@@ -4,6 +4,8 @@
 
 A desktop environment built around terminal AI agents, not traditional code editing
 
+**Download at [vbcdr.io](https://www.vbcdr.io/)**
+
 ## What is an AIDE?
 
 AIDE stands for AI-Integrated Development Environment
