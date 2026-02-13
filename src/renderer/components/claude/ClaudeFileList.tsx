@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { useClaudeStore } from '@/stores/claude-store'
 import { useProjectStore } from '@/stores/project-store'
-import { ChevronRight, ChevronDown, File, Globe, Wand2, Terminal, FolderOpen, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronRight, ChevronDown, File, Globe, Wand2, Terminal, FolderOpen, Webhook, RefreshCw, Trash2 } from 'lucide-react'
 import type { ClaudeSection, ClaudeFileEntry } from '@/models/types'
 
 const SECTION_CONFIG: { key: ClaudeSection; label: string; Icon: typeof Globe }[] = [
   { key: 'global', label: 'Global', Icon: Globe },
+  { key: 'hooks', label: 'Hooks', Icon: Webhook },
   { key: 'skills', label: 'Skills', Icon: Wand2 },
   { key: 'commands', label: 'Commands', Icon: Terminal },
   { key: 'project', label: 'Project', Icon: FolderOpen }

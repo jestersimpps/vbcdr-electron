@@ -85,7 +85,7 @@ export interface EncryptedCredential {
   updatedAt: number
 }
 
-export type ClaudeSection = 'global' | 'skills' | 'commands' | 'project'
+export type ClaudeSection = 'global' | 'hooks' | 'skills' | 'commands' | 'project'
 
 export interface ClaudeFileEntry {
   name: string

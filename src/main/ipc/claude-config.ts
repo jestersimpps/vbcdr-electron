@@ -76,8 +76,27 @@ function scanClaudeFiles(projectPath: string): ClaudeFileEntry[] {
 
   addFiles(path.join(claudeDir, 'commands'), 'commands', entries)
 
+  addFiles(path.join(claudeDir, 'scripts'), 'hooks', entries)
+
+  const keybindingsJson = path.join(claudeDir, 'keybindings.json')
+  if (fs.existsSync(keybindingsJson)) {
+    entries.push({ name: 'keybindings.json', path: keybindingsJson, section: 'global' })
+  }
+
   const projectKey = projectPath.replace(/\//g, '-')
-  const projectMemDir = path.join(claudeDir, 'projects', projectKey, 'memory')
+  const projectConfigDir = path.join(claudeDir, 'projects', projectKey)
+
+  const projectSettingsJson = path.join(projectConfigDir, 'settings.json')
+  if (fs.existsSync(projectSettingsJson)) {
+    entries.push({ name: 'settings.json (project)', path: projectSettingsJson, section: 'project' })
+  }
+
+  const projectClaudeMdGlobal = path.join(projectConfigDir, 'CLAUDE.md')
+  if (fs.existsSync(projectClaudeMdGlobal)) {
+    entries.push({ name: 'CLAUDE.md (project config)', path: projectClaudeMdGlobal, section: 'project' })
+  }
+
+  const projectMemDir = path.join(projectConfigDir, 'memory')
   addFiles(projectMemDir, 'project', entries)
 
   const projectClaudeDir = path.join(projectPath, '.claude')
@@ -103,8 +122,38 @@ function scanClaudeFiles(projectPath: string): ClaudeFileEntry[] {
   return entries
 }
 
+function isAllowedClaudePath(filePath: string, projectPath?: string): boolean {
+  const resolved = path.resolve(filePath)
+  const claudeDir = path.join(os.homedir(), '.claude')
+  if (resolved.startsWith(claudeDir + path.sep)) return true
+  if (projectPath) {
+    const projectClaudeDir = path.join(path.resolve(projectPath), '.claude')
+    if (resolved.startsWith(projectClaudeDir + path.sep)) return true
+    if (resolved === path.join(path.resolve(projectPath), 'CLAUDE.md')) return true
+  }
+  return false
+}
+
 export function registerClaudeConfigHandlers(): void {
   ipcMain.handle('claude:scan-files', (_event, projectPath: string): ClaudeFileEntry[] => {
     return scanClaudeFiles(projectPath)
+  })
+
+  ipcMain.handle('claude:read-file', (_event, filePath: string, projectPath: string): string => {
+    const resolved = path.resolve(filePath)
+    if (!isAllowedClaudePath(resolved, projectPath)) throw new Error('Path not allowed')
+    return fs.readFileSync(resolved, 'utf-8')
+  })
+
+  ipcMain.handle('claude:write-file', (_event, filePath: string, content: string, projectPath: string): void => {
+    const resolved = path.resolve(filePath)
+    if (!isAllowedClaudePath(resolved, projectPath)) throw new Error('Path not allowed')
+    fs.writeFileSync(resolved, content, 'utf-8')
+  })
+
+  ipcMain.handle('claude:delete-file', (_event, filePath: string, projectPath: string): void => {
+    const resolved = path.resolve(filePath)
+    if (!isAllowedClaudePath(resolved, projectPath)) throw new Error('Path not allowed')
+    fs.unlinkSync(resolved)
   })
 }

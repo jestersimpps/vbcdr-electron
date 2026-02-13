@@ -50,7 +50,7 @@ export function ClaudeEditor({ projectId }: { projectId: string }): React.ReactE
       keybindings: [2048 | 49],
       run: async () => {
         if (activeFilePath) {
-          await saveFile(activeFilePath, editorInstance.getValue())
+          await saveFile(projectId, activeFilePath, editorInstance.getValue())
           flashSaved()
         }
       }

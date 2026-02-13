@@ -10,7 +10,10 @@ const api = {
   },
 
   claude: {
-    scanFiles: (projectPath: string) => ipcRenderer.invoke('claude:scan-files', projectPath)
+    scanFiles: (projectPath: string) => ipcRenderer.invoke('claude:scan-files', projectPath),
+    readFile: (filePath: string, projectPath: string) => ipcRenderer.invoke('claude:read-file', filePath, projectPath),
+    writeFile: (filePath: string, content: string, projectPath: string) => ipcRenderer.invoke('claude:write-file', filePath, content, projectPath),
+    deleteFile: (filePath: string, projectPath: string) => ipcRenderer.invoke('claude:delete-file', filePath, projectPath)
   },
 
   fs: {
