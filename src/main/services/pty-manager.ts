@@ -1,4 +1,5 @@
 import * as pty from 'node-pty'
+import { HTTP_API_PORT } from '@main/services/http-api'
 import { BrowserWindow } from 'electron'
 import os from 'os'
 import fs from 'fs'
@@ -34,6 +35,7 @@ function shellEnv(): Record<string, string> {
   const env = { ...process.env } as Record<string, string>
   env.TERM = 'xterm-256color'
   env.TERM_PROGRAM = 'vbcdr'
+  env.VBCDR_API = `http://127.0.0.1:${HTTP_API_PORT}`
   if (!env.PATH || !env.PATH.includes('/usr/local/bin')) {
     try {
       const loginPath = execSync('/bin/bash -ilc "echo $PATH"', { encoding: 'utf-8' }).trim()
@@ -54,12 +56,14 @@ export function createPty(
   rows: number = 24
 ): void {
   const shell = defaultShell()
+  const safeCwd = fs.existsSync(cwd) ? cwd : os.homedir()
+  const env = shellEnv()
   const proc = pty.spawn(shell, ['-l'], {
     name: 'xterm-256color',
     cols,
     rows,
-    cwd,
-    env: shellEnv()
+    cwd: safeCwd,
+    env
   })
 
   proc.onData((data: string) => {

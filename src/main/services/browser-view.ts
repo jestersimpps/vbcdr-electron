@@ -2,6 +2,7 @@ import { webContents, BrowserWindow, app } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { DEVICE_CONFIGS, type DeviceMode, type NetworkEntry } from '@main/models/types'
+import type { TabInfo } from '@main/models/api-types'
 
 interface PendingRequest {
   method: string
@@ -205,6 +206,37 @@ export async function capturePageScreenshot(tabId: string): Promise<string> {
   const filePath = path.join(tmpDir, `vc-screenshot-${Date.now()}.png`)
   fs.writeFileSync(filePath, png)
   return filePath
+}
+
+export function getTabWebContents(tabId: string): Electron.WebContents | null {
+  const entry = trackedTabs.get(tabId)
+  if (!entry) return null
+  return webContents.fromId(entry.webContentsId) ?? null
+}
+
+export function listTrackedTabs(): TabInfo[] {
+  const trackedIds = new Set<number>()
+  const tabs: TabInfo[] = []
+  for (const [id, entry] of trackedTabs) {
+    const wc = webContents.fromId(entry.webContentsId)
+    if (wc) {
+      trackedIds.add(wc.id)
+      tabs.push({ id, url: wc.getURL(), title: wc.getTitle() })
+    }
+  }
+  for (const wc of webContents.getAllWebContents()) {
+    if (wc.getType() === 'webview' && !trackedIds.has(wc.id)) {
+      const autoId = `auto-${wc.id}`
+      trackedTabs.set(autoId, {
+        webContentsId: wc.id,
+        pendingRequests: new Map(),
+        pendingResponses: new Map(),
+        bodyCache: new Map()
+      })
+      tabs.push({ id: autoId, url: wc.getURL(), title: wc.getTitle() })
+    }
+  }
+  return tabs
 }
 
 export function detachAllTabs(): void {

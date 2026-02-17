@@ -14,7 +14,7 @@
     "build:mac": "electron-vite build && electron-builder --mac --arm64",
     "build:linux": "electron-vite build && electron-builder --linux --x64",
     "build:win": "electron-vite build && electron-builder --win --x64",
-    "postinstall": "npx @electron/rebuild -f -w node-pty"
+    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null; rm -rf node_modules/node-pty/build 2>/dev/null; true"
   },
   "build": {
     "appId": "com.vbcdr.app",
