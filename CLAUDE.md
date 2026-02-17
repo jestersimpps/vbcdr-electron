@@ -1,5 +1,8 @@
 # vbcdr
 
+<!-- This file is the single source of truth for browser API docs -->
+<!-- It gets auto-injected into ~/.claude/CLAUDE.md on app start -->
+
 ## Built-in Browser Control
 
 When running inside vbcdr (`$VBCDR_API` is set), you can control the app's built-in Chromium browser via HTTP.
@@ -122,6 +125,17 @@ curl -s -X POST $VBCDR_API/screenshot -H 'Content-Type: application/json' \
 ```
 Returns `{ filePath: "/tmp/..." }` — use Read tool to view the image
 
+Optional parameters for token efficiency:
+- `width`, `height` — resize the image (e.g., `"width": 800`)
+- `quality` — JPEG quality 0-100 (default: 80, only for JPEG)
+- `format` — `'png'` or `'jpeg'` (default: `'png'`)
+
+Example with compression (70-90% token savings):
+```bash
+curl -s -X POST $VBCDR_API/screenshot -H 'Content-Type: application/json' \
+  -d '{"tabId":"TAB_ID","width":800,"format":"jpeg","quality":60}'
+```
+
 ### Wait & Navigation Endpoints
 
 **Wait for selector** — poll until an element appears
@@ -190,6 +204,7 @@ getComputedStyle(document.querySelector('.box')).backgroundColor
   - Use `silent: true` for actions when you don't need confirmation
   - Use `/clickAndWait` for common click-wait-extract workflows
   - Use `limit` parameter on `/querySelector` to cap results (e.g., `limit: 5` for first 5 links)
+  - When taking screenshots for AI analysis, use `{"width":800,"format":"jpeg","quality":60}` for 70-90% token savings
 - After any action that triggers loading (click, navigate), use `/waitForSelector` before inspecting results
 - Use `/screenshot` + Read tool when visual layout matters
 - Standard CSS selectors work: `#id`, `.class`, `[attr=value]`, `div > span:nth-child(2)`

@@ -195,16 +195,38 @@ export async function capturePageHtml(tabId: string): Promise<string> {
   return await wc.executeJavaScript('document.documentElement.outerHTML')
 }
 
-export async function capturePageScreenshot(tabId: string): Promise<string> {
+export async function capturePageScreenshot(
+  tabId: string,
+  options?: {
+    width?: number
+    height?: number
+    quality?: number
+    format?: 'png' | 'jpeg'
+  }
+): Promise<string> {
   const entry = trackedTabs.get(tabId)
   if (!entry) throw new Error('Tab not tracked')
   const wc = webContents.fromId(entry.webContentsId)
   if (!wc) throw new Error('WebContents not found')
-  const image = await wc.capturePage()
-  const png = image.toPNG()
+
+  let image = await wc.capturePage()
+
+  if (options?.width || options?.height) {
+    const size = image.getSize()
+    const targetWidth = options.width ?? size.width
+    const targetHeight = options.height ?? size.height
+    image = image.resize({ width: targetWidth, height: targetHeight })
+  }
+
+  const format = options?.format ?? 'png'
+  const buffer = format === 'jpeg'
+    ? image.toJPEG(options?.quality ?? 80)
+    : image.toPNG()
+
   const tmpDir = app.getPath('temp')
-  const filePath = path.join(tmpDir, `vc-screenshot-${Date.now()}.png`)
-  fs.writeFileSync(filePath, png)
+  const ext = format === 'jpeg' ? 'jpg' : 'png'
+  const filePath = path.join(tmpDir, `vc-screenshot-${Date.now()}.${ext}`)
+  fs.writeFileSync(filePath, buffer)
   return filePath
 }
 

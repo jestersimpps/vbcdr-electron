@@ -17,7 +17,8 @@ import type {
   ScrollRequest,
   QuerySelectorRequest,
   ScrapeRequest,
-  ClickAndWaitRequest
+  ClickAndWaitRequest,
+  ScreenshotRequest
 } from '@main/models/api-types'
 
 export const HTTP_API_PORT = 7483
@@ -135,10 +136,15 @@ const routes: Record<string, RouteHandler> = {
   },
 
   '/screenshot': async (body, res) => {
-    const { tabId } = body as unknown as TabIdRequest
+    const { tabId, width, height, quality, format } = body as unknown as ScreenshotRequest
     if (!tabId) return fail(res, 'tabId required')
 
-    const filePath = await capturePageScreenshot(tabId)
+    const filePath = await capturePageScreenshot(tabId, {
+      width,
+      height,
+      quality,
+      format
+    })
     ok(res, { filePath })
   },
 

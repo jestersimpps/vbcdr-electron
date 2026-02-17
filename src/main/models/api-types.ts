@@ -85,3 +85,11 @@ export interface ClickAndWaitResponse {
   success: true
   text?: string
 }
+
+export interface ScreenshotRequest {
+  tabId: string
+  width?: number
+  height?: number
+  quality?: number
+  format?: 'png' | 'jpeg'
+}
