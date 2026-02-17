@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, shell } from 'electron'
 import Store from 'electron-store'
 import { readTree, readFileContents, startWatching, stopWatching } from '@main/services/file-watcher'
 import type { FileReadResult } from '@main/services/file-watcher'
@@ -44,5 +44,9 @@ export function registerFilesystemHandlers(): void {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
     fs.unlinkSync(resolved)
+  })
+
+  ipcMain.handle('fs:show-in-folder', (_event, filePath: string): void => {
+    shell.showItemInFolder(path.resolve(filePath))
   })
 }

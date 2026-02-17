@@ -3,7 +3,7 @@ import { useFileTreeStore } from '@/stores/filetree-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useGitStore } from '@/stores/git-store'
-import { ChevronRight, ChevronDown, File, Folder, RefreshCw, Copy } from 'lucide-react'
+import { ChevronRight, ChevronDown, File, Folder, RefreshCw, Copy, ExternalLink } from 'lucide-react'
 import type { FileNode, GitFileStatus } from '@/models/types'
 
 const GIT_STATUS_COLORS: Record<GitFileStatus, string> = {
@@ -63,6 +63,11 @@ function ContextMenu({
     onClose()
   }
 
+  const handleShowInFinder = (): void => {
+    window.api.fs.showInFolder(menu.path)
+    onClose()
+  }
+
   return (
     <div
       ref={ref}
@@ -75,6 +80,13 @@ function ContextMenu({
       >
         <Copy size={12} />
         Copy path
+      </button>
+      <button
+        onClick={handleShowInFinder}
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800"
+      >
+        <ExternalLink size={12} />
+        Show in Finder
       </button>
     </div>
   )
