@@ -15,7 +15,9 @@ import type {
   WaitForSelectorRequest,
   TextRequest,
   ScrollRequest,
-  QuerySelectorRequest
+  QuerySelectorRequest,
+  ScrapeRequest,
+  ClickAndWaitRequest
 } from '@main/models/api-types'
 
 export const HTTP_API_PORT = 7483
@@ -83,7 +85,7 @@ const routes: Record<string, RouteHandler> = {
   },
 
   '/click': async (body, res) => {
-    const { tabId, selector } = body as unknown as ClickRequest
+    const { tabId, selector, silent } = body as unknown as ClickRequest
     if (!tabId || !selector) return fail(res, 'tabId and selector required')
     const wc = getTabWebContents(tabId)
     if (!wc) return fail(res, 'Tab not found', 404)
@@ -91,11 +93,11 @@ const routes: Record<string, RouteHandler> = {
     await wc.executeJavaScript(
       `(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) throw new Error('Element not found'); el.click(); })()`
     )
-    ok(res)
+    ok(res, silent ? {} : { success: true })
   },
 
   '/type': async (body, res) => {
-    const { tabId, selector, text, clear } = body as unknown as TypeRequest
+    const { tabId, selector, text, clear, silent } = body as unknown as TypeRequest
     if (!tabId || !selector || text === undefined) return fail(res, 'tabId, selector, and text required')
     const wc = getTabWebContents(tabId)
     if (!wc) return fail(res, 'Tab not found', 404)
@@ -111,7 +113,7 @@ const routes: Record<string, RouteHandler> = {
         el.dispatchEvent(new Event('change', { bubbles: true }));
       })()`
     )
-    ok(res)
+    ok(res, silent ? {} : { success: true })
   },
 
   '/execute': async (body, res) => {
@@ -172,35 +174,35 @@ const routes: Record<string, RouteHandler> = {
   },
 
   '/back': async (body, res) => {
-    const { tabId } = body as unknown as TabIdRequest
+    const { tabId, silent } = body as unknown as TabIdRequest & { silent?: boolean }
     if (!tabId) return fail(res, 'tabId required')
     const wc = getTabWebContents(tabId)
     if (!wc) return fail(res, 'Tab not found', 404)
 
     if (wc.navigationHistory.canGoBack()) {
       wc.navigationHistory.goBack()
-      ok(res)
+      ok(res, silent ? {} : { success: true })
     } else {
       fail(res, 'No history to go back to')
     }
   },
 
   '/forward': async (body, res) => {
-    const { tabId } = body as unknown as TabIdRequest
+    const { tabId, silent } = body as unknown as TabIdRequest & { silent?: boolean }
     if (!tabId) return fail(res, 'tabId required')
     const wc = getTabWebContents(tabId)
     if (!wc) return fail(res, 'Tab not found', 404)
 
     if (wc.navigationHistory.canGoForward()) {
       wc.navigationHistory.goForward()
-      ok(res)
+      ok(res, silent ? {} : { success: true })
     } else {
       fail(res, 'No history to go forward to')
     }
   },
 
   '/scroll': async (body, res) => {
-    const { tabId, direction = 'down', amount = 500 } = body as unknown as ScrollRequest
+    const { tabId, direction = 'down', amount = 500, silent } = body as unknown as ScrollRequest
     if (!tabId) return fail(res, 'tabId required')
     const wc = getTabWebContents(tabId)
     if (!wc) return fail(res, 'Tab not found', 404)
@@ -214,18 +216,18 @@ const routes: Record<string, RouteHandler> = {
     const script = scrollScript[direction]
     if (!script) return fail(res, 'direction must be up, down, top, or bottom')
     await wc.executeJavaScript(script)
-    ok(res)
+    ok(res, silent ? {} : { success: true })
   },
 
   '/querySelector': async (body, res) => {
-    const { tabId, selector, attributes = ['textContent', 'href', 'className'], all = false } = body as unknown as QuerySelectorRequest
+    const { tabId, selector, attributes = ['textContent', 'href', 'className'], all = false, limit = 50 } = body as unknown as QuerySelectorRequest
     if (!tabId || !selector) return fail(res, 'tabId and selector required')
     const wc = getTabWebContents(tabId)
     if (!wc) return fail(res, 'Tab not found', 404)
 
     const attrs = JSON.stringify(attributes)
     const script = all
-      ? `[...document.querySelectorAll(${JSON.stringify(selector)})].slice(0, 50).map(el => {
+      ? `[...document.querySelectorAll(${JSON.stringify(selector)})].slice(0, ${limit}).map(el => {
           const obj = { tagName: el.tagName.toLowerCase() };
           for (const a of ${attrs}) { if (el[a] !== undefined && el[a] !== null && el[a] !== '') obj[a] = typeof el[a] === 'string' ? el[a].substring(0, 500) : el[a]; }
           return obj;
@@ -239,6 +241,60 @@ const routes: Record<string, RouteHandler> = {
         })()`
     const result = await wc.executeJavaScript(script)
     ok(res, { elements: all ? result : (result ? [result] : []) })
+  },
+
+  '/scrape': async (body, res) => {
+    const { url } = body as unknown as ScrapeRequest
+    if (!url) return fail(res, 'url required')
+
+    try {
+      const jinaUrl = url.startsWith('http') ? url : `https://${url}`
+      const response = await fetch(`https://r.jina.ai/${encodeURIComponent(jinaUrl)}`, {
+        signal: AbortSignal.timeout(30000)
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const markdown = await response.text()
+      ok(res, { markdown, url: jinaUrl })
+    } catch (error) {
+      fail(res, error instanceof Error ? error.message : 'Scrape failed', 500)
+    }
+  },
+
+  '/clickAndWait': async (body, res) => {
+    const { tabId, clickSelector, waitSelector, extractText, timeout = 5000 } = body as unknown as ClickAndWaitRequest
+    if (!tabId || !clickSelector || !waitSelector) {
+      return fail(res, 'tabId, clickSelector, and waitSelector required')
+    }
+
+    const wc = getTabWebContents(tabId)
+    if (!wc) return fail(res, 'Tab not found', 404)
+
+    try {
+      await wc.executeJavaScript(
+        `(() => { const el = document.querySelector(${JSON.stringify(clickSelector)}); if (!el) throw new Error('Click element not found'); el.click(); })()`
+      )
+
+      const interval = 200
+      const maxAttempts = Math.ceil(timeout / interval)
+      let found = false
+      for (let i = 0; i < maxAttempts; i++) {
+        found = await wc.executeJavaScript(`!!document.querySelector(${JSON.stringify(waitSelector)})`)
+        if (found) break
+        await new Promise((r) => setTimeout(r, interval))
+      }
+      if (!found) return fail(res, `Selector "${waitSelector}" not found within ${timeout}ms`, 408)
+
+      let text: string | undefined
+      if (extractText) {
+        text = await wc.executeJavaScript(
+          `(() => { const el = document.querySelector(${JSON.stringify(waitSelector)}); if (!el) throw new Error('Element not found'); return el.innerText; })()`
+        )
+      }
+
+      ok(res, { success: true, ...(text && { text }) })
+    } catch (error) {
+      fail(res, error instanceof Error ? error.message : 'Operation failed', 500)
+    }
   }
 }
 

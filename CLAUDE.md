@@ -8,6 +8,35 @@ When running inside vbcdr (`$VBCDR_API` is set), you can control the app's built
 
 All endpoints are **POST** with JSON body. Responses: `{ ok: boolean, data?, error? }`
 
+### Token-Efficient Patterns
+
+**For content extraction, always prefer `/scrape` over `/html`:**
+```bash
+# ❌ Token-heavy (500KB → 20,000-50,000 tokens)
+curl -s -X POST $VBCDR_API/html -d '{"tabId":"..."}'
+
+# ✅ Token-efficient (10-50KB → 500-2,500 tokens, 80-95% reduction)
+curl -s -X POST $VBCDR_API/scrape -d '{"url":"https://example.com"}'
+```
+
+**Use `silent: true` for actions when you don't need confirmation:**
+```bash
+curl -s -X POST $VBCDR_API/click \
+  -d '{"tabId":"...","selector":"button","silent":true}'
+```
+
+**Use `/clickAndWait` to batch common workflows (3 calls → 1):**
+```bash
+curl -s -X POST $VBCDR_API/clickAndWait \
+  -d '{"tabId":"...","clickSelector":"button.submit","waitSelector":".results","extractText":true}'
+```
+
+**Use `limit` parameter to cap query results:**
+```bash
+curl -s -X POST $VBCDR_API/querySelector \
+  -d '{"tabId":"...","selector":"a","limit":5,"all":true}'
+```
+
 ### Interaction Pattern
 
 Always follow this loop — never click or type blindly:
@@ -39,13 +68,14 @@ Returns `{ url, title }` after page loads (30s timeout)
 curl -s -X POST $VBCDR_API/click -H 'Content-Type: application/json' \
   -d '{"tabId":"TAB_ID","selector":"button.submit"}'
 ```
+Optional: `silent: true` returns minimal `{ok:true,data:{}}` instead of `{ok:true,data:{success:true}}`
 
 **Type into element**
 ```bash
 curl -s -X POST $VBCDR_API/type -H 'Content-Type: application/json' \
   -d '{"tabId":"TAB_ID","selector":"input#email","text":"hello","clear":true}'
 ```
-`clear` (optional) empties the field first
+`clear` (optional) empties the field first. `silent` (optional) returns minimal response
 
 **Execute JavaScript**
 ```bash
@@ -61,7 +91,15 @@ Returns `{ result: <return value> }`
 curl -s -X POST $VBCDR_API/querySelector -H 'Content-Type: application/json' \
   -d '{"tabId":"TAB_ID","selector":"a.nav-link","all":true,"attributes":["textContent","href","className"]}'
 ```
-Returns `{ elements: [{ tagName, textContent, href, className }] }` — capped at 50 elements, 500 chars per attribute. Use `all: false` (default) for a single match.
+Returns `{ elements: [{ tagName, textContent, href, className }] }` — capped at 50 elements (use `limit` parameter to cap lower), 500 chars per attribute. Use `all: false` (default) for a single match.
+
+**Scrape page content** — 80-95% token savings vs `/html`
+```bash
+curl -s -X POST $VBCDR_API/scrape -H 'Content-Type: application/json' \
+  -d '{"url":"https://example.com"}'
+```
+Returns `{ markdown, url }` — uses jina.ai to convert HTML → clean markdown, stripping ads/nav/footers. Works without requiring a browser tab. Can scrape multiple URLs in parallel.
+**Privacy note:** jina.ai sees all URLs passed to this endpoint.
 
 **Get text content** — lightweight alternative to `/html`
 ```bash
@@ -75,7 +113,7 @@ Returns `{ text: "..." }` — omit `selector` to get full page text via `documen
 curl -s -X POST $VBCDR_API/html -H 'Content-Type: application/json' \
   -d '{"tabId":"TAB_ID"}'
 ```
-Returns `{ html: "<html>..." }` — WARNING: can be 500KB+ on modern pages. Prefer `/text` or `/querySelector` when you only need specific content.
+Returns `{ html: "<html>..." }` — WARNING: can be 500KB+ on modern pages (20,000-50,000 tokens). **Always prefer `/scrape`** for content extraction (80-95% smaller). Use `/text` or `/querySelector` for targeted extraction. Only use `/html` when you need full DOM inspection.
 
 **Take screenshot**
 ```bash
@@ -98,7 +136,7 @@ Returns `{ found: true }` or 408 on timeout. Default timeout: 5000ms.
 curl -s -X POST $VBCDR_API/scroll -H 'Content-Type: application/json' \
   -d '{"tabId":"TAB_ID","direction":"down","amount":500}'
 ```
-`direction`: `up`, `down`, `top`, `bottom`. Default: `down`, 500px.
+`direction`: `up`, `down`, `top`, `bottom`. Default: `down`, 500px. `silent` (optional) returns minimal response.
 
 **Back / Forward**
 ```bash
@@ -107,6 +145,14 @@ curl -s -X POST $VBCDR_API/back -H 'Content-Type: application/json' \
 curl -s -X POST $VBCDR_API/forward -H 'Content-Type: application/json' \
   -d '{"tabId":"TAB_ID"}'
 ```
+`silent` (optional) returns minimal response.
+
+**Click and wait** — batch operation combining click + waitForSelector + optional text extraction
+```bash
+curl -s -X POST $VBCDR_API/clickAndWait -H 'Content-Type: application/json' \
+  -d '{"tabId":"TAB_ID","clickSelector":"button.submit","waitSelector":".results","extractText":true,"timeout":5000}'
+```
+Returns `{ success: true, text?: "..." }` — saves 300-500 tokens vs 3 separate calls. Default timeout: 5000ms.
 
 ### Common Recipes with /execute
 
@@ -137,7 +183,13 @@ getComputedStyle(document.querySelector('.box')).backgroundColor
 ### Rules
 
 - Always call `/tabs` first — never hardcode a `tabId`
-- Prefer `/text` or `/querySelector` over `/html` — avoid pulling the full DOM unless necessary
+- **Token efficiency:**
+  - Always prefer `/scrape` for content extraction (80-95% savings vs `/html`)
+  - Prefer `/text` or `/querySelector` for targeted extraction
+  - Only use `/html` when you need full DOM inspection
+  - Use `silent: true` for actions when you don't need confirmation
+  - Use `/clickAndWait` for common click-wait-extract workflows
+  - Use `limit` parameter on `/querySelector` to cap results (e.g., `limit: 5` for first 5 links)
 - After any action that triggers loading (click, navigate), use `/waitForSelector` before inspecting results
 - Use `/screenshot` + Read tool when visual layout matters
 - Standard CSS selectors work: `#id`, `.class`, `[attr=value]`, `div > span:nth-child(2)`

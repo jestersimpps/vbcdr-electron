@@ -18,6 +18,7 @@ export interface NavigateRequest {
 export interface ClickRequest {
   tabId: string
   selector: string
+  silent?: boolean
 }
 
 export interface TypeRequest {
@@ -25,6 +26,7 @@ export interface TypeRequest {
   selector: string
   text: string
   clear?: boolean
+  silent?: boolean
 }
 
 export interface ExecuteJsRequest {
@@ -51,6 +53,7 @@ export interface ScrollRequest {
   tabId: string
   direction?: 'up' | 'down' | 'top' | 'bottom'
   amount?: number
+  silent?: boolean
 }
 
 export interface QuerySelectorRequest {
@@ -58,4 +61,27 @@ export interface QuerySelectorRequest {
   selector: string
   attributes?: string[]
   all?: boolean
+  limit?: number
+}
+
+export interface ScrapeRequest {
+  url: string
+}
+
+export interface ScrapeResponse {
+  markdown: string
+  url: string
+}
+
+export interface ClickAndWaitRequest {
+  tabId: string
+  clickSelector: string
+  waitSelector: string
+  extractText?: boolean
+  timeout?: number
+}
+
+export interface ClickAndWaitResponse {
+  success: true
+  text?: string
 }
