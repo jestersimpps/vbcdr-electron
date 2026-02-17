@@ -11,7 +11,11 @@ import type {
   ClickRequest,
   TypeRequest,
   ExecuteJsRequest,
-  TabIdRequest
+  TabIdRequest,
+  WaitForSelectorRequest,
+  TextRequest,
+  ScrollRequest,
+  QuerySelectorRequest
 } from '@main/models/api-types'
 
 export const HTTP_API_PORT = 7483
@@ -134,6 +138,107 @@ const routes: Record<string, RouteHandler> = {
 
     const filePath = await capturePageScreenshot(tabId)
     ok(res, { filePath })
+  },
+
+  '/waitForSelector': async (body, res) => {
+    const { tabId, selector, timeout = 5000 } = body as unknown as WaitForSelectorRequest
+    if (!tabId || !selector) return fail(res, 'tabId and selector required')
+    const wc = getTabWebContents(tabId)
+    if (!wc) return fail(res, 'Tab not found', 404)
+
+    const interval = 200
+    const maxAttempts = Math.ceil(timeout / interval)
+    for (let i = 0; i < maxAttempts; i++) {
+      const found = await wc.executeJavaScript(
+        `!!document.querySelector(${JSON.stringify(selector)})`
+      )
+      if (found) return ok(res, { found: true })
+      await new Promise((r) => setTimeout(r, interval))
+    }
+    fail(res, `Selector "${selector}" not found within ${timeout}ms`, 408)
+  },
+
+  '/text': async (body, res) => {
+    const { tabId, selector } = body as unknown as TextRequest
+    if (!tabId) return fail(res, 'tabId required')
+    const wc = getTabWebContents(tabId)
+    if (!wc) return fail(res, 'Tab not found', 404)
+
+    const script = selector
+      ? `(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) throw new Error('Element not found'); return el.innerText; })()`
+      : `document.body.innerText`
+    const text = await wc.executeJavaScript(script)
+    ok(res, { text })
+  },
+
+  '/back': async (body, res) => {
+    const { tabId } = body as unknown as TabIdRequest
+    if (!tabId) return fail(res, 'tabId required')
+    const wc = getTabWebContents(tabId)
+    if (!wc) return fail(res, 'Tab not found', 404)
+
+    if (wc.navigationHistory.canGoBack()) {
+      wc.navigationHistory.goBack()
+      ok(res)
+    } else {
+      fail(res, 'No history to go back to')
+    }
+  },
+
+  '/forward': async (body, res) => {
+    const { tabId } = body as unknown as TabIdRequest
+    if (!tabId) return fail(res, 'tabId required')
+    const wc = getTabWebContents(tabId)
+    if (!wc) return fail(res, 'Tab not found', 404)
+
+    if (wc.navigationHistory.canGoForward()) {
+      wc.navigationHistory.goForward()
+      ok(res)
+    } else {
+      fail(res, 'No history to go forward to')
+    }
+  },
+
+  '/scroll': async (body, res) => {
+    const { tabId, direction = 'down', amount = 500 } = body as unknown as ScrollRequest
+    if (!tabId) return fail(res, 'tabId required')
+    const wc = getTabWebContents(tabId)
+    if (!wc) return fail(res, 'Tab not found', 404)
+
+    const scrollScript: Record<string, string> = {
+      down: `window.scrollBy(0, ${amount})`,
+      up: `window.scrollBy(0, -${amount})`,
+      top: `window.scrollTo(0, 0)`,
+      bottom: `window.scrollTo(0, document.body.scrollHeight)`
+    }
+    const script = scrollScript[direction]
+    if (!script) return fail(res, 'direction must be up, down, top, or bottom')
+    await wc.executeJavaScript(script)
+    ok(res)
+  },
+
+  '/querySelector': async (body, res) => {
+    const { tabId, selector, attributes = ['textContent', 'href', 'className'], all = false } = body as unknown as QuerySelectorRequest
+    if (!tabId || !selector) return fail(res, 'tabId and selector required')
+    const wc = getTabWebContents(tabId)
+    if (!wc) return fail(res, 'Tab not found', 404)
+
+    const attrs = JSON.stringify(attributes)
+    const script = all
+      ? `[...document.querySelectorAll(${JSON.stringify(selector)})].slice(0, 50).map(el => {
+          const obj = { tagName: el.tagName.toLowerCase() };
+          for (const a of ${attrs}) { if (el[a] !== undefined && el[a] !== null && el[a] !== '') obj[a] = typeof el[a] === 'string' ? el[a].substring(0, 500) : el[a]; }
+          return obj;
+        })`
+      : `(() => {
+          const el = document.querySelector(${JSON.stringify(selector)});
+          if (!el) return null;
+          const obj = { tagName: el.tagName.toLowerCase() };
+          for (const a of ${attrs}) { if (el[a] !== undefined && el[a] !== null && el[a] !== '') obj[a] = typeof el[a] === 'string' ? el[a].substring(0, 500) : el[a]; }
+          return obj;
+        })()`
+    const result = await wc.executeJavaScript(script)
+    ok(res, { elements: all ? result : (result ? [result] : []) })
   }
 }
 

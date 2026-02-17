@@ -35,3 +35,27 @@ export interface ExecuteJsRequest {
 export interface TabIdRequest {
   tabId: string
 }
+
+export interface WaitForSelectorRequest {
+  tabId: string
+  selector: string
+  timeout?: number
+}
+
+export interface TextRequest {
+  tabId: string
+  selector?: string
+}
+
+export interface ScrollRequest {
+  tabId: string
+  direction?: 'up' | 'down' | 'top' | 'bottom'
+  amount?: number
+}
+
+export interface QuerySelectorRequest {
+  tabId: string
+  selector: string
+  attributes?: string[]
+  all?: boolean
+}
