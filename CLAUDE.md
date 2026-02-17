@@ -42,14 +42,38 @@ curl -s -X POST $VBCDR_API/querySelector \
 
 ### Interaction Pattern
 
-Always follow this loop — never click or type blindly:
+**For content extraction only** → use `/scrape` (no browser interaction needed):
+```bash
+curl -s -X POST $VBCDR_API/scrape -d '{"url":"https://example.com"}'
+```
+This bypasses the browser entirely, is 80-95% more token-efficient, and can scrape multiple URLs in parallel.
 
-1. `/tabs` — get a `tabId`
-2. `/navigate` — go to a URL (blocks until page loads, 30s timeout)
-3. `/querySelector` or `/screenshot` — understand the page structure
+**For browser interactions** → follow this pattern when needed:
+
+**Key principle: Inspect before you act (when needed)**
+
+A typical workflow when first approaching a page:
+
+1. `/tabs` — get a `tabId` (always required unless you already have one)
+2. `/navigate` — go to a URL (skip if already on the right page, OR use `/scrape` to preview first)
+3. `/scrape`, `/querySelector`, or `/screenshot` — understand the page structure (skip if you know the layout)
+   - Prefer `/scrape` for content-heavy pages (80-95% more token-efficient than `/html` or `/text`)
+   - Use `/querySelector` for targeted element inspection
+   - Use `/screenshot` when visual layout matters
 4. `/click`, `/type`, or `/execute` — interact
-5. `/waitForSelector` — wait for async results to appear
-6. `/text` or `/screenshot` — verify the outcome
+5. `/waitForSelector` — wait for async results (only if the action triggers loading)
+6. `/scrape`, `/text`, or `/screenshot` — verify the outcome (optional but recommended)
+   - Prefer `/scrape` to verify content changes after interaction
+
+You can abbreviate this when:
+- You already have context about the page structure
+- You're repeating actions on the same page
+- The action is simple and deterministic (e.g., clicking a known button)
+
+But always inspect first if:
+- You're unsure what elements are available
+- The page structure might have changed
+- You're on a site you haven't interacted with before
 
 ### Core Endpoints
 
@@ -185,6 +209,44 @@ document.querySelector('.target').scrollIntoView({ behavior: 'smooth' })
 
 // Get computed styles
 getComputedStyle(document.querySelector('.box')).backgroundColor
+```
+
+### Best Practices & Site-Specific Patterns
+
+**Prefer `/click` over `/execute` for interactions**
+- `/click` works even when sites have strict Content Security Policy (CSP) that blocks inline JavaScript
+- Use `/execute` only when you need to query or manipulate data, not for user interactions
+
+**Discovering selectors on different sites**
+Every site uses different markup. Always inspect first, then interact:
+
+1. **Inspect the page** — use `/querySelector` or `/screenshot` to understand the structure
+2. **Find the actual selector** — look for data attributes, aria labels, classes, or IDs
+3. **Use that specific selector** — with `/click` or `/type`
+
+**Common selector patterns by site:**
+
+- **Twitter/X**: `[data-testid="like"]`, `[data-testid="retweet"]`, `[aria-label*="Post"]`
+- **LinkedIn**: `.reactions-react-button`, `[aria-label*="React"]`, `[aria-label*="Comment"]`
+- **Facebook**: `[aria-label*="Like"]`, `.x1i10hfl` (randomized classes)
+- **Reddit**: `button[aria-label*="upvote"]`, `[aria-label*="downvote"]`
+- **Instagram**: `svg[aria-label="Like"]` (then target parent button)
+
+**Target elements using (in order of preference):**
+1. `data-*` attributes (most stable)
+2. `aria-label` attributes (semantic and stable)
+3. `id` attributes (if not auto-generated)
+4. Semantic class names (avoid `.x1a2b3c` random hashes)
+
+**Example workflow:**
+```bash
+# 1. Inspect to find the right selector
+curl -s -X POST $VBCDR_API/querySelector \
+  -d '{"tabId":"TAB_ID","selector":"button","all":true,"attributes":["textContent","aria-label","data-testid"]}'
+
+# 2. Click using the discovered selector
+curl -s -X POST $VBCDR_API/click \
+  -d '{"tabId":"TAB_ID","selector":"[data-testid=\"like\"]","silent":true}'
 ```
 
 ### Error Recovery
