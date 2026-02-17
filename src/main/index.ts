@@ -14,6 +14,7 @@ import { registerUpdaterHandlers } from '@main/ipc/updater'
 import { initAutoUpdater, checkForUpdates, checkForUpdatesInteractive } from '@main/services/auto-updater'
 import { stopAutoFetch } from '@main/services/git-fetch-service'
 import { startHttpApi, stopHttpApi } from '@main/services/http-api'
+import { injectBrowserPrompt, removeBrowserPrompt } from '@main/services/claude-prompt'
 
 app.setName('vbcdr')
 app.setAboutPanelOptions({
@@ -243,6 +244,7 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenu()))
 
   startHttpApi()
+  injectBrowserPrompt()
   initAutoUpdater()
   if (!process.env.ELECTRON_RENDERER_URL) {
     setTimeout(() => checkForUpdates(), 5000)
@@ -305,6 +307,7 @@ app.on('window-all-closed', () => {
   stopWatching()
   detachAllTabs()
   stopAutoFetch()
+  removeBrowserPrompt()
   stopHttpApi()
   if (process.platform !== 'darwin') app.quit()
 })
@@ -314,5 +317,6 @@ app.on('before-quit', () => {
   stopWatching()
   detachAllTabs()
   stopAutoFetch()
+  removeBrowserPrompt()
   stopHttpApi()
 })
