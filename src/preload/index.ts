@@ -46,6 +46,8 @@ const api = {
     kill: (tabId: string) => ipcRenderer.invoke('terminal:kill', tabId),
     pasteImage: (tabId: string, filePath: string) =>
       ipcRenderer.invoke('terminal:paste-image', tabId, filePath),
+    pasteClipboardImage: (tabId: string) =>
+      ipcRenderer.invoke('terminal:paste-clipboard-image', tabId) as Promise<boolean>,
     onData: (callback: (tabId: string, data: string) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, tabId: string, data: string) =>
         callback(tabId, data)
@@ -65,7 +67,22 @@ const api = {
     commits: (cwd: string, maxCount?: number) => ipcRenderer.invoke('git:commits', cwd, maxCount),
     branches: (cwd: string) => ipcRenderer.invoke('git:branches', cwd),
     status: (cwd: string) => ipcRenderer.invoke('git:status', cwd),
-    fileAtHead: (cwd: string, filePath: string) => ipcRenderer.invoke('git:file-at-head', cwd, filePath)
+    fileAtHead: (cwd: string, filePath: string) => ipcRenderer.invoke('git:file-at-head', cwd, filePath),
+    checkout: (cwd: string, branch: string) => ipcRenderer.invoke('git:checkout', cwd, branch),
+    defaultBranch: (cwd: string) => ipcRenderer.invoke('git:default-branch', cwd),
+    diffSummary: (cwd: string, baseBranch: string) => ipcRenderer.invoke('git:diff-summary', cwd, baseBranch),
+    registerFetch: (projectId: string, cwd: string) => ipcRenderer.invoke('git:register-fetch', projectId, cwd),
+    unregisterFetch: (projectId: string) => ipcRenderer.invoke('git:unregister-fetch', projectId),
+    fetchNow: (cwd: string) => ipcRenderer.invoke('git:fetch-now', cwd),
+    pull: (cwd: string) => ipcRenderer.invoke('git:pull', cwd),
+    rebaseRemote: (cwd: string) => ipcRenderer.invoke('git:rebase-remote', cwd),
+    conflicts: (cwd: string) => ipcRenderer.invoke('git:conflicts', cwd),
+    onDrift: (callback: (projectId: string, drift: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, projectId: string, drift: unknown) =>
+        callback(projectId, drift)
+      ipcRenderer.on('git:drift', handler)
+      return () => ipcRenderer.removeListener('git:drift', handler)
+    }
   },
 
   browser: {

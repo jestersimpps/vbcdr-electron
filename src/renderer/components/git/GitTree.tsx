@@ -2,33 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { getTerminalInstance } from '@/components/terminal/TerminalInstance'
-import { GitBranch as GitBranchIcon, GitCommitHorizontal, Sparkles, RefreshCw, X } from 'lucide-react'
+import { sendToTerminal } from '@/lib/terminal-utils'
+import { GitBranch as GitBranchIcon, GitCommitHorizontal, GitPullRequest, Sparkles, RefreshCw, X } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 
-function sendToTerminal(tabId: string, text: string): void {
-  const entry = getTerminalInstance(tabId)
-  if (!entry) return
-  entry.terminal.paste(text)
-  setTimeout(() => {
-    const textarea = entry.terminal.textarea
-    if (!textarea) return
-    textarea.focus()
-    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }))
-  }, 500)
-}
-
 const LANE_COLORS = [
-  '#4ade80', // green
-  '#60a5fa', // blue
-  '#c084fc', // purple
-  '#facc15', // yellow
-  '#f472b6', // pink
-  '#22d3ee', // cyan
-  '#fb923c', // orange
-  '#a78bfa', // violet
-  '#34d399', // emerald
-  '#f87171', // red
+  '#4ade80',
+  '#60a5fa',
+  '#c084fc',
+  '#facc15',
+  '#f472b6',
+  '#22d3ee',
+  '#fb923c',
+  '#a78bfa',
+  '#34d399',
+  '#f87171',
 ]
 
 const COL_WIDTH = 16
@@ -227,6 +215,16 @@ export function GitTree(): React.ReactElement {
     setFeatureModalOpen(false)
   }, [activeTerminalTabId, featureDescription])
 
+  const handleCreatePR = useCallback(async () => {
+    if (!activeTerminalTabId || !activeProject) return
+    const defaultBranch = await window.api.git.defaultBranch(activeProject.path)
+    const diffSummary = await window.api.git.diffSummary(activeProject.path, defaultBranch)
+    sendToTerminal(
+      activeTerminalTabId,
+      `Create a pull request using gh CLI against ${defaultBranch}. Here's the diff summary:\n\n${diffSummary}\n\nGenerate a concise PR title and description based on the changes.`
+    )
+  }, [activeTerminalTabId, activeProject])
+
   useEffect(() => {
     if (featureModalOpen) setTimeout(() => featureInputRef.current?.focus(), 50)
   }, [featureModalOpen])
@@ -238,6 +236,7 @@ export function GitTree(): React.ReactElement {
 
   const graphRows = useMemo(() => (commits ? buildGraph(commits) : []), [commits])
   const currentBranch = branches?.find((b) => b.current)
+  const isOnDefault = currentBranch && (currentBranch.name === 'main' || currentBranch.name === 'master')
 
   if (!activeProject) {
     return (
@@ -275,6 +274,15 @@ export function GitTree(): React.ReactElement {
           >
             <GitCommitHorizontal size={12} />
             <span>Commit</span>
+          </button>
+          <button
+            disabled={!activeTerminalTabId || !!isOnDefault}
+            onClick={handleCreatePR}
+            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
+            title={isOnDefault ? 'Switch to a feature branch first' : 'Create pull request'}
+          >
+            <GitPullRequest size={12} />
+            <span>PR</span>
           </button>
           <button
             disabled={!activeTerminalTabId}

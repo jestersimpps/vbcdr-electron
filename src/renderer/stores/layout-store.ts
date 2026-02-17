@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { Layout } from 'react-grid-layout'
 
 export type PanelId = 'browser-editor' | 'git' | 'llm-terminals'
@@ -46,61 +47,73 @@ function ensureComplete(layout: Layout[]): Layout[] {
   return missing.length > 0 ? [...filtered, ...missing] : filtered
 }
 
-export const useLayoutStore = create<LayoutState>()((set, get) => ({
-  layoutsPerProject: {},
-  locksPerProject: {},
-  devToolsCollapsedPerProject: {},
-  resetVersion: 0,
+export const useLayoutStore = create<LayoutState>()(
+  persist(
+    (set, get) => ({
+      layoutsPerProject: {},
+      locksPerProject: {},
+      devToolsCollapsedPerProject: {},
+      resetVersion: 0,
 
-  getLayout: (projectId: string) => {
-    return ensureComplete(get().layoutsPerProject[projectId] ?? defaultLayout)
-  },
+      getLayout: (projectId: string) => {
+        return ensureComplete(get().layoutsPerProject[projectId] ?? defaultLayout)
+      },
 
-  isLocked: (projectId: string, panelId: PanelId) => {
-    return get().locksPerProject[projectId]?.[panelId] ?? false
-  },
+      isLocked: (projectId: string, panelId: PanelId) => {
+        return get().locksPerProject[projectId]?.[panelId] ?? false
+      },
 
-  isDevToolsCollapsed: (projectId: string) => {
-    return get().devToolsCollapsedPerProject[projectId] ?? false
-  },
+      isDevToolsCollapsed: (projectId: string) => {
+        return get().devToolsCollapsedPerProject[projectId] ?? false
+      },
 
-  saveLayout: (projectId: string, newLayout: Layout[]) => {
-    set({
-      layoutsPerProject: { ...get().layoutsPerProject, [projectId]: newLayout }
-    })
-  },
+      saveLayout: (projectId: string, newLayout: Layout[]) => {
+        set({
+          layoutsPerProject: { ...get().layoutsPerProject, [projectId]: newLayout }
+        })
+      },
 
-  togglePanelLock: (projectId: string, id: PanelId) => {
-    const current = get().locksPerProject[projectId] ?? {}
-    set({
-      locksPerProject: {
-        ...get().locksPerProject,
-        [projectId]: { ...current, [id]: !current[id] }
+      togglePanelLock: (projectId: string, id: PanelId) => {
+        const current = get().locksPerProject[projectId] ?? {}
+        set({
+          locksPerProject: {
+            ...get().locksPerProject,
+            [projectId]: { ...current, [id]: !current[id] }
+          }
+        })
+      },
+
+      setDevToolsCollapsed: (projectId: string, collapsed: boolean) => {
+        set({
+          devToolsCollapsedPerProject: {
+            ...get().devToolsCollapsedPerProject,
+            [projectId]: collapsed
+          }
+        })
+      },
+
+      resetLayout: (projectId: string) => {
+        const lpp = { ...get().layoutsPerProject }
+        const lkp = { ...get().locksPerProject }
+        const dcp = { ...get().devToolsCollapsedPerProject }
+        delete lpp[projectId]
+        delete lkp[projectId]
+        delete dcp[projectId]
+        set({
+          layoutsPerProject: lpp,
+          locksPerProject: lkp,
+          devToolsCollapsedPerProject: dcp,
+          resetVersion: get().resetVersion + 1
+        })
       }
-    })
-  },
-
-  setDevToolsCollapsed: (projectId: string, collapsed: boolean) => {
-    set({
-      devToolsCollapsedPerProject: {
-        ...get().devToolsCollapsedPerProject,
-        [projectId]: collapsed
-      }
-    })
-  },
-
-  resetLayout: (projectId: string) => {
-    const lpp = { ...get().layoutsPerProject }
-    const lkp = { ...get().locksPerProject }
-    const dcp = { ...get().devToolsCollapsedPerProject }
-    delete lpp[projectId]
-    delete lkp[projectId]
-    delete dcp[projectId]
-    set({
-      layoutsPerProject: lpp,
-      locksPerProject: lkp,
-      devToolsCollapsedPerProject: dcp,
-      resetVersion: get().resetVersion + 1
-    })
-  }
-}))
+    }),
+    {
+      name: 'vbcdr-layout',
+      partialize: (state) => ({
+        layoutsPerProject: state.layoutsPerProject,
+        locksPerProject: state.locksPerProject,
+        devToolsCollapsedPerProject: state.devToolsCollapsedPerProject
+      })
+    }
+  )
+)

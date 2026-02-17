@@ -1,10 +1,13 @@
 import { useEffect } from 'react'
 import { AppLayoutGrid } from '@/components/layout/AppLayoutGrid'
 import { UpdateBanner } from '@/components/layout/UpdateBanner'
+import { DriftBanner } from '@/components/git/DriftBanner'
+import { ConflictBanner } from '@/components/git/ConflictBanner'
 import { useThemeStore } from '@/stores/theme-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useUpdaterStore } from '@/stores/updater-store'
+import { useGitStore } from '@/stores/git-store'
 import { applyThemeToAll } from '@/components/terminal/TerminalInstance'
 
 export function App(): React.ReactElement {
@@ -27,6 +30,10 @@ export function App(): React.ReactElement {
 
   useEffect(() => {
     return useUpdaterStore.getState().init()
+  }, [])
+
+  useEffect(() => {
+    return useGitStore.getState().initFetchListener()
   }, [])
 
   useEffect(() => {
@@ -58,6 +65,8 @@ export function App(): React.ReactElement {
   return (
     <>
       <UpdateBanner />
+      <DriftBanner />
+      <ConflictBanner />
       <AppLayoutGrid />
     </>
   )

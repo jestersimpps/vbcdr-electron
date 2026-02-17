@@ -1,9 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useGitStore } from '@/stores/git-store'
-import { ChevronRight, ChevronDown, File, Folder, RefreshCw } from 'lucide-react'
+import { ChevronRight, ChevronDown, File, Folder, RefreshCw, Copy } from 'lucide-react'
 import type { FileNode, GitFileStatus } from '@/models/types'
 
 const GIT_STATUS_COLORS: Record<GitFileStatus, string> = {
@@ -24,16 +24,74 @@ const GIT_STATUS_LABELS: Record<GitFileStatus, string> = {
   conflict: 'C'
 }
 
+interface ContextMenuState {
+  x: number
+  y: number
+  path: string
+  name: string
+  isDirectory: boolean
+}
+
+function ContextMenu({
+  menu,
+  onClose
+}: {
+  menu: ContextMenuState
+  onClose: () => void
+}): React.ReactElement {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [onClose])
+
+  const handleCopyPath = (): void => {
+    navigator.clipboard.writeText(menu.path)
+    onClose()
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="fixed z-50 min-w-[160px] rounded-md border border-zinc-700 bg-zinc-900 py-1 shadow-xl"
+      style={{ left: menu.x, top: menu.y }}
+    >
+      <button
+        onClick={handleCopyPath}
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800"
+      >
+        <Copy size={12} />
+        Copy path
+      </button>
+    </div>
+  )
+}
+
 function TreeNode({
   node,
   depth,
   projectId,
-  cwd
+  cwd,
+  onContextMenu
 }: {
   node: FileNode
   depth: number
   projectId: string
   cwd: string
+  onContextMenu: (e: React.MouseEvent, node: FileNode) => void
 }): React.ReactElement {
   const expandedPaths = useFileTreeStore((s) => s.expandedPerProject[projectId])
   const { toggleExpanded } = useFileTreeStore()
@@ -53,6 +111,7 @@ function TreeNode({
         } ${statusColor || (isActive ? 'text-zinc-200' : 'text-zinc-400')}`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
         onClick={() => openFile(projectId, node.path, node.name, cwd, fileStatus)}
+        onContextMenu={(e) => onContextMenu(e, node)}
       >
         <File size={14} className="shrink-0 text-zinc-600" />
         <span className="flex-1 truncate">{node.name}</span>
@@ -71,6 +130,7 @@ function TreeNode({
         className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-sm ${statusColor || 'text-zinc-300'} hover:bg-zinc-800/50`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
         onClick={() => toggleExpanded(projectId, node.path)}
+        onContextMenu={(e) => onContextMenu(e, node)}
       >
         {isExpanded ? (
           <ChevronDown size={14} className="shrink-0 text-zinc-500" />
@@ -82,7 +142,7 @@ function TreeNode({
       </div>
       {isExpanded &&
         node.children?.map((child) => (
-          <TreeNode key={child.path} node={child} depth={depth + 1} projectId={projectId} cwd={cwd} />
+          <TreeNode key={child.path} node={child} depth={depth + 1} projectId={projectId} cwd={cwd} onContextMenu={onContextMenu} />
         ))}
     </div>
   )
@@ -95,6 +155,9 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
   const tree = useFileTreeStore((s) => s.treePerProject[projectId])
   const { loadTree, setTree } = useFileTreeStore()
   const { loadStatus } = useGitStore()
+  const { openDefaultFile } = useEditorStore()
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const defaultFileOpened = useRef(false)
 
   useEffect(() => {
     if (!activeProject) return
@@ -117,6 +180,25 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
       window.api.fs.unwatch()
     }
   }, [projectId])
+
+  useEffect(() => {
+    if (tree && !defaultFileOpened.current) {
+      defaultFileOpened.current = true
+      openDefaultFile(projectId, tree)
+    }
+  }, [tree, projectId])
+
+  const handleContextMenu = (e: React.MouseEvent, node: FileNode): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      path: node.path,
+      name: node.name,
+      isDirectory: node.isDirectory
+    })
+  }
 
   if (!activeProject) {
     return (
@@ -147,9 +229,12 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
       </div>
       <div className="flex-1 overflow-y-auto p-1">
         {tree.children?.map((child) => (
-          <TreeNode key={child.path} node={child} depth={0} projectId={projectId} cwd={activeProject.path} />
+          <TreeNode key={child.path} node={child} depth={0} projectId={projectId} cwd={activeProject.path} onContextMenu={handleContextMenu} />
         ))}
       </div>
+      {contextMenu && (
+        <ContextMenu menu={contextMenu} onClose={() => setContextMenu(null)} />
+      )}
     </div>
   )
 }

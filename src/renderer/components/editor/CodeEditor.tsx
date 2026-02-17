@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Editor, { DiffEditor, type Monaco } from '@monaco-editor/react'
 import { useEditorStore } from '@/stores/editor-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
-import { X, FileWarning } from 'lucide-react'
+import { X, FileWarning, Circle } from 'lucide-react'
 import type { OpenFile } from '@/models/types'
+import type { editor } from 'monaco-editor'
 
 const EXT_LANG: Record<string, string> = {
   ts: 'typescript',
@@ -99,17 +100,46 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   const getFullThemeId = useThemeStore((s) => s.getFullThemeId)
   const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? EMPTY_FILES)
   const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
-  const { setActiveFile, closeFile } = useEditorStore()
+  const { setActiveFile, closeFile, editFileContent, saveFile } = useEditorStore()
+  const [showSaved, setShowSaved] = useState(false)
+  const savedTimer = useRef<ReturnType<typeof setTimeout>>(null)
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath)
   const themeId = getFullThemeId()
   const monacoTheme = MONACO_THEME_NAME[themeId] ?? 'github-dark'
+
+  const flashSaved = useCallback(() => {
+    if (savedTimer.current) clearTimeout(savedTimer.current)
+    setShowSaved(true)
+    savedTimer.current = setTimeout(() => setShowSaved(false), 1500)
+  }, [])
 
   useEffect(() => {
     return window.api.fs.onFileChanged((path, content) => {
       useEditorStore.getState().updateFileContent(path, content)
     })
   }, [])
+
+  const handleEditorMount = useCallback((editorInstance: editor.IStandaloneCodeEditor) => {
+    editorInstance.addAction({
+      id: 'file-save',
+      label: 'Save',
+      keybindings: [2048 | 49],
+      run: async () => {
+        const state = useEditorStore.getState()
+        const filePath = state.statePerProject[projectId]?.activeFilePath
+        if (filePath) {
+          const saved = await state.saveFile(projectId, filePath)
+          if (saved) flashSaved()
+        }
+      }
+    })
+  }, [projectId, flashSaved])
+
+  const handleChange = useCallback((value: string | undefined) => {
+    if (value === undefined || !activeFilePath) return
+    editFileContent(projectId, activeFilePath, value)
+  }, [projectId, activeFilePath, editFileContent])
 
   return (
     <div className="flex h-full flex-col bg-zinc-950">
@@ -125,6 +155,9 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
             onClick={() => setActiveFile(projectId, file.path)}
           >
             <span className="truncate max-w-[120px]">{file.name}</span>
+            {file.isDirty && (
+              <Circle size={8} className="shrink-0 fill-zinc-400 text-zinc-400" />
+            )}
             <button
               className="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-zinc-700"
               title="Close file"
@@ -137,6 +170,11 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
             </button>
           </div>
         ))}
+        <span
+          className={`ml-2 text-[10px] text-emerald-400 transition-opacity duration-300 ${showSaved ? 'opacity-100' : 'opacity-0'}`}
+        >
+          Saved
+        </span>
       </div>
 
       <div className="flex-1">
@@ -169,8 +207,9 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
               language={detectLanguage(activeFile.name)}
               theme={monacoTheme}
               beforeMount={handleBeforeMount}
+              onMount={handleEditorMount}
+              onChange={handleChange}
               options={{
-                readOnly: true,
                 minimap: { enabled: false },
                 fontSize: 13,
                 lineNumbers: 'on',

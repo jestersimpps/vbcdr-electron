@@ -24,10 +24,16 @@ export const useClaudeStore = create<ClaudeStore>((set, get) => ({
   projectPaths: {},
 
   loadFiles: async (projectId: string, projectPath: string) => {
+    const oldFiles = get().filesPerProject[projectId] ?? []
+    const nextCache = { ...get().contentCache }
+    for (const f of oldFiles) {
+      delete nextCache[f.path]
+    }
     const files: ClaudeFileEntry[] = await window.api.claude.scanFiles(projectPath)
     set((s) => ({
       filesPerProject: { ...s.filesPerProject, [projectId]: files },
-      projectPaths: { ...s.projectPaths, [projectId]: projectPath }
+      projectPaths: { ...s.projectPaths, [projectId]: projectPath },
+      contentCache: nextCache
     }))
   },
 

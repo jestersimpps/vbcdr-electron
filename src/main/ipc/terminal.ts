@@ -29,4 +29,13 @@ export function registerTerminalHandlers(): void {
       writePty(tabId, '\x16')
     }
   })
+
+  ipcMain.handle('terminal:paste-clipboard-image', (_event, tabId: string): boolean => {
+    const image = clipboard.readImage()
+    if (!image.isEmpty()) {
+      writePty(tabId, '\x16')
+      return true
+    }
+    return false
+  })
 }

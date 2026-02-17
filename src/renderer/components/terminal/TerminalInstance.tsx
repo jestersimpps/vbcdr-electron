@@ -219,10 +219,21 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       }
     }
 
+    const onPaste = (e: ClipboardEvent): void => {
+      const hasImage = e.clipboardData?.types.some((t) => t.startsWith('image/'))
+      const hasText = e.clipboardData?.types.includes('text/plain')
+      if (hasImage && !hasText) {
+        e.preventDefault()
+        e.stopPropagation()
+        window.api.terminal.pasteClipboardImage(tabId)
+      }
+    }
+
     el.addEventListener('dragover', onDragOver)
     el.addEventListener('dragenter', onDragEnter)
     el.addEventListener('dragleave', onDragLeave)
     el.addEventListener('drop', onDrop)
+    el.addEventListener('paste', onPaste, true)
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
@@ -231,6 +242,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       el.removeEventListener('dragenter', onDragEnter)
       el.removeEventListener('dragleave', onDragLeave)
       el.removeEventListener('drop', onDrop)
+      el.removeEventListener('paste', onPaste, true)
     }
   }, [tabId, projectId, cwd, initialCommand])
 

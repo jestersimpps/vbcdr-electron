@@ -72,6 +72,26 @@ export interface GitCommit {
 export interface GitBranch {
   name: string
   current: boolean
+  remote: boolean
+}
+
+export interface GitCheckoutResult {
+  success: boolean
+  branch: string
+  stashed: boolean
+  error?: string
+}
+
+export interface BranchDriftInfo {
+  ahead: number
+  behind: number
+  diverged: boolean
+  remoteBranch: string | null
+}
+
+export interface ConflictInfo {
+  path: string
+  absolutePath: string
 }
 
 export type GitFileStatus = 'modified' | 'added' | 'untracked' | 'deleted' | 'renamed' | 'conflict'

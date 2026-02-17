@@ -12,13 +12,14 @@ import { stopWatching } from '@main/services/file-watcher'
 import { detachAllTabs } from '@main/services/browser-view'
 import { registerUpdaterHandlers } from '@main/ipc/updater'
 import { initAutoUpdater, checkForUpdates, checkForUpdatesInteractive } from '@main/services/auto-updater'
+import { stopAutoFetch } from '@main/services/git-fetch-service'
 
 app.setName('vbcdr')
 app.setAboutPanelOptions({
   applicationName: 'vbcdr',
   applicationVersion: app.getVersion(),
   version: '',
-  copyright: '© 2025 Jo Vinkenroye',
+  copyright: '© 2026 Jo Vinkenroye',
   credits: 'A desktop vibe coding environment for Claude Code developers.\nTerminal, browser, editor, and git — all in one window.',
   iconPath: path.join(__dirname, '../../resources/icon.png')
 })
@@ -301,6 +302,7 @@ app.on('window-all-closed', () => {
   killAll()
   stopWatching()
   detachAllTabs()
+  stopAutoFetch()
   if (process.platform !== 'darwin') app.quit()
 })
 
@@ -308,4 +310,5 @@ app.on('before-quit', () => {
   killAll()
   stopWatching()
   detachAllTabs()
+  stopAutoFetch()
 })

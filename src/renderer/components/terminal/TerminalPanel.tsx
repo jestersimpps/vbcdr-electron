@@ -3,7 +3,7 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
-import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw } from 'lucide-react'
+import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function TerminalPanel(): React.ReactElement {
@@ -200,6 +200,16 @@ export function TerminalPanel(): React.ReactElement {
           title="Clear context"
         >
           <Trash2 size={14} />
+        </button>
+        <button
+          onClick={() => {
+            if (activeTabId) window.api.terminal.pasteClipboardImage(activeTabId)
+          }}
+          disabled={!activeTabId}
+          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          title="Paste screenshot from clipboard"
+        >
+          <ImagePlus size={14} />
         </button>
         <button
           onClick={() => {
