@@ -11,12 +11,12 @@ function broadcast(projectId: string, drift: BranchDriftInfo): void {
   }
 }
 
-function tick(): void {
+async function tick(): Promise<void> {
   for (const [projectId, cwd] of projects) {
     try {
-      if (!isGitRepo(cwd)) continue
-      fetchRemote(cwd)
-      const drift = getBranchDrift(cwd)
+      if (!await isGitRepo(cwd)) continue
+      await fetchRemote(cwd)
+      const drift = await getBranchDrift(cwd)
       if (drift.behind > 0 || drift.diverged) {
         broadcast(projectId, drift)
       }
@@ -29,7 +29,7 @@ function tick(): void {
 export function registerProject(projectId: string, cwd: string): void {
   projects.set(projectId, cwd)
   if (!intervalId) {
-    intervalId = setInterval(tick, 60_000)
+    intervalId = setInterval(() => { tick() }, 60_000)
   }
 }
 
@@ -49,7 +49,7 @@ export function stopAutoFetch(): void {
   projects.clear()
 }
 
-export function fetchNow(cwd: string): BranchDriftInfo {
-  fetchRemote(cwd)
+export async function fetchNow(cwd: string): Promise<BranchDriftInfo> {
+  await fetchRemote(cwd)
   return getBranchDrift(cwd)
 }

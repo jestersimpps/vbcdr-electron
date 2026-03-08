@@ -36,7 +36,7 @@ function HeadersTable({ headers }: { headers: Record<string, string> }): React.R
   )
 }
 
-function ResponseBody({ entry }: { entry: NetworkEntry }): React.ReactElement {
+function ResponseBody({ entry, tabId }: { entry: NetworkEntry; tabId: string }): React.ReactElement {
   const [body, setBody] = useState<string | null>(null)
   const [isBase64, setIsBase64] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -53,10 +53,7 @@ function ResponseBody({ entry }: { entry: NetworkEntry }): React.ReactElement {
     setLoading(true)
     setError(null)
     try {
-      const result = await window.api.browser.getResponseBody(
-        useBrowserStore.getState().tabs.find((t) => t.networkEntries.some((n) => n.id === entry.id))?.id ?? '',
-        entry.id
-      )
+      const result = await window.api.browser.getResponseBody(tabId, entry.id)
       cacheRef.current.set(entry.id, result)
       setBody(result.body)
       setIsBase64(result.base64Encoded)
@@ -95,7 +92,7 @@ function ResponseBody({ entry }: { entry: NetworkEntry }): React.ReactElement {
 
 type DetailTab = 'general' | 'request' | 'response' | 'body'
 
-function NetworkDetail({ entry }: { entry: NetworkEntry }): React.ReactElement {
+function NetworkDetail({ entry, tabId }: { entry: NetworkEntry; tabId: string }): React.ReactElement {
   const [activeTab, setActiveTab] = useState<DetailTab>('general')
 
   const tabs: { key: DetailTab; label: string }[] = [
@@ -159,7 +156,7 @@ function NetworkDetail({ entry }: { entry: NetworkEntry }): React.ReactElement {
         )}
         {activeTab === 'request' && <HeadersTable headers={entry.requestHeaders} />}
         {activeTab === 'response' && <HeadersTable headers={entry.responseHeaders} />}
-        {activeTab === 'body' && <ResponseBody entry={entry} />}
+        {activeTab === 'body' && <ResponseBody entry={entry} tabId={tabId} />}
       </div>
     </div>
   )
@@ -290,7 +287,7 @@ export function NetworkPanel(): React.ReactElement {
                     <Send size={12} />
                   </button>
                 </div>
-                {isExpanded && <NetworkDetail entry={entry} />}
+                {isExpanded && <NetworkDetail entry={entry} tabId={activeTabId!} />}
               </div>
             )
           })

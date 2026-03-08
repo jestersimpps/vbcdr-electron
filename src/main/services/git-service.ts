@@ -1,28 +1,31 @@
-import { execFileSync } from 'child_process'
+import { execFile as execFileCb } from 'child_process'
+import { promisify } from 'util'
 import path from 'path'
 import fs from 'fs'
 import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, BranchDriftInfo, ConflictInfo } from '@main/models/types'
 
+const execFile = promisify(execFileCb)
 const SEPARATOR = '<<SEP>>'
 const FORMAT = ['%H', '%h', '%s', '%an', '%ar', '%D', '%P'].join(SEPARATOR)
 
-function runGit(cwd: string, args: string[], timeout: number = 5000): string {
-  return execFileSync('git', args, { cwd, encoding: 'utf-8', timeout }).trim()
+async function runGit(cwd: string, args: string[], timeout: number = 5000): Promise<string> {
+  const { stdout } = await execFile('git', args, { cwd, encoding: 'utf-8', timeout })
+  return stdout.trim()
 }
 
-export function isGitRepo(cwd: string): boolean {
+export async function isGitRepo(cwd: string): Promise<boolean> {
   try {
-    runGit(cwd, ['rev-parse', '--is-inside-work-tree'])
+    await runGit(cwd, ['rev-parse', '--is-inside-work-tree'])
     return true
   } catch {
     return false
   }
 }
 
-export function getCommits(cwd: string, maxCount: number = 50): GitCommit[] {
+export async function getCommits(cwd: string, maxCount: number = 50): Promise<GitCommit[]> {
   try {
     const safeMax = Math.max(1, Math.min(Math.floor(maxCount), 1000))
-    const raw = runGit(cwd, ['log', '--all', `--format=${FORMAT}`, `--max-count=${safeMax}`])
+    const raw = await runGit(cwd, ['log', '--all', `--format=${FORMAT}`, `--max-count=${safeMax}`])
     if (!raw) return []
 
     return raw.split('\n').map((line) => {
@@ -36,9 +39,9 @@ export function getCommits(cwd: string, maxCount: number = 50): GitCommit[] {
   }
 }
 
-export function getBranches(cwd: string): GitBranch[] {
+export async function getBranches(cwd: string): Promise<GitBranch[]> {
   try {
-    const raw = runGit(cwd, ['branch', '-a', '--no-color'])
+    const raw = await runGit(cwd, ['branch', '-a', '--no-color'])
     if (!raw) return []
 
     return raw
@@ -75,19 +78,19 @@ function parseFileStatus(x: string, y: string): GitFileStatus {
   return 'modified'
 }
 
-export function getFileAtHead(cwd: string, absolutePath: string): string | null {
+export async function getFileAtHead(cwd: string, absolutePath: string): Promise<string | null> {
   try {
     const relativePath = path.relative(cwd, absolutePath)
     if (relativePath.startsWith('..')) return null
-    return runGit(cwd, ['show', `HEAD:${relativePath}`])
+    return await runGit(cwd, ['show', `HEAD:${relativePath}`])
   } catch {
     return null
   }
 }
 
-export function getStatus(cwd: string): Record<string, GitFileStatus> {
+export async function getStatus(cwd: string): Promise<Record<string, GitFileStatus>> {
   try {
-    const raw = runGit(cwd, ['status', '--porcelain'])
+    const raw = await runGit(cwd, ['status', '--porcelain'])
     if (!raw) return {}
 
     const statusMap: Record<string, GitFileStatus> = {}
@@ -119,20 +122,20 @@ export function getStatus(cwd: string): Record<string, GitFileStatus> {
   }
 }
 
-function isDirty(cwd: string): boolean {
+async function isDirty(cwd: string): Promise<boolean> {
   try {
-    const raw = runGit(cwd, ['status', '--porcelain'])
+    const raw = await runGit(cwd, ['status', '--porcelain'])
     return raw.length > 0
   } catch {
     return false
   }
 }
 
-export function checkoutBranch(cwd: string, branchName: string): GitCheckoutResult {
+export async function checkoutBranch(cwd: string, branchName: string): Promise<GitCheckoutResult> {
   let stashed = false
   try {
-    if (isDirty(cwd)) {
-      runGit(cwd, ['stash', 'push', '-m', 'vbcdr-auto-stash'])
+    if (await isDirty(cwd)) {
+      await runGit(cwd, ['stash', 'push', '-m', 'vbcdr-auto-stash'])
       stashed = true
     }
 
@@ -140,17 +143,17 @@ export function checkoutBranch(cwd: string, branchName: string): GitCheckoutResu
     if (isRemote) {
       const localName = branchName.replace(/^[^/]+\//, '')
       try {
-        runGit(cwd, ['checkout', localName])
+        await runGit(cwd, ['checkout', localName])
       } catch {
-        runGit(cwd, ['checkout', '-b', localName, '--track', `remotes/${branchName}`])
+        await runGit(cwd, ['checkout', '-b', localName, '--track', `remotes/${branchName}`])
       }
     } else {
-      runGit(cwd, ['checkout', branchName])
+      await runGit(cwd, ['checkout', branchName])
     }
 
     if (stashed) {
       try {
-        runGit(cwd, ['stash', 'pop'])
+        await runGit(cwd, ['stash', 'pop'])
       } catch {
         // stash pop conflict — leave stash, user can resolve
       }
@@ -159,19 +162,19 @@ export function checkoutBranch(cwd: string, branchName: string): GitCheckoutResu
     return { success: true, branch: branchName, stashed }
   } catch (err) {
     if (stashed) {
-      try { runGit(cwd, ['stash', 'pop']) } catch {}
+      try { await runGit(cwd, ['stash', 'pop']) } catch {}
     }
     return { success: false, branch: branchName, stashed, error: (err as Error).message }
   }
 }
 
-export function getDefaultBranch(cwd: string): string {
+export async function getDefaultBranch(cwd: string): Promise<string> {
   try {
-    const ref = runGit(cwd, ['symbolic-ref', 'refs/remotes/origin/HEAD'])
+    const ref = await runGit(cwd, ['symbolic-ref', 'refs/remotes/origin/HEAD'])
     return ref.replace('refs/remotes/origin/', '')
   } catch {
     try {
-      runGit(cwd, ['rev-parse', '--verify', 'refs/heads/main'])
+      await runGit(cwd, ['rev-parse', '--verify', 'refs/heads/main'])
       return 'main'
     } catch {
       return 'master'
@@ -179,32 +182,32 @@ export function getDefaultBranch(cwd: string): string {
   }
 }
 
-export function getDiffSummary(cwd: string, baseBranch: string): string {
+export async function getDiffSummary(cwd: string, baseBranch: string): Promise<string> {
   try {
-    const currentBranch = runGit(cwd, ['rev-parse', '--abbrev-ref', 'HEAD'])
-    const log = runGit(cwd, ['log', '--oneline', `${baseBranch}..${currentBranch}`])
-    const stat = runGit(cwd, ['diff', '--stat', `${baseBranch}...${currentBranch}`])
+    const currentBranch = await runGit(cwd, ['rev-parse', '--abbrev-ref', 'HEAD'])
+    const log = await runGit(cwd, ['log', '--oneline', `${baseBranch}..${currentBranch}`])
+    const stat = await runGit(cwd, ['diff', '--stat', `${baseBranch}...${currentBranch}`])
     return `Commits:\n${log}\n\nChanges:\n${stat}`
   } catch (err) {
     return `Error getting diff summary: ${(err as Error).message}`
   }
 }
 
-export function fetchRemote(cwd: string): void {
+export async function fetchRemote(cwd: string): Promise<void> {
   try {
     const lockPath = path.join(cwd, '.git', 'index.lock')
     if (fs.existsSync(lockPath)) return
-    runGit(cwd, ['fetch', '--quiet'], 15000)
+    await runGit(cwd, ['fetch', '--quiet'], 15000)
   } catch {
     // silent fail for background fetch
   }
 }
 
-export function getBranchDrift(cwd: string): BranchDriftInfo {
+export async function getBranchDrift(cwd: string): Promise<BranchDriftInfo> {
   try {
-    const branch = runGit(cwd, ['rev-parse', '--abbrev-ref', 'HEAD'])
-    const upstream = runGit(cwd, ['rev-parse', '--abbrev-ref', `${branch}@{upstream}`])
-    const raw = runGit(cwd, ['rev-list', '--left-right', '--count', `${branch}...${upstream}`])
+    const branch = await runGit(cwd, ['rev-parse', '--abbrev-ref', 'HEAD'])
+    const upstream = await runGit(cwd, ['rev-parse', '--abbrev-ref', `${branch}@{upstream}`])
+    const raw = await runGit(cwd, ['rev-list', '--left-right', '--count', `${branch}...${upstream}`])
     const [aheadStr, behindStr] = raw.split(/\s+/)
     const ahead = parseInt(aheadStr, 10) || 0
     const behind = parseInt(behindStr, 10) || 0
@@ -214,9 +217,9 @@ export function getBranchDrift(cwd: string): BranchDriftInfo {
   }
 }
 
-export function getConflicts(cwd: string): ConflictInfo[] {
+export async function getConflicts(cwd: string): Promise<ConflictInfo[]> {
   try {
-    const raw = runGit(cwd, ['status', '--porcelain'])
+    const raw = await runGit(cwd, ['status', '--porcelain'])
     if (!raw) return []
 
     return raw
@@ -236,17 +239,17 @@ export function getConflicts(cwd: string): ConflictInfo[] {
   }
 }
 
-export function pull(cwd: string): string {
+export async function pull(cwd: string): Promise<string> {
   try {
-    return runGit(cwd, ['pull'], 15000)
+    return await runGit(cwd, ['pull'], 15000)
   } catch (err) {
     return (err as Error).message
   }
 }
 
-export function rebaseRemote(cwd: string): string {
+export async function rebaseRemote(cwd: string): Promise<string> {
   try {
-    return runGit(cwd, ['pull', '--rebase'], 15000)
+    return await runGit(cwd, ['pull', '--rebase'], 15000)
   } catch (err) {
     return (err as Error).message
   }

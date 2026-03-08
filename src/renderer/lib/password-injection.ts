@@ -1,5 +1,10 @@
 export function getDetectionScript(): string {
   return `(function() {
+    if (window.__vcPwdObserver) {
+      window.__vcPwdObserver.disconnect();
+      window.__vcPwdObserver = null;
+      window.__vcPwdDetectorActive = false;
+    }
     if (window.__vcPwdDetectorActive) return;
     window.__vcPwdDetectorActive = true;
 
@@ -80,6 +85,7 @@ export function getDetectionScript(): string {
       childList: true,
       subtree: true
     });
+    window.__vcPwdObserver = observer;
   })();`;
 }
 

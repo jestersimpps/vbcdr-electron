@@ -16,44 +16,44 @@ import { registerProject, unregisterProject, fetchNow } from '@main/services/git
 import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, BranchDriftInfo, ConflictInfo } from '@main/models/types'
 
 export function registerGitHandlers(): void {
-  ipcMain.handle('git:is-repo', (_event, cwd: string): boolean => {
+  ipcMain.handle('git:is-repo', async (_event, cwd: string): Promise<boolean> => {
     return isGitRepo(cwd)
   })
 
-  ipcMain.handle('git:commits', (_event, cwd: string, maxCount?: number): GitCommit[] => {
+  ipcMain.handle('git:commits', async (_event, cwd: string, maxCount?: number): Promise<GitCommit[]> => {
     return getCommits(cwd, maxCount)
   })
 
-  ipcMain.handle('git:branches', (_event, cwd: string): GitBranch[] => {
+  ipcMain.handle('git:branches', async (_event, cwd: string): Promise<GitBranch[]> => {
     return getBranches(cwd)
   })
 
   ipcMain.handle(
     'git:status',
-    (_event, cwd: string): Record<string, GitFileStatus> => {
+    async (_event, cwd: string): Promise<Record<string, GitFileStatus>> => {
       return getStatus(cwd)
     }
   )
 
   ipcMain.handle(
     'git:file-at-head',
-    (_event, cwd: string, filePath: string): string | null => {
+    async (_event, cwd: string, filePath: string): Promise<string | null> => {
       return getFileAtHead(cwd, filePath)
     }
   )
 
   ipcMain.handle(
     'git:checkout',
-    (_event, cwd: string, branch: string): GitCheckoutResult => {
+    async (_event, cwd: string, branch: string): Promise<GitCheckoutResult> => {
       return checkoutBranch(cwd, branch)
     }
   )
 
-  ipcMain.handle('git:default-branch', (_event, cwd: string): string => {
+  ipcMain.handle('git:default-branch', async (_event, cwd: string): Promise<string> => {
     return getDefaultBranch(cwd)
   })
 
-  ipcMain.handle('git:diff-summary', (_event, cwd: string, baseBranch: string): string => {
+  ipcMain.handle('git:diff-summary', async (_event, cwd: string, baseBranch: string): Promise<string> => {
     return getDiffSummary(cwd, baseBranch)
   })
 
@@ -65,19 +65,19 @@ export function registerGitHandlers(): void {
     unregisterProject(projectId)
   })
 
-  ipcMain.handle('git:fetch-now', (_event, cwd: string): BranchDriftInfo => {
+  ipcMain.handle('git:fetch-now', async (_event, cwd: string): Promise<BranchDriftInfo> => {
     return fetchNow(cwd)
   })
 
-  ipcMain.handle('git:pull', (_event, cwd: string): string => {
+  ipcMain.handle('git:pull', async (_event, cwd: string): Promise<string> => {
     return pull(cwd)
   })
 
-  ipcMain.handle('git:rebase-remote', (_event, cwd: string): string => {
+  ipcMain.handle('git:rebase-remote', async (_event, cwd: string): Promise<string> => {
     return rebaseRemote(cwd)
   })
 
-  ipcMain.handle('git:conflicts', (_event, cwd: string): ConflictInfo[] => {
+  ipcMain.handle('git:conflicts', async (_event, cwd: string): Promise<ConflictInfo[]> => {
     return getConflicts(cwd)
   })
 }

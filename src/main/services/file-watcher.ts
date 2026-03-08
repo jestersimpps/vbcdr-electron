@@ -26,6 +26,7 @@ let watcher: FSWatcher | null = null
 let currentRoot: string | null = null
 let currentShowIgnored = false
 const fileDebounce = new Map<string, NodeJS.Timeout>()
+let treeDebounce: NodeJS.Timeout | null = null
 
 const ALWAYS_IGNORE = ['.git', 'node_modules', '.DS_Store']
 
@@ -113,8 +114,13 @@ export function startWatching(rootPath: string, win: BrowserWindow, showIgnored:
   watcher.on('all', (event: string, filePath: string) => {
     if (win.isDestroyed() || !currentRoot) return
 
-    const tree = readTree(currentRoot, currentShowIgnored)
-    win.webContents.send('fs:tree-changed', tree)
+    if (treeDebounce) clearTimeout(treeDebounce)
+    treeDebounce = setTimeout(() => {
+      treeDebounce = null
+      if (win.isDestroyed() || !currentRoot) return
+      const tree = readTree(currentRoot, currentShowIgnored)
+      win.webContents.send('fs:tree-changed', tree)
+    }, 200)
 
     if (event === 'change') {
       if (BINARY_EXTS.has(getExt(filePath))) return
@@ -152,6 +158,7 @@ export function readFileContents(filePath: string): FileReadResult {
 }
 
 export function stopWatching(): void {
+  if (treeDebounce) { clearTimeout(treeDebounce); treeDebounce = null }
   for (const timer of fileDebounce.values()) clearTimeout(timer)
   fileDebounce.clear()
   if (watcher) {

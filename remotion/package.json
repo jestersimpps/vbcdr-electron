@@ -1,0 +1,22 @@
+{
+  "name": "vbcdr-video",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts VbcdrDemo out/vbcdr-demo.mp4",
+    "render:4k": "remotion render src/index.ts VbcdrDemo out/vbcdr-demo-4k.mp4 --scale=2"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.421",
+    "@remotion/media": "4.0.421",
+    "@remotion/transitions": "4.0.421",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.421"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "typescript": "5.7.3"
+  }
+}

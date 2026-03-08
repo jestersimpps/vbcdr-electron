@@ -118,23 +118,25 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
   },
 
   addConsoleEntry: (tabId: string, entry: ConsoleEntry) => {
-    set((state) => ({
-      tabs: state.tabs.map((t) =>
-        t.id === tabId
-          ? { ...t, consoleEntries: [...t.consoleEntries.slice(-499), entry] }
-          : t
-      )
-    }))
+    set((state) => {
+      const idx = state.tabs.findIndex((t) => t.id === tabId)
+      if (idx === -1) return state
+      const tab = state.tabs[idx]
+      const tabs = [...state.tabs]
+      tabs[idx] = { ...tab, consoleEntries: [...tab.consoleEntries.slice(-499), entry] }
+      return { tabs }
+    })
   },
 
   addNetworkEntry: (tabId: string, entry: NetworkEntry) => {
-    set((state) => ({
-      tabs: state.tabs.map((t) =>
-        t.id === tabId
-          ? { ...t, networkEntries: [...t.networkEntries.slice(-499), entry] }
-          : t
-      )
-    }))
+    set((state) => {
+      const idx = state.tabs.findIndex((t) => t.id === tabId)
+      if (idx === -1) return state
+      const tab = state.tabs[idx]
+      const tabs = [...state.tabs]
+      tabs[idx] = { ...tab, networkEntries: [...tab.networkEntries.slice(-499), entry] }
+      return { tabs }
+    })
   },
 
   setDevToolsTab: (tab: 'console' | 'network' | 'passwords') => set({ devToolsTab: tab }),
