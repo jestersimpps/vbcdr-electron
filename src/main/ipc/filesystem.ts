@@ -15,13 +15,13 @@ function isWithinProjectRoot(filePath: string): boolean {
 }
 
 export function registerFilesystemHandlers(): void {
-  ipcMain.handle('fs:read-tree', (_event, rootPath: string): FileNode => {
-    return readTree(rootPath)
+  ipcMain.handle('fs:read-tree', (_event, rootPath: string, showIgnored: boolean = false): FileNode => {
+    return readTree(rootPath, showIgnored)
   })
 
-  ipcMain.handle('fs:watch', (event, rootPath: string): void => {
+  ipcMain.handle('fs:watch', (event, rootPath: string, showIgnored: boolean = false): void => {
     const win = BrowserWindow.fromWebContents(event.sender)
-    if (win) startWatching(rootPath, win)
+    if (win) startWatching(rootPath, win, showIgnored)
   })
 
   ipcMain.handle('fs:read-file', (_event, filePath: string): FileReadResult => {

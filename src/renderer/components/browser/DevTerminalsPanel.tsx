@@ -7,7 +7,7 @@ import { Plus, X } from 'lucide-react'
 function getGridLayout(count: number): { cols: number; rows: number[] } {
   switch (count) {
     case 1: return { cols: 1, rows: [1] }
-    case 2: return { cols: 2, rows: [2] }
+    case 2: return { cols: 1, rows: [1, 1] }
     case 3: return { cols: 2, rows: [2, 1] }
     case 4: return { cols: 2, rows: [2, 2] }
     case 5: return { cols: 3, rows: [3, 2] }

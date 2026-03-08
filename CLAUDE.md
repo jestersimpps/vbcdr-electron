@@ -13,6 +13,17 @@ All endpoints are **POST** with JSON body. Responses: `{ ok: boolean, data?, err
 
 ### Token-Efficient Patterns
 
+**For browser interactions, always use the `/state` + index workflow:**
+```bash
+# ✅ Most efficient (500-2000 tokens, 80-95% reduction vs querySelector)
+curl -s -X POST $VBCDR_API/state -d '{"tabId":"..."}'
+curl -s -X POST $VBCDR_API/clickByIndex -d '{"tabId":"...","index":5,"silent":true}'
+
+# ❌ Less efficient (3000-5000 tokens)
+curl -s -X POST $VBCDR_API/querySelector -d '{"tabId":"...","selector":"button","all":true}'
+curl -s -X POST $VBCDR_API/click -d '{"tabId":"...","selector":"button.submit"}'
+```
+
 **For content extraction, always prefer `/scrape` over `/html`:**
 ```bash
 # ❌ Token-heavy (500KB → 20,000-50,000 tokens)
@@ -50,20 +61,24 @@ This bypasses the browser entirely, is 80-95% more token-efficient, and can scra
 
 **For browser interactions** → follow this pattern when needed:
 
-**Key principle: Inspect before you act (when needed)**
+**Key principle: Use `/state` for all interactions**
 
-A typical workflow when first approaching a page:
+The optimal workflow for browser automation:
 
 1. `/tabs` — get a `tabId` (always required unless you already have one)
 2. `/navigate` — go to a URL (skip if already on the right page, OR use `/scrape` to preview first)
-3. `/scrape`, `/querySelector`, or `/screenshot` — understand the page structure (skip if you know the layout)
-   - Prefer `/scrape` for content-heavy pages (80-95% more token-efficient than `/html` or `/text`)
-   - Use `/querySelector` for targeted element inspection
-   - Use `/screenshot` when visual layout matters
-4. `/click`, `/type`, or `/execute` — interact
+3. `/state` — get indexed interactive elements with visibility info (80-95% more token-efficient than `/querySelector`)
+   - Returns numeric indices for all interactive/visible elements
+   - Includes element properties: tag, text, role, bounds, attributes
+   - Filters out hidden elements automatically
+4. `/clickByIndex` or `/typeByIndex` — interact using element indices
 5. `/waitForSelector` — wait for async results (only if the action triggers loading)
-6. `/scrape`, `/text`, or `/screenshot` — verify the outcome (optional but recommended)
-   - Prefer `/scrape` to verify content changes after interaction
+6. `/state` — get updated element state after interaction
+
+**Fallback pattern (if you need more control):**
+- Use `/scrape`, `/querySelector`, or `/screenshot` for page inspection
+- Use `/click`, `/type`, or `/execute` for interactions
+- Prefer `/scrape` for content-heavy pages (80-95% more token-efficient than `/html` or `/text`)
 
 You can abbreviate this when:
 - You already have context about the page structure
@@ -76,6 +91,27 @@ But always inspect first if:
 - You're on a site you haven't interacted with before
 
 ### Core Endpoints
+
+**Get DOM state with indexed elements** — **MOST EFFICIENT for interactions**
+```bash
+curl -s -X POST $VBCDR_API/state -H 'Content-Type: application/json' \
+  -d '{"tabId":"TAB_ID","viewportThreshold":1000}'
+```
+Returns `{ elements: [{ index, tag, text, role, bounds, attributes, isVisible, isInteractive }], viewport, hiddenElementsCount }` — only interactive/visible elements with numeric indices. **Use this instead of querySelector for 80-95% token savings.** The `viewportThreshold` parameter (default: 1000px) controls how far beyond the viewport to include elements.
+
+**Click by element index**
+```bash
+curl -s -X POST $VBCDR_API/clickByIndex -H 'Content-Type: application/json' \
+  -d '{"tabId":"TAB_ID","index":5}'
+```
+Click element by its index from `/state`. Optional: `silent: true` returns minimal response.
+
+**Type by element index**
+```bash
+curl -s -X POST $VBCDR_API/typeByIndex -H 'Content-Type: application/json' \
+  -d '{"tabId":"TAB_ID","index":3,"text":"hello","clear":true}'
+```
+Type into element by its index from `/state`. `clear` (optional) empties the field first. `silent` (optional) returns minimal response.
 
 **List browser tabs**
 ```bash
@@ -259,7 +295,8 @@ curl -s -X POST $VBCDR_API/click \
 ### Rules
 
 - Always call `/tabs` first — never hardcode a `tabId`
-- **Token efficiency:**
+- **Token efficiency (MOST IMPORTANT):**
+  - **Always use `/state` + `/clickByIndex`/`/typeByIndex` for browser interactions** (80-95% savings vs `/querySelector` + `/click`)
   - Always prefer `/scrape` for content extraction (80-95% savings vs `/html`)
   - Prefer `/text` or `/querySelector` for targeted extraction
   - Only use `/html` when you need full DOM inspection
@@ -267,6 +304,10 @@ curl -s -X POST $VBCDR_API/click \
   - Use `/clickAndWait` for common click-wait-extract workflows
   - Use `limit` parameter on `/querySelector` to cap results (e.g., `limit: 5` for first 5 links)
   - When taking screenshots for AI analysis, use `{"width":800,"format":"jpeg","quality":60}` for 70-90% token savings
+- **Workflow:**
+  - Call `/state` to get indexed elements
+  - Use `/clickByIndex` or `/typeByIndex` with element indices
+  - Call `/state` again after interactions to see changes
 - After any action that triggers loading (click, navigate), use `/waitForSelector` before inspecting results
 - Use `/screenshot` + Read tool when visual layout matters
-- Standard CSS selectors work: `#id`, `.class`, `[attr=value]`, `div > span:nth-child(2)`
+- Standard CSS selectors work: `#id`, `.class`, `[attr=value]`, `div > span:nth-child(2)` (but prefer `/state` indices)

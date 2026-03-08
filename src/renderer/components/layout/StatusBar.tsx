@@ -1,4 +1,4 @@
-import { FolderOpen, LayoutGrid } from 'lucide-react'
+import { FolderOpen, LayoutGrid, MonitorOff, Monitor } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { ThemePicker } from '@/components/theme/ThemePicker'
@@ -9,6 +9,8 @@ export function StatusBar(): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => s.activeProject)
   const resetLayout = useLayoutStore((s) => s.resetLayout)
+  const toggleBrowserless = useLayoutStore((s) => s.toggleBrowserless)
+  const browserless = useLayoutStore((s) => activeProjectId ? s.isBrowserless(activeProjectId) : false)
 
   const project = activeProject()
 
@@ -26,14 +28,24 @@ export function StatusBar(): React.ReactElement {
 
       <div className="flex shrink-0 items-center gap-1">
         {activeProjectId && (
-          <button
-            onClick={() => resetLayout(activeProjectId)}
-            className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
-            title="Reset layout"
-          >
-            <LayoutGrid size={13} />
-            <span>Reset</span>
-          </button>
+          <>
+            <button
+              onClick={() => toggleBrowserless(activeProjectId)}
+              className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+              title={browserless ? 'Switch to Browser mode' : 'Switch to Browserless mode'}
+            >
+              {browserless ? <Monitor size={13} /> : <MonitorOff size={13} />}
+              <span>{browserless ? 'Browser' : 'Browserless'}</span>
+            </button>
+            <button
+              onClick={() => resetLayout(activeProjectId)}
+              className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+              title="Reset layout"
+            >
+              <LayoutGrid size={13} />
+              <span>Reset</span>
+            </button>
+          </>
         )}
         <ThemePicker />
         <VariantToggle />

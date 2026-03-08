@@ -6,6 +6,7 @@ import type { ImperativePanelHandle } from 'react-resizable-panels'
 import { DraggablePanel } from '@/components/layout/DraggablePanel'
 import { BrowserViewPanel } from '@/components/browser/BrowserViewPanel'
 import { DevToolsPanel } from '@/components/browser/DevToolsPanel'
+import { DevTerminalsPanel } from '@/components/browser/DevTerminalsPanel'
 import { GitTree } from '@/components/git/GitTree'
 import { TerminalPanel } from '@/components/terminal/TerminalPanel'
 import { FileTree } from '@/components/sidebar/FileTree'
@@ -13,11 +14,11 @@ import { CodeEditor } from '@/components/editor/CodeEditor'
 import { useEditorStore } from '@/stores/editor-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { useLayoutStore, panelConfigs, GRID_COLS, GRID_ROWS } from '@/stores/layout-store'
+import { useLayoutStore, GRID_COLS, GRID_ROWS, getPanelConfigs } from '@/stores/layout-store'
 import { StatusBar } from '@/components/layout/StatusBar'
 import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
 import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
-import { Globe, Code, Bot, Plus, X, FolderOpen, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Globe, Code, Bot, TerminalSquare, Plus, X, FolderOpen, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -28,8 +29,16 @@ const CONTAINER_PADDING = 6
 export function AppLayoutGrid(): React.ReactElement {
   const { projects, activeProjectId, loadProjects, addProject, removeProject, setActiveProject } =
     useProjectStore()
+  const browserless = useLayoutStore((s) => activeProjectId ? s.isBrowserless(activeProjectId) : false)
+  const defaultTab = browserless ? 'terminals' : 'browser'
   const centerTab = useEditorStore(
-    (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'browser' : 'browser')
+    (s) => {
+      if (!activeProjectId) return defaultTab
+      const tab = s.centerTabPerProject[activeProjectId] ?? defaultTab
+      if (browserless && tab === 'browser') return 'terminals'
+      if (!browserless && tab === 'terminals') return 'browser'
+      return tab
+    }
   )
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
   const { getLayout, isLocked, saveLayout, isDevToolsCollapsed, setDevToolsCollapsed } = useLayoutStore()
@@ -42,8 +51,9 @@ export function AppLayoutGrid(): React.ReactElement {
   const [height, setHeight] = useState(0)
 
   const projectId = activeProjectId ?? '__default__'
-  const layout = getLayout(projectId)
+  const layout = getLayout(projectId, browserless)
   const collapsed = isDevToolsCollapsed(projectId)
+  const activePanelConfigs = getPanelConfigs(browserless)
 
   useEffect(() => {
     loadProjects()
@@ -64,6 +74,7 @@ export function AppLayoutGrid(): React.ReactElement {
   }, [])
 
   useEffect(() => {
+    if (browserless) return
     const panel = devToolsPanelRef.current
     if (!panel) return
     if (collapsed) {
@@ -71,7 +82,7 @@ export function AppLayoutGrid(): React.ReactElement {
     } else {
       panel.expand()
     }
-  }, [collapsed, resetVersion])
+  }, [collapsed, resetVersion, browserless])
 
   const handleStop = (newLayout: Layout[]): void => {
     saveLayout(projectId, newLayout)
@@ -100,114 +111,204 @@ export function AppLayoutGrid(): React.ReactElement {
     static: isLocked(projectId, item.i as any)
   }))
 
+  const renderBrowserlessPanel = (): React.ReactNode => (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
+        <button
+          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'terminals')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            centerTab === 'terminals'
+              ? 'border-b-2 border-zinc-400 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          )}
+        >
+          <TerminalSquare size={12} />
+          Terminals
+        </button>
+        <button
+          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'editor')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            centerTab === 'editor'
+              ? 'border-b-2 border-zinc-400 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          )}
+        >
+          <Code size={12} />
+          Editor
+        </button>
+        <button
+          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'claude')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            centerTab === 'claude'
+              ? 'border-b-2 border-zinc-400 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          )}
+        >
+          <Bot size={12} />
+          Claude
+        </button>
+      </div>
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <PanelGroup direction="horizontal">
+          <Panel defaultSize={65} minSize={20}>
+            <div className="relative h-full overflow-hidden">
+              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'terminals' ? 'z-10' : 'z-0 invisible')}>
+                <TerminalPanel />
+              </div>
+              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'editor' ? 'z-10' : 'z-0 invisible')}>
+                {activeProjectId && (
+                  <PanelGroup direction="horizontal">
+                    <Panel defaultSize={25} minSize={15} maxSize={40}>
+                      <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
+                        <FileTree projectId={activeProjectId} />
+                      </div>
+                    </Panel>
+                    <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+                    <Panel defaultSize={75} minSize={30}>
+                      <CodeEditor projectId={activeProjectId} />
+                    </Panel>
+                  </PanelGroup>
+                )}
+              </div>
+              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'claude' ? 'z-10' : 'z-0 invisible')}>
+                {activeProjectId && (
+                  <PanelGroup direction="horizontal">
+                    <Panel defaultSize={25} minSize={15} maxSize={40}>
+                      <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
+                        <ClaudeFileList projectId={activeProjectId} />
+                      </div>
+                    </Panel>
+                    <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+                    <Panel defaultSize={75} minSize={30}>
+                      <ClaudeEditor projectId={activeProjectId} />
+                    </Panel>
+                  </PanelGroup>
+                )}
+              </div>
+            </div>
+          </Panel>
+          <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+          <Panel defaultSize={35} minSize={15}>
+            <DevTerminalsPanel />
+          </Panel>
+        </PanelGroup>
+      </div>
+    </div>
+  )
+
+  const renderBrowserPanel = (): React.ReactNode => (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
+        <button
+          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'browser')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            centerTab === 'browser'
+              ? 'border-b-2 border-zinc-400 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          )}
+        >
+          <Globe size={12} />
+          Browser
+        </button>
+        <button
+          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'editor')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            centerTab === 'editor'
+              ? 'border-b-2 border-zinc-400 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          )}
+        >
+          <Code size={12} />
+          Editor
+        </button>
+        <button
+          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'claude')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            centerTab === 'claude'
+              ? 'border-b-2 border-zinc-400 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          )}
+        >
+          <Bot size={12} />
+          Claude
+        </button>
+        <button
+          onClick={toggleDevTools}
+          className="ml-auto flex items-center gap-1 px-2 py-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          title={collapsed ? 'Show DevTools' : 'Hide DevTools'}
+        >
+          {collapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+          <span className="text-[10px]">DevTools</span>
+        </button>
+      </div>
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <PanelGroup direction="horizontal">
+          <Panel defaultSize={65} minSize={20}>
+            <div className="relative h-full overflow-hidden">
+              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'browser' ? 'z-10' : 'z-0 invisible')}>
+                <BrowserViewPanel />
+              </div>
+              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'editor' ? 'z-10' : 'z-0 invisible')}>
+                {activeProjectId && (
+                  <PanelGroup direction="horizontal">
+                    <Panel defaultSize={25} minSize={15} maxSize={40}>
+                      <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
+                        <FileTree projectId={activeProjectId} />
+                      </div>
+                    </Panel>
+                    <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+                    <Panel defaultSize={75} minSize={30}>
+                      <CodeEditor projectId={activeProjectId} />
+                    </Panel>
+                  </PanelGroup>
+                )}
+              </div>
+              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'claude' ? 'z-10' : 'z-0 invisible')}>
+                {activeProjectId && (
+                  <PanelGroup direction="horizontal">
+                    <Panel defaultSize={25} minSize={15} maxSize={40}>
+                      <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
+                        <ClaudeFileList projectId={activeProjectId} />
+                      </div>
+                    </Panel>
+                    <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+                    <Panel defaultSize={75} minSize={30}>
+                      <ClaudeEditor projectId={activeProjectId} />
+                    </Panel>
+                  </PanelGroup>
+                )}
+              </div>
+            </div>
+          </Panel>
+          {!collapsed && (
+            <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+          )}
+          <Panel
+            ref={devToolsPanelRef}
+            defaultSize={35}
+            minSize={15}
+            collapsible
+            collapsedSize={0}
+            onCollapse={handleDevToolsCollapse}
+            onExpand={handleDevToolsExpand}
+          >
+            <DevToolsPanel />
+          </Panel>
+        </PanelGroup>
+      </div>
+    </div>
+  )
+
   const renderPanel = (id: string): React.ReactNode => {
     switch (id) {
       case 'browser-editor':
-        return (
-          <div className="flex h-full flex-col">
-            <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
-              <button
-                onClick={() => activeProjectId && setCenterTab(activeProjectId, 'browser')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
-                  centerTab === 'browser'
-                    ? 'border-b-2 border-zinc-400 text-zinc-200'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                )}
-              >
-                <Globe size={12} />
-                Browser
-              </button>
-              <button
-                onClick={() => activeProjectId && setCenterTab(activeProjectId, 'editor')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
-                  centerTab === 'editor'
-                    ? 'border-b-2 border-zinc-400 text-zinc-200'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                )}
-              >
-                <Code size={12} />
-                Editor
-              </button>
-              <button
-                onClick={() => activeProjectId && setCenterTab(activeProjectId, 'claude')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
-                  centerTab === 'claude'
-                    ? 'border-b-2 border-zinc-400 text-zinc-200'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                )}
-              >
-                <Bot size={12} />
-                Claude
-              </button>
-              <button
-                onClick={toggleDevTools}
-                className="ml-auto flex items-center gap-1 px-2 py-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                title={collapsed ? 'Show DevTools' : 'Hide DevTools'}
-              >
-                {collapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-                <span className="text-[10px]">DevTools</span>
-              </button>
-            </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <PanelGroup direction="horizontal">
-                <Panel defaultSize={65} minSize={20}>
-                  <div className="relative h-full overflow-hidden">
-                    <div className={cn('absolute inset-0', centerTab === 'browser' ? 'z-10' : 'z-0 invisible')}>
-                      <BrowserViewPanel />
-                    </div>
-                    <div className={cn('absolute inset-0', centerTab === 'editor' ? 'z-10' : 'z-0 invisible')}>
-                      {activeProjectId && (
-                        <PanelGroup direction="horizontal">
-                          <Panel defaultSize={25} minSize={15} maxSize={40}>
-                            <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900/30">
-                              <FileTree projectId={activeProjectId} />
-                            </div>
-                          </Panel>
-                          <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-                          <Panel defaultSize={75} minSize={30}>
-                            <CodeEditor projectId={activeProjectId} />
-                          </Panel>
-                        </PanelGroup>
-                      )}
-                    </div>
-                    <div className={cn('absolute inset-0', centerTab === 'claude' ? 'z-10' : 'z-0 invisible')}>
-                      {activeProjectId && (
-                        <PanelGroup direction="horizontal">
-                          <Panel defaultSize={25} minSize={15} maxSize={40}>
-                            <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900/30">
-                              <ClaudeFileList projectId={activeProjectId} />
-                            </div>
-                          </Panel>
-                          <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-                          <Panel defaultSize={75} minSize={30}>
-                            <ClaudeEditor projectId={activeProjectId} />
-                          </Panel>
-                        </PanelGroup>
-                      )}
-                    </div>
-                  </div>
-                </Panel>
-                {!collapsed && (
-                  <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-                )}
-                <Panel
-                  ref={devToolsPanelRef}
-                  defaultSize={35}
-                  minSize={15}
-                  collapsible
-                  collapsedSize={0}
-                  onCollapse={handleDevToolsCollapse}
-                  onExpand={handleDevToolsExpand}
-                >
-                  <DevToolsPanel />
-                </Panel>
-              </PanelGroup>
-            </div>
-          </div>
-        )
+        return browserless ? renderBrowserlessPanel() : renderBrowserPanel()
       case 'git':
         return <GitTree />
       case 'llm-terminals':
@@ -286,7 +387,7 @@ export function AppLayoutGrid(): React.ReactElement {
             onDragStop={handleStop}
             onResizeStop={handleStop}
           >
-            {panelConfigs.map((panel) => (
+            {activePanelConfigs.map((panel) => (
               <div key={panel.id}>
                 <DraggablePanel
                   id={panel.id}

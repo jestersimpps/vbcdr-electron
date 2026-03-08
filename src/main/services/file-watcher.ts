@@ -24,11 +24,13 @@ function getExt(filePath: string): string {
 
 let watcher: FSWatcher | null = null
 let currentRoot: string | null = null
+let currentShowIgnored = false
 const fileDebounce = new Map<string, NodeJS.Timeout>()
 
-function loadGitignore(rootPath: string): Ignore {
+const ALWAYS_IGNORE = ['.git', 'node_modules', '.DS_Store']
+
+function loadGitignorePatterns(rootPath: string): Ignore {
   const ig = ignore()
-  ig.add(['.git', 'node_modules', '.DS_Store'])
   const gitignorePath = path.join(rootPath, '.gitignore')
   try {
     const content = fs.readFileSync(gitignorePath, 'utf-8')
@@ -39,8 +41,9 @@ function loadGitignore(rootPath: string): Ignore {
   return ig
 }
 
-export function readTree(rootPath: string, maxDepth: number = 10): FileNode {
-  const ig = loadGitignore(rootPath)
+export function readTree(rootPath: string, showIgnored: boolean = false, maxDepth: number = 10): FileNode {
+  const alwaysIg = ignore().add(ALWAYS_IGNORE)
+  const gitIg = loadGitignorePatterns(rootPath)
 
   function walk(dirPath: string, depth: number): FileNode[] {
     if (depth > maxDepth) return []
@@ -55,7 +58,10 @@ export function readTree(rootPath: string, maxDepth: number = 10): FileNode {
     const nodes: FileNode[] = []
     for (const entry of entries) {
       const rel = path.relative(rootPath, path.join(dirPath, entry.name))
-      if (ig.ignores(rel)) continue
+      if (alwaysIg.ignores(rel)) continue
+
+      const isIgnored = gitIg.ignores(rel)
+      if (isIgnored && !showIgnored) continue
 
       const fullPath = path.join(dirPath, entry.name)
       const isDir = entry.isDirectory()
@@ -64,6 +70,7 @@ export function readTree(rootPath: string, maxDepth: number = 10): FileNode {
         name: entry.name,
         path: fullPath,
         isDirectory: isDir,
+        isGitignored: isIgnored || undefined,
         children: isDir ? walk(fullPath, depth + 1) : undefined
       })
     }
@@ -82,18 +89,22 @@ export function readTree(rootPath: string, maxDepth: number = 10): FileNode {
   }
 }
 
-export function startWatching(rootPath: string, win: BrowserWindow): void {
+export function startWatching(rootPath: string, win: BrowserWindow, showIgnored: boolean = false): void {
   stopWatching()
   currentRoot = rootPath
+  currentShowIgnored = showIgnored
 
-  const ig = loadGitignore(rootPath)
+  const alwaysIg = ignore().add(ALWAYS_IGNORE)
+  const gitIg = loadGitignorePatterns(rootPath)
 
   watcher = watch(rootPath, {
     ignoreInitial: true,
     ignored: (filePath: string) => {
       const rel = path.relative(rootPath, filePath)
       if (!rel || rel === '.') return false
-      return ig.ignores(rel)
+      if (alwaysIg.ignores(rel)) return true
+      if (!showIgnored && gitIg.ignores(rel)) return true
+      return false
     },
     depth: 10,
     persistent: true
@@ -102,7 +113,7 @@ export function startWatching(rootPath: string, win: BrowserWindow): void {
   watcher.on('all', (event: string, filePath: string) => {
     if (win.isDestroyed() || !currentRoot) return
 
-    const tree = readTree(currentRoot)
+    const tree = readTree(currentRoot, currentShowIgnored)
     win.webContents.send('fs:tree-changed', tree)
 
     if (event === 'change') {

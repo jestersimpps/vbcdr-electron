@@ -18,7 +18,13 @@ export const panelConfigs: PanelConfig[] = [
   { id: 'llm-terminals', title: 'LLM Coding Terminals' }
 ]
 
+export const browserlessPanelConfigs: PanelConfig[] = [
+  { id: 'browser-editor', title: 'Terminals' },
+  { id: 'git', title: 'Git' }
+]
+
 const validPanelIds = new Set<string>(panelConfigs.map((p) => p.id))
+const browserlessValidPanelIds = new Set<string>(browserlessPanelConfigs.map((p) => p.id))
 
 export const defaultLayout: Layout[] = [
   { i: 'browser-editor', x: 0, y: 0, w: 8, h: 12, minW: 4, minH: 3 },
@@ -26,24 +32,38 @@ export const defaultLayout: Layout[] = [
   { i: 'llm-terminals', x: 8, y: 5, w: 4, h: 7, minW: 3, minH: 2 }
 ]
 
+export const browserlessDefaultLayout: Layout[] = [
+  { i: 'browser-editor', x: 0, y: 0, w: 8, h: 12, minW: 4, minH: 3 },
+  { i: 'git', x: 8, y: 0, w: 4, h: 12, minW: 3, minH: 3 }
+]
+
+export function getPanelConfigs(browserless: boolean): PanelConfig[] {
+  return browserless ? browserlessPanelConfigs : panelConfigs
+}
+
 interface LayoutState {
   layoutsPerProject: Record<string, Layout[]>
   locksPerProject: Record<string, Record<string, boolean>>
   devToolsCollapsedPerProject: Record<string, boolean>
+  browserlessPerProject: Record<string, boolean>
   resetVersion: number
-  getLayout: (projectId: string) => Layout[]
+  getLayout: (projectId: string, browserless?: boolean) => Layout[]
   isLocked: (projectId: string, panelId: PanelId) => boolean
   isDevToolsCollapsed: (projectId: string) => boolean
+  isBrowserless: (projectId: string) => boolean
   saveLayout: (projectId: string, newLayout: Layout[]) => void
   togglePanelLock: (projectId: string, id: PanelId) => void
   setDevToolsCollapsed: (projectId: string, collapsed: boolean) => void
+  toggleBrowserless: (projectId: string) => void
   resetLayout: (projectId: string) => void
 }
 
-function ensureComplete(layout: Layout[]): Layout[] {
-  const filtered = layout.filter((l) => validPanelIds.has(l.i))
-  const ids = new Set(filtered.map((l) => l.i))
-  const missing = defaultLayout.filter((d) => !ids.has(d.i))
+function ensureComplete(layout: Layout[], browserless: boolean): Layout[] {
+  const ids = browserless ? browserlessValidPanelIds : validPanelIds
+  const defaults = browserless ? browserlessDefaultLayout : defaultLayout
+  const filtered = layout.filter((l) => ids.has(l.i))
+  const present = new Set(filtered.map((l) => l.i))
+  const missing = defaults.filter((d) => !present.has(d.i))
   return missing.length > 0 ? [...filtered, ...missing] : filtered
 }
 
@@ -53,10 +73,13 @@ export const useLayoutStore = create<LayoutState>()(
       layoutsPerProject: {},
       locksPerProject: {},
       devToolsCollapsedPerProject: {},
+      browserlessPerProject: {},
       resetVersion: 0,
 
-      getLayout: (projectId: string) => {
-        return ensureComplete(get().layoutsPerProject[projectId] ?? defaultLayout)
+      getLayout: (projectId: string, browserless?: boolean) => {
+        const bl = browserless ?? get().browserlessPerProject[projectId] ?? false
+        const defaults = bl ? browserlessDefaultLayout : defaultLayout
+        return ensureComplete(get().layoutsPerProject[projectId] ?? defaults, bl)
       },
 
       isLocked: (projectId: string, panelId: PanelId) => {
@@ -65,6 +88,10 @@ export const useLayoutStore = create<LayoutState>()(
 
       isDevToolsCollapsed: (projectId: string) => {
         return get().devToolsCollapsedPerProject[projectId] ?? false
+      },
+
+      isBrowserless: (projectId: string) => {
+        return get().browserlessPerProject[projectId] ?? false
       },
 
       saveLayout: (projectId: string, newLayout: Layout[]) => {
@@ -92,6 +119,20 @@ export const useLayoutStore = create<LayoutState>()(
         })
       },
 
+      toggleBrowserless: (projectId: string) => {
+        const current = get().browserlessPerProject[projectId] ?? false
+        const lpp = { ...get().layoutsPerProject }
+        delete lpp[projectId]
+        set({
+          browserlessPerProject: {
+            ...get().browserlessPerProject,
+            [projectId]: !current
+          },
+          layoutsPerProject: lpp,
+          resetVersion: get().resetVersion + 1
+        })
+      },
+
       resetLayout: (projectId: string) => {
         const lpp = { ...get().layoutsPerProject }
         const lkp = { ...get().locksPerProject }
@@ -112,7 +153,8 @@ export const useLayoutStore = create<LayoutState>()(
       partialize: (state) => ({
         layoutsPerProject: state.layoutsPerProject,
         locksPerProject: state.locksPerProject,
-        devToolsCollapsedPerProject: state.devToolsCollapsedPerProject
+        devToolsCollapsedPerProject: state.devToolsCollapsedPerProject,
+        browserlessPerProject: state.browserlessPerProject
       })
     }
   )

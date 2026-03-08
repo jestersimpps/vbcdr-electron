@@ -9,6 +9,7 @@ export interface FileNode {
   name: string
   path: string
   isDirectory: boolean
+  isGitignored?: boolean
   children?: FileNode[]
 }
 

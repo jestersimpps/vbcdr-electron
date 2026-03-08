@@ -18,11 +18,21 @@ import type {
   QuerySelectorRequest,
   ScrapeRequest,
   ClickAndWaitRequest,
-  ScreenshotRequest
+  ScreenshotRequest,
+  StateRequest,
+  StateResponse,
+  ClickByIndexRequest,
+  TypeByIndexRequest
 } from '@main/models/api-types'
 
 export const HTTP_API_PORT = 7483
 let server: http.Server | null = null
+
+const elementIndexCache = new Map<string, Map<number, string>>()
+
+function clearElementIndexCache(tabId: string): void {
+  elementIndexCache.delete(tabId)
+}
 
 function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
@@ -301,6 +311,158 @@ const routes: Record<string, RouteHandler> = {
     } catch (error) {
       fail(res, error instanceof Error ? error.message : 'Operation failed', 500)
     }
+  },
+
+  '/state': async (body, res) => {
+    const { tabId, viewportThreshold = 1000 } = body as unknown as StateRequest
+    if (!tabId) return fail(res, 'tabId required')
+    const wc = getTabWebContents(tabId)
+    if (!wc) return fail(res, 'Tab not found', 404)
+
+    const script = `(() => {
+      const INTERACTIVE_TAGS = new Set(['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'LABEL']);
+      const INTERACTIVE_ROLES = new Set(['button', 'link', 'checkbox', 'radio', 'textbox', 'combobox', 'menuitem', 'tab', 'searchbox']);
+
+      function isInteractive(el) {
+        if (INTERACTIVE_TAGS.has(el.tagName)) return true;
+        const role = el.getAttribute('role');
+        if (role && INTERACTIVE_ROLES.has(role)) return true;
+        const onclick = el.getAttribute('onclick');
+        if (onclick) return true;
+        const style = window.getComputedStyle(el);
+        if (style.cursor === 'pointer') return true;
+        return false;
+      }
+
+      function isVisible(el, viewportHeight) {
+        const style = window.getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return false;
+        const threshold = ${viewportThreshold};
+        return rect.top < viewportHeight + threshold && rect.bottom > -threshold;
+      }
+
+      const viewport = {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scrollY: window.scrollY,
+        scrollX: window.scrollX
+      };
+
+      const elements = [];
+      const allElements = document.querySelectorAll('*');
+      let hiddenCount = 0;
+
+      for (const el of allElements) {
+        const interactive = isInteractive(el);
+        const visible = isVisible(el, viewport.height);
+
+        if (!interactive && !visible) continue;
+
+        const rect = el.getBoundingClientRect();
+        const text = (el.innerText || el.textContent || '').trim().substring(0, 100);
+        const ariaLabel = el.getAttribute('aria-label');
+        const role = el.getAttribute('role');
+
+        const attributes = {};
+        for (const attr of el.attributes) {
+          if (['id', 'name', 'class', 'type', 'placeholder', 'value', 'href', 'aria-label'].includes(attr.name)) {
+            attributes[attr.name] = attr.value;
+          }
+        }
+
+        if (!visible) {
+          hiddenCount++;
+        } else {
+          elements.push({
+            tag: el.tagName.toLowerCase(),
+            text,
+            role,
+            ariaLabel,
+            bounds: {
+              x: rect.x + window.scrollX,
+              y: rect.y + window.scrollY,
+              width: rect.width,
+              height: rect.height
+            },
+            attributes,
+            isVisible: visible,
+            isInteractive: interactive
+          });
+        }
+      }
+
+      return { elements, viewport, hiddenElementsCount: hiddenCount };
+    })()`
+
+    const result = await wc.executeJavaScript(script) as Omit<StateResponse, 'elements'> & { elements: Omit<StateResponse['elements'][0], 'index'>[] }
+
+    const indexMap = new Map<number, string>()
+    const indexedElements = result.elements.map((el, index) => {
+      const selector =
+        el.attributes.id ? `#${el.attributes.id}` :
+        el.attributes.name ? `[name="${el.attributes.name}"]` :
+        `${el.tag}`
+      indexMap.set(index, selector)
+      return { ...el, index }
+    })
+
+    elementIndexCache.set(tabId, indexMap)
+
+    ok(res, {
+      elements: indexedElements,
+      viewport: result.viewport,
+      hiddenElementsCount: result.hiddenElementsCount
+    } as StateResponse)
+  },
+
+  '/clickByIndex': async (body, res) => {
+    const { tabId, index, silent } = body as unknown as ClickByIndexRequest
+    if (!tabId || index === undefined) return fail(res, 'tabId and index required')
+
+    const indexMap = elementIndexCache.get(tabId)
+    if (!indexMap) return fail(res, 'No element index cache found. Call /state first', 400)
+
+    const selector = indexMap.get(index)
+    if (!selector) return fail(res, `Element index ${index} not found`, 404)
+
+    const wc = getTabWebContents(tabId)
+    if (!wc) return fail(res, 'Tab not found', 404)
+
+    await wc.executeJavaScript(
+      `(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) throw new Error('Element not found'); el.click(); })()`
+    )
+    ok(res, silent ? {} : { success: true })
+  },
+
+  '/typeByIndex': async (body, res) => {
+    const { tabId, index, text, clear, silent } = body as unknown as TypeByIndexRequest
+    if (!tabId || index === undefined || text === undefined) {
+      return fail(res, 'tabId, index, and text required')
+    }
+
+    const indexMap = elementIndexCache.get(tabId)
+    if (!indexMap) return fail(res, 'No element index cache found. Call /state first', 400)
+
+    const selector = indexMap.get(index)
+    if (!selector) return fail(res, `Element index ${index} not found`, 404)
+
+    const wc = getTabWebContents(tabId)
+    if (!wc) return fail(res, 'Tab not found', 404)
+
+    await wc.executeJavaScript(
+      `(() => {
+        const el = document.querySelector(${JSON.stringify(selector)});
+        if (!el) throw new Error('Element not found');
+        el.focus();
+        ${clear ? 'el.value = "";' : ''}
+        el.value = ${JSON.stringify(text)};
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      })()`
+    )
+    ok(res, silent ? {} : { success: true })
   }
 }
 

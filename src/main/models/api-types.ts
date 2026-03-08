@@ -93,3 +93,54 @@ export interface ScreenshotRequest {
   quality?: number
   format?: 'png' | 'jpeg'
 }
+
+export interface StateRequest {
+  tabId: string
+  viewportThreshold?: number
+}
+
+export interface ElementBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface IndexedElement {
+  index: number
+  tag: string
+  text: string
+  role?: string
+  ariaLabel?: string
+  bounds: ElementBounds
+  attributes: Record<string, string>
+  isVisible: boolean
+  isInteractive: boolean
+}
+
+export interface ViewportInfo {
+  width: number
+  height: number
+  scrollY: number
+  scrollX: number
+}
+
+export interface StateResponse {
+  elements: IndexedElement[]
+  viewport: ViewportInfo
+  hiddenElementsCount: number
+}
+
+export interface ClickByIndexRequest {
+  tabId: string
+  index: number
+  silent?: boolean
+}
+
+export interface TypeByIndexRequest {
+  tabId: string
+  index: number
+  text: string
+  clear?: boolean
+  silent?: boolean
+}

@@ -17,12 +17,12 @@ const api = {
   },
 
   fs: {
-    readTree: (rootPath: string) => ipcRenderer.invoke('fs:read-tree', rootPath),
+    readTree: (rootPath: string, showIgnored?: boolean) => ipcRenderer.invoke('fs:read-tree', rootPath, showIgnored ?? false),
     readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
     writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:write-file', filePath, content),
     deleteFile: (filePath: string) => ipcRenderer.invoke('fs:delete-file', filePath),
     showInFolder: (filePath: string) => ipcRenderer.invoke('fs:show-in-folder', filePath),
-    watch: (rootPath: string) => ipcRenderer.invoke('fs:watch', rootPath),
+    watch: (rootPath: string, showIgnored?: boolean) => ipcRenderer.invoke('fs:watch', rootPath, showIgnored ?? false),
     unwatch: () => ipcRenderer.invoke('fs:unwatch'),
     onTreeChanged: (callback: (tree: unknown) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, tree: unknown) => callback(tree)

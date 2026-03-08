@@ -3,7 +3,7 @@ import { useFileTreeStore } from '@/stores/filetree-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useGitStore } from '@/stores/git-store'
-import { ChevronRight, ChevronDown, File, Folder, RefreshCw, Copy, ExternalLink } from 'lucide-react'
+import { ChevronRight, ChevronDown, File, Folder, RefreshCw, Copy, ExternalLink, Eye, EyeOff } from 'lucide-react'
 import type { FileNode, GitFileStatus } from '@/models/types'
 
 const GIT_STATUS_COLORS: Record<GitFileStatus, string> = {
@@ -114,11 +114,13 @@ function TreeNode({
   const fileStatus = gitStatus?.[node.path]
   const statusColor = fileStatus ? GIT_STATUS_COLORS[fileStatus] : ''
 
+  const ignoredStyle = node.isGitignored ? 'opacity-40' : ''
+
   if (!node.isDirectory) {
     const isActive = node.path === activeFilePath
     return (
       <div
-        className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-sm hover:bg-zinc-800/50 ${
+        className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-sm hover:bg-zinc-800/50 ${ignoredStyle} ${
           isActive ? 'bg-zinc-800/70' : ''
         } ${statusColor || (isActive ? 'text-zinc-200' : 'text-zinc-400')}`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
@@ -139,7 +141,7 @@ function TreeNode({
   return (
     <div>
       <div
-        className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-sm ${statusColor || 'text-zinc-300'} hover:bg-zinc-800/50`}
+        className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-sm ${ignoredStyle} ${statusColor || 'text-zinc-300'} hover:bg-zinc-800/50`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
         onClick={() => toggleExpanded(projectId, node.path)}
         onContextMenu={(e) => onContextMenu(e, node)}
@@ -165,7 +167,8 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
     s.projects.find((p) => p.id === projectId)
   )
   const tree = useFileTreeStore((s) => s.treePerProject[projectId])
-  const { loadTree, setTree } = useFileTreeStore()
+  const showIgnored = useFileTreeStore((s) => s.showIgnoredPerProject[projectId] ?? false)
+  const { loadTree, setTree, toggleShowIgnored } = useFileTreeStore()
   const { loadStatus } = useGitStore()
   const { openDefaultFile } = useEditorStore()
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
@@ -175,12 +178,12 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
     if (!activeProject) return
 
     if (!tree) {
-      loadTree(projectId, activeProject.path)
+      loadTree(projectId, activeProject.path, showIgnored)
     }
 
     loadStatus(projectId, activeProject.path)
 
-    window.api.fs.watch(activeProject.path)
+    window.api.fs.watch(activeProject.path, showIgnored)
 
     const unsub = window.api.fs.onTreeChanged((newTree) => {
       setTree(projectId, newTree as FileNode)
@@ -231,13 +234,22 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3 py-1.5">
         <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Explorer</span>
-        <button
-          onClick={handleRefresh}
-          className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-          title="Refresh"
-        >
-          <RefreshCw size={12} />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => toggleShowIgnored(projectId, activeProject.path)}
+            className={`rounded p-1 hover:bg-zinc-800 ${showIgnored ? 'text-zinc-300' : 'text-zinc-500 hover:text-zinc-300'}`}
+            title={showIgnored ? 'Hide ignored files' : 'Show ignored files'}
+          >
+            {showIgnored ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
+          <button
+            onClick={handleRefresh}
+            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+            title="Refresh"
+          >
+            <RefreshCw size={12} />
+          </button>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto p-1">
         {tree.children?.map((child) => (
