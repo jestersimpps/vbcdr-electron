@@ -33,8 +33,8 @@ export const defaultLayout: Layout[] = [
 ]
 
 export const browserlessDefaultLayout: Layout[] = [
-  { i: 'browser-editor', x: 0, y: 0, w: 8, h: 12, minW: 4, minH: 3 },
-  { i: 'git', x: 8, y: 0, w: 4, h: 12, minW: 3, minH: 3 }
+  { i: 'browser-editor', x: 0, y: 0, w: 10, h: 12, minW: 4, minH: 3 },
+  { i: 'git', x: 10, y: 0, w: 2, h: 12, minW: 2, minH: 3 }
 ]
 
 export function getPanelConfigs(browserless: boolean): PanelConfig[] {
