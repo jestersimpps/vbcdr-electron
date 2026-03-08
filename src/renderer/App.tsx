@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { AppLayoutGrid } from '@/components/layout/AppLayoutGrid'
 import { UpdateBanner } from '@/components/layout/UpdateBanner'
-import { DriftBanner } from '@/components/git/DriftBanner'
+
 import { ConflictBanner } from '@/components/git/ConflictBanner'
 import { useThemeStore } from '@/stores/theme-store'
 import { useProjectStore } from '@/stores/project-store'
@@ -70,7 +70,7 @@ export function App(): React.ReactElement {
   return (
     <>
       <UpdateBanner />
-      <DriftBanner />
+
       <ConflictBanner />
       <AppLayoutGrid />
     </>

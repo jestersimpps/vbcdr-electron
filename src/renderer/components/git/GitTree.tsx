@@ -3,7 +3,7 @@ import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { sendToTerminal } from '@/lib/terminal-utils'
-import { GitBranch as GitBranchIcon, GitCommitHorizontal, GitPullRequest, Sparkles, RefreshCw, X } from 'lucide-react'
+import { GitBranch as GitBranchIcon, GitCommitHorizontal, GitPullRequest, Sparkles, RefreshCw, X, ArrowDown, GitMerge } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 
 const LANE_COLORS = [
@@ -202,6 +202,9 @@ export function GitTree(): React.ReactElement {
   const isRepo = useGitStore((s) => activeProjectId ? s.isRepoPerProject[activeProjectId] : false)
   const commits = useGitStore((s) => activeProjectId ? s.commitsPerProject[activeProjectId] : undefined)
   const branches = useGitStore((s) => activeProjectId ? s.branchesPerProject[activeProjectId] : undefined)
+  const drift = useGitStore((s) => activeProjectId ? s.driftPerProject[activeProjectId] : undefined)
+  const pullAction = useGitStore((s) => s.pull)
+  const rebaseAction = useGitStore((s) => s.rebaseRemote)
   const { loadGitData } = useGitStore()
 
   const [featureModalOpen, setFeatureModalOpen] = useState(false)
@@ -264,6 +267,26 @@ export function GitTree(): React.ReactElement {
             <span className="rounded bg-green-400/15 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
               {currentBranch.name}
             </span>
+          )}
+          {drift && drift.behind > 0 && !drift.diverged && activeProjectId && activeProject && (
+            <button
+              onClick={() => pullAction(activeProjectId, activeProject.path)}
+              className="flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-400 hover:bg-blue-500/25"
+              title={`${drift.behind} commit${drift.behind > 1 ? 's' : ''} behind ${drift.remoteBranch ?? 'remote'} — click to pull`}
+            >
+              <ArrowDown size={10} />
+              <span>{drift.behind}</span>
+            </button>
+          )}
+          {drift?.diverged && activeProjectId && activeProject && (
+            <button
+              onClick={() => rebaseAction(activeProjectId, activeProject.path)}
+              className="flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400 hover:bg-amber-500/25"
+              title={`Diverged: ${drift.ahead} ahead, ${drift.behind} behind — click to rebase`}
+            >
+              <GitMerge size={10} />
+              <span>{drift.ahead}/{drift.behind}</span>
+            </button>
           )}
         </div>
         <div className="flex items-center gap-1">
