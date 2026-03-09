@@ -36,10 +36,9 @@ function shellEnv(): Record<string, string> {
   env.TERM = 'xterm-256color'
   env.TERM_PROGRAM = 'vbcdr'
   env.VBCDR_API = `http://127.0.0.1:${HTTP_API_PORT}`
-  env.GIT_TERMINAL_PROMPT = '0'
   env.GIT_CONFIG_COUNT = '1'
   env.GIT_CONFIG_KEY_0 = 'credential.helper'
-  env.GIT_CONFIG_VALUE_0 = ''
+  env.GIT_CONFIG_VALUE_0 = 'osxkeychain'
   if (!env.PATH || !env.PATH.includes('/usr/local/bin')) {
     try {
       const loginPath = execSync('/bin/bash -ilc "echo $PATH"', { encoding: 'utf-8' }).trim()
