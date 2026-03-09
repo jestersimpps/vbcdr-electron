@@ -9,7 +9,12 @@ const SEPARATOR = '<<SEP>>'
 const FORMAT = ['%H', '%h', '%s', '%an', '%ar', '%D', '%P'].join(SEPARATOR)
 
 async function runGit(cwd: string, args: string[], timeout: number = 5000): Promise<string> {
-  const { stdout } = await execFile('git', args, { cwd, encoding: 'utf-8', timeout })
+  const { stdout } = await execFile('git', args, {
+    cwd,
+    encoding: 'utf-8',
+    timeout,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+  })
   return stdout.trim()
 }
 

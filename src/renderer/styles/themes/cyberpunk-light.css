@@ -1,0 +1,72 @@
+:root.cyberpunk-light body {
+  background: #f5f4e8;
+  color: #1a1a10;
+}
+
+:root.cyberpunk-light ::-webkit-scrollbar-thumb {
+  background: #b8007780;
+}
+
+:root.cyberpunk-light ::-webkit-scrollbar-thumb:hover {
+  background: #b80077bb;
+}
+
+:root.cyberpunk-light .bg-zinc-950 { background-color: #f5f4e8; }
+:root.cyberpunk-light .bg-zinc-900\/80 { background-color: #eeead8e6; }
+:root.cyberpunk-light .bg-zinc-900\/50 { background-color: #eeead880; }
+:root.cyberpunk-light .bg-zinc-900\/30 { background-color: #eeead84d; }
+:root.cyberpunk-light .bg-zinc-900 { background-color: #eeead8; }
+:root.cyberpunk-light .bg-zinc-800 { background-color: #e4dfc8; }
+:root.cyberpunk-light .bg-zinc-800\/70 { background-color: #e4dfc8b3; }
+:root.cyberpunk-light .bg-zinc-800\/50 { background-color: #e4dfc880; }
+:root.cyberpunk-light .bg-zinc-800\/30 { background-color: #e4dfc84d; }
+:root.cyberpunk-light .bg-zinc-700 { background-color: #d8d0b0; }
+:root.cyberpunk-light .bg-zinc-700\/30 { background-color: #d8d0b04d; }
+
+:root.cyberpunk-light .hover\:bg-zinc-800:hover { background-color: #e0d8c0; }
+:root.cyberpunk-light .hover\:bg-zinc-800\/50:hover { background-color: #e0d8c080; }
+:root.cyberpunk-light .hover\:bg-zinc-800\/30:hover { background-color: #e0d8c04d; }
+:root.cyberpunk-light .hover\:bg-zinc-700:hover { background-color: #d0c8a8; }
+
+:root.cyberpunk-light .border-zinc-800 { border-color: #a6850060; }
+:root.cyberpunk-light .border-zinc-700 { border-color: #b8007750; }
+:root.cyberpunk-light .border-zinc-600 { border-color: #b8007750; }
+:root.cyberpunk-light .border-zinc-600\/40 { border-color: #b8007730; }
+
+:root.cyberpunk-light .text-zinc-100 { color: #1a1a10; }
+:root.cyberpunk-light .text-zinc-200 { color: #a68500; }
+:root.cyberpunk-light .text-zinc-300 { color: #b80077; }
+:root.cyberpunk-light .text-zinc-400 { color: #007a6a; }
+:root.cyberpunk-light .text-zinc-500 { color: #c05000; }
+:root.cyberpunk-light .text-zinc-600 { color: #b80077; }
+
+:root.cyberpunk-light .hover\:text-zinc-200:hover { color: #b80077; }
+:root.cyberpunk-light .hover\:text-zinc-300:hover { color: #a68500; }
+:root.cyberpunk-light .hover\:text-zinc-400:hover { color: #007a6a; }
+
+:root.cyberpunk-light .bg-blue-500 { background-color: #007a6a; }
+:root.cyberpunk-light .bg-blue-600 { background-color: #006a5a; }
+:root.cyberpunk-light .hover\:bg-blue-500:hover { background-color: #008a7a; }
+:root.cyberpunk-light .bg-blue-500\/15 { background-color: rgba(0, 122, 106, 0.15); }
+:root.cyberpunk-light .bg-emerald-400 { background-color: #a68500; }
+:root.cyberpunk-light .bg-amber-400 { background-color: #c05000; }
+:root.cyberpunk-light .bg-amber-600 { background-color: #c05000; }
+:root.cyberpunk-light .bg-amber-500\/15 { background-color: rgba(192, 80, 0, 0.15); }
+:root.cyberpunk-light .bg-red-500\/20 { background-color: rgba(184, 0, 119, 0.2); }
+:root.cyberpunk-light .bg-red-600 { background-color: #b80077; }
+:root.cyberpunk-light .bg-green-400 { background-color: #a68500; }
+:root.cyberpunk-light .bg-green-400\/15 { background-color: rgba(166, 133, 0, 0.15); }
+:root.cyberpunk-light .bg-green-600 { background-color: #b89500; }
+
+:root.cyberpunk-light .text-blue-400 { color: #007a6a; }
+:root.cyberpunk-light .text-emerald-400 { color: #a68500; }
+:root.cyberpunk-light .text-amber-300 { color: #c05000; }
+:root.cyberpunk-light .text-amber-400 { color: #c05000; }
+:root.cyberpunk-light .text-red-400 { color: #b80077; }
+:root.cyberpunk-light .text-red-500 { color: #cc0088; }
+:root.cyberpunk-light .text-green-400 { color: #a68500; }
+:root.cyberpunk-light .text-yellow-400 { color: #c05000; }
+:root.cyberpunk-light .fill-yellow-400 { fill: #c05000; }
+:root.cyberpunk-light .hover\:text-red-400:hover { color: #cc0088; }
+
+:root.cyberpunk-light .focus\:ring-zinc-600:focus { --tw-ring-color: #007a6a; }

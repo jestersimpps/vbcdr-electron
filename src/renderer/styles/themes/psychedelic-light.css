@@ -4,11 +4,11 @@
 }
 
 :root.psychedelic-light ::-webkit-scrollbar-thumb {
-  background: #d8a0f0;
+  background: #d4187680;
 }
 
 :root.psychedelic-light ::-webkit-scrollbar-thumb:hover {
-  background: #c080e0;
+  background: #d41876bb;
 }
 
 :root.psychedelic-light .bg-zinc-950 { background-color: #faf0ff; }
@@ -23,23 +23,50 @@
 :root.psychedelic-light .bg-zinc-700 { background-color: #d8b8e8; }
 :root.psychedelic-light .bg-zinc-700\/30 { background-color: #d8b8e84d; }
 
-:root.psychedelic-light .hover\:bg-zinc-800:hover { background-color: #e8d0f0; }
-:root.psychedelic-light .hover\:bg-zinc-800\/50:hover { background-color: #e8d0f080; }
-:root.psychedelic-light .hover\:bg-zinc-800\/30:hover { background-color: #e8d0f04d; }
-:root.psychedelic-light .hover\:bg-zinc-700:hover { background-color: #d8b8e8; }
+:root.psychedelic-light .hover\:bg-zinc-800:hover { background-color: #e4c8f0; }
+:root.psychedelic-light .hover\:bg-zinc-800\/50:hover { background-color: #e4c8f080; }
+:root.psychedelic-light .hover\:bg-zinc-800\/30:hover { background-color: #e4c8f04d; }
+:root.psychedelic-light .hover\:bg-zinc-700:hover { background-color: #d0a8e0; }
 
-:root.psychedelic-light .border-zinc-800 { border-color: #d8b8e8; }
-:root.psychedelic-light .border-zinc-700 { border-color: #c8a0d8; }
-:root.psychedelic-light .border-zinc-600 { border-color: #c8a0d8; }
-:root.psychedelic-light .border-zinc-600\/40 { border-color: #c8a0d866; }
+:root.psychedelic-light .border-zinc-800 { border-color: #1a8a0050; }
+:root.psychedelic-light .border-zinc-700 { border-color: #d4187660; }
+:root.psychedelic-light .border-zinc-600 { border-color: #d4187660; }
+:root.psychedelic-light .border-zinc-600\/40 { border-color: #d4187630; }
 
 :root.psychedelic-light .text-zinc-100 { color: #2a1040; }
-:root.psychedelic-light .text-zinc-200 { color: #2a1040; }
-:root.psychedelic-light .text-zinc-300 { color: #4a2868; }
-:root.psychedelic-light .text-zinc-400 { color: #7848a0; }
-:root.psychedelic-light .text-zinc-500 { color: #7848a0; }
-:root.psychedelic-light .text-zinc-600 { color: #7848a0; }
+:root.psychedelic-light .text-zinc-200 { color: #d41876; }
+:root.psychedelic-light .text-zinc-300 { color: #0088aa; }
+:root.psychedelic-light .text-zinc-400 { color: #8b2fc9; }
+:root.psychedelic-light .text-zinc-500 { color: #1a8a00; }
+:root.psychedelic-light .text-zinc-600 { color: #d41876; }
 
-:root.psychedelic-light .hover\:text-zinc-200:hover { color: #2a1040; }
-:root.psychedelic-light .hover\:text-zinc-300:hover { color: #4a2868; }
-:root.psychedelic-light .hover\:text-zinc-400:hover { color: #7848a0; }
+:root.psychedelic-light .hover\:text-zinc-200:hover { color: #8b2fc9; }
+:root.psychedelic-light .hover\:text-zinc-300:hover { color: #d41876; }
+:root.psychedelic-light .hover\:text-zinc-400:hover { color: #0088aa; }
+
+:root.psychedelic-light .bg-blue-500 { background-color: #8b2fc9; }
+:root.psychedelic-light .bg-blue-600 { background-color: #7a20b8; }
+:root.psychedelic-light .hover\:bg-blue-500:hover { background-color: #9c40d8; }
+:root.psychedelic-light .bg-blue-500\/15 { background-color: rgba(139, 47, 201, 0.15); }
+:root.psychedelic-light .bg-emerald-400 { background-color: #1a8a00; }
+:root.psychedelic-light .bg-amber-400 { background-color: #b5a000; }
+:root.psychedelic-light .bg-amber-600 { background-color: #b5a000; }
+:root.psychedelic-light .bg-amber-500\/15 { background-color: rgba(181, 160, 0, 0.15); }
+:root.psychedelic-light .bg-red-500\/20 { background-color: rgba(212, 24, 118, 0.2); }
+:root.psychedelic-light .bg-red-600 { background-color: #d41876; }
+:root.psychedelic-light .bg-green-400 { background-color: #1a8a00; }
+:root.psychedelic-light .bg-green-400\/15 { background-color: rgba(26, 138, 0, 0.15); }
+:root.psychedelic-light .bg-green-600 { background-color: #22a500; }
+
+:root.psychedelic-light .text-blue-400 { color: #8b2fc9; }
+:root.psychedelic-light .text-emerald-400 { color: #1a8a00; }
+:root.psychedelic-light .text-amber-300 { color: #b5a000; }
+:root.psychedelic-light .text-amber-400 { color: #b5a000; }
+:root.psychedelic-light .text-red-400 { color: #d41876; }
+:root.psychedelic-light .text-red-500 { color: #e02080; }
+:root.psychedelic-light .text-green-400 { color: #1a8a00; }
+:root.psychedelic-light .text-yellow-400 { color: #b5a000; }
+:root.psychedelic-light .fill-yellow-400 { fill: #b5a000; }
+:root.psychedelic-light .hover\:text-red-400:hover { color: #e02080; }
+
+:root.psychedelic-light .focus\:ring-zinc-600:focus { --tw-ring-color: #8b2fc9; }

@@ -258,6 +258,198 @@ TERMINAL_THEMES['gruvbox-light'] = lightTerminalBase('#fbf1c7', '#3c3836', '#af3
 TERMINAL_THEMES['monokai-dark'] = darkTerminalBase('#1e1f1c', '#f8f8f2', '#f8f8f0')
 TERMINAL_THEMES['monokai-light'] = lightTerminalBase('#fafafa', '#272822', '#5f5a60')
 
+TERMINAL_THEMES['synthwave-dark'] = {
+  background: '#0a0a1a',
+  foreground: '#e0d0ff',
+  cursor: '#ff2975',
+  cursorAccent: '#0a0a1a',
+  selectionBackground: '#b362ff44',
+  black: '#181438',
+  red: '#ff2975',
+  green: '#00ff9f',
+  yellow: '#ffcc00',
+  blue: '#00d4ff',
+  magenta: '#b362ff',
+  cyan: '#00d4ff',
+  white: '#e0d0ff',
+  brightBlack: '#7060a8',
+  brightRed: '#ff6ba0',
+  brightGreen: '#66ffcc',
+  brightYellow: '#ffe066',
+  brightBlue: '#66e0ff',
+  brightMagenta: '#cc8aff',
+  brightCyan: '#66e8ff',
+  brightWhite: '#ffffff'
+}
+
+TERMINAL_THEMES['synthwave-light'] = {
+  background: '#f0e8ff',
+  foreground: '#1a1030',
+  cursor: '#c9156d',
+  cursorAccent: '#f0e8ff',
+  selectionBackground: '#c098d880',
+  black: '#1a1030',
+  red: '#c9156d',
+  green: '#007a4a',
+  yellow: '#a08000',
+  blue: '#007a8a',
+  magenta: '#6930c3',
+  cyan: '#007a8a',
+  white: '#6040a0',
+  brightBlack: '#3a2058',
+  brightRed: '#d4266e',
+  brightGreen: '#009060',
+  brightYellow: '#b89000',
+  brightBlue: '#008a9a',
+  brightMagenta: '#7a40d0',
+  brightCyan: '#009aaa',
+  brightWhite: '#f0e8ff'
+}
+
+TERMINAL_THEMES['cyberpunk-dark'] = {
+  background: '#0c0c14',
+  foreground: '#e0e8d0',
+  cursor: '#e8ff00',
+  cursorAccent: '#0c0c14',
+  selectionBackground: '#e8ff0030',
+  black: '#1a1a28',
+  red: '#ff00aa',
+  green: '#00ffd5',
+  yellow: '#e8ff00',
+  blue: '#00aaff',
+  magenta: '#ff00aa',
+  cyan: '#00ffd5',
+  white: '#e0e8d0',
+  brightBlack: '#687860',
+  brightRed: '#ff44cc',
+  brightGreen: '#44ffe0',
+  brightYellow: '#eeff66',
+  brightBlue: '#44bbff',
+  brightMagenta: '#ff66cc',
+  brightCyan: '#66ffe8',
+  brightWhite: '#ffffff'
+}
+
+TERMINAL_THEMES['cyberpunk-light'] = {
+  background: '#f5f4e8',
+  foreground: '#1a1a10',
+  cursor: '#a68500',
+  cursorAccent: '#f5f4e8',
+  selectionBackground: '#c0bca080',
+  black: '#1a1a10',
+  red: '#b80077',
+  green: '#007a6a',
+  yellow: '#a68500',
+  blue: '#005a8a',
+  magenta: '#b80077',
+  cyan: '#007a6a',
+  white: '#606040',
+  brightBlack: '#3a3a20',
+  brightRed: '#cc0088',
+  brightGreen: '#008a7a',
+  brightYellow: '#b89500',
+  brightBlue: '#006a9a',
+  brightMagenta: '#cc0099',
+  brightCyan: '#009a8a',
+  brightWhite: '#f5f4e8'
+}
+
+TERMINAL_THEMES['rainbow-dark'] = {
+  background: '#101018',
+  foreground: '#e8e0f0',
+  cursor: '#4dabf7',
+  cursorAccent: '#101018',
+  selectionBackground: '#b07aff40',
+  black: '#1c1a2a',
+  red: '#ff4040',
+  green: '#2ec46a',
+  yellow: '#ffe066',
+  blue: '#4dabf7',
+  magenta: '#b07aff',
+  cyan: '#4dabf7',
+  white: '#e8e0f0',
+  brightBlack: '#787098',
+  brightRed: '#ff6666',
+  brightGreen: '#66d98a',
+  brightYellow: '#ffe888',
+  brightBlue: '#77c0ff',
+  brightMagenta: '#c8a0ff',
+  brightCyan: '#88d4ff',
+  brightWhite: '#ffffff'
+}
+
+TERMINAL_THEMES['rainbow-light'] = {
+  background: '#fafafa',
+  foreground: '#1a1020',
+  cursor: '#2060d0',
+  cursorAccent: '#fafafa',
+  selectionBackground: '#ccc8d880',
+  black: '#1a1020',
+  red: '#c01030',
+  green: '#1a7a30',
+  yellow: '#c06000',
+  blue: '#2060d0',
+  magenta: '#8040c0',
+  cyan: '#2060d0',
+  white: '#605080',
+  brightBlack: '#3a2848',
+  brightRed: '#d02040',
+  brightGreen: '#228a40',
+  brightYellow: '#d07000',
+  brightBlue: '#3070e0',
+  brightMagenta: '#9050d0',
+  brightCyan: '#3080e0',
+  brightWhite: '#fafafa'
+}
+
+TERMINAL_THEMES['tropical-dark'] = {
+  background: '#0a1418',
+  foreground: '#e0f0f0',
+  cursor: '#ff6b6b',
+  cursorAccent: '#0a1418',
+  selectionBackground: '#00d2d330',
+  black: '#142228',
+  red: '#ff6b6b',
+  green: '#a8e26a',
+  yellow: '#ffa348',
+  blue: '#00d2d3',
+  magenta: '#ff6b6b',
+  cyan: '#00d2d3',
+  white: '#e0f0f0',
+  brightBlack: '#508080',
+  brightRed: '#ff8888',
+  brightGreen: '#bbe888',
+  brightYellow: '#ffb878',
+  brightBlue: '#44dde0',
+  brightMagenta: '#ff9090',
+  brightCyan: '#66e4e4',
+  brightWhite: '#ffffff'
+}
+
+TERMINAL_THEMES['tropical-light'] = {
+  background: '#fff8f0',
+  foreground: '#1a1810',
+  cursor: '#d4413b',
+  cursorAccent: '#fff8f0',
+  selectionBackground: '#d8c8a480',
+  black: '#1a1810',
+  red: '#d4413b',
+  green: '#3a7a3a',
+  yellow: '#c07020',
+  blue: '#008080',
+  magenta: '#d4413b',
+  cyan: '#008080',
+  white: '#605838',
+  brightBlack: '#3a3020',
+  brightRed: '#e0504a',
+  brightGreen: '#4a8a4a',
+  brightYellow: '#d08030',
+  brightBlue: '#009090',
+  brightMagenta: '#e06058',
+  brightCyan: '#00a0a0',
+  brightWhite: '#fff8f0'
+}
+
 export function getTerminalTheme(themeId: string): ITheme {
   return TERMINAL_THEMES[themeId] ?? TERMINAL_THEMES['github-dark']
 }

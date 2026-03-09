@@ -1,0 +1,72 @@
+:root.tropical-light body {
+  background: #fff8f0;
+  color: #1a1810;
+}
+
+:root.tropical-light ::-webkit-scrollbar-thumb {
+  background: #d4413b80;
+}
+
+:root.tropical-light ::-webkit-scrollbar-thumb:hover {
+  background: #d4413bbb;
+}
+
+:root.tropical-light .bg-zinc-950 { background-color: #fff8f0; }
+:root.tropical-light .bg-zinc-900\/80 { background-color: #f8eee0e6; }
+:root.tropical-light .bg-zinc-900\/50 { background-color: #f8eee080; }
+:root.tropical-light .bg-zinc-900\/30 { background-color: #f8eee04d; }
+:root.tropical-light .bg-zinc-900 { background-color: #f8eee0; }
+:root.tropical-light .bg-zinc-800 { background-color: #f0e0c8; }
+:root.tropical-light .bg-zinc-800\/70 { background-color: #f0e0c8b3; }
+:root.tropical-light .bg-zinc-800\/50 { background-color: #f0e0c880; }
+:root.tropical-light .bg-zinc-800\/30 { background-color: #f0e0c84d; }
+:root.tropical-light .bg-zinc-700 { background-color: #e8d4b0; }
+:root.tropical-light .bg-zinc-700\/30 { background-color: #e8d4b04d; }
+
+:root.tropical-light .hover\:bg-zinc-800:hover { background-color: #eddcc4; }
+:root.tropical-light .hover\:bg-zinc-800\/50:hover { background-color: #eddcc480; }
+:root.tropical-light .hover\:bg-zinc-800\/30:hover { background-color: #eddcc44d; }
+:root.tropical-light .hover\:bg-zinc-700:hover { background-color: #e0cca0; }
+
+:root.tropical-light .border-zinc-800 { border-color: #00808050; }
+:root.tropical-light .border-zinc-700 { border-color: #d4413b50; }
+:root.tropical-light .border-zinc-600 { border-color: #d4413b50; }
+:root.tropical-light .border-zinc-600\/40 { border-color: #d4413b30; }
+
+:root.tropical-light .text-zinc-100 { color: #1a1810; }
+:root.tropical-light .text-zinc-200 { color: #d4413b; }
+:root.tropical-light .text-zinc-300 { color: #008080; }
+:root.tropical-light .text-zinc-400 { color: #3a7a3a; }
+:root.tropical-light .text-zinc-500 { color: #c07020; }
+:root.tropical-light .text-zinc-600 { color: #d4413b; }
+
+:root.tropical-light .hover\:text-zinc-200:hover { color: #008080; }
+:root.tropical-light .hover\:text-zinc-300:hover { color: #d4413b; }
+:root.tropical-light .hover\:text-zinc-400:hover { color: #3a7a3a; }
+
+:root.tropical-light .bg-blue-500 { background-color: #008080; }
+:root.tropical-light .bg-blue-600 { background-color: #007070; }
+:root.tropical-light .hover\:bg-blue-500:hover { background-color: #009090; }
+:root.tropical-light .bg-blue-500\/15 { background-color: rgba(0, 128, 128, 0.15); }
+:root.tropical-light .bg-emerald-400 { background-color: #3a7a3a; }
+:root.tropical-light .bg-amber-400 { background-color: #c07020; }
+:root.tropical-light .bg-amber-600 { background-color: #c07020; }
+:root.tropical-light .bg-amber-500\/15 { background-color: rgba(192, 112, 32, 0.15); }
+:root.tropical-light .bg-red-500\/20 { background-color: rgba(212, 65, 59, 0.2); }
+:root.tropical-light .bg-red-600 { background-color: #d4413b; }
+:root.tropical-light .bg-green-400 { background-color: #3a7a3a; }
+:root.tropical-light .bg-green-400\/15 { background-color: rgba(58, 122, 58, 0.15); }
+:root.tropical-light .bg-green-600 { background-color: #4a8a4a; }
+
+:root.tropical-light .text-blue-400 { color: #008080; }
+:root.tropical-light .text-emerald-400 { color: #3a7a3a; }
+:root.tropical-light .text-amber-300 { color: #c07020; }
+:root.tropical-light .text-amber-400 { color: #c07020; }
+:root.tropical-light .text-red-400 { color: #d4413b; }
+:root.tropical-light .text-red-500 { color: #e0504a; }
+:root.tropical-light .text-green-400 { color: #3a7a3a; }
+:root.tropical-light .text-yellow-400 { color: #c07020; }
+:root.tropical-light .fill-yellow-400 { fill: #c07020; }
+:root.tropical-light .hover\:text-red-400:hover { color: #e0504a; }
+
+:root.tropical-light .focus\:ring-zinc-600:focus { --tw-ring-color: #008080; }

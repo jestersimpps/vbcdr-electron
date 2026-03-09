@@ -1,0 +1,119 @@
+:root.rainbow-dark body {
+  background: #101018;
+  color: #e8e0f0;
+}
+
+:root.rainbow-dark ::-webkit-scrollbar-thumb {
+  background: #4dabf760;
+}
+
+:root.rainbow-dark ::-webkit-scrollbar-thumb:hover {
+  background: #4dabf790;
+}
+
+:root.rainbow-dark .bg-zinc-950 {
+  background-color: #101018;
+}
+
+:root.rainbow-dark .bg-zinc-900\/80 {
+  background-color: rgba(16, 14, 30, 0.9);
+}
+
+:root.rainbow-dark .bg-zinc-900\/50 {
+  background-color: rgba(16, 14, 30, 0.6);
+}
+
+:root.rainbow-dark .bg-zinc-900\/30 {
+  background-color: rgba(16, 14, 30, 0.5);
+}
+
+:root.rainbow-dark .bg-zinc-900 {
+  background-color: #100e1e;
+}
+
+:root.rainbow-dark .bg-zinc-800 {
+  background-color: #1a162e;
+}
+
+:root.rainbow-dark .bg-zinc-800\/50 {
+  background-color: rgba(26, 22, 46, 0.5);
+}
+
+:root.rainbow-dark .hover\:bg-zinc-800:hover {
+  background-color: #241e3e;
+}
+
+:root.rainbow-dark .hover\:bg-zinc-700:hover {
+  background-color: #302850;
+}
+
+:root.rainbow-dark .hover\:bg-zinc-800\/50:hover {
+  background-color: rgba(36, 30, 62, 0.5);
+}
+
+:root.rainbow-dark .border-zinc-800 {
+  border-color: #ff404040;
+}
+
+:root.rainbow-dark .border-zinc-700 {
+  border-color: #b07aff50;
+}
+
+:root.rainbow-dark .text-zinc-50 {
+  color: #f0e8ff;
+}
+
+:root.rainbow-dark .text-zinc-200 {
+  color: #ff9f1c;
+}
+
+:root.rainbow-dark .text-zinc-300 {
+  color: #2ec46a;
+}
+
+:root.rainbow-dark .text-zinc-400 {
+  color: #4dabf7;
+}
+
+:root.rainbow-dark .text-zinc-500 {
+  color: #b07aff;
+}
+
+:root.rainbow-dark .text-zinc-600 {
+  color: #ff4040;
+}
+
+:root.rainbow-dark .hover\:text-zinc-200:hover {
+  color: #ffe066;
+}
+
+:root.rainbow-dark .hover\:text-zinc-300:hover {
+  color: #ff4040;
+}
+
+:root.rainbow-dark .bg-blue-500 { background-color: #4dabf7; }
+:root.rainbow-dark .bg-blue-600 { background-color: #3090e0; }
+:root.rainbow-dark .hover\:bg-blue-500:hover { background-color: #77c0ff; }
+:root.rainbow-dark .bg-blue-500\/15 { background-color: rgba(77, 171, 247, 0.15); }
+:root.rainbow-dark .bg-emerald-400 { background-color: #2ec46a; }
+:root.rainbow-dark .bg-amber-400 { background-color: #ff9f1c; }
+:root.rainbow-dark .bg-amber-600 { background-color: #ff9f1c; }
+:root.rainbow-dark .bg-amber-500\/15 { background-color: rgba(255, 159, 28, 0.15); }
+:root.rainbow-dark .bg-red-500\/20 { background-color: rgba(255, 64, 64, 0.2); }
+:root.rainbow-dark .bg-red-600 { background-color: #ff4040; }
+:root.rainbow-dark .bg-green-400 { background-color: #2ec46a; }
+:root.rainbow-dark .bg-green-400\/15 { background-color: rgba(46, 196, 106, 0.15); }
+:root.rainbow-dark .bg-green-600 { background-color: #22a050; }
+
+:root.rainbow-dark .text-blue-400 { color: #4dabf7; }
+:root.rainbow-dark .text-emerald-400 { color: #2ec46a; }
+:root.rainbow-dark .text-amber-300 { color: #ffe066; }
+:root.rainbow-dark .text-amber-400 { color: #ff9f1c; }
+:root.rainbow-dark .text-red-400 { color: #ff4040; }
+:root.rainbow-dark .text-red-500 { color: #ff6666; }
+:root.rainbow-dark .text-green-400 { color: #2ec46a; }
+:root.rainbow-dark .text-yellow-400 { color: #ffe066; }
+:root.rainbow-dark .fill-yellow-400 { fill: #ffe066; }
+:root.rainbow-dark .hover\:text-red-400:hover { color: #ff6666; }
+
+:root.rainbow-dark .focus\:ring-zinc-600:focus { --tw-ring-color: #b07aff; }

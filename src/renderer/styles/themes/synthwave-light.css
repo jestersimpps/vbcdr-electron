@@ -1,0 +1,72 @@
+:root.synthwave-light body {
+  background: #f0e8ff;
+  color: #1a1030;
+}
+
+:root.synthwave-light ::-webkit-scrollbar-thumb {
+  background: #c9156d80;
+}
+
+:root.synthwave-light ::-webkit-scrollbar-thumb:hover {
+  background: #c9156dbb;
+}
+
+:root.synthwave-light .bg-zinc-950 { background-color: #f0e8ff; }
+:root.synthwave-light .bg-zinc-900\/80 { background-color: #e8d0f8e6; }
+:root.synthwave-light .bg-zinc-900\/50 { background-color: #e8d0f880; }
+:root.synthwave-light .bg-zinc-900\/30 { background-color: #e8d0f84d; }
+:root.synthwave-light .bg-zinc-900 { background-color: #e8d0f8; }
+:root.synthwave-light .bg-zinc-800 { background-color: #ddb8f0; }
+:root.synthwave-light .bg-zinc-800\/70 { background-color: #ddb8f0b3; }
+:root.synthwave-light .bg-zinc-800\/50 { background-color: #ddb8f080; }
+:root.synthwave-light .bg-zinc-800\/30 { background-color: #ddb8f04d; }
+:root.synthwave-light .bg-zinc-700 { background-color: #d0a0e8; }
+:root.synthwave-light .bg-zinc-700\/30 { background-color: #d0a0e84d; }
+
+:root.synthwave-light .hover\:bg-zinc-800:hover { background-color: #d8aef0; }
+:root.synthwave-light .hover\:bg-zinc-800\/50:hover { background-color: #d8aef080; }
+:root.synthwave-light .hover\:bg-zinc-800\/30:hover { background-color: #d8aef04d; }
+:root.synthwave-light .hover\:bg-zinc-700:hover { background-color: #c890e0; }
+
+:root.synthwave-light .border-zinc-800 { border-color: #c9156d40; }
+:root.synthwave-light .border-zinc-700 { border-color: #6930c360; }
+:root.synthwave-light .border-zinc-600 { border-color: #6930c360; }
+:root.synthwave-light .border-zinc-600\/40 { border-color: #6930c330; }
+
+:root.synthwave-light .text-zinc-100 { color: #2a1040; }
+:root.synthwave-light .text-zinc-200 { color: #6930c3; }
+:root.synthwave-light .text-zinc-300 { color: #c9156d; }
+:root.synthwave-light .text-zinc-400 { color: #007a8a; }
+:root.synthwave-light .text-zinc-500 { color: #8840b0; }
+:root.synthwave-light .text-zinc-600 { color: #c9156d; }
+
+:root.synthwave-light .hover\:text-zinc-200:hover { color: #c9156d; }
+:root.synthwave-light .hover\:text-zinc-300:hover { color: #6930c3; }
+:root.synthwave-light .hover\:text-zinc-400:hover { color: #007a8a; }
+
+:root.synthwave-light .bg-blue-500 { background-color: #6930c3; }
+:root.synthwave-light .bg-blue-600 { background-color: #5820a8; }
+:root.synthwave-light .hover\:bg-blue-500:hover { background-color: #7a40d0; }
+:root.synthwave-light .bg-blue-500\/15 { background-color: rgba(105, 48, 195, 0.15); }
+:root.synthwave-light .bg-emerald-400 { background-color: #007a4a; }
+:root.synthwave-light .bg-amber-400 { background-color: #a08000; }
+:root.synthwave-light .bg-amber-600 { background-color: #a08000; }
+:root.synthwave-light .bg-amber-500\/15 { background-color: rgba(160, 128, 0, 0.15); }
+:root.synthwave-light .bg-red-500\/20 { background-color: rgba(201, 21, 109, 0.2); }
+:root.synthwave-light .bg-red-600 { background-color: #c9156d; }
+:root.synthwave-light .bg-green-400 { background-color: #007a4a; }
+:root.synthwave-light .bg-green-400\/15 { background-color: rgba(0, 122, 74, 0.15); }
+:root.synthwave-light .bg-green-600 { background-color: #009060; }
+
+:root.synthwave-light .text-blue-400 { color: #6930c3; }
+:root.synthwave-light .text-emerald-400 { color: #007a4a; }
+:root.synthwave-light .text-amber-300 { color: #a08000; }
+:root.synthwave-light .text-amber-400 { color: #a08000; }
+:root.synthwave-light .text-red-400 { color: #c9156d; }
+:root.synthwave-light .text-red-500 { color: #d4266e; }
+:root.synthwave-light .text-green-400 { color: #007a4a; }
+:root.synthwave-light .text-yellow-400 { color: #a08000; }
+:root.synthwave-light .fill-yellow-400 { fill: #a08000; }
+:root.synthwave-light .hover\:text-red-400:hover { color: #d4266e; }
+
+:root.synthwave-light .focus\:ring-zinc-600:focus { --tw-ring-color: #6930c3; }

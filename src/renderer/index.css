@@ -26,6 +26,14 @@
 @import "./styles/themes/monokai-light.css";
 @import "./styles/themes/psychedelic-dark.css";
 @import "./styles/themes/psychedelic-light.css";
+@import "./styles/themes/synthwave-dark.css";
+@import "./styles/themes/synthwave-light.css";
+@import "./styles/themes/cyberpunk-dark.css";
+@import "./styles/themes/cyberpunk-light.css";
+@import "./styles/themes/rainbow-dark.css";
+@import "./styles/themes/rainbow-light.css";
+@import "./styles/themes/tropical-dark.css";
+@import "./styles/themes/tropical-light.css";
 
 body {
   margin: 0;

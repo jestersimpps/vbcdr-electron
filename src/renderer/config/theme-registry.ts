@@ -17,6 +17,10 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
   { id: 'gruvbox', name: 'Gruvbox', category: 'classic', supportsLightMode: true },
   { id: 'monokai', name: 'Monokai', category: 'classic', supportsLightMode: true },
   { id: 'psychedelic', name: 'Psychedelic', category: 'experimental', supportsLightMode: true },
+  { id: 'synthwave', name: 'Synthwave', category: 'experimental', supportsLightMode: true },
+  { id: 'cyberpunk', name: 'Cyberpunk', category: 'experimental', supportsLightMode: true },
+  { id: 'rainbow', name: 'Rainbow', category: 'experimental', supportsLightMode: true },
+  { id: 'tropical', name: 'Tropical', category: 'experimental', supportsLightMode: true },
 ]
 
 export function getThemeById(id: string): ThemeDefinition | undefined {
