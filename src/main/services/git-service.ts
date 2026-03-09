@@ -13,7 +13,13 @@ async function runGit(cwd: string, args: string[], timeout: number = 5000): Prom
     cwd,
     encoding: 'utf-8',
     timeout,
-    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' }
+    env: {
+      ...process.env,
+      GIT_TERMINAL_PROMPT: '0',
+      GIT_CONFIG_COUNT: '1',
+      GIT_CONFIG_KEY_0: 'credential.helper',
+      GIT_CONFIG_VALUE_0: ''
+    }
   })
   return stdout.trim()
 }
