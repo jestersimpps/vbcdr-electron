@@ -80,7 +80,11 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       terminal.unicode.activeVersion = '11'
 
       try {
-        terminal.loadAddon(new WebglAddon())
+        const webgl = new WebglAddon()
+        webgl.onContextLoss(() => {
+          webgl.dispose()
+        })
+        terminal.loadAddon(webgl)
       } catch {
         /* WebGL not available, fall back to canvas renderer */
       }
