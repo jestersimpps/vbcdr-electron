@@ -68,6 +68,17 @@ export function DevTerminalsPanel(): React.ReactElement {
 
   return (
     <div className="flex h-full flex-col">
+      <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50 px-1">
+        <div className="flex-1" />
+        <button
+          onClick={handleAdd}
+          disabled={projectTabs.length >= 6}
+          className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
+          title="New terminal"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
       <div className="relative flex-1" style={{ minHeight: 0 }}>
         {projectIds.map((pid) => {
           const pTabs = tabs.filter((t) => t.projectId === pid)
@@ -129,16 +140,6 @@ export function DevTerminalsPanel(): React.ReactElement {
             </div>
           )
         })}
-      </div>
-      <div className="flex items-center border-t border-zinc-800 bg-zinc-900/50 px-2 py-0.5">
-        <button
-          onClick={handleAdd}
-          disabled={projectTabs.length >= 6}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
-        >
-          <Plus size={10} />
-          Add Terminal
-        </button>
       </div>
     </div>
   )

@@ -15,16 +15,16 @@ export function StatusBar(): React.ReactElement {
   const project = activeProject()
 
   return (
-    <div className="flex h-6 shrink-0 items-center justify-between border-t border-zinc-800 bg-zinc-900/80 px-3 text-xs text-zinc-400">
-      <div className="flex items-center gap-3 overflow-hidden">
+    <div className="relative z-20 flex h-6 shrink-0 items-center justify-between border-t border-zinc-800 bg-zinc-900/80 px-3 text-xs text-zinc-400">
+      <div className="flex items-center gap-3 overflow-hidden min-w-0">
         {project && (
           <div className="flex items-center gap-1.5 truncate">
             <FolderOpen size={13} className="shrink-0" />
             <span className="truncate">{project.path}</span>
           </div>
         )}
-        <BranchSwitcher />
       </div>
+      <BranchSwitcher />
 
       <div className="flex shrink-0 items-center gap-1">
         {activeProjectId && (

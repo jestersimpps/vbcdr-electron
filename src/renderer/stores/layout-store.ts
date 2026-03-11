@@ -27,14 +27,14 @@ const validPanelIds = new Set<string>(panelConfigs.map((p) => p.id))
 const browserlessValidPanelIds = new Set<string>(browserlessPanelConfigs.map((p) => p.id))
 
 export const defaultLayout: Layout[] = [
-  { i: 'browser-editor', x: 0, y: 0, w: 8, h: 12, minW: 4, minH: 3 },
-  { i: 'git', x: 8, y: 0, w: 4, h: 5, minW: 3, minH: 3 },
-  { i: 'llm-terminals', x: 8, y: 5, w: 4, h: 7, minW: 3, minH: 2 }
+  { i: 'browser-editor', x: 0, y: 0, w: 7, h: 12, minW: 4, minH: 3 },
+  { i: 'git', x: 7, y: 0, w: 5, h: 5, minW: 3, minH: 3 },
+  { i: 'llm-terminals', x: 7, y: 5, w: 5, h: 7, minW: 3, minH: 2 }
 ]
 
 export const browserlessDefaultLayout: Layout[] = [
-  { i: 'browser-editor', x: 0, y: 0, w: 10, h: 12, minW: 4, minH: 3 },
-  { i: 'git', x: 10, y: 0, w: 2, h: 12, minW: 2, minH: 3 }
+  { i: 'browser-editor', x: 0, y: 0, w: 9, h: 12, minW: 4, minH: 3 },
+  { i: 'git', x: 9, y: 0, w: 3, h: 12, minW: 2, minH: 3 }
 ]
 
 export function getPanelConfigs(browserless: boolean): PanelConfig[] {

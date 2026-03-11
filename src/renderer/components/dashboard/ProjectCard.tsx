@@ -1,9 +1,14 @@
-import { GitBranch as GitBranchIcon, FileText, Terminal, FolderOpen } from 'lucide-react'
+import { useState } from 'react'
+import { GitBranch as GitBranchIcon, FileText, Terminal } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useGitStore } from '@/stores/git-store'
 import { useEditorStore } from '@/stores/editor-store'
-import type { Project, GitBranch } from '@/models/types'
+import { useThemeStore } from '@/stores/theme-store'
+import { getTerminalTheme } from '@/config/terminal-theme-registry'
+import { getTerminalInstance } from '@/components/terminal/TerminalInstance'
+import { DashboardTerminal } from '@/components/dashboard/DashboardTerminal'
+import type { Project, GitBranch, TerminalTab } from '@/models/types'
 import { cn } from '@/lib/utils'
 
 const EMPTY_BRANCHES: GitBranch[] = []
@@ -35,6 +40,11 @@ function useClaudeStatus(projectId: string): ClaudeStatus {
   return 'none'
 }
 
+function useLlmTabs(projectId: string): TerminalTab[] {
+  const tabs = useTerminalStore((s) => s.tabs)
+  return tabs.filter((t) => t.projectId === projectId && t.initialCommand)
+}
+
 export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
   const setActiveProject = useProjectStore((s) => s.setActiveProject)
   const branches = useGitStore((s) => s.branchesPerProject[project.id] ?? EMPTY_BRANCHES)
@@ -42,6 +52,15 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
   const openFilesCount = useEditorStore((s) => s.statePerProject[project.id]?.openFiles.length ?? 0)
   const terminalCount = useTerminalStore((s) => s.tabs.filter((t) => t.projectId === project.id).length)
   const claudeStatus = useClaudeStatus(project.id)
+  const llmTabs = useLlmTabs(project.id)
+  const tabStatuses = useTerminalStore((s) => s.tabStatuses)
+  const themeId = useThemeStore((s) => s.getFullThemeId())
+  const accentColor = getTerminalTheme(themeId).cursor ?? '#58a6ff'
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  const clampedIndex = Math.min(activeIndex, Math.max(llmTabs.length - 1, 0))
+  const activeTab = llmTabs[clampedIndex] ?? null
+  const hasTerminal = activeTab ? !!getTerminalInstance(activeTab.id) : false
 
   const currentBranch = branches.find((b) => b.current)
   const previewLines = outputBuffer
@@ -49,59 +68,89 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
     .filter((l) => l.length > 0)
     .slice(-12)
 
+  const navigate = (): void => setActiveProject(project.id)
+
   return (
-    <button
-      onClick={() => setActiveProject(project.id)}
-      className="group flex w-full min-w-0 flex-col gap-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 text-left transition-all hover:bg-zinc-800/50"
+    <div
+      className="group flex w-full min-w-0 flex-col gap-2 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-left transition-all hover:bg-zinc-800/50"
     >
-      <div className="flex items-start justify-between gap-2">
+      <div onClick={navigate} className="flex items-center justify-between gap-2 cursor-pointer">
         <div className="flex items-center gap-2 min-w-0">
-          <FolderOpen size={16} className="shrink-0 text-zinc-400" />
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-zinc-200">{project.name}</div>
-            <div className="truncate text-[11px] text-zinc-500">{project.path}</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
           <span
             className={cn(
-              'inline-block h-2.5 w-2.5 rounded-full',
+              'inline-block h-2 w-2 shrink-0 rounded-full',
               claudeStatus === 'busy' && 'animate-pulse bg-amber-400',
               claudeStatus === 'idle' && 'bg-emerald-400',
               claudeStatus === 'none' && 'bg-zinc-600'
             )}
             title={claudeStatus === 'busy' ? 'Claude is working' : claudeStatus === 'idle' ? 'Claude idle' : 'No Claude session'}
           />
+          <span className="truncate text-sm font-medium text-zinc-200">{project.name}</span>
+          {currentBranch && (
+            <>
+              <GitBranchIcon size={11} className="shrink-0 text-zinc-600" />
+              <span className="truncate text-[11px] font-mono text-zinc-500">{currentBranch.name}</span>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0 text-[11px] text-zinc-600">
+          <span className="flex items-center gap-1">
+            <FileText size={10} />
+            {openFilesCount}
+          </span>
+          <span className="flex items-center gap-1">
+            <Terminal size={10} />
+            {terminalCount}
+          </span>
         </div>
       </div>
 
-      {currentBranch && (
-        <div className="flex items-center gap-1.5">
-          <GitBranchIcon size={12} className="text-zinc-500" />
-          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[11px] font-mono text-zinc-400">
-            {currentBranch.name}
-          </span>
+      {hasTerminal && activeTab ? (
+        <div
+          className="flex w-full min-w-0 flex-col gap-1"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {llmTabs.length > 1 && (
+            <div className="flex items-center gap-1">
+              {llmTabs.map((tab, i) => {
+                const status = tabStatuses[tab.id]
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveIndex(i)}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] font-mono transition-colors',
+                      i !== clampedIndex && 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-400'
+                    )}
+                    style={i === clampedIndex ? { backgroundColor: `${accentColor}20`, color: accentColor } : undefined}
+                  >
+                    <span
+                      className={cn(
+                        'inline-block h-1.5 w-1.5 shrink-0 rounded-full',
+                        status === 'busy' && 'animate-pulse bg-amber-400',
+                        status === 'idle' && 'bg-emerald-400',
+                        (!status || status === 'none') && 'bg-zinc-600'
+                      )}
+                    />
+                    {tab.title}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          <div className="w-full min-w-0 h-80 overflow-hidden rounded">
+            <DashboardTerminal tabId={activeTab.id} />
+          </div>
         </div>
-      )}
-
-      {previewLines.length > 0 && (
-        <div className="w-full min-w-0 h-40 rounded bg-zinc-950 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-zinc-500 overflow-hidden">
+      ) : previewLines.length > 0 ? (
+        <div className="w-full min-w-0 h-80 rounded bg-zinc-950 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-zinc-500 overflow-hidden">
           {previewLines.map((line, i) => (
             <div key={i} className="truncate">{line}</div>
           ))}
         </div>
-      )}
+      ) : null}
 
-      <div className="flex items-center gap-3 text-[11px] text-zinc-600">
-        <span className="flex items-center gap-1">
-          <FileText size={11} />
-          {openFilesCount} files
-        </span>
-        <span className="flex items-center gap-1">
-          <Terminal size={11} />
-          {terminalCount} terminals
-        </span>
-      </div>
-    </button>
+    </div>
   )
 }

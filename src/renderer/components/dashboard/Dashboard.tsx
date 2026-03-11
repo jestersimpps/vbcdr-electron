@@ -40,7 +40,7 @@ export function Dashboard(): React.ReactElement {
             </button>
           </div>
         ) : (
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(600px, 1fr))' }}>
+          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(600px, 1fr))' }}>
             {projects.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}

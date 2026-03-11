@@ -46,6 +46,41 @@ const configuredSessions = new WeakSet<Electron.Session>()
 
 let mainWindow: BrowserWindow | null = null
 
+function handleBeforeInput(_event: Electron.Event, input: Electron.Input): void {
+  if (input.type !== 'keyDown') return
+
+  if (input.key === 'r' && input.meta && !input.shift) {
+    _event.preventDefault()
+    mainWindow?.webContents.send('browser:reload')
+    return
+  }
+
+  if (input.meta && input.alt && /^[1-9]$/.test(input.key)) {
+    _event.preventDefault()
+    mainWindow?.webContents.send('menu:action', `switch-project-${input.key}`)
+    return
+  }
+
+  if (input.meta && input.shift && input.key === '[') {
+    _event.preventDefault()
+    mainWindow?.webContents.send('menu:action', 'terminal-tab-prev')
+    return
+  }
+
+  if (input.meta && input.shift && input.key === ']') {
+    _event.preventDefault()
+    mainWindow?.webContents.send('menu:action', 'terminal-tab-next')
+    return
+  }
+
+
+  if (input.meta && input.alt && input.key === 'w') {
+    _event.preventDefault()
+    mainWindow?.webContents.send('menu:action', 'close-file-tab')
+    return
+  }
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -62,12 +97,7 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.webContents.on('before-input-event', (_event, input) => {
-    if (input.type === 'keyDown' && input.key === 'r' && input.meta && !input.shift) {
-      _event.preventDefault()
-      mainWindow?.webContents.send('browser:reload')
-    }
-  })
+  mainWindow.webContents.on('before-input-event', handleBeforeInput)
 
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
@@ -130,6 +160,12 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
       },
       { type: 'separator' },
       {
+        label: 'Save',
+        accelerator: 'CmdOrCtrl+S',
+        click: () => mainWindow?.webContents.send('menu:action', 'save-file')
+      },
+      { type: 'separator' },
+      {
         label: 'Close Window',
         accelerator: 'CmdOrCtrl+Shift+W',
         click: () => mainWindow?.close()
@@ -153,6 +189,12 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
   const viewMenu: Electron.MenuItemConstructorOptions = {
     label: 'View',
     submenu: [
+      {
+        label: 'Dashboard',
+        accelerator: 'CmdOrCtrl+D',
+        click: () => mainWindow?.webContents.send('menu:action', 'toggle-dashboard')
+      },
+      { type: 'separator' },
       {
         label: 'Toggle Browser',
         accelerator: 'CmdOrCtrl+1',
@@ -202,6 +244,12 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
           const wc = mainWindow?.webContents
           if (wc) wc.setZoomLevel(wc.getZoomLevel() - 0.5)
         }
+      },
+      { type: 'separator' },
+      {
+        label: 'Toggle Light/Dark',
+        accelerator: 'CmdOrCtrl+Shift+L',
+        click: () => mainWindow?.webContents.send('menu:action', 'toggle-variant')
       },
       { type: 'separator' },
       { role: 'togglefullscreen' }
@@ -288,12 +336,7 @@ app.whenReady().then(() => {
         }
       })
 
-      contents.on('before-input-event', (_e, input) => {
-        if (input.type === 'keyDown' && input.key === 'r' && input.meta && !input.shift) {
-          _e.preventDefault()
-          mainWindow?.webContents.send('browser:reload')
-        }
-      })
+      contents.on('before-input-event', handleBeforeInput)
     }
   })
 

@@ -100,7 +100,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       try {
         const webgl = new WebglAddon()
         webgl.onContextLoss(() => {
-          webgl.dispose()
+          try { webgl.dispose() } catch { /* context already gone */ }
         })
         terminal.loadAddon(webgl)
       } catch {
@@ -133,6 +133,8 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       })
 
       let idleTimer: ReturnType<typeof setTimeout> | null = null
+      let busyTimer: ReturnType<typeof setTimeout> | null = null
+      let lastDataAt = 0
       const isLlm = !!initialCommand
 
       const unsubData = window.api.terminal.onData((incomingTabId: string, data: string) => {
@@ -144,14 +146,20 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           })
 
           if (isLlm) {
-            const currentEntry = terminalsMap.get(tabId)
-            const suppressed = currentEntry && Date.now() < currentEntry.suppressBusyUntil
-            const store = useTerminalStore.getState()
-            if (!suppressed && store.tabStatuses[tabId] !== 'busy') {
-              store.setTabStatus(tabId, 'busy')
+            lastDataAt = Date.now()
+
+            if (!busyTimer) {
+              busyTimer = setTimeout(() => {
+                busyTimer = null
+                if (Date.now() - lastDataAt < 300) {
+                  useTerminalStore.getState().setTabStatus(tabId, 'busy')
+                }
+              }, 1000)
             }
+
             if (idleTimer) clearTimeout(idleTimer)
             idleTimer = setTimeout(() => {
+              if (busyTimer) { clearTimeout(busyTimer); busyTimer = null }
               useTerminalStore.getState().setTabStatus(tabId, 'idle')
             }, 3000)
 
@@ -202,6 +210,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       if (resizeTimer) clearTimeout(resizeTimer)
       resizeTimer = setTimeout(() => {
         try {
+          if (!el.contains(terminal.element)) return
           const atBottom = terminal.buffer.active.viewportY === terminal.buffer.active.baseY
           fitAddon.fit()
           if (atBottom) terminal.scrollToBottom()
