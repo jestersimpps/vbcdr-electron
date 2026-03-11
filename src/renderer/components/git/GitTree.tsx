@@ -19,10 +19,10 @@ const LANE_COLORS = [
   '#f87171',
 ]
 
-const COL_WIDTH = 16
-const ROW_HEIGHT = 36
-const NODE_RADIUS = 4
-const MERGE_RADIUS = 5
+const COL_WIDTH = 14
+const ROW_HEIGHT = 32
+const NODE_RADIUS = 3
+const MERGE_RADIUS = 4
 
 interface GraphRow {
   commit: GitCommit
@@ -179,13 +179,18 @@ function GraphSvg({ rows }: { rows: GraphRow[] }): React.ReactElement {
 
 function RefBadge({ label, index }: { label: string; index: number }): React.ReactElement {
   const isHead = label.startsWith('HEAD')
+  const isTag = label.startsWith('tag:')
   const base = isHead
     ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+    : isTag
+    ? 'bg-purple-500/15 text-purple-400 border border-purple-500/25'
     : 'bg-zinc-700/30 text-zinc-400 border border-zinc-600/40'
 
+  const displayLabel = label.startsWith('tag: ') ? label.slice(5) : label
+
   return (
-    <span className={`inline-flex items-center rounded px-1 py-px text-[10px] font-medium leading-tight ${base}`}>
-      {label}
+    <span className={`shrink-0 inline-flex items-center rounded px-1 py-px text-[9px] font-medium leading-tight max-w-[80px] truncate ${base}`}>
+      {displayLabel}
     </span>
   )
 }
@@ -238,6 +243,11 @@ export function GitTree(): React.ReactElement {
   }, [activeProject?.id])
 
   const graphRows = useMemo(() => (commits ? buildGraph(commits) : []), [commits])
+  const graphWidth = useMemo(() => {
+    if (graphRows.length === 0) return COL_WIDTH + 8
+    const maxCols = Math.max(1, ...graphRows.map((r) => Math.max(r.col + 1, ...r.lines.map((l) => Math.max(l.fromCol, l.toCol) + 1))))
+    return maxCols * COL_WIDTH + 12
+  }, [graphRows])
   const currentBranch = branches?.find((b) => b.current)
   const isOnDefault = currentBranch && (currentBranch.name === 'main' || currentBranch.name === 'master')
 
@@ -259,61 +269,60 @@ export function GitTree(): React.ReactElement {
 
   return (
     <div className="relative flex h-full flex-col bg-zinc-950">
-      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3 py-1.5">
-        <div className="flex items-center gap-2">
-          <GitBranchIcon size={14} className="text-zinc-500" />
-          <span className="text-xs text-zinc-400">Git</span>
+      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2 py-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <GitBranchIcon size={13} className="shrink-0 text-zinc-500" />
+          <span className="shrink-0 text-[11px] text-zinc-400">Git</span>
           {currentBranch && (
-            <span className="rounded bg-green-400/15 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
+            <span className="truncate rounded bg-green-400/15 px-1.5 py-px text-[10px] font-medium text-green-400">
               {currentBranch.name}
             </span>
           )}
           {drift && drift.behind > 0 && !drift.diverged && activeProjectId && activeProject && (
             <button
               onClick={() => pullAction(activeProjectId, activeProject.path)}
-              className="flex items-center gap-1 rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-400 hover:bg-blue-500/25"
+              className="flex shrink-0 items-center gap-0.5 rounded bg-blue-500/15 px-1 py-px text-[10px] font-medium text-blue-400 hover:bg-blue-500/25"
               title={`${drift.behind} commit${drift.behind > 1 ? 's' : ''} behind ${drift.remoteBranch ?? 'remote'} — click to pull`}
             >
-              <ArrowDown size={10} />
+              <ArrowDown size={9} />
               <span>{drift.behind}</span>
             </button>
           )}
           {drift?.diverged && activeProjectId && activeProject && (
             <button
               onClick={() => rebaseAction(activeProjectId, activeProject.path)}
-              className="flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400 hover:bg-amber-500/25"
+              className="flex shrink-0 items-center gap-0.5 rounded bg-amber-500/15 px-1 py-px text-[10px] font-medium text-amber-400 hover:bg-amber-500/25"
               title={`Diverged: ${drift.ahead} ahead, ${drift.behind} behind — click to rebase`}
             >
-              <GitMerge size={10} />
+              <GitMerge size={9} />
               <span>{drift.ahead}/{drift.behind}</span>
             </button>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center">
           <button
             disabled={!activeTerminalTabId}
             onClick={() => activeTerminalTabId && sendToTerminal(activeTerminalTabId, '/commit')}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
+            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
+            title="Commit"
           >
-            <GitCommitHorizontal size={12} />
-            <span>Commit</span>
+            <GitCommitHorizontal size={13} />
           </button>
           <button
             disabled={!activeTerminalTabId || !!isOnDefault}
             onClick={handleCreatePR}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
+            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
             title={isOnDefault ? 'Switch to a feature branch first' : 'Create pull request'}
           >
-            <GitPullRequest size={12} />
-            <span>PR</span>
+            <GitPullRequest size={13} />
           </button>
           <button
             disabled={!activeTerminalTabId}
             onClick={() => setFeatureModalOpen(true)}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
+            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
+            title="New Feature"
           >
-            <Sparkles size={12} />
-            <span>New Feature</span>
+            <Sparkles size={13} />
           </button>
           <button
             onClick={() => activeProject && loadGitData(activeProject.id, activeProject.path)}
@@ -331,25 +340,28 @@ export function GitTree(): React.ReactElement {
             <GraphSvg rows={graphRows} />
           </div>
 
-          <div className="relative" style={{ marginLeft: Math.max(1, ...graphRows.map((r) => Math.max(r.col + 1, ...r.lines.map((l) => Math.max(l.fromCol, l.toCol) + 1)))) * COL_WIDTH + 12 }}>
+          <div className="relative" style={{ marginLeft: graphWidth }}>
             {graphRows.map((row) => (
               <div
                 key={row.commit.hash}
-                className="flex items-center gap-2 pr-3 hover:bg-zinc-800/30"
+                className="flex items-center pr-2 hover:bg-zinc-800/30"
                 style={{ height: ROW_HEIGHT }}
               >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="flex items-center gap-1 overflow-hidden">
                     {row.commit.refs.length > 0 &&
-                      row.commit.refs.map((ref, ri) => (
+                      row.commit.refs.slice(0, 2).map((ref, ri) => (
                         <RefBadge key={ref} label={ref} index={ri} />
                       ))}
-                    <span className="truncate text-xs text-zinc-300">{row.commit.message}</span>
+                    {row.commit.refs.length > 2 && (
+                      <span className="shrink-0 text-[9px] text-zinc-500">+{row.commit.refs.length - 2}</span>
+                    )}
+                    <span className="truncate text-[11px] leading-tight text-zinc-300">{row.commit.message}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[10px] text-zinc-400">
-                    <span className="font-mono">{row.commit.shortHash}</span>
-                    <span>{row.commit.author}</span>
-                    <span>{row.commit.date}</span>
+                  <div className="flex items-center gap-1.5 overflow-hidden text-[9px] text-zinc-500">
+                    <span className="shrink-0 font-mono">{row.commit.shortHash}</span>
+                    <span className="truncate">{row.commit.author}</span>
+                    <span className="shrink-0">{row.commit.date}</span>
                   </div>
                 </div>
               </div>
