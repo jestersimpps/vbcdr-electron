@@ -25,7 +25,7 @@ interface TerminalEntry {
 }
 
 const terminalsMap = new Map<string, TerminalEntry>()
-const lineAccumulators = new Map<string, string>()
+const bufferReadTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 export function applyThemeToAll(themeId: string): void {
   const xtermTheme = getTerminalTheme(themeId)
@@ -63,6 +63,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
     if (entry && !document.body.contains(entry.terminal.element)) {
       entry.unsubData?.()
+      const staleTimer = bufferReadTimers.get(tabId)
+      if (staleTimer) clearTimeout(staleTimer)
+      bufferReadTimers.delete(tabId)
       try { entry.terminal.dispose() } catch { /* WebGL addon may throw */ }
       terminalsMap.delete(tabId)
       entry = undefined
@@ -152,14 +155,25 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
               useTerminalStore.getState().setTabStatus(tabId, 'idle')
             }, 3000)
 
-            const cleaned = stripAnsi(data)
-            const pending = (lineAccumulators.get(projectId) ?? '') + cleaned
-            const parts = pending.split('\n')
-            lineAccumulators.set(projectId, parts.pop()!)
-            const lines = parts.filter((l) => l.trim().length > 0)
-            if (lines.length > 0) {
-              store.appendOutput(projectId, lines)
-            }
+            const prevTimer = bufferReadTimers.get(tabId)
+            if (prevTimer) clearTimeout(prevTimer)
+            bufferReadTimers.set(tabId, setTimeout(() => {
+              bufferReadTimers.delete(tabId)
+              const te = terminalsMap.get(tabId)
+              if (!te) return
+              const buf = te.terminal.buffer.active
+              const extracted: string[] = []
+              for (let y = 0; y < te.terminal.rows; y++) {
+                const row = buf.getLine(buf.baseY + y)
+                if (row) {
+                  const text = row.translateToString(true)
+                  if (text.trim()) extracted.push(text)
+                }
+              }
+              if (extracted.length > 0) {
+                useTerminalStore.getState().setOutput(projectId, extracted)
+              }
+            }, 200))
           }
         }
       })
@@ -333,6 +347,9 @@ export function disposeTerminal(tabId: string): void {
   const entry = terminalsMap.get(tabId)
   if (entry) {
     entry.unsubData?.()
+    const timer = bufferReadTimers.get(tabId)
+    if (timer) clearTimeout(timer)
+    bufferReadTimers.delete(tabId)
     try { entry.terminal.dispose() } catch { /* WebGL addon may throw during dispose */ }
     terminalsMap.delete(tabId)
   }

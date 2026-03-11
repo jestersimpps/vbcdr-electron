@@ -17,7 +17,7 @@ interface TerminalStore {
   setActiveTab: (projectId: string, tabId: string) => void
   setTabStatus: (tabId: string, status: TabStatus) => void
   setTabTitle: (tabId: string, title: string) => void
-  appendOutput: (projectId: string, lines: string[]) => void
+  setOutput: (projectId: string, lines: string[]) => void
   initProject: (projectId: string, cwd: string) => void
 }
 
@@ -96,12 +96,13 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     }))
   },
 
-  appendOutput: (projectId: string, lines: string[]) => {
-    set((state) => {
-      const existing = state.outputBufferPerProject[projectId] ?? []
-      const merged = [...existing, ...lines].slice(-OUTPUT_BUFFER_SIZE)
-      return { outputBufferPerProject: { ...state.outputBufferPerProject, [projectId]: merged } }
-    })
+  setOutput: (projectId: string, lines: string[]) => {
+    set((state) => ({
+      outputBufferPerProject: {
+        ...state.outputBufferPerProject,
+        [projectId]: lines.slice(-OUTPUT_BUFFER_SIZE)
+      }
+    }))
   },
 
   initProject: (projectId: string, cwd: string) => {
