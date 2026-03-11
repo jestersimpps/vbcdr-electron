@@ -348,7 +348,7 @@ export function AppLayoutGrid(): React.ReactElement {
               onClick={() => setActiveProject(project.id)}
               className={cn(
                 'group flex items-center gap-1.5 h-full px-3 text-xs font-medium transition-colors border-b-2',
-                activeProjectId === project.id
+                activeProjectId === project.id && !dashboardActive
                   ? 'border-zinc-400 text-zinc-200 bg-zinc-800/50'
                   : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
               )}

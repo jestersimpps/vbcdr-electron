@@ -53,7 +53,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   showDashboard: () => {
-    set({ activeProjectId: null, dashboardActive: true })
+    set({ dashboardActive: true })
   },
 
   activeProject: () => {
