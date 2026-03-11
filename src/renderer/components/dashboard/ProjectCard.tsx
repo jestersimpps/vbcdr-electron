@@ -52,7 +52,7 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
   return (
     <button
       onClick={() => setActiveProject(project.id)}
-      className="group flex min-h-[16rem] w-full min-w-0 flex-col gap-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60 p-4 text-left transition-all hover:border-zinc-600 hover:bg-zinc-900"
+      className="group flex min-h-[16rem] w-full min-w-0 flex-col gap-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 text-left transition-all hover:bg-zinc-800/50"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">

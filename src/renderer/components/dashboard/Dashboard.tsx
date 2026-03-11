@@ -21,7 +21,7 @@ export function Dashboard(): React.ReactElement {
         <h1 className="text-sm font-medium text-zinc-300">Dashboard</h1>
         <button
           onClick={addProject}
-          className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-zinc-100"
+          className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
         >
           <Plus size={12} />
           Add Project
@@ -33,7 +33,7 @@ export function Dashboard(): React.ReactElement {
             <p className="text-sm">No projects yet</p>
             <button
               onClick={addProject}
-              className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700"
+              className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-4 py-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
             >
               <Plus size={12} />
               Add your first project
