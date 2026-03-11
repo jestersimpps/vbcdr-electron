@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
+import { useEditorStore } from '@/stores/editor-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
 import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -19,6 +20,7 @@ export function TerminalPanel(): React.ReactElement {
   const { createTab, closeTab, replaceTab, setActiveTab, initProject } = useTerminalStore()
 
   const fullThemeId = useThemeStore((s) => s.getFullThemeId())
+  const centerTab = useEditorStore((s) => activeProjectId ? s.centerTabPerProject[activeProjectId] ?? null : null)
 
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -57,7 +59,7 @@ export function TerminalPanel(): React.ReactElement {
     if (!activeTabId) return
     const timer = setTimeout(() => focusTerminal(activeTabId), 50)
     return () => clearTimeout(timer)
-  }, [activeTabId])
+  }, [activeTabId, centerTab])
 
   useEffect(() => {
     if (activeProject) {

@@ -4,16 +4,20 @@ import type { TerminalTab } from '@/models/types'
 
 type TabStatus = 'idle' | 'busy'
 
+const OUTPUT_BUFFER_SIZE = 10
+
 interface TerminalStore {
   tabs: TerminalTab[]
   activeTabPerProject: Record<string, string>
   tabStatuses: Record<string, TabStatus>
+  outputBufferPerProject: Record<string, string[]>
   createTab: (projectId: string, cwd: string, initialCommand?: string) => string
   closeTab: (tabId: string) => void
   replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => string
   setActiveTab: (projectId: string, tabId: string) => void
   setTabStatus: (tabId: string, status: TabStatus) => void
   setTabTitle: (tabId: string, title: string) => void
+  appendOutput: (projectId: string, lines: string[]) => void
   initProject: (projectId: string, cwd: string) => void
 }
 
@@ -21,6 +25,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   tabs: [],
   activeTabPerProject: {},
   tabStatuses: {},
+  outputBufferPerProject: {},
 
   createTab: (projectId: string, cwd: string, initialCommand?: string) => {
     const tabId = uuid()
@@ -89,6 +94,14 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     set((state) => ({
       activeTabPerProject: { ...state.activeTabPerProject, [projectId]: tabId }
     }))
+  },
+
+  appendOutput: (projectId: string, lines: string[]) => {
+    set((state) => {
+      const existing = state.outputBufferPerProject[projectId] ?? []
+      const merged = [...existing, ...lines].slice(-OUTPUT_BUFFER_SIZE)
+      return { outputBufferPerProject: { ...state.outputBufferPerProject, [projectId]: merged } }
+    })
   },
 
   initProject: (projectId: string, cwd: string) => {

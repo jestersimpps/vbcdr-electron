@@ -18,7 +18,8 @@ import { useLayoutStore, GRID_COLS, GRID_ROWS, getPanelConfigs } from '@/stores/
 import { StatusBar } from '@/components/layout/StatusBar'
 import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
 import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
-import { Globe, Code, Bot, TerminalSquare, Plus, X, FolderOpen, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Dashboard } from '@/components/dashboard/Dashboard'
+import { Globe, Code, Bot, TerminalSquare, Plus, X, FolderOpen, ChevronLeft, ChevronRight, LayoutDashboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -27,7 +28,7 @@ const MARGIN = 6
 const CONTAINER_PADDING = 6
 
 export function AppLayoutGrid(): React.ReactElement {
-  const { projects, activeProjectId, loadProjects, addProject, removeProject, setActiveProject } =
+  const { projects, activeProjectId, dashboardActive, loadProjects, addProject, removeProject, setActiveProject, showDashboard } =
     useProjectStore()
   const browserless = useLayoutStore((s) => activeProjectId ? s.isBrowserless(activeProjectId) : false)
   const defaultTab = browserless ? 'terminals' : 'browser'
@@ -71,7 +72,7 @@ export function AppLayoutGrid(): React.ReactElement {
     const ro = new ResizeObserver(measure)
     ro.observe(containerRef.current)
     return () => ro.disconnect()
-  }, [])
+  }, [dashboardActive])
 
   useEffect(() => {
     if (browserless) return
@@ -328,6 +329,19 @@ export function AppLayoutGrid(): React.ReactElement {
           className="flex items-center gap-0.5 h-full"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
+          <button
+            onClick={showDashboard}
+            className={cn(
+              'flex items-center gap-1.5 h-full px-3 text-xs font-medium transition-colors border-b-2',
+              dashboardActive
+                ? 'border-zinc-400 text-zinc-200 bg-zinc-800/50'
+                : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
+            )}
+          >
+            <LayoutDashboard size={12} className="shrink-0" />
+            <span>Dashboard</span>
+          </button>
+          <div className="mx-1 h-4 w-px bg-zinc-700/60" />
           {projects.map((project) => (
             <button
               key={project.id}
@@ -371,39 +385,46 @@ export function AppLayoutGrid(): React.ReactElement {
         </div>
       </div>
 
-      <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden">
-        {width > 0 && height > 0 && (
-          <ReactGridLayout
-            key={resetVersion}
-            layout={gridLayout}
-            cols={GRID_COLS}
-            rowHeight={(height - 2 * CONTAINER_PADDING - (GRID_ROWS - 1) * MARGIN) / GRID_ROWS}
-            width={width}
-            margin={[MARGIN, MARGIN]}
-            containerPadding={[CONTAINER_PADDING, CONTAINER_PADDING]}
-            draggableHandle=".panel-drag-handle"
-            compactType="vertical"
-            resizeHandles={['se', 's', 'e']}
-            onDragStop={handleStop}
-            onResizeStop={handleStop}
-          >
-            {activePanelConfigs.map((panel) => (
-              <div key={panel.id}>
-                <DraggablePanel
-                  id={panel.id}
-                  projectId={projectId}
-                  title={panel.title}
-                  locked={isLocked(projectId, panel.id)}
-                >
-                  {renderPanel(panel.id)}
-                </DraggablePanel>
-              </div>
-            ))}
-          </ReactGridLayout>
-        )}
-      </div>
-
-      <StatusBar />
+      {dashboardActive ? (
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <Dashboard />
+        </div>
+      ) : (
+        <>
+          <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden">
+            {width > 0 && height > 0 && (
+              <ReactGridLayout
+                key={resetVersion}
+                layout={gridLayout}
+                cols={GRID_COLS}
+                rowHeight={(height - 2 * CONTAINER_PADDING - (GRID_ROWS - 1) * MARGIN) / GRID_ROWS}
+                width={width}
+                margin={[MARGIN, MARGIN]}
+                containerPadding={[CONTAINER_PADDING, CONTAINER_PADDING]}
+                draggableHandle=".panel-drag-handle"
+                compactType="vertical"
+                resizeHandles={['se', 's', 'e']}
+                onDragStop={handleStop}
+                onResizeStop={handleStop}
+              >
+                {activePanelConfigs.map((panel) => (
+                  <div key={panel.id}>
+                    <DraggablePanel
+                      id={panel.id}
+                      projectId={projectId}
+                      title={panel.title}
+                      locked={isLocked(projectId, panel.id)}
+                    >
+                      {renderPanel(panel.id)}
+                    </DraggablePanel>
+                  </div>
+                ))}
+              </ReactGridLayout>
+            )}
+          </div>
+          <StatusBar />
+        </>
+      )}
     </div>
   )
 }

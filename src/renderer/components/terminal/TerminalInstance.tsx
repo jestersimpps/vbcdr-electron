@@ -34,6 +34,12 @@ function shellEscape(path: string): string {
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'])
 
+const ANSI_RE = /\x1b(?:\[[0-9;?]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|\([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz])/g
+
+function stripAnsi(str: string): string {
+  return str.replace(ANSI_RE, '')
+}
+
 export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: TerminalInstanceProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -134,6 +140,12 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
             idleTimer = setTimeout(() => {
               useTerminalStore.getState().setTabStatus(tabId, 'idle')
             }, 3000)
+
+            const cleaned = stripAnsi(data)
+            const lines = cleaned.split('\n').filter((l) => l.trim().length > 0)
+            if (lines.length > 0) {
+              store.appendOutput(projectId, lines)
+            }
           }
         }
       })
@@ -299,6 +311,7 @@ export function focusTerminal(tabId: string): void {
   const entry = terminalsMap.get(tabId)
   if (!entry) return
   entry.fitAddon.fit()
+  entry.terminal.refresh(0, entry.terminal.rows - 1)
   entry.terminal.scrollToBottom()
   entry.terminal.focus()
 }

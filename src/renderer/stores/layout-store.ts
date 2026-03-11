@@ -77,7 +77,7 @@ export const useLayoutStore = create<LayoutState>()(
       resetVersion: 0,
 
       getLayout: (projectId: string, browserless?: boolean) => {
-        const bl = browserless ?? get().browserlessPerProject[projectId] ?? false
+        const bl = browserless ?? get().browserlessPerProject[projectId] ?? true
         const defaults = bl ? browserlessDefaultLayout : defaultLayout
         return ensureComplete(get().layoutsPerProject[projectId] ?? defaults, bl)
       },
@@ -91,7 +91,7 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       isBrowserless: (projectId: string) => {
-        return get().browserlessPerProject[projectId] ?? false
+        return get().browserlessPerProject[projectId] ?? true
       },
 
       saveLayout: (projectId: string, newLayout: Layout[]) => {
@@ -120,7 +120,7 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       toggleBrowserless: (projectId: string) => {
-        const current = get().browserlessPerProject[projectId] ?? false
+        const current = get().browserlessPerProject[projectId] ?? true
         const lpp = { ...get().layoutsPerProject }
         delete lpp[projectId]
         set({
