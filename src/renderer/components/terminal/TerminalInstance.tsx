@@ -25,6 +25,7 @@ interface TerminalEntry {
 }
 
 const terminalsMap = new Map<string, TerminalEntry>()
+const lineAccumulators = new Map<string, string>()
 
 export function applyThemeToAll(themeId: string): void {
   const xtermTheme = getTerminalTheme(themeId)
@@ -152,7 +153,10 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
             }, 3000)
 
             const cleaned = stripAnsi(data)
-            const lines = cleaned.split('\n').filter((l) => l.trim().length > 0)
+            const pending = (lineAccumulators.get(projectId) ?? '') + cleaned
+            const parts = pending.split('\n')
+            lineAccumulators.set(projectId, parts.pop()!)
+            const lines = parts.filter((l) => l.trim().length > 0)
             if (lines.length > 0) {
               store.appendOutput(projectId, lines)
             }

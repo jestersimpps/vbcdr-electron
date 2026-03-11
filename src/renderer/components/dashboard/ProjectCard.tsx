@@ -52,7 +52,7 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
   return (
     <button
       onClick={() => setActiveProject(project.id)}
-      className="group flex min-h-[16rem] w-full min-w-0 flex-col gap-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 text-left transition-all hover:bg-zinc-800/50"
+      className="group flex w-full min-w-0 flex-col gap-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 text-left transition-all hover:bg-zinc-800/50"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -85,7 +85,7 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
       )}
 
       {previewLines.length > 0 && (
-        <div className="w-full min-w-0 flex-1 rounded bg-zinc-950 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-zinc-500 overflow-hidden">
+        <div className="w-full min-w-0 h-40 rounded bg-zinc-950 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-zinc-500 overflow-hidden">
           {previewLines.map((line, i) => (
             <div key={i} className="truncate">{line}</div>
           ))}
