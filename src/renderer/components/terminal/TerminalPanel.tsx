@@ -69,8 +69,11 @@ export function TerminalPanel(): React.ReactElement {
 
   useEffect(() => {
     const unsubExit = window.api.terminal.onExit((tabId: string) => {
-      disposeTerminal(tabId)
-      useTerminalStore.getState().closeTab(tabId)
+      const tab = useTerminalStore.getState().tabs.find((t) => t.id === tabId)
+      if (tab) {
+        disposeTerminal(tabId)
+        useTerminalStore.getState().closeTab(tabId)
+      }
     })
     return () => unsubExit()
   }, [])
@@ -187,15 +190,7 @@ export function TerminalPanel(): React.ReactElement {
         <button
           onClick={() => {
             if (!activeTabId) return
-            const entry = getTerminalInstance(activeTabId)
-            if (!entry) return
-            entry.terminal.paste('/clear')
-            setTimeout(() => {
-              const textarea = entry.terminal.textarea
-              if (!textarea) return
-              textarea.focus()
-              textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }))
-            }, 500)
+            window.api.terminal.write(activeTabId, '/clear\r')
           }}
           disabled={!activeTabId}
           className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"

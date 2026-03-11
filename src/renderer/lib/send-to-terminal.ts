@@ -5,9 +5,6 @@ export function sendToTerminal(tabId: string, text: string): void {
   if (!entry) return
   entry.terminal.paste(text)
   setTimeout(() => {
-    const textarea = entry.terminal.textarea
-    if (!textarea) return
-    textarea.focus()
-    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }))
-  }, 500)
+    window.api.terminal.write(tabId, '\r')
+  }, 100)
 }

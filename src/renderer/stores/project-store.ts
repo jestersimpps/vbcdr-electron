@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { useTerminalStore } from './terminal-store'
+import { useDevTerminalStore } from './dev-terminal-store'
 import type { Project } from '@/models/types'
 
 interface ProjectStore {
@@ -33,6 +35,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   removeProject: async (id: string) => {
+    const termTabs = useTerminalStore.getState().tabs.filter((t) => t.projectId === id)
+    const devTabs = useDevTerminalStore.getState().tabs.filter((t) => t.projectId === id)
+    await Promise.all(
+      [...termTabs, ...devTabs].map((tab) => window.api.terminal.kill(tab.id))
+    )
     await window.api.projects.remove(id)
     const state = get()
     if (state.activeProjectId === id) {

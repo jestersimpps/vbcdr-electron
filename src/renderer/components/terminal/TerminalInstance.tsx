@@ -16,7 +16,15 @@ interface TerminalInstanceProps {
   initialCommand?: string
 }
 
-const terminalsMap = new Map<string, { terminal: Terminal; fitAddon: FitAddon; searchAddon: SearchAddon; unsubData?: () => void }>()
+interface TerminalEntry {
+  terminal: Terminal
+  fitAddon: FitAddon
+  searchAddon: SearchAddon
+  unsubData?: () => void
+  suppressBusyUntil: number
+}
+
+const terminalsMap = new Map<string, TerminalEntry>()
 
 export function applyThemeToAll(themeId: string): void {
   const xtermTheme = getTerminalTheme(themeId)
@@ -95,7 +103,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         /* WebGL not available, fall back to canvas renderer */
       }
 
-      entry = { terminal, fitAddon, searchAddon }
+      entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0 }
       terminalsMap.set(tabId, entry)
 
       terminal.attachCustomKeyEventHandler((e) => {
@@ -132,8 +140,10 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           })
 
           if (isLlm) {
+            const currentEntry = terminalsMap.get(tabId)
+            const suppressed = currentEntry && Date.now() < currentEntry.suppressBusyUntil
             const store = useTerminalStore.getState()
-            if (store.tabStatuses[tabId] !== 'busy') {
+            if (!suppressed && store.tabStatuses[tabId] !== 'busy') {
               store.setTabStatus(tabId, 'busy')
             }
             if (idleTimer) clearTimeout(idleTimer)
@@ -278,9 +288,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
   )
 }
 
-export function getTerminalInstance(
-  tabId: string
-): { terminal: Terminal; fitAddon: FitAddon; searchAddon: SearchAddon; unsubData?: () => void } | undefined {
+export function getTerminalInstance(tabId: string): TerminalEntry | undefined {
   return terminalsMap.get(tabId)
 }
 
@@ -310,6 +318,7 @@ export function clearTerminalSearch(tabId: string): void {
 export function focusTerminal(tabId: string): void {
   const entry = terminalsMap.get(tabId)
   if (!entry) return
+  entry.suppressBusyUntil = Date.now() + 500
   entry.fitAddon.fit()
   entry.terminal.refresh(0, entry.terminal.rows - 1)
   entry.terminal.scrollToBottom()
