@@ -22,6 +22,7 @@ function broadcast(status: UpdateStatus): void {
 export function initAutoUpdater(): void {
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
+  autoUpdater.logger = null
 
   autoUpdater.on('checking-for-update', () => {
     broadcast({ state: 'checking' })
