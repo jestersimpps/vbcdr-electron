@@ -23,6 +23,10 @@ export function DashboardTerminal({ tabId }: DashboardTerminalProps): React.Reac
     container.appendChild(termEl)
     entry.terminal.scrollToBottom()
 
+    const viewport = termEl.querySelector('.xterm-viewport') as HTMLElement | null
+    const prevOverflow = viewport?.style.overflowY ?? ''
+    if (viewport) viewport.style.overflowY = 'hidden'
+
     const termWidth = termEl.offsetWidth
     const termHeight = termEl.offsetHeight
     const containerWidth = container.clientWidth
@@ -37,6 +41,7 @@ export function DashboardTerminal({ tabId }: DashboardTerminalProps): React.Reac
     }
 
     return () => {
+      if (viewport) viewport.style.overflowY = prevOverflow
       termEl.style.transform = ''
       termEl.style.transformOrigin = ''
       if (originalParent) {
