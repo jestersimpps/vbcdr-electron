@@ -85,9 +85,10 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
 
   return (
     <div
-      className="group flex w-full min-w-0 flex-col gap-2 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-left transition-all hover:bg-zinc-800/50"
+      className="group flex w-full min-w-0 cursor-pointer flex-col gap-2 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-left transition-all hover:bg-zinc-800/50"
+      onClick={navigate}
     >
-      <div onClick={navigate} className="flex items-center justify-between gap-2 cursor-pointer">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span
             className={cn(
@@ -119,11 +120,7 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
       </div>
 
       {hasTerminal && activeTab ? (
-        <div
-          className="flex w-full min-w-0 flex-col gap-1"
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="flex w-full min-w-0 flex-col gap-1">
           {llmTabs.length > 1 && (
             <div className="flex items-center gap-1">
               {llmTabs.map((tab, i) => {
@@ -131,7 +128,7 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveIndex(i)}
+                    onClick={(e) => { e.stopPropagation(); setActiveIndex(i) }}
                     className={cn(
                       'flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] font-mono transition-colors',
                       i !== clampedIndex && 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-400'

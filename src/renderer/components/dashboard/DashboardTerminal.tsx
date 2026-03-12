@@ -27,6 +27,7 @@ export function DashboardTerminal({ tabId }: DashboardTerminalProps): React.Reac
     termEl.style.height = `${origHeight}px`
 
     container.appendChild(termEl)
+    termEl.style.pointerEvents = 'none'
     entry.terminal.scrollToBottom()
 
     const viewport = termEl.querySelector('.xterm-viewport') as HTMLElement | null
@@ -46,6 +47,7 @@ export function DashboardTerminal({ tabId }: DashboardTerminalProps): React.Reac
 
     return () => {
       if (viewport) viewport.style.overflowY = prevOverflow
+      termEl.style.pointerEvents = ''
       termEl.style.transform = ''
       termEl.style.transformOrigin = ''
       termEl.style.width = ''
