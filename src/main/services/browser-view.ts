@@ -2,7 +2,6 @@ import { webContents, BrowserWindow, app } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { DEVICE_CONFIGS, type DeviceMode, type NetworkEntry } from '@main/models/types'
-import type { TabInfo } from '@main/models/api-types'
 
 interface PendingRequest {
   method: string
@@ -236,9 +235,9 @@ export function getTabWebContents(tabId: string): Electron.WebContents | null {
   return webContents.fromId(entry.webContentsId) ?? null
 }
 
-export function listTrackedTabs(): TabInfo[] {
+export function listTrackedTabs(): { id: string; url: string; title: string }[] {
   const trackedIds = new Set<number>()
-  const tabs: TabInfo[] = []
+  const tabs: { id: string; url: string; title: string }[] = []
   for (const [id, entry] of trackedTabs) {
     const wc = webContents.fromId(entry.webContentsId)
     if (wc) {

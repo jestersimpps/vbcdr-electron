@@ -1,5 +1,4 @@
 import * as pty from 'node-pty'
-import { HTTP_API_PORT } from '@main/services/http-api'
 import { BrowserWindow } from 'electron'
 import os from 'os'
 import fs from 'fs'
@@ -35,7 +34,6 @@ function shellEnv(): Record<string, string> {
   const env = { ...process.env } as Record<string, string>
   env.TERM = 'xterm-256color'
   env.TERM_PROGRAM = 'vbcdr'
-  env.VBCDR_API = `http://127.0.0.1:${HTTP_API_PORT}`
   env.GIT_CONFIG_COUNT = '1'
   env.GIT_CONFIG_KEY_0 = 'credential.helper'
   env.GIT_CONFIG_VALUE_0 = 'osxkeychain'
