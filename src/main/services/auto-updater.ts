@@ -44,12 +44,13 @@ export function initAutoUpdater(): void {
   })
 
   autoUpdater.on('error', (err: Error) => {
+    if (err.message?.includes('404')) return
     broadcast({ state: 'error', error: err.message })
   })
 }
 
 export function checkForUpdates(): void {
-  autoUpdater.checkForUpdates()
+  autoUpdater.checkForUpdates().catch(() => {})
 }
 
 export async function checkForUpdatesInteractive(): Promise<void> {
