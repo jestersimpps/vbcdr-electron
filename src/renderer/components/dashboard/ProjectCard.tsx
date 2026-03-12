@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GitBranch as GitBranchIcon, FileText, Terminal } from 'lucide-react'
+import { GitBranch as GitBranchIcon, FileText, Terminal, Zap } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useGitStore } from '@/stores/git-store'
@@ -13,6 +13,18 @@ import { cn } from '@/lib/utils'
 
 const EMPTY_BRANCHES: GitBranch[] = []
 const EMPTY_OUTPUT: string[] = []
+const MAX_TOKENS = 160_000
+
+function formatTokens(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
+function tokenBarFill(pct: number, theme: { green?: string; yellow?: string; red?: string }): string {
+  if (pct < 0.5) return theme.green ?? '#7ee787'
+  if (pct < 0.75) return theme.yellow ?? '#ffa657'
+  return theme.red ?? '#ff7b72'
+}
 
 const NON_ASCII_RE = /[^\x20-\x7E\t]/g
 const MULTI_SPACE_RE = /\s{2,}/g
@@ -54,6 +66,7 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
   const claudeStatus = useClaudeStatus(project.id)
   const llmTabs = useLlmTabs(project.id)
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
+  const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
   const themeId = useThemeStore((s) => s.getFullThemeId())
   const accentColor = getTerminalTheme(themeId).cursor ?? '#58a6ff'
   const [activeIndex, setActiveIndex] = useState(0)
@@ -150,6 +163,27 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
           ))}
         </div>
       ) : null}
+
+      {activeTab && tokenUsagePerTab[activeTab.id] != null && (() => {
+        const tokens = tokenUsagePerTab[activeTab.id]
+        const pct = Math.min(tokens / MAX_TOKENS, 1)
+        const theme = getTerminalTheme(themeId)
+        const fill = tokenBarFill(pct, theme)
+        return (
+          <div className="flex items-center gap-2 px-0.5">
+            <Zap size={9} className="shrink-0" style={{ color: `${fill}80` }} />
+            <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-zinc-800">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                style={{ width: `${pct * 100}%`, backgroundColor: fill }}
+              />
+            </div>
+            <span className="shrink-0 text-[9px] tabular-nums" style={{ color: `${fill}aa` }}>
+              {formatTokens(tokens)}
+            </span>
+          </div>
+        )
+      })()}
 
     </div>
   )

@@ -4,8 +4,24 @@ import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
-import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus } from 'lucide-react'
+import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+import { getTerminalTheme } from '@/config/terminal-theme-registry'
+import type { ITheme } from '@xterm/xterm'
+
+const MAX_TOKENS = 160_000
+
+function formatTokens(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
+function tokenBarFill(pct: number, theme: ITheme): string {
+  if (pct < 0.5) return theme.green ?? '#7ee787'
+  if (pct < 0.75) return theme.yellow ?? '#ffa657'
+  return theme.red ?? '#ff7b72'
+}
 
 export function TerminalPanel(): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
@@ -17,6 +33,7 @@ export function TerminalPanel(): React.ReactElement {
   const tabs = useTerminalStore((s) => s.tabs)
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
+  const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
   const { createTab, closeTab, replaceTab, setActiveTab, initProject } = useTerminalStore()
 
   const fullThemeId = useThemeStore((s) => s.getFullThemeId())
@@ -222,6 +239,27 @@ export function TerminalPanel(): React.ReactElement {
           <RotateCw size={14} />
         </button>
       </div>
+
+      {activeTab?.initialCommand && tokenUsagePerTab[activeTab.id] != null && (() => {
+        const tokens = tokenUsagePerTab[activeTab.id]
+        const pct = Math.min(tokens / MAX_TOKENS, 1)
+        const theme = getTerminalTheme(fullThemeId)
+        const fill = tokenBarFill(pct, theme)
+        return (
+          <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900/60 px-2 py-0.5">
+            <Zap size={10} className="shrink-0" style={{ color: `${fill}80` }} />
+            <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                style={{ width: `${pct * 100}%`, backgroundColor: fill }}
+              />
+            </div>
+            <span className="shrink-0 text-[10px] tabular-nums" style={{ color: `${fill}aa` }}>
+              {formatTokens(tokens)} / {formatTokens(MAX_TOKENS)}
+            </span>
+          </div>
+        )
+      })()}
 
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         {projectTabs.length === 0 && (

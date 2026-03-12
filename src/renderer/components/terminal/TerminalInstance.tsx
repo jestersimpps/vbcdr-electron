@@ -44,9 +44,16 @@ function shellEscape(path: string): string {
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'])
 
 const ANSI_RE = /\x1b(?:\[[0-9;?]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|\([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz])/g
+const TOKEN_RE = /(\d[\d,.]*)\s*tokens?/
 
 function stripAnsi(str: string): string {
   return str.replace(ANSI_RE, '')
+}
+
+function parseTokenCount(line: string): number | null {
+  const m = TOKEN_RE.exec(line)
+  if (!m) return null
+  return parseInt(m[1].replace(/[,.]/g, ''), 10)
 }
 
 export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: TerminalInstanceProps): React.ReactElement {
@@ -171,15 +178,21 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
               if (!te) return
               const buf = te.terminal.buffer.active
               const extracted: string[] = []
+              let latestTokens: number | null = null
               for (let y = 0; y < te.terminal.rows; y++) {
                 const row = buf.getLine(buf.baseY + y)
                 if (row) {
                   const text = row.translateToString(true)
                   if (text.trim()) extracted.push(text)
+                  const tokens = parseTokenCount(stripAnsi(text))
+                  if (tokens !== null) latestTokens = tokens
                 }
               }
               if (extracted.length > 0) {
                 useTerminalStore.getState().setOutput(projectId, extracted)
+              }
+              if (latestTokens !== null) {
+                useTerminalStore.getState().setTokenUsage(tabId, latestTokens)
               }
             }, 200))
           }
