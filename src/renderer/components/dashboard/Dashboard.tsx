@@ -1,13 +1,19 @@
 import { useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
+import { useTerminalStore } from '@/stores/terminal-store'
 import { useGitStore } from '@/stores/git-store'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 
 export function Dashboard(): React.ReactElement {
   const projects = useProjectStore((s) => s.projects)
   const addProject = useProjectStore((s) => s.addProject)
+  const lastActivityPerProject = useTerminalStore((s) => s.lastActivityPerProject)
   const loadGitData = useGitStore((s) => s.loadGitData)
+
+  const sorted = [...projects].sort(
+    (a, b) => (lastActivityPerProject[b.id] ?? 0) - (lastActivityPerProject[a.id] ?? 0)
+  )
 
   useEffect(() => {
     for (const project of projects) {
@@ -41,7 +47,7 @@ export function Dashboard(): React.ReactElement {
           </div>
         ) : (
           <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(600px, 1fr))' }}>
-            {projects.map((project) => (
+            {sorted.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
           </div>

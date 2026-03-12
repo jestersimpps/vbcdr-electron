@@ -12,6 +12,7 @@ interface TerminalStore {
   tabStatuses: Record<string, TabStatus>
   outputBufferPerProject: Record<string, string[]>
   tokenUsagePerTab: Record<string, number>
+  lastActivityPerProject: Record<string, number>
   createTab: (projectId: string, cwd: string, initialCommand?: string) => string
   closeTab: (tabId: string) => void
   replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => string
@@ -29,6 +30,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   tabStatuses: {},
   outputBufferPerProject: {},
   tokenUsagePerTab: {},
+  lastActivityPerProject: {},
 
   createTab: (projectId: string, cwd: string, initialCommand?: string) => {
     const tabId = uuid()
@@ -85,8 +87,10 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   },
 
   setTabStatus: (tabId: string, status: TabStatus) => {
+    const tab = get().tabs.find((t) => t.id === tabId)
     set((state) => ({
-      tabStatuses: { ...state.tabStatuses, [tabId]: status }
+      tabStatuses: { ...state.tabStatuses, [tabId]: status },
+      ...(tab && { lastActivityPerProject: { ...state.lastActivityPerProject, [tab.projectId]: Date.now() } })
     }))
   },
 
@@ -107,7 +111,8 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       outputBufferPerProject: {
         ...state.outputBufferPerProject,
         [projectId]: lines.slice(-OUTPUT_BUFFER_SIZE)
-      }
+      },
+      lastActivityPerProject: { ...state.lastActivityPerProject, [projectId]: Date.now() }
     }))
   },
 
