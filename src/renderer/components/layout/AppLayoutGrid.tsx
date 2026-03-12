@@ -154,6 +154,10 @@ export function AppLayoutGrid(): React.ReactElement {
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">
         <PanelGroup direction="horizontal">
+          <Panel defaultSize={35} minSize={15}>
+            <DevTerminalsPanel />
+          </Panel>
+          <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
           <Panel defaultSize={65} minSize={20}>
             <div className="relative h-full overflow-hidden">
               <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'terminals' ? 'z-10' : 'z-0 invisible')}>
@@ -190,10 +194,6 @@ export function AppLayoutGrid(): React.ReactElement {
                 )}
               </div>
             </div>
-          </Panel>
-          <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-          <Panel defaultSize={35} minSize={15}>
-            <DevTerminalsPanel />
           </Panel>
         </PanelGroup>
       </div>
