@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { GitBranch as GitBranchIcon, FileText, Terminal, Zap } from 'lucide-react'
-import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useGitStore } from '@/stores/git-store'
 import { useEditorStore } from '@/stores/editor-store'
@@ -38,6 +37,8 @@ function sanitizeLine(raw: string): string {
 
 interface ProjectCardProps {
   project: Project
+  onOpenModal: () => void
+  isModalOpen: boolean
 }
 
 type ClaudeStatus = 'busy' | 'idle' | 'none'
@@ -57,8 +58,7 @@ function useLlmTabs(projectId: string): TerminalTab[] {
   return tabs.filter((t) => t.projectId === projectId && t.initialCommand)
 }
 
-export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
-  const setActiveProject = useProjectStore((s) => s.setActiveProject)
+export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardProps): React.ReactElement {
   const branches = useGitStore((s) => s.branchesPerProject[project.id] ?? EMPTY_BRANCHES)
   const outputBuffer = useTerminalStore((s) => s.outputBufferPerProject[project.id] ?? EMPTY_OUTPUT)
   const openFilesCount = useEditorStore((s) => s.statePerProject[project.id]?.openFiles.length ?? 0)
@@ -81,12 +81,10 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
     .filter((l) => l.length > 0)
     .slice(-12)
 
-  const navigate = (): void => setActiveProject(project.id)
-
   return (
     <div
       className="group flex w-full min-w-0 cursor-pointer flex-col gap-2 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-left transition-all hover:bg-zinc-800/50"
-      onClick={navigate}
+      onClick={onOpenModal}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -119,7 +117,7 @@ export function ProjectCard({ project }: ProjectCardProps): React.ReactElement {
         </div>
       </div>
 
-      {hasTerminal && activeTab ? (
+      {hasTerminal && activeTab && !isModalOpen ? (
         <div className="flex w-full min-w-0 flex-col gap-1">
           {llmTabs.length > 1 && (
             <div className="flex items-center gap-1">

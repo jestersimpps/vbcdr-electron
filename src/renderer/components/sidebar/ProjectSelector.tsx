@@ -25,7 +25,7 @@ export function ProjectSelector(): React.ReactElement {
         </button>
       </div>
 
-      {projects.map((project) => (
+      {[...projects].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map((project) => (
         <div
           key={project.id}
           className={cn(

@@ -152,50 +152,48 @@ export function AppLayoutGrid(): React.ReactElement {
           Claude
         </button>
       </div>
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <PanelGroup direction="horizontal">
-          <Panel defaultSize={35} minSize={15}>
-            <DevTerminalsPanel />
-          </Panel>
-          <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-          <Panel defaultSize={65} minSize={20}>
-            <div className="relative h-full overflow-hidden">
-              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'terminals' ? 'z-10' : 'z-0 invisible')}>
-                <TerminalPanel />
-              </div>
-              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'editor' ? 'z-10' : 'z-0 invisible')}>
-                {activeProjectId && (
-                  <PanelGroup direction="horizontal">
-                    <Panel defaultSize={25} minSize={15} maxSize={40}>
-                      <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
-                        <FileTree projectId={activeProjectId} />
-                      </div>
-                    </Panel>
-                    <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-                    <Panel defaultSize={75} minSize={30}>
-                      <CodeEditor projectId={activeProjectId} />
-                    </Panel>
-                  </PanelGroup>
-                )}
-              </div>
-              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'claude' ? 'z-10' : 'z-0 invisible')}>
-                {activeProjectId && (
-                  <PanelGroup direction="horizontal">
-                    <Panel defaultSize={25} minSize={15} maxSize={40}>
-                      <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
-                        <ClaudeFileList projectId={activeProjectId} />
-                      </div>
-                    </Panel>
-                    <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-                    <Panel defaultSize={75} minSize={30}>
-                      <ClaudeEditor projectId={activeProjectId} />
-                    </Panel>
-                  </PanelGroup>
-                )}
-              </div>
-            </div>
-          </Panel>
-        </PanelGroup>
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        <div className={cn('absolute inset-0', centerTab === 'terminals' ? 'z-10' : 'z-0 invisible')}>
+          <PanelGroup direction="horizontal">
+            <Panel defaultSize={35} minSize={15}>
+              <DevTerminalsPanel />
+            </Panel>
+            <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+            <Panel defaultSize={65} minSize={20}>
+              <TerminalPanel />
+            </Panel>
+          </PanelGroup>
+        </div>
+        <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'editor' ? 'z-10' : 'z-0 invisible')}>
+          {activeProjectId && (
+            <PanelGroup direction="horizontal">
+              <Panel defaultSize={25} minSize={15} maxSize={40}>
+                <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
+                  <FileTree projectId={activeProjectId} />
+                </div>
+              </Panel>
+              <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+              <Panel defaultSize={75} minSize={30}>
+                <CodeEditor projectId={activeProjectId} />
+              </Panel>
+            </PanelGroup>
+          )}
+        </div>
+        <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'claude' ? 'z-10' : 'z-0 invisible')}>
+          {activeProjectId && (
+            <PanelGroup direction="horizontal">
+              <Panel defaultSize={25} minSize={15} maxSize={40}>
+                <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
+                  <ClaudeFileList projectId={activeProjectId} />
+                </div>
+              </Panel>
+              <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+              <Panel defaultSize={75} minSize={30}>
+                <ClaudeEditor projectId={activeProjectId} />
+              </Panel>
+            </PanelGroup>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -342,7 +340,7 @@ export function AppLayoutGrid(): React.ReactElement {
             <span>Dashboard</span>
           </button>
           <div className="mx-1 h-4 w-px bg-zinc-700/60" />
-          {projects.map((project) => (
+          {[...projects].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map((project) => (
             <button
               key={project.id}
               onClick={() => setActiveProject(project.id)}

@@ -30,7 +30,7 @@ export function AppLayout(): React.ReactElement {
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div className="flex items-center gap-0.5 h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          {projects.map((project) => (
+          {[...projects].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map((project) => (
             <button
               key={project.id}
               onClick={() => setActiveProject(project.id)}

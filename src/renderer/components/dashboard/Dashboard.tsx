@@ -1,19 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
-import { useTerminalStore } from '@/stores/terminal-store'
 import { useGitStore } from '@/stores/git-store'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
+import { ProjectModal } from '@/components/dashboard/ProjectModal'
+import type { Project } from '@/models/types'
 
 export function Dashboard(): React.ReactElement {
   const projects = useProjectStore((s) => s.projects)
   const addProject = useProjectStore((s) => s.addProject)
-  const lastActivityPerProject = useTerminalStore((s) => s.lastActivityPerProject)
   const loadGitData = useGitStore((s) => s.loadGitData)
+  const [modalProject, setModalProject] = useState<Project | null>(null)
 
-  const sorted = [...projects].sort(
-    (a, b) => (lastActivityPerProject[b.id] ?? 0) - (lastActivityPerProject[a.id] ?? 0)
-  )
+  const sorted = [...projects].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
 
   useEffect(() => {
     for (const project of projects) {
@@ -23,16 +22,6 @@ export function Dashboard(): React.ReactElement {
 
   return (
     <div className="flex h-full flex-col bg-zinc-950">
-      <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-3">
-        <h1 className="text-sm font-medium text-zinc-300">Dashboard</h1>
-        <button
-          onClick={addProject}
-          className="flex items-center gap-1.5 rounded-md bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
-        >
-          <Plus size={12} />
-          Add Project
-        </button>
-      </div>
       <div className="flex-1 overflow-auto p-6">
         {projects.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-zinc-600">
@@ -46,13 +35,21 @@ export function Dashboard(): React.ReactElement {
             </button>
           </div>
         ) : (
-          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(600px, 1fr))' }}>
+          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
             {sorted.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onOpenModal={() => setModalProject(project)}
+                isModalOpen={modalProject?.id === project.id}
+              />
             ))}
           </div>
         )}
       </div>
+      {modalProject && (
+        <ProjectModal project={modalProject} onClose={() => setModalProject(null)} />
+      )}
     </div>
   )
 }
