@@ -1,6 +1,6 @@
 {
   "name": "vbcdr",
-  "version": "1.1.23",
+  "version": "1.1.24",
   "description": "Desktop vibe coding environment for Claude Code developers",
   "author": {
     "name": "jo vinkenroye",
@@ -15,7 +15,7 @@
     "build:linux": "electron-vite build && electron-builder --linux --x64",
     "build:win": "electron-vite build && electron-builder --win --x64",
     "postinstall": "node scripts/postinstall.js",
-    "release": "node -e \"const v='v'+require('./package.json').version,{execSync}=require('child_process');try{execSync('git tag '+v,{stdio:'inherit'})}catch(e){console.error('Tag '+v+' already exists - bump version first');process.exit(1)}execSync('git push origin '+v,{stdio:'inherit'})\""
+    "release": "npm version patch --no-git-tag-version && node -e \"const v='v'+require('./package.json').version,{execSync}=require('child_process');execSync('git add package.json',{stdio:'inherit'});execSync('git commit -m \\'Bump version to '+v+'\\'',{stdio:'inherit'});execSync('git tag '+v,{stdio:'inherit'});execSync('git push origin master --tags',{stdio:'inherit'})\""
   },
   "build": {
     "appId": "com.vbcdr.app",
