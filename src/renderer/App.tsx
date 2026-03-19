@@ -11,10 +11,49 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { useUpdaterStore } from '@/stores/updater-store'
 import { useGitStore } from '@/stores/git-store'
 import { applyThemeToAll } from '@/components/terminal/TerminalInstance'
+import type { CustomThemeUI } from '@/models/custom-theme'
+
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `${r}, ${g}, ${b}`
+}
+
+function applyCustomVars(ui: CustomThemeUI): void {
+  const style = `
+    :root {
+      --ct-bg-primary: ${ui.bgPrimary};
+      --ct-bg-primary-rgb: ${hexToRgb(ui.bgPrimary)};
+      --ct-bg-secondary: ${ui.bgSecondary};
+      --ct-bg-secondary-rgb: ${hexToRgb(ui.bgSecondary)};
+      --ct-bg-elevated: ${ui.bgElevated};
+      --ct-bg-elevated-rgb: ${hexToRgb(ui.bgElevated)};
+      --ct-bg-subtle: ${ui.bgSubtle};
+      --ct-bg-subtle-rgb: ${hexToRgb(ui.bgSubtle)};
+      --ct-text-1: ${ui.text1};
+      --ct-text-2: ${ui.text2};
+      --ct-text-3: ${ui.text3};
+      --ct-border-1: ${ui.border1};
+      --ct-border-2: ${ui.border2};
+      --ct-border-2-rgb: ${hexToRgb(ui.border2)};
+    }
+  `
+  let styleEl = document.getElementById('ct-vars')
+  if (!styleEl) {
+    styleEl = document.createElement('style')
+    styleEl.id = 'ct-vars'
+    document.head.appendChild(styleEl)
+  }
+  styleEl.textContent = style
+}
 
 export function App(): React.ReactElement {
   const themeName = useThemeStore((s) => s.themeName)
   const variant = useThemeStore((s) => s.variant)
+  const customDark = useThemeStore((s) => s.customDark)
+  const customLight = useThemeStore((s) => s.customLight)
 
   useEffect(() => {
     const classes = Array.from(document.documentElement.classList)
@@ -27,8 +66,20 @@ export function App(): React.ReactElement {
     const fullThemeId = `${themeName}-${variant}`
     document.documentElement.classList.add(fullThemeId)
 
-    applyThemeToAll(fullThemeId)
+    if (themeName === 'custom') {
+      const { customDark: cd, customLight: cl } = useThemeStore.getState()
+      applyCustomVars(variant === 'dark' ? cd.ui : cl.ui)
+    }
+
+    applyThemeToAll(useThemeStore.getState().getTerminalThemeId())
   }, [themeName, variant])
+
+  useEffect(() => {
+    if (themeName !== 'custom') return
+    const colors = variant === 'dark' ? customDark : customLight
+    applyCustomVars(colors.ui)
+    applyThemeToAll(useThemeStore.getState().getTerminalThemeId())
+  }, [customDark, customLight])
 
   useEffect(() => {
     return useUpdaterStore.getState().init()

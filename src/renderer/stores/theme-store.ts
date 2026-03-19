@@ -1,15 +1,23 @@
 import { create } from 'zustand'
 import { getThemeById } from '@/config/theme-registry'
+import { setCustomTerminalTheme } from '@/config/terminal-theme-registry'
+import { type CustomThemeColors, DEFAULT_CUSTOM_DARK, DEFAULT_CUSTOM_LIGHT } from '@/models/custom-theme'
 
 type Variant = 'dark' | 'light'
 
 interface ThemeStore {
   themeName: string
   variant: Variant
+  terminalThemeId: string
+  customDark: CustomThemeColors
+  customLight: CustomThemeColors
   setTheme: (themeName: string) => void
   setVariant: (variant: Variant) => void
   toggleVariant: () => void
   getFullThemeId: () => string
+  setTerminalTheme: (id: string) => void
+  getTerminalThemeId: () => string
+  setCustomTheme: (variant: Variant, colors: CustomThemeColors) => void
 }
 
 const LEGACY_MAPPING: Record<string, { themeName: string; variant: Variant }> = {
@@ -38,11 +46,24 @@ function migrateTheme(stored: string | null): { themeName: string; variant: Vari
   return { themeName: 'github', variant: 'dark' }
 }
 
+function loadCustomColors(key: string, fallback: CustomThemeColors): CustomThemeColors {
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return fallback
+}
+
 const initialTheme = migrateTheme(localStorage.getItem('theme'))
+const initialCustomDark = loadCustomColors('customDark', DEFAULT_CUSTOM_DARK)
+const initialCustomLight = loadCustomColors('customLight', DEFAULT_CUSTOM_LIGHT)
 
 export const useThemeStore = create<ThemeStore>((set, get) => ({
   themeName: initialTheme.themeName,
   variant: initialTheme.variant,
+  terminalThemeId: localStorage.getItem('terminalTheme') ?? '',
+  customDark: initialCustomDark,
+  customLight: initialCustomLight,
 
   setTheme: (themeName: string) => {
     const theme = getThemeById(themeName)
@@ -87,5 +108,26 @@ export const useThemeStore = create<ThemeStore>((set, get) => ({
   getFullThemeId: () => {
     const { themeName, variant } = get()
     return `${themeName}-${variant}`
-  }
+  },
+
+  setTerminalTheme: (id: string) => {
+    if (id) {
+      localStorage.setItem('terminalTheme', id)
+    } else {
+      localStorage.removeItem('terminalTheme')
+    }
+    set({ terminalThemeId: id })
+  },
+
+  getTerminalThemeId: () => {
+    const { terminalThemeId, themeName, variant } = get()
+    return terminalThemeId || `${themeName}-${variant}`
+  },
+
+  setCustomTheme: (variant: Variant, colors: CustomThemeColors) => {
+    const key = variant === 'dark' ? 'customDark' : 'customLight'
+    localStorage.setItem(key, JSON.stringify(colors))
+    setCustomTerminalTheme(variant, colors.terminal)
+    set(variant === 'dark' ? { customDark: colors } : { customLight: colors })
+  },
 }))

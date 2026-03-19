@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
-import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus, Zap } from 'lucide-react'
+import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus, Zap, Palette } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-import { getTerminalTheme } from '@/config/terminal-theme-registry'
+import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
 import type { ITheme } from '@xterm/xterm'
+
+const TERMINAL_THEME_OPTIONS = [
+  { id: '', label: 'Auto' },
+  ...Object.keys(TERMINAL_THEMES).map((id) => ({ id, label: id }))
+]
 
 const MAX_TOKENS = 160_000
 
@@ -37,6 +42,9 @@ export function TerminalPanel(): React.ReactElement {
   const { createTab, closeTab, replaceTab, setActiveTab, initProject } = useTerminalStore()
 
   const fullThemeId = useThemeStore((s) => s.getFullThemeId())
+  const terminalThemeId = useThemeStore((s) => s.terminalThemeId)
+  const setTerminalTheme = useThemeStore((s) => s.setTerminalTheme)
+  const [terminalThemeOpen, setTerminalThemeOpen] = useState(false)
   const centerTab = useEditorStore((s) => activeProjectId ? s.centerTabPerProject[activeProjectId] ?? null : null)
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -69,8 +77,9 @@ export function TerminalPanel(): React.ReactElement {
   }, [activeTabId])
 
   useEffect(() => {
-    applyThemeToAll(fullThemeId)
-  }, [fullThemeId])
+    applyThemeToAll(useThemeStore.getState().getTerminalThemeId())
+  }, [fullThemeId, terminalThemeId])
+
 
   useEffect(() => {
     if (!activeTabId) return
@@ -238,12 +247,50 @@ export function TerminalPanel(): React.ReactElement {
         >
           <RotateCw size={14} />
         </button>
+        <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
+        <button
+          onClick={() => setTerminalThemeOpen(true)}
+          className={cn('rounded p-0.5 hover:bg-zinc-700 hover:text-zinc-200', terminalThemeId ? 'text-blue-400' : 'text-zinc-400')}
+          title="Terminal color theme"
+        >
+          <Palette size={14} />
+        </button>
+        {terminalThemeOpen && createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60"
+            onMouseDown={(e) => { if (e.target === e.currentTarget) setTerminalThemeOpen(false) }}
+          >
+            <div className="w-56 rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden">
+              <div className="px-3 py-2 border-b border-zinc-800 text-xs font-medium text-zinc-400">Terminal Theme</div>
+              <div className="py-1 max-h-80 overflow-y-auto">
+                {TERMINAL_THEME_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => {
+                      setTerminalTheme(opt.id)
+                      applyThemeToAll(opt.id || useThemeStore.getState().getTerminalThemeId())
+                      setTerminalThemeOpen(false)
+                    }}
+                    className={cn(
+                      'flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-zinc-800',
+                      terminalThemeId === opt.id ? 'text-blue-400' : 'text-zinc-300'
+                    )}
+                  >
+                    {terminalThemeId === opt.id ? <span className="text-blue-400">✓</span> : <span className="w-3" />}
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
 
       {activeTab?.initialCommand && tokenUsagePerTab[activeTab.id] != null && (() => {
         const tokens = tokenUsagePerTab[activeTab.id]
         const pct = Math.min(tokens / MAX_TOKENS, 1)
-        const theme = getTerminalTheme(fullThemeId)
+        const theme = getTerminalTheme(useThemeStore.getState().getTerminalThemeId())
         const fill = tokenBarFill(pct, theme)
         return (
           <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900/60 px-2 py-0.5">

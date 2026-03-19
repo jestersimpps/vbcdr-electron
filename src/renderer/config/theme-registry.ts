@@ -1,7 +1,7 @@
 export interface ThemeDefinition {
   id: string
   name: string
-  category: 'popular' | 'classic' | 'experimental'
+  category: 'popular' | 'classic' | 'experimental' | 'custom'
   supportsLightMode: boolean
 }
 
@@ -21,6 +21,7 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
   { id: 'cyberpunk', name: 'Cyberpunk', category: 'experimental', supportsLightMode: true },
   { id: 'rainbow', name: 'Rainbow', category: 'experimental', supportsLightMode: true },
   { id: 'tropical', name: 'Tropical', category: 'experimental', supportsLightMode: true },
+  { id: 'custom', name: 'Custom', category: 'custom', supportsLightMode: true },
 ]
 
 export function getThemeById(id: string): ThemeDefinition | undefined {
@@ -29,4 +30,8 @@ export function getThemeById(id: string): ThemeDefinition | undefined {
 
 export function getThemesByCategory(category: ThemeDefinition['category']): ThemeDefinition[] {
   return THEME_REGISTRY.filter((theme) => theme.category === category)
+}
+
+export function isCustomTheme(id: string): boolean {
+  return id === 'custom'
 }

@@ -1,4 +1,5 @@
 import type { ITheme } from '@xterm/xterm'
+import { DEFAULT_CUSTOM_DARK, DEFAULT_CUSTOM_LIGHT } from '@/models/custom-theme'
 
 export const TERMINAL_THEMES: Record<string, ITheme> = {
   'github-dark': {
@@ -27,26 +28,26 @@ export const TERMINAL_THEMES: Record<string, ITheme> = {
 
   'github-light': {
     background: '#ffffff',
-    foreground: '#1f2328',
-    cursor: '#0969da',
+    foreground: '#1f231f',
+    cursor: '#096fdb',
     cursorAccent: '#ffffff',
     selectionBackground: '#add6ff',
-    black: '#1f2328',
-    red: '#cf222e',
-    green: '#116329',
-    yellow: '#953800',
-    blue: '#0550ae',
+    black: '#241929',
+    red: '#cf2330',
+    green: '#116428',
+    yellow: '#4d2d00',
+    blue: '#096fdb',
     magenta: '#8250df',
-    cyan: '#0a3069',
-    white: '#6e7781',
+    cyan: '#1b7c83',
+    white: '#6e7681',
     brightBlack: '#57606a',
-    brightRed: '#d1242f',
-    brightGreen: '#1a7f37',
-    brightYellow: '#9a6700',
-    brightBlue: '#0969da',
-    brightMagenta: '#8a63d2',
-    brightCyan: '#1168cc',
-    brightWhite: '#e6edf3'
+    brightRed: '#a4423f',
+    brightGreen: '#1a7f34',
+    brightYellow: '#633d0f',
+    brightBlue: '#21cbff',
+    brightMagenta: '#a475f9',
+    brightCyan: '#31aaa0',
+    brightWhite: '#8d959e'
   },
 
   'dracula-dark': {
@@ -127,21 +128,21 @@ export const TERMINAL_THEMES: Record<string, ITheme> = {
     cursor: '#4078f2',
     cursorAccent: '#fafafa',
     selectionBackground: '#d0d0d0',
-    black: '#383a42',
+    black: '#383a3c',
     red: '#e45649',
     green: '#50a14f',
     yellow: '#c18401',
-    blue: '#4078f2',
+    blue: '#0184bc',
     magenta: '#a626a4',
-    cyan: '#0184bc',
+    cyan: '#0997b3',
     white: '#a0a1a7',
-    brightBlack: '#4f525e',
-    brightRed: '#e45649',
-    brightGreen: '#50a14f',
-    brightYellow: '#c18401',
-    brightBlue: '#4078f2',
-    brightMagenta: '#a626a4',
-    brightCyan: '#0184bc',
+    brightBlack: '#4f525b',
+    brightRed: '#e06c75',
+    brightGreen: '#98c379',
+    brightYellow: '#e5c07b',
+    brightBlue: '#61afef',
+    brightMagenta: '#c678dd',
+    brightCyan: '#56b6c2',
     brightWhite: '#fafafa'
   },
 
@@ -240,21 +241,109 @@ const lightTerminalBase = (bg: string, fg: string, cursor: string): ITheme => ({
   brightBlue: '#0969da',
   brightMagenta: '#8a63d2',
   brightCyan: '#1168cc',
-  brightWhite: bg
+  brightWhite: fg
 })
 
 TERMINAL_THEMES['material-dark'] = darkTerminalBase('#1e1e1e', '#eeffff', '#82aaff')
 TERMINAL_THEMES['material-light'] = lightTerminalBase('#fafafa', '#272727', '#5a5a5a')
 TERMINAL_THEMES['nord-dark'] = darkTerminalBase('#2e3440', '#eceff4', '#88c0d0')
-TERMINAL_THEMES['nord-light'] = lightTerminalBase('#eceff4', '#2e3440', '#5e81ac')
+TERMINAL_THEMES['nord-light'] = {
+  background: '#e5e9f0',
+  foreground: '#434c5e',
+  cursor: '#88c0d0',
+  cursorAccent: '#e5e9f0',
+  selectionBackground: '#d8deea',
+  black: '#3b4282',
+  red: '#bf616e',
+  green: '#a3be8c',
+  yellow: '#ebcb8b',
+  blue: '#81a1c1',
+  magenta: '#b48ead',
+  cyan: '#88c0d0',
+  white: '#d8deea',
+  brightBlack: '#4c5375',
+  brightRed: '#bf616e',
+  brightGreen: '#a3be8c',
+  brightYellow: '#ebcb8b',
+  brightBlue: '#81a1c1',
+  brightMagenta: '#b48ead',
+  brightCyan: '#8fbcbb',
+  brightWhite: '#eceffa'
+}
 TERMINAL_THEMES['tokyo-night-dark'] = darkTerminalBase('#1a1b26', '#c0caf5', '#7aa2f7')
-TERMINAL_THEMES['tokyo-night-light'] = lightTerminalBase('#d5d6db', '#343b58', '#2e7de9')
+TERMINAL_THEMES['tokyo-night-light'] = {
+  background: '#e1e3ee',
+  foreground: '#37606f',
+  cursor: '#2e7dea',
+  cursorAccent: '#e1e3ee',
+  selectionBackground: '#99a6de',
+  black: '#e9e9ed',
+  red: '#f52a65',
+  green: '#589238',
+  yellow: '#8c6c3e',
+  blue: '#2e7dea',
+  magenta: '#9854f1',
+  cyan: '#007195',
+  white: '#617db1',
+  brightBlack: '#a1a6c5',
+  brightRed: '#f52a65',
+  brightGreen: '#589238',
+  brightYellow: '#8c6c3e',
+  brightBlue: '#2e7dea',
+  brightMagenta: '#9854f1',
+  brightCyan: '#007195',
+  brightWhite: '#37606f'
+}
 TERMINAL_THEMES['catppuccin-dark'] = darkTerminalBase('#1e1e2e', '#cdd6f4', '#89b4fa')
-TERMINAL_THEMES['catppuccin-light'] = lightTerminalBase('#eff1f5', '#4c4f69', '#1e66f5')
+TERMINAL_THEMES['catppuccin-light'] = {
+  background: '#eff1f5',
+  foreground: '#4c4f69',
+  cursor: '#dc8a78',
+  cursorAccent: '#eff1f5',
+  selectionBackground: '#acb0be80',
+  black: '#5c5f77',
+  red: '#d20f39',
+  green: '#40a02b',
+  yellow: '#df8e1d',
+  blue: '#1e66f5',
+  magenta: '#ea76cb',
+  cyan: '#179299',
+  white: '#acb0be',
+  brightBlack: '#6c6f85',
+  brightRed: '#d20f39',
+  brightGreen: '#40a02b',
+  brightYellow: '#df8e1d',
+  brightBlue: '#1e66f5',
+  brightMagenta: '#ea76cb',
+  brightCyan: '#179299',
+  brightWhite: '#bcc0cc'
+}
 TERMINAL_THEMES['pastel-dark'] = darkTerminalBase('#1e1e2e', '#e0d0f0', '#c8b8e0')
 TERMINAL_THEMES['pastel-light'] = lightTerminalBase('#fffbf5', '#5c5470', '#7d728a')
 TERMINAL_THEMES['gruvbox-dark'] = darkTerminalBase('#1d2021', '#ebdbb2', '#fabd2f')
-TERMINAL_THEMES['gruvbox-light'] = lightTerminalBase('#fbf1c7', '#3c3836', '#af3a03')
+TERMINAL_THEMES['gruvbox-light'] = {
+  background: '#fbf1c7',
+  foreground: '#3c3836',
+  cursor: '#af3a03',
+  cursorAccent: '#fbf1c7',
+  selectionBackground: '#d5c4a180',
+  black: '#7c6f64',
+  red: '#cc241d',
+  green: '#98971a',
+  yellow: '#d79921',
+  blue: '#458588',
+  magenta: '#b16286',
+  cyan: '#689d6a',
+  white: '#a89984',
+  brightBlack: '#928374',
+  brightRed: '#9d0006',
+  brightGreen: '#79740e',
+  brightYellow: '#b57614',
+  brightBlue: '#076678',
+  brightMagenta: '#8f3f71',
+  brightCyan: '#427b58',
+  brightWhite: '#3c3836'
+}
 TERMINAL_THEMES['monokai-dark'] = darkTerminalBase('#1e1f1c', '#f8f8f2', '#f8f8f0')
 TERMINAL_THEMES['monokai-light'] = lightTerminalBase('#fafafa', '#272822', '#5f5a60')
 
@@ -448,6 +537,24 @@ TERMINAL_THEMES['tropical-light'] = {
   brightMagenta: '#e06058',
   brightCyan: '#00a0a0',
   brightWhite: '#fff8f0'
+}
+
+function loadStoredTerminal(key: string, fallback: ITheme): ITheme {
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return parsed.terminal ?? fallback
+    }
+  } catch { /* ignore */ }
+  return fallback
+}
+
+TERMINAL_THEMES['custom-dark'] = loadStoredTerminal('customDark', DEFAULT_CUSTOM_DARK.terminal)
+TERMINAL_THEMES['custom-light'] = loadStoredTerminal('customLight', DEFAULT_CUSTOM_LIGHT.terminal)
+
+export function setCustomTerminalTheme(variant: 'dark' | 'light', theme: ITheme): void {
+  TERMINAL_THEMES[`custom-${variant}`] = { ...theme }
 }
 
 export function getTerminalTheme(themeId: string): ITheme {
