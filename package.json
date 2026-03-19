@@ -14,7 +14,8 @@
     "build:mac": "electron-vite build && electron-builder --mac --arm64",
     "build:linux": "electron-vite build && electron-builder --linux --x64",
     "build:win": "electron-vite build && electron-builder --win --x64",
-    "postinstall": "node scripts/postinstall.js"
+    "postinstall": "node scripts/postinstall.js",
+    "release": "node -e \"const v='v'+require('./package.json').version,{execSync}=require('child_process');execSync('git tag '+v,{stdio:'inherit'});execSync('git push origin '+v,{stdio:'inherit'})\""
   },
   "build": {
     "appId": "com.vbcdr.app",
