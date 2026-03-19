@@ -87,7 +87,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         cols: 80,
         rows: 24,
         allowProposedApi: true,
-        theme: getTerminalTheme(useThemeStore.getState().getFullThemeId())
+        theme: getTerminalTheme(useThemeStore.getState().getTerminalThemeId())
       })
 
       const fitAddon = new FitAddon()

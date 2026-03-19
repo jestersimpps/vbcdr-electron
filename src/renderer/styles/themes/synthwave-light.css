@@ -1,6 +1,6 @@
 :root.synthwave-light body {
-  background: #f0e8ff;
-  color: #1a1030;
+  background: #f8f0ff;
+  color: #0e0820;
 }
 
 :root.synthwave-light ::-webkit-scrollbar-thumb {
@@ -11,29 +11,29 @@
   background: #c9156dbb;
 }
 
-:root.synthwave-light .bg-zinc-950 { background-color: #f0e8ff; }
-:root.synthwave-light .bg-zinc-900\/80 { background-color: #e8d0f8e6; }
-:root.synthwave-light .bg-zinc-900\/50 { background-color: #e8d0f880; }
-:root.synthwave-light .bg-zinc-900\/30 { background-color: #e8d0f84d; }
-:root.synthwave-light .bg-zinc-900 { background-color: #e8d0f8; }
-:root.synthwave-light .bg-zinc-800 { background-color: #ddb8f0; }
-:root.synthwave-light .bg-zinc-800\/70 { background-color: #ddb8f0b3; }
-:root.synthwave-light .bg-zinc-800\/50 { background-color: #ddb8f080; }
-:root.synthwave-light .bg-zinc-800\/30 { background-color: #ddb8f04d; }
-:root.synthwave-light .bg-zinc-700 { background-color: #d0a0e8; }
-:root.synthwave-light .bg-zinc-700\/30 { background-color: #d0a0e84d; }
+:root.synthwave-light .bg-zinc-950 { background-color: #f8f0ff; }
+:root.synthwave-light .bg-zinc-900\/80 { background-color: #f2e0fff0; }
+:root.synthwave-light .bg-zinc-900\/50 { background-color: #f2e0ff99; }
+:root.synthwave-light .bg-zinc-900\/30 { background-color: #f2e0ff66; }
+:root.synthwave-light .bg-zinc-900 { background-color: #f2e0ff; }
+:root.synthwave-light .bg-zinc-800 { background-color: #e8ccf8; }
+:root.synthwave-light .bg-zinc-800\/70 { background-color: #e8ccf8b3; }
+:root.synthwave-light .bg-zinc-800\/50 { background-color: #e8ccf880; }
+:root.synthwave-light .bg-zinc-800\/30 { background-color: #e8ccf84d; }
+:root.synthwave-light .bg-zinc-700 { background-color: #ddbcf0; }
+:root.synthwave-light .bg-zinc-700\/30 { background-color: #ddbcf04d; }
 
-:root.synthwave-light .hover\:bg-zinc-800:hover { background-color: #d8aef0; }
-:root.synthwave-light .hover\:bg-zinc-800\/50:hover { background-color: #d8aef080; }
-:root.synthwave-light .hover\:bg-zinc-800\/30:hover { background-color: #d8aef04d; }
-:root.synthwave-light .hover\:bg-zinc-700:hover { background-color: #c890e0; }
+:root.synthwave-light .hover\:bg-zinc-800:hover { background-color: #e4c8f8; }
+:root.synthwave-light .hover\:bg-zinc-800\/50:hover { background-color: #e4c8f880; }
+:root.synthwave-light .hover\:bg-zinc-800\/30:hover { background-color: #e4c8f84d; }
+:root.synthwave-light .hover\:bg-zinc-700:hover { background-color: #d4acec; }
 
 :root.synthwave-light .border-zinc-800 { border-color: #c9156d40; }
 :root.synthwave-light .border-zinc-700 { border-color: #6930c360; }
 :root.synthwave-light .border-zinc-600 { border-color: #6930c360; }
 :root.synthwave-light .border-zinc-600\/40 { border-color: #6930c330; }
 
-:root.synthwave-light .text-zinc-100 { color: #2a1040; }
+:root.synthwave-light .text-zinc-100 { color: #0e0820; }
 :root.synthwave-light .text-zinc-200 { color: #6930c3; }
 :root.synthwave-light .text-zinc-300 { color: #c9156d; }
 :root.synthwave-light .text-zinc-400 { color: #007a8a; }

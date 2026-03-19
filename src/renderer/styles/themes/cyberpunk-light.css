@@ -1,6 +1,6 @@
 :root.cyberpunk-light body {
-  background: #f5f4e8;
-  color: #1a1a10;
+  background: #fdfaf0;
+  color: #101008;
 }
 
 :root.cyberpunk-light ::-webkit-scrollbar-thumb {
@@ -11,29 +11,29 @@
   background: #b80077bb;
 }
 
-:root.cyberpunk-light .bg-zinc-950 { background-color: #f5f4e8; }
-:root.cyberpunk-light .bg-zinc-900\/80 { background-color: #eeead8e6; }
-:root.cyberpunk-light .bg-zinc-900\/50 { background-color: #eeead880; }
-:root.cyberpunk-light .bg-zinc-900\/30 { background-color: #eeead84d; }
-:root.cyberpunk-light .bg-zinc-900 { background-color: #eeead8; }
-:root.cyberpunk-light .bg-zinc-800 { background-color: #e4dfc8; }
-:root.cyberpunk-light .bg-zinc-800\/70 { background-color: #e4dfc8b3; }
-:root.cyberpunk-light .bg-zinc-800\/50 { background-color: #e4dfc880; }
-:root.cyberpunk-light .bg-zinc-800\/30 { background-color: #e4dfc84d; }
-:root.cyberpunk-light .bg-zinc-700 { background-color: #d8d0b0; }
-:root.cyberpunk-light .bg-zinc-700\/30 { background-color: #d8d0b04d; }
+:root.cyberpunk-light .bg-zinc-950 { background-color: #fdfaf0; }
+:root.cyberpunk-light .bg-zinc-900\/80 { background-color: #f8f5e0f0; }
+:root.cyberpunk-light .bg-zinc-900\/50 { background-color: #f8f5e099; }
+:root.cyberpunk-light .bg-zinc-900\/30 { background-color: #f8f5e066; }
+:root.cyberpunk-light .bg-zinc-900 { background-color: #f8f5e0; }
+:root.cyberpunk-light .bg-zinc-800 { background-color: #f2eccc; }
+:root.cyberpunk-light .bg-zinc-800\/70 { background-color: #f2ecccb3; }
+:root.cyberpunk-light .bg-zinc-800\/50 { background-color: #f2eccc80; }
+:root.cyberpunk-light .bg-zinc-800\/30 { background-color: #f2eccc4d; }
+:root.cyberpunk-light .bg-zinc-700 { background-color: #e8e0b8; }
+:root.cyberpunk-light .bg-zinc-700\/30 { background-color: #e8e0b84d; }
 
-:root.cyberpunk-light .hover\:bg-zinc-800:hover { background-color: #e0d8c0; }
-:root.cyberpunk-light .hover\:bg-zinc-800\/50:hover { background-color: #e0d8c080; }
-:root.cyberpunk-light .hover\:bg-zinc-800\/30:hover { background-color: #e0d8c04d; }
-:root.cyberpunk-light .hover\:bg-zinc-700:hover { background-color: #d0c8a8; }
+:root.cyberpunk-light .hover\:bg-zinc-800:hover { background-color: #eee8c8; }
+:root.cyberpunk-light .hover\:bg-zinc-800\/50:hover { background-color: #eee8c880; }
+:root.cyberpunk-light .hover\:bg-zinc-800\/30:hover { background-color: #eee8c84d; }
+:root.cyberpunk-light .hover\:bg-zinc-700:hover { background-color: #e0d8a8; }
 
 :root.cyberpunk-light .border-zinc-800 { border-color: #a6850060; }
 :root.cyberpunk-light .border-zinc-700 { border-color: #b8007750; }
 :root.cyberpunk-light .border-zinc-600 { border-color: #b8007750; }
 :root.cyberpunk-light .border-zinc-600\/40 { border-color: #b8007730; }
 
-:root.cyberpunk-light .text-zinc-100 { color: #1a1a10; }
+:root.cyberpunk-light .text-zinc-100 { color: #101008; }
 :root.cyberpunk-light .text-zinc-200 { color: #a68500; }
 :root.cyberpunk-light .text-zinc-300 { color: #b80077; }
 :root.cyberpunk-light .text-zinc-400 { color: #007a6a; }

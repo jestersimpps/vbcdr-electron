@@ -1,6 +1,6 @@
 :root.dracula-light body {
-  background: #f8f8f2;
-  color: #363c4a;
+  background: #ffffff;
+  color: #282d38;
 }
 
 :root.dracula-light ::-webkit-scrollbar-thumb {
@@ -8,38 +8,38 @@
 }
 
 :root.dracula-light ::-webkit-scrollbar-thumb:hover {
-  background: #c0c0b0;
+  background: #b8b8a8;
 }
 
-:root.dracula-light .bg-zinc-950 { background-color: #f8f8f2; }
-:root.dracula-light .bg-zinc-900\/80 { background-color: #f0f0ebe6; }
-:root.dracula-light .bg-zinc-900\/50 { background-color: #f0f0eb80; }
-:root.dracula-light .bg-zinc-900\/30 { background-color: #f0f0eb4d; }
-:root.dracula-light .bg-zinc-900 { background-color: #f0f0eb; }
-:root.dracula-light .bg-zinc-800 { background-color: #e8e8e0; }
-:root.dracula-light .bg-zinc-800\/70 { background-color: #e8e8e0b3; }
-:root.dracula-light .bg-zinc-800\/50 { background-color: #e8e8e080; }
-:root.dracula-light .bg-zinc-800\/30 { background-color: #e8e8e04d; }
-:root.dracula-light .bg-zinc-700 { background-color: #d0d0c0; }
-:root.dracula-light .bg-zinc-700\/30 { background-color: #d0d0c04d; }
+:root.dracula-light .bg-zinc-950 { background-color: #ffffff; }
+:root.dracula-light .bg-zinc-900\/80 { background-color: #f5f5f0f0; }
+:root.dracula-light .bg-zinc-900\/50 { background-color: #f5f5f099; }
+:root.dracula-light .bg-zinc-900\/30 { background-color: #f5f5f066; }
+:root.dracula-light .bg-zinc-900 { background-color: #f5f5f0; }
+:root.dracula-light .bg-zinc-800 { background-color: #ecece4; }
+:root.dracula-light .bg-zinc-800\/70 { background-color: #ecece4b3; }
+:root.dracula-light .bg-zinc-800\/50 { background-color: #ecece480; }
+:root.dracula-light .bg-zinc-800\/30 { background-color: #ecece44d; }
+:root.dracula-light .bg-zinc-700 { background-color: #d8d8c8; }
+:root.dracula-light .bg-zinc-700\/30 { background-color: #d8d8c84d; }
 
-:root.dracula-light .hover\:bg-zinc-800:hover { background-color: #e8e8e0; }
-:root.dracula-light .hover\:bg-zinc-800\/50:hover { background-color: #e8e8e080; }
-:root.dracula-light .hover\:bg-zinc-800\/30:hover { background-color: #e8e8e04d; }
-:root.dracula-light .hover\:bg-zinc-700:hover { background-color: #d0d0c0; }
+:root.dracula-light .hover\:bg-zinc-800:hover { background-color: #ecece4; }
+:root.dracula-light .hover\:bg-zinc-800\/50:hover { background-color: #ecece480; }
+:root.dracula-light .hover\:bg-zinc-800\/30:hover { background-color: #ecece44d; }
+:root.dracula-light .hover\:bg-zinc-700:hover { background-color: #d8d8c8; }
 
-:root.dracula-light .border-zinc-800 { border-color: #d0d0c0; }
-:root.dracula-light .border-zinc-700 { border-color: #c0c0b0; }
-:root.dracula-light .border-zinc-600 { border-color: #c0c0b0; }
-:root.dracula-light .border-zinc-600\/40 { border-color: #c0c0b066; }
+:root.dracula-light .border-zinc-800 { border-color: #c8c8b8; }
+:root.dracula-light .border-zinc-700 { border-color: #b0b0a0; }
+:root.dracula-light .border-zinc-600 { border-color: #b0b0a0; }
+:root.dracula-light .border-zinc-600\/40 { border-color: #b0b0a066; }
 
-:root.dracula-light .text-zinc-100 { color: #363c4a; }
+:root.dracula-light .text-zinc-100 { color: #282d38; }
 :root.dracula-light .text-zinc-200 { color: #363c4a; }
-:root.dracula-light .text-zinc-300 { color: #4d5566; }
-:root.dracula-light .text-zinc-400 { color: #7c8897; }
-:root.dracula-light .text-zinc-500 { color: #7c8897; }
-:root.dracula-light .text-zinc-600 { color: #7c8897; }
+:root.dracula-light .text-zinc-300 { color: #474f60; }
+:root.dracula-light .text-zinc-400 { color: #576070; }
+:root.dracula-light .text-zinc-500 { color: #687280; }
+:root.dracula-light .text-zinc-600 { color: #788490; }
 
-:root.dracula-light .hover\:text-zinc-200:hover { color: #363c4a; }
-:root.dracula-light .hover\:text-zinc-300:hover { color: #4d5566; }
-:root.dracula-light .hover\:text-zinc-400:hover { color: #7c8897; }
+:root.dracula-light .hover\:text-zinc-200:hover { color: #282d38; }
+:root.dracula-light .hover\:text-zinc-300:hover { color: #474f60; }
+:root.dracula-light .hover\:text-zinc-400:hover { color: #576070; }

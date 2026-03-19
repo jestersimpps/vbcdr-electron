@@ -1,6 +1,6 @@
 :root.rainbow-light body {
-  background: #fafafa;
-  color: #1a1020;
+  background: #ffffff;
+  color: #100818;
 }
 
 :root.rainbow-light ::-webkit-scrollbar-thumb {
@@ -11,29 +11,29 @@
   background: #2060d0bb;
 }
 
-:root.rainbow-light .bg-zinc-950 { background-color: #fafafa; }
-:root.rainbow-light .bg-zinc-900\/80 { background-color: #f4f0f8e6; }
-:root.rainbow-light .bg-zinc-900\/50 { background-color: #f4f0f880; }
-:root.rainbow-light .bg-zinc-900\/30 { background-color: #f4f0f84d; }
-:root.rainbow-light .bg-zinc-900 { background-color: #f4f0f8; }
-:root.rainbow-light .bg-zinc-800 { background-color: #e8e0f0; }
-:root.rainbow-light .bg-zinc-800\/70 { background-color: #e8e0f0b3; }
-:root.rainbow-light .bg-zinc-800\/50 { background-color: #e8e0f080; }
-:root.rainbow-light .bg-zinc-800\/30 { background-color: #e8e0f04d; }
-:root.rainbow-light .bg-zinc-700 { background-color: #dcd0e8; }
-:root.rainbow-light .bg-zinc-700\/30 { background-color: #dcd0e84d; }
+:root.rainbow-light .bg-zinc-950 { background-color: #ffffff; }
+:root.rainbow-light .bg-zinc-900\/80 { background-color: #f8f4fcf0; }
+:root.rainbow-light .bg-zinc-900\/50 { background-color: #f8f4fc99; }
+:root.rainbow-light .bg-zinc-900\/30 { background-color: #f8f4fc66; }
+:root.rainbow-light .bg-zinc-900 { background-color: #f8f4fc; }
+:root.rainbow-light .bg-zinc-800 { background-color: #f0e8f8; }
+:root.rainbow-light .bg-zinc-800\/70 { background-color: #f0e8f8b3; }
+:root.rainbow-light .bg-zinc-800\/50 { background-color: #f0e8f880; }
+:root.rainbow-light .bg-zinc-800\/30 { background-color: #f0e8f84d; }
+:root.rainbow-light .bg-zinc-700 { background-color: #e8dcf4; }
+:root.rainbow-light .bg-zinc-700\/30 { background-color: #e8dcf44d; }
 
-:root.rainbow-light .hover\:bg-zinc-800:hover { background-color: #e4d8ee; }
-:root.rainbow-light .hover\:bg-zinc-800\/50:hover { background-color: #e4d8ee80; }
-:root.rainbow-light .hover\:bg-zinc-800\/30:hover { background-color: #e4d8ee4d; }
-:root.rainbow-light .hover\:bg-zinc-700:hover { background-color: #d4c4e0; }
+:root.rainbow-light .hover\:bg-zinc-800:hover { background-color: #ece4f8; }
+:root.rainbow-light .hover\:bg-zinc-800\/50:hover { background-color: #ece4f880; }
+:root.rainbow-light .hover\:bg-zinc-800\/30:hover { background-color: #ece4f84d; }
+:root.rainbow-light .hover\:bg-zinc-700:hover { background-color: #e0d4f0; }
 
 :root.rainbow-light .border-zinc-800 { border-color: #c0103040; }
 :root.rainbow-light .border-zinc-700 { border-color: #2060d050; }
 :root.rainbow-light .border-zinc-600 { border-color: #2060d050; }
 :root.rainbow-light .border-zinc-600\/40 { border-color: #2060d030; }
 
-:root.rainbow-light .text-zinc-100 { color: #1a1020; }
+:root.rainbow-light .text-zinc-100 { color: #100818; }
 :root.rainbow-light .text-zinc-200 { color: #c01030; }
 :root.rainbow-light .text-zinc-300 { color: #1a7a30; }
 :root.rainbow-light .text-zinc-400 { color: #2060d0; }

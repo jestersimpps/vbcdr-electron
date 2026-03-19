@@ -4,6 +4,7 @@ import type { BranchDriftInfo } from '@main/models/types'
 
 const projects = new Map<string, string>()
 let intervalId: ReturnType<typeof setInterval> | null = null
+let ticking = false
 
 function broadcast(projectId: string, drift: BranchDriftInfo): void {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -12,24 +13,30 @@ function broadcast(projectId: string, drift: BranchDriftInfo): void {
 }
 
 async function tick(): Promise<void> {
-  for (const [projectId, cwd] of projects) {
-    try {
-      if (!await isGitRepo(cwd)) continue
-      await fetchRemote(cwd)
-      const drift = await getBranchDrift(cwd)
-      if (drift.behind > 0 || drift.diverged) {
-        broadcast(projectId, drift)
+  if (ticking) return
+  ticking = true
+  try {
+    for (const [projectId, cwd] of projects) {
+      try {
+        if (!await isGitRepo(cwd)) continue
+        await fetchRemote(cwd)
+        const drift = await getBranchDrift(cwd)
+        if (drift.behind > 0 || drift.diverged) {
+          broadcast(projectId, drift)
+        }
+      } catch {
+        // silent
       }
-    } catch {
-      // silent
     }
+  } finally {
+    ticking = false
   }
 }
 
 export function registerProject(projectId: string, cwd: string): void {
   projects.set(projectId, cwd)
   if (!intervalId) {
-    intervalId = setInterval(() => { tick() }, 60_000)
+    intervalId = setInterval(() => { void tick() }, 60_000)
   }
 }
 

@@ -124,6 +124,11 @@ export function attachTab(tabId: string, webContentsId: number, win: BrowserWind
         } catch { /* body may not be available for some requests */ }
       }
     }
+
+    if (method === 'Network.loadingFailed') {
+      pendingRequests.delete(params.requestId)
+      pendingResponses.delete(params.requestId)
+    }
   })
 }
 
