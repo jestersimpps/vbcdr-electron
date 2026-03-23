@@ -140,6 +140,15 @@ export interface PasswordPromptData {
   password: string
 }
 
+export interface SearchResult {
+  path: string
+  relativePath: string
+  name: string
+  type: 'name' | 'content'
+  line?: number
+  lineContent?: string
+}
+
 export type ClaudeSection = 'global' | 'hooks' | 'skills' | 'commands' | 'project'
 
 export interface ClaudeFileEntry {

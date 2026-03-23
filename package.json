@@ -97,12 +97,14 @@
     "electron-store": "^8.2.0",
     "electron-updater": "^6.7.3",
     "ignore": "^7.0.3",
+    "mammoth": "^1.12.0",
     "node-pty": "^1.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-grid-layout": "^2.2.2",
     "react-resizable-panels": "^2.1.7",
     "uuid": "^11.1.0",
+    "xlsx": "^0.18.5",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

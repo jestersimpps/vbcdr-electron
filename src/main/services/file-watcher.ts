@@ -6,11 +6,16 @@ import ignore, { type Ignore } from 'ignore'
 import type { FileNode } from '@main/models/types'
 
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'bmp', 'avif'])
+const AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'opus', 'webm', 'aiff', 'aif'])
+const OFFICE_EXTS = new Set(['pdf', 'docx', 'xlsx', 'xls'])
+const BASE64_EXTS = new Set([...OFFICE_EXTS, ...AUDIO_EXTS])
 const BINARY_EXTS = new Set([
   ...IMAGE_EXTS, 'svg',
   'woff', 'woff2', 'ttf', 'eot', 'otf',
-  'pdf', 'zip', 'tar', 'gz',
-  'mp3', 'mp4', 'mov', 'avi', 'wav'
+  ...OFFICE_EXTS, 'pptx',
+  ...AUDIO_EXTS,
+  'zip', 'tar', 'gz',
+  'mp4', 'mov', 'avi'
 ])
 
 export interface FileReadResult {
@@ -150,6 +155,9 @@ export function readFileContents(filePath: string): FileReadResult {
   }
   if (ext === 'svg') {
     return { content: fs.readFileSync(filePath, 'utf-8'), isBinary: true }
+  }
+  if (BASE64_EXTS.has(ext)) {
+    return { content: fs.readFileSync(filePath).toString('base64'), isBinary: true }
   }
   if (BINARY_EXTS.has(ext)) {
     return { content: '', isBinary: true }

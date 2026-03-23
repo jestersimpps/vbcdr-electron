@@ -4,14 +4,84 @@ import { ipcMain, BrowserWindow, shell } from 'electron'
 import Store from 'electron-store'
 import { readTree, readFileContents, startWatching, stopWatching } from '@main/services/file-watcher'
 import type { FileReadResult } from '@main/services/file-watcher'
-import type { FileNode, Project } from '@main/models/types'
+import type { FileNode, Project, SearchResult } from '@main/models/types'
 
 const store = new Store<{ projects: Project[] }>({ defaults: { projects: [] } })
+
+const ALWAYS_IGNORE = new Set(['.git', 'node_modules', '.DS_Store'])
+const BINARY_EXTS = new Set([
+  'png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'bmp', 'avif', 'svg',
+  'woff', 'woff2', 'ttf', 'eot', 'otf',
+  'pdf', 'docx', 'xlsx', 'xls', 'pptx',
+  'zip', 'tar', 'gz',
+  'mp3', 'mp4', 'mov', 'avi', 'wav'
+])
 
 function isWithinProjectRoot(filePath: string): boolean {
   const resolved = path.resolve(filePath)
   const projects = store.get('projects')
   return projects.some((p) => resolved.startsWith(p.path + path.sep) || resolved === p.path)
+}
+
+function searchFiles(rootPath: string, query: string, maxResults: number = 100): SearchResult[] {
+  const results: SearchResult[] = []
+  const lowerQuery = query.toLowerCase()
+
+  function walk(dirPath: string): void {
+    if (results.length >= maxResults) return
+    let entries: fs.Dirent[]
+    try {
+      entries = fs.readdirSync(dirPath, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (results.length >= maxResults) return
+      if (ALWAYS_IGNORE.has(entry.name)) continue
+      const fullPath = path.join(dirPath, entry.name)
+      const relativePath = path.relative(rootPath, fullPath)
+
+      if (entry.isDirectory()) {
+        walk(fullPath)
+        continue
+      }
+
+      const nameMatch = entry.name.toLowerCase().includes(lowerQuery)
+      const ext = path.extname(entry.name).slice(1).toLowerCase()
+      const isBinary = BINARY_EXTS.has(ext)
+
+      if (nameMatch) {
+        results.push({ path: fullPath, relativePath, name: entry.name, type: 'name' })
+      }
+
+      if (!isBinary) {
+        try {
+          const stat = fs.statSync(fullPath)
+          if (stat.size > 1024 * 512) continue
+          const content = fs.readFileSync(fullPath, 'utf-8')
+          const lines = content.split('\n')
+          for (let i = 0; i < lines.length; i++) {
+            if (results.length >= maxResults) return
+            if (lines[i].toLowerCase().includes(lowerQuery)) {
+              results.push({
+                path: fullPath,
+                relativePath,
+                name: entry.name,
+                type: 'content',
+                line: i + 1,
+                lineContent: lines[i].trim().substring(0, 200)
+              })
+            }
+          }
+        } catch {
+          // skip unreadable files
+        }
+      }
+    }
+  }
+
+  walk(rootPath)
+  return results
 }
 
 export function registerFilesystemHandlers(): void {
@@ -43,7 +113,54 @@ export function registerFilesystemHandlers(): void {
   ipcMain.handle('fs:delete-file', (_event, filePath: string): void => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
-    fs.unlinkSync(resolved)
+    const stat = fs.statSync(resolved)
+    if (stat.isDirectory()) {
+      fs.rmSync(resolved, { recursive: true })
+    } else {
+      fs.unlinkSync(resolved)
+    }
+  })
+
+  ipcMain.handle('fs:create-file', (_event, filePath: string): void => {
+    const resolved = path.resolve(filePath)
+    if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
+    fs.writeFileSync(resolved, '', 'utf-8')
+  })
+
+  ipcMain.handle('fs:create-folder', (_event, folderPath: string): void => {
+    const resolved = path.resolve(folderPath)
+    if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
+    fs.mkdirSync(resolved, { recursive: true })
+  })
+
+  ipcMain.handle('fs:rename', (_event, oldPath: string, newPath: string): void => {
+    const resolvedOld = path.resolve(oldPath)
+    const resolvedNew = path.resolve(newPath)
+    if (!isWithinProjectRoot(resolvedOld)) throw new Error('Path outside project root')
+    if (!isWithinProjectRoot(resolvedNew)) throw new Error('Path outside project root')
+    fs.renameSync(resolvedOld, resolvedNew)
+  })
+
+  ipcMain.handle('fs:duplicate', (_event, filePath: string): string => {
+    const resolved = path.resolve(filePath)
+    if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
+    const dir = path.dirname(resolved)
+    const ext = path.extname(resolved)
+    const base = path.basename(resolved, ext)
+    let newPath = path.join(dir, `${base} (copy)${ext}`)
+    let i = 2
+    while (fs.existsSync(newPath)) {
+      newPath = path.join(dir, `${base} (copy ${i})${ext}`)
+      i++
+    }
+    fs.copyFileSync(resolved, newPath)
+    return newPath
+  })
+
+  ipcMain.handle('fs:search', (_event, rootPath: string, query: string): SearchResult[] => {
+    const resolved = path.resolve(rootPath)
+    if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
+    return searchFiles(resolved, query)
   })
 
   ipcMain.handle('fs:show-in-folder', (_event, filePath: string): void => {
