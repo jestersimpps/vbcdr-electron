@@ -30,8 +30,21 @@ const bufferReadTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 export function applyThemeToAll(themeId: string): void {
   const xtermTheme = getTerminalTheme(themeId)
+  const transparent = !!useLayoutStore.getState().backgroundImage
+  const themeToApply = transparent ? { ...xtermTheme, background: '#00000000' } : xtermTheme
   terminalsMap.forEach(({ terminal }) => {
-    terminal.options.theme = xtermTheme
+    terminal.options.theme = themeToApply
+  })
+}
+
+export function applyBackgroundTransparency(transparent: boolean): void {
+  terminalsMap.forEach(({ terminal }) => {
+    const current = terminal.options.theme ?? {}
+    const themeId = useThemeStore.getState().getTerminalThemeId()
+    const base = getTerminalTheme(themeId)
+    terminal.options.theme = transparent
+      ? { ...base, ...current, background: '#00000000' }
+      : { ...base, ...current, background: base.background }
   })
 }
 
@@ -91,7 +104,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         rows: 24,
         allowProposedApi: true,
         allowTransparency: transparent,
-        theme: transparent ? { ...baseTheme, background: 'rgba(0,0,0,0)' } : baseTheme
+        theme: transparent ? { ...baseTheme, background: '#00000000' } : baseTheme
       })
 
       const fitAddon = new FitAddon()

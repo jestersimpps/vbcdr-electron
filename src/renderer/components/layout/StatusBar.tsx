@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { FolderOpen, LayoutGrid, MonitorOff, Monitor, Image as ImageIcon, X } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useLayoutStore } from '@/stores/layout-store'
+import { applyBackgroundTransparency } from '@/components/terminal/TerminalInstance'
 import { ThemePicker } from '@/components/theme/ThemePicker'
 import { VariantToggle } from '@/components/theme/VariantToggle'
 import { BranchSwitcher } from '@/components/git/BranchSwitcher'
@@ -24,7 +25,10 @@ export function StatusBar(): React.ReactElement {
     const reader = new FileReader()
     reader.onload = () => {
       const result = reader.result
-      if (typeof result === 'string') setBackgroundImage(result)
+      if (typeof result === 'string') {
+        setBackgroundImage(result)
+        applyBackgroundTransparency(true)
+      }
     }
     reader.readAsDataURL(file)
     e.target.value = ''
@@ -93,7 +97,10 @@ export function StatusBar(): React.ReactElement {
               className="h-1 w-20 cursor-pointer accent-zinc-500"
             />
             <button
-              onClick={() => setBackgroundImage(null)}
+              onClick={() => {
+                setBackgroundImage(null)
+                applyBackgroundTransparency(false)
+              }}
               className="flex shrink-0 items-center rounded px-1 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
               title="Clear background image"
             >
