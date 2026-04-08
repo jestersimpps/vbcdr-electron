@@ -3,6 +3,14 @@ import { BrowserWindow } from 'electron'
 import os from 'os'
 import fs from 'fs'
 import { execSync } from 'child_process'
+import {
+  loadScrollback,
+  appendScrollback,
+  clearScrollback,
+  flushScrollback
+} from '@main/services/terminal-scrollback'
+
+export { flushScrollback }
 
 interface PtyInstance {
   process: pty.IPty
@@ -59,6 +67,16 @@ export function createPty(
   const shell = defaultShell()
   const safeCwd = fs.existsSync(cwd) ? cwd : os.homedir()
   const env = shellEnv()
+
+  const saved = loadScrollback(tabId)
+  if (saved.length > 0 && !win.isDestroyed()) {
+    win.webContents.send(
+      'terminal:data',
+      tabId,
+      saved + '\r\n\x1b[2m── session restored ──\x1b[0m\r\n'
+    )
+  }
+
   const proc = pty.spawn(shell, ['-l'], {
     name: 'xterm-256color',
     cols,
@@ -68,6 +86,7 @@ export function createPty(
   })
 
   proc.onData((data: string) => {
+    appendScrollback(tabId, data)
     if (!win.isDestroyed()) {
       win.webContents.send('terminal:data', tabId, data)
     }
@@ -97,9 +116,11 @@ export function killPty(tabId: string): void {
     instance.process.kill()
     instances.delete(tabId)
   }
+  clearScrollback(tabId)
 }
 
 export function killAll(): void {
+  flushScrollback()
   for (const [, instance] of instances) {
     instance.process.kill()
   }
