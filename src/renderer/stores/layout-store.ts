@@ -46,6 +46,8 @@ interface LayoutState {
   locksPerProject: Record<string, Record<string, boolean>>
   devToolsCollapsedPerProject: Record<string, boolean>
   browserlessPerProject: Record<string, boolean>
+  backgroundImage: string | null
+  backgroundBlur: number
   resetVersion: number
   getLayout: (projectId: string, browserless?: boolean) => Layout[]
   isLocked: (projectId: string, panelId: PanelId) => boolean
@@ -56,6 +58,8 @@ interface LayoutState {
   setDevToolsCollapsed: (projectId: string, collapsed: boolean) => void
   toggleBrowserless: (projectId: string) => void
   resetLayout: (projectId: string) => void
+  setBackgroundImage: (dataUrl: string | null) => void
+  setBackgroundBlur: (blur: number) => void
 }
 
 function ensureComplete(layout: Layout[], browserless: boolean): Layout[] {
@@ -74,6 +78,8 @@ export const useLayoutStore = create<LayoutState>()(
       locksPerProject: {},
       devToolsCollapsedPerProject: {},
       browserlessPerProject: {},
+      backgroundImage: null,
+      backgroundBlur: 0,
       resetVersion: 0,
 
       getLayout: (projectId: string, browserless?: boolean) => {
@@ -133,6 +139,14 @@ export const useLayoutStore = create<LayoutState>()(
         })
       },
 
+      setBackgroundImage: (dataUrl: string | null) => {
+        set({ backgroundImage: dataUrl })
+      },
+
+      setBackgroundBlur: (blur: number) => {
+        set({ backgroundBlur: blur })
+      },
+
       resetLayout: (projectId: string) => {
         const lpp = { ...get().layoutsPerProject }
         const lkp = { ...get().locksPerProject }
@@ -154,7 +168,9 @@ export const useLayoutStore = create<LayoutState>()(
         layoutsPerProject: state.layoutsPerProject,
         locksPerProject: state.locksPerProject,
         devToolsCollapsedPerProject: state.devToolsCollapsedPerProject,
-        browserlessPerProject: state.browserlessPerProject
+        browserlessPerProject: state.browserlessPerProject,
+        backgroundImage: state.backgroundImage,
+        backgroundBlur: state.backgroundBlur
       })
     }
   )

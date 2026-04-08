@@ -4,6 +4,7 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
+import { useLayoutStore } from '@/stores/layout-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
 import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus, Zap, Palette } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -115,8 +116,10 @@ export function TerminalPanel(): React.ReactElement {
     closeTab(tabId)
   }
 
+  const backgroundImage = useLayoutStore((s) => s.backgroundImage)
+
   return (
-    <div data-terminal-panel className="bg-zinc-950" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div data-terminal-panel className={backgroundImage ? '' : 'bg-zinc-950'} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex flex-1 items-center gap-0.5 overflow-x-auto px-1">
           {projectTabs.map((tab) => (

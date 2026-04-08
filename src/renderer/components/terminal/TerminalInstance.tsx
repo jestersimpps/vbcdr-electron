@@ -7,6 +7,7 @@ import { SearchAddon } from '@xterm/addon-search'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { useThemeStore } from '@/stores/theme-store'
 import { useTerminalStore } from '@/stores/terminal-store'
+import { useLayoutStore } from '@/stores/layout-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 
 interface TerminalInstanceProps {
@@ -80,6 +81,8 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
     }
 
     if (!entry) {
+      const transparent = !!useLayoutStore.getState().backgroundImage
+      const baseTheme = getTerminalTheme(useThemeStore.getState().getTerminalThemeId())
       const terminal = new Terminal({
         cursorBlink: true,
         fontSize: 13,
@@ -87,7 +90,8 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         cols: 80,
         rows: 24,
         allowProposedApi: true,
-        theme: getTerminalTheme(useThemeStore.getState().getTerminalThemeId())
+        allowTransparency: transparent,
+        theme: transparent ? { ...baseTheme, background: 'rgba(0,0,0,0)' } : baseTheme
       })
 
       const fitAddon = new FitAddon()
@@ -104,14 +108,16 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
       terminal.unicode.activeVersion = '11'
 
-      try {
-        const webgl = new WebglAddon()
-        webgl.onContextLoss(() => {
-          try { webgl.dispose() } catch { /* context already gone */ }
-        })
-        terminal.loadAddon(webgl)
-      } catch {
-        /* WebGL not available, fall back to canvas renderer */
+      if (!transparent) {
+        try {
+          const webgl = new WebglAddon()
+          webgl.onContextLoss(() => {
+            try { webgl.dispose() } catch { /* context already gone */ }
+          })
+          terminal.loadAddon(webgl)
+        } catch {
+          /* WebGL not available, fall back to canvas renderer */
+        }
       }
 
       entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0 }
@@ -219,13 +225,19 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
     const { terminal, fitAddon } = entry
     let resizeTimer: ReturnType<typeof setTimeout> | null = null
+    let prevCols = terminal.cols
+    let prevRows = terminal.rows
     const observer = new ResizeObserver(() => {
       if (resizeTimer) clearTimeout(resizeTimer)
       resizeTimer = setTimeout(() => {
         try {
           if (!el.contains(terminal.element)) return
-          const atBottom = terminal.buffer.active.viewportY === terminal.buffer.active.baseY
+          const buf = terminal.buffer.active
+          const atBottom = buf.baseY - buf.viewportY <= 1
           fitAddon.fit()
+          if (terminal.cols === prevCols && terminal.rows === prevRows) return
+          prevCols = terminal.cols
+          prevRows = terminal.rows
           if (atBottom) terminal.scrollToBottom()
         } catch { /* element may be unmounted during resize */ }
       }, 80)

@@ -46,6 +46,8 @@ export function AppLayoutGrid(): React.ReactElement {
   const termTabs = useTerminalStore((s) => s.tabs)
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const resetVersion = useLayoutStore((s) => s.resetVersion)
+  const backgroundImage = useLayoutStore((s) => s.backgroundImage)
+  const backgroundBlur = useLayoutStore((s) => s.backgroundBlur)
   const containerRef = useRef<HTMLDivElement>(null)
   const devToolsPanelRef = useRef<ImperativePanelHandle>(null)
   const [width, setWidth] = useState(0)
@@ -384,6 +386,16 @@ export function AppLayoutGrid(): React.ReactElement {
       </div>
 
       <div className="relative flex-1 min-h-0 overflow-hidden">
+        {backgroundImage && (
+          <div
+            className="absolute inset-0 pointer-events-none bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${backgroundImage})`,
+              filter: backgroundBlur > 0 ? `blur(${backgroundBlur}px)` : undefined,
+              transform: backgroundBlur > 0 ? 'scale(1.05)' : undefined
+            }}
+          />
+        )}
         <div
           ref={containerRef}
           className="absolute inset-0"

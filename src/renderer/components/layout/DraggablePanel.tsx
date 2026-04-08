@@ -19,9 +19,15 @@ export function DraggablePanel({
   children
 }: DraggablePanelProps): React.ReactElement {
   const togglePanelLock = useLayoutStore((s) => s.togglePanelLock)
+  const backgroundImage = useLayoutStore((s) => s.backgroundImage)
 
   return (
-    <div className="flex h-full flex-col border border-zinc-800 rounded-md overflow-hidden bg-zinc-950">
+    <div
+      className={cn(
+        'flex h-full flex-col border border-zinc-800 rounded-md overflow-hidden',
+        backgroundImage ? 'bg-zinc-950/70 backdrop-blur-sm' : 'bg-zinc-950'
+      )}
+    >
       <div
         className={cn(
           'panel-drag-handle flex items-center gap-1.5 px-2 py-1 bg-zinc-900/80 border-b border-zinc-800 shrink-0',
