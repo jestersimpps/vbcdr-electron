@@ -9,6 +9,7 @@ import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, cle
 import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus, Zap, Palette } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
+import { GitActions } from '@/components/git/GitActions'
 import type { ITheme } from '@xterm/xterm'
 
 const TERMINAL_THEME_OPTIONS = [
@@ -195,47 +196,55 @@ export function TerminalPanel(): React.ReactElement {
         />
         <button
           onClick={() => activeTabId && searchQuery && searchTerminal(activeTabId, searchQuery, 'previous')}
-          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+          onMouseDown={(e) => e.preventDefault()}
+          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
           title="Previous match"
         >
-          <ChevronUp size={14} />
+          <ChevronUp size={16} />
         </button>
         <button
           onClick={() => activeTabId && searchQuery && searchTerminal(activeTabId, searchQuery, 'next')}
-          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
+          onMouseDown={(e) => e.preventDefault()}
+          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200"
           title="Next match"
         >
-          <ChevronDown size={14} />
+          <ChevronDown size={16} />
         </button>
         <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
         <button
           onClick={scrollToBottom}
           disabled={!activeTabId}
-          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          onMouseDown={(e) => e.preventDefault()}
+          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
           title="Scroll to bottom"
         >
-          <ArrowDownToLine size={14} />
+          <ArrowDownToLine size={16} />
         </button>
         <button
           onClick={() => {
             if (!activeTabId) return
             window.api.terminal.write(activeTabId, '/clear\r')
+            focusTerminal(activeTabId)
           }}
           disabled={!activeTabId}
-          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          onMouseDown={(e) => e.preventDefault()}
+          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
           title="Clear context"
         >
-          <Trash2 size={14} />
+          <Trash2 size={16} />
         </button>
         <button
           onClick={() => {
-            if (activeTabId) window.api.terminal.pasteClipboardImage(activeTabId)
+            if (!activeTabId) return
+            window.api.terminal.pasteClipboardImage(activeTabId)
+            focusTerminal(activeTabId)
           }}
           disabled={!activeTabId}
-          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          onMouseDown={(e) => e.preventDefault()}
+          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
           title="Paste screenshot from clipboard"
         >
-          <ImagePlus size={14} />
+          <ImagePlus size={16} />
         </button>
         <button
           onClick={() => {
@@ -245,18 +254,22 @@ export function TerminalPanel(): React.ReactElement {
             replaceTab(activeTabId, activeProject.id, activeProject.path, 'claude')
           }}
           disabled={!activeTabId}
-          className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          onMouseDown={(e) => e.preventDefault()}
+          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
           title="Restart terminal"
         >
-          <RotateCw size={14} />
+          <RotateCw size={16} />
         </button>
+        <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
+        <GitActions />
         <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
         <button
           onClick={() => setTerminalThemeOpen(true)}
-          className={cn('rounded p-0.5 hover:bg-zinc-700 hover:text-zinc-200', terminalThemeId ? 'text-blue-400' : 'text-zinc-400')}
+          onMouseDown={(e) => e.preventDefault()}
+          className={cn('rounded p-1.5 hover:bg-zinc-700 hover:text-zinc-200', terminalThemeId ? 'text-blue-400' : 'text-zinc-400')}
           title="Terminal color theme"
         >
-          <Palette size={14} />
+          <Palette size={16} />
         </button>
         {terminalThemeOpen && createPortal(
           <div

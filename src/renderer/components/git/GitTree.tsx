@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
-import { useTerminalStore } from '@/stores/terminal-store'
-import { sendToTerminal } from '@/lib/terminal-utils'
-import { GitBranch as GitBranchIcon, GitCommitHorizontal, GitPullRequest, Sparkles, RefreshCw, X, ArrowDown, GitMerge } from 'lucide-react'
+import { GitBranch as GitBranchIcon, ArrowDown, GitMerge, RefreshCw } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 
 const LANE_COLORS = [
@@ -202,8 +200,6 @@ export function GitTree(): React.ReactElement {
     return id ? s.projects.find((p) => p.id === id) : undefined
   })
 
-  const activeTerminalTabId = useTerminalStore((s) => activeProjectId ? s.activeTabPerProject[activeProjectId] : undefined)
-
   const isRepo = useGitStore((s) => activeProjectId ? s.isRepoPerProject[activeProjectId] : false)
   const commits = useGitStore((s) => activeProjectId ? s.commitsPerProject[activeProjectId] : undefined)
   const branches = useGitStore((s) => activeProjectId ? s.branchesPerProject[activeProjectId] : undefined)
@@ -211,31 +207,6 @@ export function GitTree(): React.ReactElement {
   const pullAction = useGitStore((s) => s.pull)
   const rebaseAction = useGitStore((s) => s.rebaseRemote)
   const { loadGitData } = useGitStore()
-
-  const [featureModalOpen, setFeatureModalOpen] = useState(false)
-  const [featureDescription, setFeatureDescription] = useState('')
-  const featureInputRef = useRef<HTMLInputElement>(null)
-
-  const handleFeatureSubmit = useCallback(() => {
-    if (!activeTerminalTabId || !featureDescription.trim()) return
-    sendToTerminal(activeTerminalTabId, `Create a new git feature branch for: ${featureDescription.trim()}. Create the branch name from the description using kebab-case prefixed with feature/. Switch to the new branch.`)
-    setFeatureDescription('')
-    setFeatureModalOpen(false)
-  }, [activeTerminalTabId, featureDescription])
-
-  const handleCreatePR = useCallback(async () => {
-    if (!activeTerminalTabId || !activeProject) return
-    const defaultBranch = await window.api.git.defaultBranch(activeProject.path)
-    const diffSummary = await window.api.git.diffSummary(activeProject.path, defaultBranch)
-    sendToTerminal(
-      activeTerminalTabId,
-      `Create a pull request using gh CLI against ${defaultBranch}. Here's the diff summary:\n\n${diffSummary}\n\nGenerate a concise PR title and description based on the changes.`
-    )
-  }, [activeTerminalTabId, activeProject])
-
-  useEffect(() => {
-    if (featureModalOpen) setTimeout(() => featureInputRef.current?.focus(), 50)
-  }, [featureModalOpen])
 
   useEffect(() => {
     if (!activeProject) return
@@ -249,7 +220,6 @@ export function GitTree(): React.ReactElement {
     return maxCols * COL_WIDTH + 12
   }, [graphRows])
   const currentBranch = branches?.find((b) => b.current)
-  const isOnDefault = currentBranch && (currentBranch.name === 'main' || currentBranch.name === 'master')
 
   if (!activeProject) {
     return (
@@ -299,39 +269,13 @@ export function GitTree(): React.ReactElement {
             </button>
           )}
         </div>
-        <div className="flex shrink-0 items-center">
-          <button
-            disabled={!activeTerminalTabId}
-            onClick={() => activeTerminalTabId && sendToTerminal(activeTerminalTabId, '/commit')}
-            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
-            title="Commit"
-          >
-            <GitCommitHorizontal size={13} />
-          </button>
-          <button
-            disabled={!activeTerminalTabId || !!isOnDefault}
-            onClick={handleCreatePR}
-            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
-            title={isOnDefault ? 'Switch to a feature branch first' : 'Create pull request'}
-          >
-            <GitPullRequest size={13} />
-          </button>
-          <button
-            disabled={!activeTerminalTabId}
-            onClick={() => setFeatureModalOpen(true)}
-            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30 disabled:pointer-events-none"
-            title="New Feature"
-          >
-            <Sparkles size={13} />
-          </button>
-          <button
-            onClick={() => activeProject && loadGitData(activeProject.id, activeProject.path)}
-            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-            title="Refresh"
-          >
-            <RefreshCw size={12} />
-          </button>
-        </div>
+        <button
+          onClick={() => activeProject && loadGitData(activeProject.id, activeProject.path)}
+          className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+          title="Refresh"
+        >
+          <RefreshCw size={12} />
+        </button>
       </div>
 
       <div className="flex-1 overflow-auto">
@@ -374,38 +318,6 @@ export function GitTree(): React.ReactElement {
         )}
       </div>
 
-      {featureModalOpen && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="mx-4 w-full max-w-sm rounded-lg border border-zinc-700 bg-zinc-900 p-4 shadow-xl">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-zinc-200">New Feature</span>
-              <button
-                onClick={() => { setFeatureModalOpen(false); setFeatureDescription('') }}
-                className="rounded p-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-                title="Close"
-              >
-                <X size={14} />
-              </button>
-            </div>
-            <input
-              ref={featureInputRef}
-              type="text"
-              value={featureDescription}
-              onChange={(e) => setFeatureDescription(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleFeatureSubmit(); if (e.key === 'Escape') { setFeatureModalOpen(false); setFeatureDescription('') } }}
-              placeholder="Describe the feature..."
-              className="mb-3 w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-zinc-500"
-            />
-            <button
-              disabled={!featureDescription.trim()}
-              onClick={handleFeatureSubmit}
-              className="w-full rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-40 disabled:pointer-events-none"
-            >
-              Send to LLM
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
