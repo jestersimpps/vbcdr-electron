@@ -400,8 +400,11 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
               language={detectLanguage(activeFile.name)}
               theme={monacoTheme}
               beforeMount={handleBeforeMount}
+              onMount={(diffEditor) => handleEditorMount(diffEditor.getModifiedEditor())}
+              onChange={handleChange}
               options={{
-                readOnly: true,
+                readOnly: false,
+                originalEditable: false,
                 renderSideBySide: false,
                 minimap: { enabled: false },
                 fontSize: 13,
