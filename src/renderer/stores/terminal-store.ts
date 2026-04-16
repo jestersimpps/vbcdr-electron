@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import { v4 as uuid } from 'uuid'
 import type { TerminalTab } from '@/models/types'
 
@@ -25,9 +24,7 @@ interface TerminalStore {
   initProject: (projectId: string, cwd: string) => void
 }
 
-export const useTerminalStore = create<TerminalStore>()(
-  persist(
-    (set, get) => ({
+export const useTerminalStore = create<TerminalStore>((set, get) => ({
   tabs: [],
   activeTabPerProject: {},
   tabStatuses: {},
@@ -130,13 +127,4 @@ export const useTerminalStore = create<TerminalStore>()(
     if (existing.length > 0) return
     get().createTab(projectId, cwd, 'claude')
   }
-    }),
-    {
-      name: 'vbcdr-terminals',
-      partialize: (state) => ({
-        tabs: state.tabs,
-        activeTabPerProject: state.activeTabPerProject
-      })
-    }
-  )
-)
+}))

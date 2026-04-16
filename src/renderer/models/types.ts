@@ -54,8 +54,6 @@ export interface BrowserTab {
   url: string
   deviceMode: DeviceMode
   zoomLevel: number
-  consoleEntries: ConsoleEntry[]
-  networkEntries: NetworkEntry[]
 }
 
 export interface HistoryEntry {

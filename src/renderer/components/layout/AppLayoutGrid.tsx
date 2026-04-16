@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback, useState, useMemo, memo } from 'react'
 import ReactGridLayout from 'react-grid-layout/legacy'
 import type { Layout } from 'react-grid-layout/legacy'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
@@ -27,6 +27,18 @@ import 'react-resizable/css/styles.css'
 const MARGIN = 6
 const CONTAINER_PADDING = 6
 
+const ProjectTabStatus = memo(function ProjectTabStatus({ projectId }: { projectId: string }): React.ReactElement | null {
+  const tabs = useTerminalStore((s) => s.tabs)
+  const tabStatuses = useTerminalStore((s) => s.tabStatuses)
+  const llmTabs = tabs.filter((t) => t.projectId === projectId && t.initialCommand)
+  if (llmTabs.length === 0) return null
+  const anyBusy = llmTabs.some((t) => tabStatuses[t.id] === 'busy')
+  if (anyBusy) return <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400 shrink-0" />
+  const allIdle = llmTabs.every((t) => tabStatuses[t.id] === 'idle')
+  if (allIdle) return <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
+  return null
+})
+
 export function AppLayoutGrid(): React.ReactElement {
   const { projects, activeProjectId, dashboardActive, loadProjects, addProject, removeProject, setActiveProject, showDashboard } =
     useProjectStore()
@@ -43,8 +55,6 @@ export function AppLayoutGrid(): React.ReactElement {
   )
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
   const { getLayout, isLocked, saveLayout, isDevToolsCollapsed, setDevToolsCollapsed } = useLayoutStore()
-  const termTabs = useTerminalStore((s) => s.tabs)
-  const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const resetVersion = useLayoutStore((s) => s.resetVersion)
   const backgroundImage = useLayoutStore((s) => s.backgroundImage)
   const backgroundBlur = useLayoutStore((s) => s.backgroundBlur)
@@ -109,10 +119,10 @@ export function AppLayoutGrid(): React.ReactElement {
     setDevToolsCollapsed(projectId, false)
   }, [projectId, setDevToolsCollapsed])
 
-  const gridLayout = layout.map((item) => ({
-    ...item,
-    static: isLocked(projectId, item.i as any)
-  }))
+  const gridLayout = useMemo(
+    () => layout.map((item) => ({ ...item, static: isLocked(projectId, item.i as any) })),
+    [layout, projectId, isLocked]
+  )
 
   const renderBrowserlessPanel = (): React.ReactNode => (
     <div className="flex h-full flex-col">
@@ -355,15 +365,7 @@ export function AppLayoutGrid(): React.ReactElement {
             >
               <FolderOpen size={12} className="shrink-0" />
               <span className="truncate max-w-[120px]">{project.name}</span>
-              {(() => {
-                const llmTabs = termTabs.filter((t) => t.projectId === project.id && t.initialCommand)
-                if (llmTabs.length === 0) return null
-                const anyBusy = llmTabs.some((t) => tabStatuses[t.id] === 'busy')
-                if (anyBusy) return <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400 shrink-0" />
-                const allIdle = llmTabs.every((t) => tabStatuses[t.id] === 'idle')
-                if (allIdle) return <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
-                return null
-              })()}
+              <ProjectTabStatus projectId={project.id} />
               <span
                 onClick={(e) => {
                   e.stopPropagation()

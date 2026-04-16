@@ -8,6 +8,8 @@ import type {
   PersistedBrowserTab
 } from '@/models/types'
 
+const MAX_ENTRIES = 500
+
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 function debouncedSave(projectId: string): void {
@@ -36,6 +38,8 @@ interface BrowserStore {
   tabs: BrowserTab[]
   activeTabPerProject: Record<string, string>
   devToolsTab: 'console' | 'network' | 'passwords'
+  consoleEntriesPerTab: Record<string, ConsoleEntry[]>
+  networkEntriesPerTab: Record<string, NetworkEntry[]>
   createTab: (projectId: string) => string
   closeTab: (projectId: string, tabId: string) => void
   setActiveTab: (projectId: string, tabId: string) => void
@@ -56,6 +60,8 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
   tabs: [],
   activeTabPerProject: {},
   devToolsTab: 'console',
+  consoleEntriesPerTab: {},
+  networkEntriesPerTab: {},
 
   createTab: (projectId: string): string => {
     const tabId = uuid()
@@ -66,9 +72,7 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
       projectId,
       url: '',
       deviceMode: 'desktop',
-      zoomLevel: 0,
-      consoleEntries: [],
-      networkEntries: []
+      zoomLevel: 0
     }
     set((state) => ({
       tabs: [...state.tabs, tab],
@@ -88,7 +92,10 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
         activeTabPerProject[projectId] = remaining[remaining.length - 1]?.id ?? ''
       }
 
-      return { tabs, activeTabPerProject }
+      const { [tabId]: _c, ...consoleEntriesPerTab } = state.consoleEntriesPerTab
+      const { [tabId]: _n, ...networkEntriesPerTab } = state.networkEntriesPerTab
+
+      return { tabs, activeTabPerProject, consoleEntriesPerTab, networkEntriesPerTab }
     })
     debouncedSave(projectId)
   },
@@ -119,23 +126,25 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
 
   addConsoleEntry: (tabId: string, entry: ConsoleEntry) => {
     set((state) => {
-      const idx = state.tabs.findIndex((t) => t.id === tabId)
-      if (idx === -1) return state
-      const tab = state.tabs[idx]
-      const tabs = [...state.tabs]
-      tabs[idx] = { ...tab, consoleEntries: [...tab.consoleEntries.slice(-499), entry] }
-      return { tabs }
+      const prev = state.consoleEntriesPerTab[tabId] ?? []
+      return {
+        consoleEntriesPerTab: {
+          ...state.consoleEntriesPerTab,
+          [tabId]: [...prev.slice(-(MAX_ENTRIES - 1)), entry]
+        }
+      }
     })
   },
 
   addNetworkEntry: (tabId: string, entry: NetworkEntry) => {
     set((state) => {
-      const idx = state.tabs.findIndex((t) => t.id === tabId)
-      if (idx === -1) return state
-      const tab = state.tabs[idx]
-      const tabs = [...state.tabs]
-      tabs[idx] = { ...tab, networkEntries: [...tab.networkEntries.slice(-499), entry] }
-      return { tabs }
+      const prev = state.networkEntriesPerTab[tabId] ?? []
+      return {
+        networkEntriesPerTab: {
+          ...state.networkEntriesPerTab,
+          [tabId]: [...prev.slice(-(MAX_ENTRIES - 1)), entry]
+        }
+      }
     })
   },
 
@@ -143,13 +152,13 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
 
   clearConsole: (tabId: string) => {
     set((state) => ({
-      tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, consoleEntries: [] } : t))
+      consoleEntriesPerTab: { ...state.consoleEntriesPerTab, [tabId]: [] }
     }))
   },
 
   clearNetwork: (tabId: string) => {
     set((state) => ({
-      tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, networkEntries: [] } : t))
+      networkEntriesPerTab: { ...state.networkEntriesPerTab, [tabId]: [] }
     }))
     window.api.browser.clearBodyCache(tabId)
   },
@@ -195,9 +204,7 @@ export const useBrowserStore = create<BrowserStore>((set, get) => ({
       projectId,
       url: p.url,
       deviceMode: p.deviceMode,
-      zoomLevel: 0,
-      consoleEntries: [],
-      networkEntries: []
+      zoomLevel: 0
     }))
 
     set((state) => ({

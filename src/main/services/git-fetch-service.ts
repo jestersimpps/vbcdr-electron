@@ -12,22 +12,24 @@ function broadcast(projectId: string, drift: BranchDriftInfo): void {
   }
 }
 
+async function checkProject(projectId: string, cwd: string): Promise<void> {
+  try {
+    if (!await isGitRepo(cwd)) return
+    await fetchRemote(cwd)
+    const drift = await getBranchDrift(cwd)
+    if (drift.behind > 0 || drift.diverged) {
+      broadcast(projectId, drift)
+    }
+  } catch {
+    // silent
+  }
+}
+
 async function tick(): Promise<void> {
   if (ticking) return
   ticking = true
   try {
-    for (const [projectId, cwd] of projects) {
-      try {
-        if (!await isGitRepo(cwd)) continue
-        await fetchRemote(cwd)
-        const drift = await getBranchDrift(cwd)
-        if (drift.behind > 0 || drift.diverged) {
-          broadcast(projectId, drift)
-        }
-      } catch {
-        // silent
-      }
-    }
+    await Promise.all([...projects.entries()].map(([id, cwd]) => checkProject(id, cwd)))
   } finally {
     ticking = false
   }

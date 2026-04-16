@@ -1,49 +1,65 @@
-import Store from 'electron-store'
+import fs from 'fs'
+import path from 'path'
+import { app } from 'electron'
 
-interface ScrollbackSchema {
-  buffers: Record<string, string>
-}
+const MAX_BYTES = 128_000
+const FLUSH_DEBOUNCE_MS = 2000
 
-const MAX_BYTES = 256_000
-const FLUSH_DEBOUNCE_MS = 1500
+const scrollbackDir = (): string => path.join(app.getPath('userData'), 'scrollback')
 
-const store = new Store<ScrollbackSchema>({
-  name: 'terminal-scrollback',
-  defaults: { buffers: {} }
-})
-
-const memory = new Map<string, string>()
+const chunks = new Map<string, string[]>()
+const chunkSize = new Map<string, number>()
 const dirty = new Set<string>()
 let flushTimer: ReturnType<typeof setTimeout> | null = null
 
+function ensureDir(): void {
+  fs.mkdirSync(scrollbackDir(), { recursive: true })
+}
+
+function tabFile(tabId: string): string {
+  return path.join(scrollbackDir(), `${tabId}.txt`)
+}
+
 export function loadScrollback(tabId: string): string {
-  const cached = memory.get(tabId)
-  if (cached !== undefined) return cached
-  const all = store.get('buffers')
-  const data = all[tabId] ?? ''
-  memory.set(tabId, data)
-  return data
+  if (chunks.has(tabId)) {
+    return chunks.get(tabId)!.join('')
+  }
+  try {
+    ensureDir()
+    const data = fs.readFileSync(tabFile(tabId), 'utf-8')
+    chunks.set(tabId, [data])
+    chunkSize.set(tabId, data.length)
+    return data
+  } catch {
+    return ''
+  }
 }
 
 export function appendScrollback(tabId: string, chunk: string): void {
-  const current = memory.get(tabId) ?? loadScrollback(tabId)
-  let next = current + chunk
-  if (next.length > MAX_BYTES) {
-    next = next.slice(next.length - MAX_BYTES)
+  if (!chunks.has(tabId)) {
+    chunks.set(tabId, [])
+    chunkSize.set(tabId, 0)
   }
-  memory.set(tabId, next)
+  const arr = chunks.get(tabId)!
+  arr.push(chunk)
+  const total = (chunkSize.get(tabId) ?? 0) + chunk.length
+  chunkSize.set(tabId, total)
+
+  if (total > MAX_BYTES) {
+    const joined = arr.join('').slice(-MAX_BYTES)
+    chunks.set(tabId, [joined])
+    chunkSize.set(tabId, joined.length)
+  }
+
   dirty.add(tabId)
   scheduleFlush()
 }
 
 export function clearScrollback(tabId: string): void {
-  memory.delete(tabId)
+  chunks.delete(tabId)
+  chunkSize.delete(tabId)
   dirty.delete(tabId)
-  const all = store.get('buffers')
-  if (tabId in all) {
-    delete all[tabId]
-    store.set('buffers', all)
-  }
+  try { fs.unlinkSync(tabFile(tabId)) } catch { /* already gone */ }
 }
 
 function scheduleFlush(): void {
@@ -60,15 +76,15 @@ export function flushScrollback(): void {
     flushTimer = null
   }
   if (dirty.size === 0) return
-  const all = store.get('buffers')
+  ensureDir()
   for (const tabId of dirty) {
-    const data = memory.get(tabId)
-    if (data && data.length > 0) {
-      all[tabId] = data
-    } else {
-      delete all[tabId]
+    const arr = chunks.get(tabId)
+    if (!arr || arr.length === 0) {
+      try { fs.unlinkSync(tabFile(tabId)) } catch { /* ok */ }
+      continue
     }
+    const data = arr.join('')
+    fs.writeFile(tabFile(tabId), data, 'utf-8', () => {/* fire and forget */})
   }
-  store.set('buffers', all)
   dirty.clear()
 }

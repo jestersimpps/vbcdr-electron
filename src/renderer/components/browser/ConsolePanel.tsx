@@ -27,7 +27,7 @@ export function ConsolePanel(): React.ReactElement {
     if (!activeProjectId) return EMPTY
     const tabId = s.activeTabPerProject[activeProjectId]
     if (!tabId) return EMPTY
-    return s.tabs.find((t) => t.id === tabId)?.consoleEntries ?? EMPTY
+    return s.consoleEntriesPerTab[tabId] ?? EMPTY
   })
   const { clearConsole } = useBrowserStore()
 

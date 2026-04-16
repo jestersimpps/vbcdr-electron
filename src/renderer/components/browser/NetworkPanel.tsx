@@ -194,7 +194,7 @@ export function NetworkPanel(): React.ReactElement {
     if (!activeProjectId) return EMPTY
     const tabId = s.activeTabPerProject[activeProjectId]
     if (!tabId) return EMPTY
-    return s.tabs.find((t) => t.id === tabId)?.networkEntries ?? EMPTY
+    return s.networkEntriesPerTab[tabId] ?? EMPTY
   })
   const { clearNetwork } = useBrowserStore()
 
