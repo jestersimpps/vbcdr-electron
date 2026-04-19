@@ -21,12 +21,21 @@ interface TerminalEntry {
   terminal: Terminal
   fitAddon: FitAddon
   searchAddon: SearchAddon
-  unsubData?: () => void
+  onIncomingData?: (data: string) => void
   suppressBusyUntil: number
 }
 
 const terminalsMap = new Map<string, TerminalEntry>()
 const bufferReadTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+let globalDataUnsub: (() => void) | null = null
+
+function ensureGlobalDataDispatcher(): void {
+  if (globalDataUnsub) return
+  globalDataUnsub = window.api.terminal.onData((incomingTabId: string, data: string) => {
+    terminalsMap.get(incomingTabId)?.onIncomingData?.(data)
+  })
+}
 
 export function applyThemeToAll(themeId: string): void {
   const xtermTheme = getTerminalTheme(themeId)
@@ -83,7 +92,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
     let isReconnect = false
 
     if (entry && !document.body.contains(entry.terminal.element)) {
-      entry.unsubData?.()
+      entry.onIncomingData = undefined
       const staleTimer = bufferReadTimers.get(tabId)
       if (staleTimer) clearTimeout(staleTimer)
       bufferReadTimers.delete(tabId)
@@ -122,15 +131,21 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       terminal.unicode.activeVersion = '11'
 
       if (!transparent) {
-        try {
-          const webgl = new WebglAddon()
-          webgl.onContextLoss(() => {
-            try { webgl.dispose() } catch { /* context already gone */ }
-          })
-          terminal.loadAddon(webgl)
-        } catch {
-          /* WebGL not available, fall back to canvas renderer */
+        let webglRetry = 0
+        const loadWebgl = (): void => {
+          try {
+            const webgl = new WebglAddon()
+            webgl.onContextLoss(() => {
+              try { webgl.dispose() } catch { /* context already gone */ }
+              try { terminal.refresh(0, terminal.rows - 1) } catch { /* disposed */ }
+              if (webglRetry++ < 2) setTimeout(loadWebgl, 1000)
+            })
+            terminal.loadAddon(webgl)
+          } catch {
+            try { terminal.refresh(0, terminal.rows - 1) } catch { /* disposed */ }
+          }
         }
+        loadWebgl()
       }
 
       entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0 }
@@ -163,61 +178,64 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       let lastDataAt = 0
       const isLlm = !!initialCommand
 
-      const unsubData = window.api.terminal.onData((incomingTabId: string, data: string) => {
-        if (incomingTabId === tabId) {
+      const onIncomingData = (data: string): void => {
+        try {
           const buf = terminal.buffer.active
           const atBottom = buf.baseY - buf.viewportY <= 1
           terminal.write(data, () => {
             if (atBottom) terminal.scrollToBottom()
           })
-
-          if (isLlm) {
-            lastDataAt = Date.now()
-
-            if (!busyTimer) {
-              busyTimer = setTimeout(() => {
-                busyTimer = null
-                if (Date.now() - lastDataAt < 300) {
-                  useTerminalStore.getState().setTabStatus(tabId, 'busy')
-                }
-              }, 1000)
-            }
-
-            if (idleTimer) clearTimeout(idleTimer)
-            idleTimer = setTimeout(() => {
-              if (busyTimer) { clearTimeout(busyTimer); busyTimer = null }
-              useTerminalStore.getState().setTabStatus(tabId, 'idle')
-            }, 3000)
-
-            const prevTimer = bufferReadTimers.get(tabId)
-            if (prevTimer) clearTimeout(prevTimer)
-            bufferReadTimers.set(tabId, setTimeout(() => {
-              bufferReadTimers.delete(tabId)
-              const te = terminalsMap.get(tabId)
-              if (!te) return
-              const buf = te.terminal.buffer.active
-              const extracted: string[] = []
-              let latestTokens: number | null = null
-              for (let y = 0; y < te.terminal.rows; y++) {
-                const row = buf.getLine(buf.baseY + y)
-                if (row) {
-                  const text = row.translateToString(true)
-                  if (text.trim()) extracted.push(text)
-                  const tokens = parseTokenCount(stripAnsi(text))
-                  if (tokens !== null) latestTokens = tokens
-                }
-              }
-              if (extracted.length > 0) {
-                useTerminalStore.getState().setOutput(projectId, extracted)
-              }
-              if (latestTokens !== null) {
-                useTerminalStore.getState().setTokenUsage(tabId, latestTokens)
-              }
-            }, 200))
-          }
+        } catch {
+          return
         }
-      })
-      terminalsMap.get(tabId)!.unsubData = unsubData
+
+        if (isLlm) {
+          lastDataAt = Date.now()
+
+          if (!busyTimer) {
+            busyTimer = setTimeout(() => {
+              busyTimer = null
+              if (Date.now() - lastDataAt < 300) {
+                useTerminalStore.getState().setTabStatus(tabId, 'busy')
+              }
+            }, 1000)
+          }
+
+          if (idleTimer) clearTimeout(idleTimer)
+          idleTimer = setTimeout(() => {
+            if (busyTimer) { clearTimeout(busyTimer); busyTimer = null }
+            useTerminalStore.getState().setTabStatus(tabId, 'idle')
+          }, 3000)
+
+          const prevTimer = bufferReadTimers.get(tabId)
+          if (prevTimer) clearTimeout(prevTimer)
+          bufferReadTimers.set(tabId, setTimeout(() => {
+            bufferReadTimers.delete(tabId)
+            const te = terminalsMap.get(tabId)
+            if (!te) return
+            const buf = te.terminal.buffer.active
+            const extracted: string[] = []
+            let latestTokens: number | null = null
+            for (let y = 0; y < te.terminal.rows; y++) {
+              const row = buf.getLine(buf.baseY + y)
+              if (row) {
+                const text = row.translateToString(true)
+                if (text.trim()) extracted.push(text)
+                const tokens = parseTokenCount(stripAnsi(text))
+                if (tokens !== null) latestTokens = tokens
+              }
+            }
+            if (extracted.length > 0) {
+              useTerminalStore.getState().setOutput(projectId, extracted)
+            }
+            if (latestTokens !== null) {
+              useTerminalStore.getState().setTokenUsage(tabId, latestTokens)
+            }
+          }, 200))
+        }
+      }
+      terminalsMap.get(tabId)!.onIncomingData = onIncomingData
+      ensureGlobalDataDispatcher()
 
       setTimeout(() => {
         fitAddon.fit()
@@ -393,7 +411,7 @@ export function focusTerminal(tabId: string): void {
 export function disposeTerminal(tabId: string): void {
   const entry = terminalsMap.get(tabId)
   if (entry) {
-    entry.unsubData?.()
+    entry.onIncomingData = undefined
     const timer = bufferReadTimers.get(tabId)
     if (timer) clearTimeout(timer)
     bufferReadTimers.delete(tabId)
