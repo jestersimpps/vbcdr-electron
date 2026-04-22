@@ -91,7 +91,7 @@ export function TerminalPanel(): React.ReactElement {
 
   useEffect(() => {
     if (activeProject) {
-      initProject(activeProject.id, activeProject.path)
+      void initProject(activeProject.id, activeProject.path)
     }
   }, [activeProject?.id])
 

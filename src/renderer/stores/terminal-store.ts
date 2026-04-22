@@ -21,7 +21,7 @@ interface TerminalStore {
   setTabTitle: (tabId: string, title: string) => void
   setOutput: (projectId: string, lines: string[]) => void
   setTokenUsage: (tabId: string, tokens: number) => void
-  initProject: (projectId: string, cwd: string) => void
+  initProject: (projectId: string, cwd: string) => Promise<void>
 }
 
 export const useTerminalStore = create<TerminalStore>((set, get) => ({
@@ -122,9 +122,28 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     }))
   },
 
-  initProject: (projectId: string, cwd: string) => {
+  initProject: async (projectId: string, cwd: string) => {
     const existing = get().tabs.filter((t) => t.projectId === projectId)
-    if (existing.length > 0) return
+    if (existing.length > 0) {
+      const liveness = await Promise.all(existing.map((t) => window.api.terminal.has(t.id)))
+      const anyLive = liveness.some(Boolean)
+      if (anyLive) return
+      const deadIds = existing.map((t) => t.id)
+      set((state) => {
+        const tabs = state.tabs.filter((t) => !deadIds.includes(t.id))
+        const activeTabPerProject = { ...state.activeTabPerProject }
+        if (deadIds.includes(activeTabPerProject[projectId])) {
+          delete activeTabPerProject[projectId]
+        }
+        const tabStatuses = { ...state.tabStatuses }
+        const tokenUsagePerTab = { ...state.tokenUsagePerTab }
+        for (const id of deadIds) {
+          delete tabStatuses[id]
+          delete tokenUsagePerTab[id]
+        }
+        return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab }
+      })
+    }
     get().createTab(projectId, cwd, 'claude')
   }
 }))

@@ -15,9 +15,28 @@ export { flushScrollback }
 interface PtyInstance {
   process: pty.IPty
   projectId: string
+  pendingChunks: string[]
+  flushTimer: ReturnType<typeof setTimeout> | null
 }
 
 const instances = new Map<string, PtyInstance>()
+const IPC_BATCH_MS = 16
+
+function flushPending(tabId: string, win: BrowserWindow): void {
+  const instance = instances.get(tabId)
+  if (!instance) return
+  instance.flushTimer = null
+  if (instance.pendingChunks.length === 0) return
+  const batch = instance.pendingChunks.join('')
+  instance.pendingChunks.length = 0
+  if (!win.isDestroyed()) {
+    win.webContents.send('terminal:data', tabId, batch)
+  }
+}
+
+export function hasPty(tabId: string): boolean {
+  return instances.has(tabId)
+}
 
 function defaultShell(): string {
   if (process.env.SHELL && fs.existsSync(process.env.SHELL)) {
@@ -85,21 +104,29 @@ export function createPty(
     env
   })
 
+  instances.set(tabId, { process: proc, projectId, pendingChunks: [], flushTimer: null })
+
   proc.onData((data: string) => {
     appendScrollback(tabId, data)
-    if (!win.isDestroyed()) {
-      win.webContents.send('terminal:data', tabId, data)
+    const instance = instances.get(tabId)
+    if (!instance) return
+    instance.pendingChunks.push(data)
+    if (!instance.flushTimer) {
+      instance.flushTimer = setTimeout(() => flushPending(tabId, win), IPC_BATCH_MS)
     }
   })
 
   proc.onExit(({ exitCode }) => {
+    const instance = instances.get(tabId)
+    if (instance?.flushTimer) {
+      clearTimeout(instance.flushTimer)
+      flushPending(tabId, win)
+    }
     if (!win.isDestroyed()) {
       win.webContents.send('terminal:exit', tabId, exitCode)
     }
     instances.delete(tabId)
   })
-
-  instances.set(tabId, { process: proc, projectId })
 }
 
 export function writePty(tabId: string, data: string): void {
@@ -113,6 +140,7 @@ export function resizePty(tabId: string, cols: number, rows: number): void {
 export function killPty(tabId: string): void {
   const instance = instances.get(tabId)
   if (instance) {
+    if (instance.flushTimer) clearTimeout(instance.flushTimer)
     instance.process.kill()
     instances.delete(tabId)
   }
@@ -122,6 +150,7 @@ export function killPty(tabId: string): void {
 export function killAll(): void {
   flushScrollback()
   for (const [, instance] of instances) {
+    if (instance.flushTimer) clearTimeout(instance.flushTimer)
     instance.process.kill()
   }
   instances.clear()

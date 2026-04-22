@@ -126,27 +126,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       terminal.loadAddon(unicode11Addon)
       terminal.loadAddon(webLinksAddon)
 
-      terminal.open(el)
-
       terminal.unicode.activeVersion = '11'
-
-      if (!transparent) {
-        let webglRetry = 0
-        const loadWebgl = (): void => {
-          try {
-            const webgl = new WebglAddon()
-            webgl.onContextLoss(() => {
-              try { webgl.dispose() } catch { /* context already gone */ }
-              try { terminal.refresh(0, terminal.rows - 1) } catch { /* disposed */ }
-              if (webglRetry++ < 2) setTimeout(loadWebgl, 1000)
-            })
-            terminal.loadAddon(webgl)
-          } catch {
-            try { terminal.refresh(0, terminal.rows - 1) } catch { /* disposed */ }
-          }
-        }
-        loadWebgl()
-      }
 
       entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0 }
       terminalsMap.set(tabId, entry)
@@ -237,7 +217,33 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       terminalsMap.get(tabId)!.onIncomingData = onIncomingData
       ensureGlobalDataDispatcher()
 
-      setTimeout(() => {
+      let opened = false
+      const openWhenSized = (): void => {
+        if (opened) return
+        if (el.clientWidth === 0 || el.clientHeight === 0) return
+        opened = true
+        sizeObserver.disconnect()
+
+        terminal.open(el)
+
+        if (!transparent) {
+          let webglRetry = 0
+          const loadWebgl = (): void => {
+            try {
+              const webgl = new WebglAddon()
+              webgl.onContextLoss(() => {
+                try { webgl.dispose() } catch { /* context already gone */ }
+                try { terminal.refresh(0, terminal.rows - 1) } catch { /* disposed */ }
+                if (webglRetry++ < 2) setTimeout(loadWebgl, 1000)
+              })
+              terminal.loadAddon(webgl)
+            } catch {
+              try { terminal.refresh(0, terminal.rows - 1) } catch { /* disposed */ }
+            }
+          }
+          loadWebgl()
+        }
+
         fitAddon.fit()
         terminal.scrollToBottom()
         terminal.focus()
@@ -251,7 +257,11 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
             }, 500)
           }
         }
-      }, 200)
+      }
+
+      const sizeObserver = new ResizeObserver(openWhenSized)
+      sizeObserver.observe(el)
+      openWhenSized()
     }
 
     const { terminal, fitAddon } = entry
@@ -402,10 +412,20 @@ export function focusTerminal(tabId: string): void {
   const entry = terminalsMap.get(tabId)
   if (!entry) return
   entry.suppressBusyUntil = Date.now() + 500
-  entry.fitAddon.fit()
-  entry.terminal.refresh(0, entry.terminal.rows - 1)
-  entry.terminal.scrollToBottom()
-  entry.terminal.focus()
+  const applyFit = (): void => {
+    try {
+      entry.fitAddon.fit()
+      if (entry.terminal.cols < 2 || entry.terminal.rows < 2) {
+        requestAnimationFrame(applyFit)
+        return
+      }
+      window.api.terminal.resize(tabId, entry.terminal.cols, entry.terminal.rows)
+      entry.terminal.refresh(0, entry.terminal.rows - 1)
+      entry.terminal.scrollToBottom()
+      entry.terminal.focus()
+    } catch { /* terminal may be disposed or not yet open */ }
+  }
+  applyFit()
 }
 
 export function disposeTerminal(tabId: string): void {

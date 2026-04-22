@@ -50,6 +50,7 @@ const api = {
     resize: (tabId: string, cols: number, rows: number) =>
       ipcRenderer.invoke('terminal:resize', tabId, cols, rows),
     kill: (tabId: string) => ipcRenderer.invoke('terminal:kill', tabId),
+    has: (tabId: string) => ipcRenderer.invoke('terminal:has', tabId) as Promise<boolean>,
     pasteImage: (tabId: string, filePath: string) =>
       ipcRenderer.invoke('terminal:paste-image', tabId, filePath),
     pasteClipboardImage: (tabId: string) =>
