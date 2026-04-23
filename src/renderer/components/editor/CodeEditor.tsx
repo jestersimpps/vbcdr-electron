@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Editor, { DiffEditor, type Monaco } from '@monaco-editor/react'
 import { useEditorStore } from '@/stores/editor-store'
+import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
 import { X, FileWarning, Circle } from 'lucide-react'
@@ -309,6 +310,7 @@ const EMPTY_FILES: OpenFile[] = []
 
 export function CodeEditor({ projectId }: { projectId: string }): React.ReactElement {
   const getFullThemeId = useThemeStore((s) => s.getFullThemeId)
+  const minimapEnabled = useEditorPrefsStore((s) => s.minimapEnabled)
   const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? EMPTY_FILES)
   const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
   const { setActiveFile, closeFile, editFileContent, saveFile } = useEditorStore()
@@ -406,7 +408,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
                 readOnly: false,
                 originalEditable: false,
                 renderSideBySide: false,
-                minimap: { enabled: false },
+                minimap: { enabled: minimapEnabled },
                 fontSize: 13,
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
@@ -424,7 +426,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
               onMount={handleEditorMount}
               onChange={handleChange}
               options={{
-                minimap: { enabled: false },
+                minimap: { enabled: minimapEnabled },
                 fontSize: 13,
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,

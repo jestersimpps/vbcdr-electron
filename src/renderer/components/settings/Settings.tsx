@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Image as ImageIcon, X, Palette, Moon, Sun, Pencil, Zap, RotateCcw, Volume2, Play, type LucideIcon } from 'lucide-react'
 import { useLayoutStore, DEFAULT_TOKEN_CAP } from '@/stores/layout-store'
+import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { getThemesByCategory, getThemeById, type ThemeDefinition } from '@/config/theme-registry'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
@@ -36,6 +37,7 @@ export function Settings(): React.ReactElement {
       <div className="mx-auto max-w-3xl space-y-6">
         <h1 className="text-2xl font-semibold text-zinc-100">Settings</h1>
         <TokenCapSection />
+        <EditorSection />
         <BackgroundSection />
         <SoundSection />
         <ThemeSection />
@@ -237,6 +239,64 @@ function BackgroundSection(): React.ReactElement {
         </div>
       </div>
     </SectionCard>
+  )
+}
+
+function EditorSection(): React.ReactElement {
+  const minimapEnabled = useEditorPrefsStore((s) => s.minimapEnabled)
+  const setMinimapEnabled = useEditorPrefsStore((s) => s.setMinimapEnabled)
+  const accent = useAccent()
+
+  return (
+    <SectionCard title="Editor" description="Code editor preferences.">
+      <PrefToggle
+        label="Minimap"
+        description="Show code minimap on the right edge of the editor."
+        enabled={minimapEnabled}
+        onToggle={() => setMinimapEnabled(!minimapEnabled)}
+        accent={accent}
+      />
+    </SectionCard>
+  )
+}
+
+function PrefToggle({
+  label,
+  description,
+  enabled,
+  onToggle,
+  accent
+}: {
+  label: string
+  description?: string
+  enabled: boolean
+  onToggle: () => void
+  accent: string
+}): React.ReactElement {
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <button
+        onClick={onToggle}
+        className={cn(
+          'relative h-5 w-9 shrink-0 rounded-full border transition-colors',
+          enabled ? 'border-transparent' : 'border-zinc-700 bg-zinc-800'
+        )}
+        style={enabled ? { backgroundColor: accent, borderColor: accent } : undefined}
+        aria-pressed={enabled}
+        aria-label={`Toggle ${label}`}
+      >
+        <span
+          className={cn(
+            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform',
+            enabled ? 'translate-x-4' : 'translate-x-0.5'
+          )}
+        />
+      </button>
+      <div className="flex flex-col">
+        <span className="text-xs text-zinc-300">{label}</span>
+        {description && <span className="text-[11px] text-zinc-500">{description}</span>}
+      </div>
+    </div>
   )
 }
 
