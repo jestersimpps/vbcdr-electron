@@ -4,6 +4,7 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { useGitStore } from '@/stores/git-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useThemeStore } from '@/stores/theme-store'
+import { useLayoutStore } from '@/stores/layout-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import { getTerminalInstance } from '@/components/terminal/TerminalInstance'
 import { DashboardTerminal } from '@/components/dashboard/DashboardTerminal'
@@ -12,7 +13,6 @@ import { cn } from '@/lib/utils'
 
 const EMPTY_BRANCHES: GitBranch[] = []
 const EMPTY_OUTPUT: string[] = []
-const MAX_TOKENS = 160_000
 
 function formatTokens(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
@@ -68,6 +68,7 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
   const themeId = useThemeStore((s) => s.getFullThemeId())
+  const tokenCap = useLayoutStore((s) => s.tokenCap)
   const accentColor = getTerminalTheme(themeId).cursor ?? '#58a6ff'
   const [activeIndex, setActiveIndex] = useState(0)
 
@@ -161,7 +162,7 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
 
       {activeTab && tokenUsagePerTab[activeTab.id] != null && (() => {
         const tokens = tokenUsagePerTab[activeTab.id]
-        const pct = Math.min(tokens / MAX_TOKENS, 1)
+        const pct = Math.min(tokens / tokenCap, 1)
         const theme = getTerminalTheme(themeId)
         const fill = tokenBarFill(pct, theme)
         return (

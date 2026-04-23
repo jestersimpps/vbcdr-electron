@@ -48,6 +48,7 @@ interface LayoutState {
   browserlessPerProject: Record<string, boolean>
   backgroundImage: string | null
   backgroundBlur: number
+  tokenCap: number
   resetVersion: number
   getLayout: (projectId: string, browserless?: boolean) => Layout[]
   isLocked: (projectId: string, panelId: PanelId) => boolean
@@ -60,7 +61,10 @@ interface LayoutState {
   resetLayout: (projectId: string) => void
   setBackgroundImage: (dataUrl: string | null) => void
   setBackgroundBlur: (blur: number) => void
+  setTokenCap: (cap: number) => void
 }
+
+export const DEFAULT_TOKEN_CAP = 160_000
 
 function ensureComplete(layout: Layout[], browserless: boolean): Layout[] {
   const ids = browserless ? browserlessValidPanelIds : validPanelIds
@@ -80,6 +84,7 @@ export const useLayoutStore = create<LayoutState>()(
       browserlessPerProject: {},
       backgroundImage: null,
       backgroundBlur: 0,
+      tokenCap: DEFAULT_TOKEN_CAP,
       resetVersion: 0,
 
       getLayout: (projectId: string, browserless?: boolean) => {
@@ -147,6 +152,11 @@ export const useLayoutStore = create<LayoutState>()(
         set({ backgroundBlur: blur })
       },
 
+      setTokenCap: (cap: number) => {
+        const safe = Number.isFinite(cap) && cap > 0 ? Math.round(cap) : DEFAULT_TOKEN_CAP
+        set({ tokenCap: safe })
+      },
+
       resetLayout: (projectId: string) => {
         const lpp = { ...get().layoutsPerProject }
         const lkp = { ...get().locksPerProject }
@@ -170,7 +180,8 @@ export const useLayoutStore = create<LayoutState>()(
         devToolsCollapsedPerProject: state.devToolsCollapsedPerProject,
         browserlessPerProject: state.browserlessPerProject,
         backgroundImage: state.backgroundImage,
-        backgroundBlur: state.backgroundBlur
+        backgroundBlur: state.backgroundBlur,
+        tokenCap: state.tokenCap
       })
     }
   )

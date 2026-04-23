@@ -17,8 +17,6 @@ const TERMINAL_THEME_OPTIONS = [
   ...Object.keys(TERMINAL_THEMES).map((id) => ({ id, label: id }))
 ]
 
-const MAX_TOKENS = 160_000
-
 function formatTokens(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return String(n)
@@ -118,6 +116,7 @@ export function TerminalPanel(): React.ReactElement {
   }
 
   const backgroundImage = useLayoutStore((s) => s.backgroundImage)
+  const tokenCap = useLayoutStore((s) => s.tokenCap)
 
   return (
     <div data-terminal-panel className={backgroundImage ? '' : 'bg-zinc-950'} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -305,7 +304,7 @@ export function TerminalPanel(): React.ReactElement {
 
       {activeTab?.initialCommand && tokenUsagePerTab[activeTab.id] != null && (() => {
         const tokens = tokenUsagePerTab[activeTab.id]
-        const pct = Math.min(tokens / MAX_TOKENS, 1)
+        const pct = Math.min(tokens / tokenCap, 1)
         const theme = getTerminalTheme(useThemeStore.getState().getTerminalThemeId())
         const fill = tokenBarFill(pct, theme)
         return (
@@ -318,7 +317,7 @@ export function TerminalPanel(): React.ReactElement {
               />
             </div>
             <span className="shrink-0 text-[10px] tabular-nums" style={{ color: `${fill}aa` }}>
-              {formatTokens(tokens)} / {formatTokens(MAX_TOKENS)}
+              {formatTokens(tokens)} / {formatTokens(tokenCap)}
             </span>
           </div>
         )

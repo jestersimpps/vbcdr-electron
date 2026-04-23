@@ -3,14 +3,13 @@ import { X, Plus, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, Ima
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
+import { useLayoutStore } from '@/stores/layout-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import { getTerminalInstance, disposeTerminal, searchTerminal, clearTerminalSearch, focusTerminal } from '@/components/terminal/TerminalInstance'
 import { ModalTerminal } from '@/components/dashboard/ModalTerminal'
 import { cn } from '@/lib/utils'
 import type { Project, TerminalTab } from '@/models/types'
 import type { ITheme } from '@xterm/xterm'
-
-const MAX_TOKENS = 160_000
 
 function formatTokens(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
@@ -36,6 +35,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
   const { createTab, closeTab, replaceTab, setActiveTab, initProject } = useTerminalStore()
   const setActiveProject = useProjectStore((s) => s.setActiveProject)
   const fullThemeId = useThemeStore((s) => s.getFullThemeId())
+  const tokenCap = useLayoutStore((s) => s.tokenCap)
 
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -257,7 +257,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
 
         {activeTab?.initialCommand && tokenUsagePerTab[activeTab.id] != null && (() => {
           const tokens = tokenUsagePerTab[activeTab.id]
-          const pct = Math.min(tokens / MAX_TOKENS, 1)
+          const pct = Math.min(tokens / tokenCap, 1)
           const theme = getTerminalTheme(fullThemeId)
           const fill = tokenBarFill(pct, theme)
           return (
@@ -270,7 +270,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
                 />
               </div>
               <span className="shrink-0 text-[10px] tabular-nums" style={{ color: `${fill}aa` }}>
-                {formatTokens(tokens)} / {formatTokens(MAX_TOKENS)}
+                {formatTokens(tokens)} / {formatTokens(tokenCap)}
               </span>
             </div>
           )
