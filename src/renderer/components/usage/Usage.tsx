@@ -177,7 +177,7 @@ export function Usage(): React.ReactElement {
 
   return (
     <div className="min-h-full bg-zinc-950 p-6 text-zinc-200">
-      <div className="space-y-4">
+      <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold">Usage</h1>
           <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
@@ -196,75 +196,88 @@ export function Usage(): React.ReactElement {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-3">
-          <Kpi icon={<Layers size={14} />} label="Active sessions" value={String(claudeTabs.length)} />
-          <Kpi icon={<Activity size={14} />} label="Currently working" value={String(busyCount)} />
-          <Kpi icon={<Cpu size={14} />} label="Live tokens" value={formatTokens(liveTotalTokens)} />
-          <Kpi
-            icon={<History size={14} />}
-            label={`${rangeLabel} tokens`}
-            value={formatTokens(periodTokens)}
-            sub={periodActiveDays > 0 ? `${periodActiveDays} active ${periodActiveDays === 1 ? 'day' : 'days'}` : undefined}
-          />
-        </div>
+        <Section title="Live">
+          <div className="grid grid-cols-4 gap-3">
+            <Kpi icon={<Layers size={14} />} label="Active sessions" value={String(claudeTabs.length)} />
+            <Kpi icon={<Activity size={14} />} label="Currently working" value={String(busyCount)} />
+            <Kpi icon={<Cpu size={14} />} label="Live tokens" value={formatTokens(liveTotalTokens)} />
+            <Kpi
+              icon={<History size={14} />}
+              label={`${rangeLabel} tokens`}
+              value={formatTokens(periodTokens)}
+              sub={periodActiveDays > 0 ? `${periodActiveDays} active ${periodActiveDays === 1 ? 'day' : 'days'}` : undefined}
+            />
+          </div>
 
-        {claudeTabs.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-zinc-800 p-12 text-center">
-            <Gauge size={28} className="mx-auto text-zinc-700" />
-            <div className="mt-3 text-sm text-zinc-400">No active Claude sessions</div>
-            <div className="mt-1 text-xs text-zinc-600">
-              Open a Claude tab in any project to see live token usage and velocity here.
+          {claudeTabs.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-zinc-800 p-12 text-center">
+              <Gauge size={28} className="mx-auto text-zinc-700" />
+              <div className="mt-3 text-sm text-zinc-400">No active Claude sessions</div>
+              <div className="mt-1 text-xs text-zinc-600">
+                Open a Claude tab in any project to see live token usage and velocity here.
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {claudeTabs.map((t) => (
-              <TabRow
-                key={t.id}
-                tabId={t.id}
-                title={t.title}
-                projectName={t.projectName}
-                tokens={t.tokens}
-                cap={tokenCap}
-                isBusy={t.isBusy}
-              />
-            ))}
-          </div>
-        )}
-
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Zap size={13} className="text-zinc-400" />
-            <h2 className="text-sm font-medium text-zinc-200">By project · {rangeLabel}</h2>
-          </div>
-          {perProjectHistorical.length === 0 ? (
-            <div className="py-4 text-center text-xs text-zinc-500">No token activity in range</div>
           ) : (
-            <div className="space-y-2">
-              {perProjectHistorical.map((p) => {
-                const widthPct = (p.tokens / maxProjectTokens) * 100
-                return (
-                  <div key={p.name}>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-zinc-300">{p.name}</span>
-                      <span className="tabular-nums text-zinc-400">{formatTokens(p.tokens)}</span>
-                    </div>
-                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800">
-                      <div
-                        className="h-full rounded-full bg-emerald-500/70"
-                        style={{ width: `${widthPct}%` }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {claudeTabs.map((t) => (
+                <TabRow
+                  key={t.id}
+                  tabId={t.id}
+                  title={t.title}
+                  projectName={t.projectName}
+                  tokens={t.tokens}
+                  cap={tokenCap}
+                  isBusy={t.isBusy}
+                />
+              ))}
             </div>
           )}
-        </div>
+        </Section>
 
-        <UsageChart range={range} rangeLabel={rangeLabel} />
+        <Section title="History">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Zap size={13} className="text-zinc-400" />
+              <h2 className="text-sm font-medium text-zinc-200">By project · {rangeLabel}</h2>
+            </div>
+            {perProjectHistorical.length === 0 ? (
+              <div className="py-4 text-center text-xs text-zinc-500">No token activity in range</div>
+            ) : (
+              <div className="space-y-2">
+                {perProjectHistorical.map((p) => {
+                  const widthPct = (p.tokens / maxProjectTokens) * 100
+                  return (
+                    <div key={p.name}>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-zinc-300">{p.name}</span>
+                        <span className="tabular-nums text-zinc-400">{formatTokens(p.tokens)}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                        <div
+                          className="h-full rounded-full bg-emerald-500/70"
+                          style={{ width: `${widthPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          <UsageChart range={range} rangeLabel={rangeLabel} />
+        </Section>
       </div>
     </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
+      {children}
+    </section>
   )
 }
 

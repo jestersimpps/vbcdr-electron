@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BarChart,
   Bar,
@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts'
+import { Clock, CalendarDays, Folder, Timer, SlidersHorizontal } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useStatsStore } from '@/stores/stats-store'
 import { useThemeStore } from '@/stores/theme-store'
@@ -317,7 +318,7 @@ export function Statistics(): React.ReactElement {
 
   return (
     <div className="min-h-full bg-zinc-950 p-6 text-zinc-200">
-      <div className="space-y-4">
+      <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold">Statistics</h1>
           <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
@@ -348,140 +349,105 @@ export function Statistics(): React.ReactElement {
               </button>
             ))}
           </div>
-          {source !== 'terminal' && (
-            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
-              <input
-                type="checkbox"
-                checked={includeAllAuthors}
-                onChange={(e) => setIncludeAllAuthors(e.target.checked)}
-                className="h-3 w-3 accent-zinc-400"
-              />
-              Include all authors
-            </label>
-          )}
-          {source !== 'terminal' && (
-            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
-              Gap
-              <input
-                type="number"
-                min={1}
-                max={240}
-                value={gapMinutes}
-                onChange={(e) => setGapMinutes(Math.max(1, Math.min(240, parseInt(e.target.value, 10) || 30)))}
-                className="w-14 rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-xs"
-              />
-              min
-            </label>
-          )}
-          {source !== 'terminal' && (
-            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
-              Lead-in
-              <input
-                type="number"
-                min={0}
-                max={120}
-                value={leadInMinutes}
-                onChange={(e) => setLeadInMinutes(Math.max(0, Math.min(120, parseInt(e.target.value, 10) || 15)))}
-                className="w-14 rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-xs"
-              />
-              min
-            </label>
-          )}
-          {source !== 'commits' && (
-            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
-              Idle
-              <input
-                type="number"
-                min={1}
-                max={60}
-                value={idleMinutes}
-                onChange={(e) => setIdleMinutes(Math.max(1, Math.min(60, parseInt(e.target.value, 10) || 5)))}
-                className="w-14 rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-xs"
-              />
-              min
-            </label>
-          )}
+          <SessionSettingsPopover
+            source={source}
+            includeAllAuthors={includeAllAuthors}
+            setIncludeAllAuthors={setIncludeAllAuthors}
+            gapMinutes={gapMinutes}
+            setGapMinutes={setGapMinutes}
+            leadInMinutes={leadInMinutes}
+            setLeadInMinutes={setLeadInMinutes}
+            idleMinutes={idleMinutes}
+            setIdleMinutes={setIdleMinutes}
+          />
           {loading && <span className="text-xs text-zinc-500">Loading…</span>}
         </div>
 
-        <div className="grid grid-cols-4 gap-3">
-          <Kpi label="Total time" value={formatHours(totalMs)} />
-          <Kpi label="Today" value={formatHours(todayMs)} />
-          <Kpi label="Top project" value={topProject} />
-          <Kpi label="Avg session" value={formatDuration(avgSessionMs)} />
-        </div>
+        <Section title="Overview">
+          <div className="grid grid-cols-4 gap-3">
+            <Kpi icon={<Clock size={14} />} label="Total time" value={formatHours(totalMs)} />
+            <Kpi icon={<CalendarDays size={14} />} label="Today" value={formatHours(todayMs)} />
+            <Kpi icon={<Folder size={14} />} label="Top project" value={topProject} />
+            <Kpi icon={<Timer size={14} />} label="Avg session" value={formatDuration(avgSessionMs)} />
+          </div>
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <Card title="Hours per project">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={perProjectHours.map((p) => ({ name: p.projectName, hours: p.ms / 3_600_000 }))} layout="vertical" margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-                <XAxis type="number" stroke={palette.axis} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" stroke={palette.axis} tick={{ fontSize: 11 }} width={120} />
-                <Tooltip contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
-                <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
-                  {perProjectHours.map((p) => (
-                    <Cell key={p.projectId} fill={colorForProject[p.projectId]} />
-                  ))}
-                </Bar>
+          <Card title={`Timeline (${TIME_RANGES.find((r) => r.key === range)?.label})`}>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={timelineData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                <XAxis dataKey="label" stroke={palette.axis} tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis stroke={palette.axis} tick={{ fontSize: 11 }} unit="h" />
+                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
+                {perProjectHours.map((p) => (
+                  <Bar key={p.projectId} dataKey={p.projectName} stackId="s" fill={colorForProject[p.projectId]} />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </Card>
+        </Section>
 
-          <Card title="Project time share">
-            <ResponsiveContainer width="100%" height={260}>
-              <RPieChart>
-                <Pie
-                  data={perProjectHours.map((p) => ({ name: p.projectName, value: p.ms / 3_600_000, projectId: p.projectId }))}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={55}
-                  outerRadius={95}
-                  paddingAngle={2}
-                >
-                  {perProjectHours.map((p) => (
-                    <Cell key={p.projectId} fill={colorForProject[p.projectId]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-              </RPieChart>
-            </ResponsiveContainer>
-          </Card>
-        </div>
+        <Section title="Breakdown">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <Card title="Hours per project">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={perProjectHours.map((p) => ({ name: p.projectName, hours: p.ms / 3_600_000 }))} layout="vertical" margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+                  <XAxis type="number" stroke={palette.axis} tick={{ fontSize: 11 }} />
+                  <YAxis type="category" dataKey="name" stroke={palette.axis} tick={{ fontSize: 11 }} width={120} />
+                  <Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
+                  <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
+                    {perProjectHours.map((p) => (
+                      <Cell key={p.projectId} fill={colorForProject[p.projectId]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
 
-        <Card title={`Timeline (${TIME_RANGES.find((r) => r.key === range)?.label})`}>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={timelineData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
-              <XAxis dataKey="label" stroke={palette.axis} tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-              <YAxis stroke={palette.axis} tick={{ fontSize: 11 }} unit="h" />
-              <Tooltip contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
-              {perProjectHours.map((p) => (
-                <Bar key={p.projectId} dataKey={p.projectName} stackId="s" fill={colorForProject[p.projectId]} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
+            <Card title="Project time share">
+              <ResponsiveContainer width="100%" height={260}>
+                <RPieChart>
+                  <Pie
+                    data={perProjectHours.map((p) => ({ name: p.projectName, value: p.ms / 3_600_000, projectId: p.projectId }))}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={55}
+                    outerRadius={95}
+                    paddingAngle={2}
+                  >
+                    {perProjectHours.map((p) => (
+                      <Cell key={p.projectId} fill={colorForProject[p.projectId]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </RPieChart>
+              </ResponsiveContainer>
+            </Card>
+          </div>
+        </Section>
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <Card title="Activity pattern (all time)">
-            <Heatmap grid={heatmap.grid} max={heatmap.max} baseColor={palette.heatmapBase} emptyColor={palette.emptyCell} />
-          </Card>
+        <Section title="Patterns">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <Card title="Activity pattern (all time)">
+              <Heatmap grid={heatmap.grid} max={heatmap.max} baseColor={palette.heatmapBase} emptyColor={palette.emptyCell} />
+            </Card>
 
-          <Card title="Code languages (HEAD)">
-            <ResponsiveContainer width="100%" height={260}>
-              <RPieChart>
-                <Pie data={languagePie} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={2}>
-                  {languagePie.map((_, i) => (
-                    <Cell key={i} fill={palette.colors[i % palette.colors.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${v as number} files`} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-              </RPieChart>
-            </ResponsiveContainer>
-          </Card>
-        </div>
+            <Card title="Code languages (HEAD)">
+              <ResponsiveContainer width="100%" height={260}>
+                <RPieChart>
+                  <Pie data={languagePie} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={2}>
+                    {languagePie.map((_, i) => (
+                      <Cell key={i} fill={palette.colors[i % palette.colors.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${v as number} files`} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </RPieChart>
+              </ResponsiveContainer>
+            </Card>
+          </div>
+        </Section>
 
+        <Section title="Detail">
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
@@ -571,15 +537,157 @@ export function Statistics(): React.ReactElement {
             </div>
           )}
         </div>
+        </Section>
       </div>
     </div>
   )
 }
 
-function Kpi({ label, value }: { label: string; value: string }): React.ReactElement {
+interface SessionSettingsPopoverProps {
+  source: SessionSource
+  includeAllAuthors: boolean
+  setIncludeAllAuthors: (v: boolean) => void
+  gapMinutes: number
+  setGapMinutes: (v: number) => void
+  leadInMinutes: number
+  setLeadInMinutes: (v: number) => void
+  idleMinutes: number
+  setIdleMinutes: (v: number) => void
+}
+
+function SessionSettingsPopover({
+  source,
+  includeAllAuthors,
+  setIncludeAllAuthors,
+  gapMinutes,
+  setGapMinutes,
+  leadInMinutes,
+  setLeadInMinutes,
+  idleMinutes,
+  setIdleMinutes
+}: SessionSettingsPopoverProps): React.ReactElement {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDocDown = (e: MouseEvent): void => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const showCommitFields = source !== 'terminal'
+  const showIdle = source !== 'commits'
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          'flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs font-medium transition-colors',
+          open ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+        )}
+      >
+        <SlidersHorizontal size={12} />
+        Session settings
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1.5 w-64 rounded-md border border-zinc-800 bg-zinc-900 p-3 shadow-lg">
+          <div className="space-y-3">
+            {showCommitFields && (
+              <label className="flex items-center gap-2 text-xs text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={includeAllAuthors}
+                  onChange={(e) => setIncludeAllAuthors(e.target.checked)}
+                  className="h-3 w-3 accent-zinc-400"
+                />
+                Include all authors
+              </label>
+            )}
+            {showCommitFields && (
+              <div className="flex items-center justify-between text-xs text-zinc-300">
+                <span>Gap</span>
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <input
+                    type="number"
+                    min={1}
+                    max={240}
+                    value={gapMinutes}
+                    onChange={(e) => setGapMinutes(Math.max(1, Math.min(240, parseInt(e.target.value, 10) || 30)))}
+                    className="w-16 rounded border border-zinc-800 bg-zinc-950 px-1.5 py-0.5 text-right text-xs"
+                  />
+                  min
+                </div>
+              </div>
+            )}
+            {showCommitFields && (
+              <div className="flex items-center justify-between text-xs text-zinc-300">
+                <span>Lead-in</span>
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <input
+                    type="number"
+                    min={0}
+                    max={120}
+                    value={leadInMinutes}
+                    onChange={(e) => setLeadInMinutes(Math.max(0, Math.min(120, parseInt(e.target.value, 10) || 15)))}
+                    className="w-16 rounded border border-zinc-800 bg-zinc-950 px-1.5 py-0.5 text-right text-xs"
+                  />
+                  min
+                </div>
+              </div>
+            )}
+            {showIdle && (
+              <div className="flex items-center justify-between text-xs text-zinc-300">
+                <span>Idle</span>
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={idleMinutes}
+                    onChange={(e) => setIdleMinutes(Math.max(1, Math.min(60, parseInt(e.target.value, 10) || 5)))}
+                    className="w-16 rounded border border-zinc-800 bg-zinc-950 px-1.5 py-0.5 text-right text-xs"
+                  />
+                  min
+                </div>
+              </div>
+            )}
+            {!showCommitFields && !showIdle && (
+              <div className="text-xs text-zinc-500">No advanced settings for this source.</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function Kpi({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }): React.ReactElement {
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-      <div className="text-xs text-zinc-500">{label}</div>
+      <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+        {icon}
+        {label}
+      </div>
       <div className="mt-1 text-xl font-semibold text-zinc-100 truncate" title={value}>{value}</div>
     </div>
   )
