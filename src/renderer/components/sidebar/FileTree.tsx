@@ -457,23 +457,8 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
 
   useEffect(() => {
     if (!activeProject) return
-
     if (!tree) {
       loadTree(projectId, activeProject.path, showIgnored)
-    }
-
-    loadStatus(projectId, activeProject.path)
-
-    window.api.fs.watch(activeProject.path, showIgnored)
-
-    const unsub = window.api.fs.onTreeChanged((newTree) => {
-      setTree(projectId, newTree as FileNode)
-      loadStatus(projectId, activeProject.path)
-    })
-
-    return () => {
-      unsub()
-      window.api.fs.unwatch()
     }
   }, [projectId])
 

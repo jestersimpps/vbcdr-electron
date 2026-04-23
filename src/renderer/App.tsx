@@ -11,8 +11,10 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useUpdaterStore } from '@/stores/updater-store'
 import { useGitStore } from '@/stores/git-store'
+import { useFileTreeStore } from '@/stores/filetree-store'
 import { applyThemeToAll } from '@/components/terminal/TerminalInstance'
 import type { CustomThemeUI } from '@/models/custom-theme'
+import type { FileNode } from '@/models/types'
 
 function hexToRgb(hex: string): string {
   const h = hex.replace('#', '')
@@ -89,6 +91,32 @@ export function App(): React.ReactElement {
   useEffect(() => {
     return useGitStore.getState().initFetchListener()
   }, [])
+
+  const activeProjectId = useProjectStore((s) => s.activeProjectId)
+  const activeProjectPath = useProjectStore((s) =>
+    s.activeProjectId ? s.projects.find((p) => p.id === s.activeProjectId)?.path : undefined
+  )
+
+  useEffect(() => {
+    if (!activeProjectId || !activeProjectPath) return
+    const projectId = activeProjectId
+    const cwd = activeProjectPath
+    const showIgnored = useFileTreeStore.getState().showIgnoredPerProject[projectId] ?? false
+
+    useFileTreeStore.getState().loadTree(projectId, cwd, showIgnored)
+    useGitStore.getState().loadStatus(projectId, cwd)
+    window.api.fs.watch(cwd, showIgnored)
+
+    const unsub = window.api.fs.onTreeChanged((newTree) => {
+      useFileTreeStore.getState().setTree(projectId, newTree as FileNode)
+      useGitStore.getState().loadStatus(projectId, cwd)
+    })
+
+    return () => {
+      unsub()
+      window.api.fs.unwatch()
+    }
+  }, [activeProjectId, activeProjectPath])
 
   useEffect(() => {
     return window.api.onMenuAction((action: string) => {
