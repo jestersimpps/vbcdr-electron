@@ -18,6 +18,7 @@ interface EditorStore {
   updateFileContent: (filePath: string, content: string) => void
   editFileContent: (projectId: string, filePath: string, content: string) => void
   saveFile: (projectId: string, filePath: string) => Promise<boolean>
+  reorderFiles: (projectId: string, fromIndex: number, toIndex: number) => void
   openDefaultFile: (projectId: string, tree: FileNode) => Promise<void>
 }
 
@@ -201,6 +202,25 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       }
     })
     return true
+  },
+
+  reorderFiles: (projectId: string, fromIndex: number, toIndex: number) => {
+    set((s) => {
+      const prev = s.statePerProject[projectId]
+      if (!prev) return s
+      if (fromIndex === toIndex) return s
+      if (fromIndex < 0 || fromIndex >= prev.openFiles.length) return s
+      if (toIndex < 0 || toIndex >= prev.openFiles.length) return s
+      const files = [...prev.openFiles]
+      const [moved] = files.splice(fromIndex, 1)
+      files.splice(toIndex, 0, moved)
+      return {
+        statePerProject: {
+          ...s.statePerProject,
+          [projectId]: { ...prev, openFiles: files }
+        }
+      }
+    })
   },
 
   openDefaultFile: async (projectId: string, tree: FileNode): Promise<void> => {

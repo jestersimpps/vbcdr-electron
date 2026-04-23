@@ -1,5 +1,15 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Editor, { DiffEditor, type Monaco } from '@monaco-editor/react'
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from '@dnd-kit/core'
+import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useEditorStore } from '@/stores/editor-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useThemeStore } from '@/stores/theme-store'
@@ -306,6 +316,51 @@ function handleBeforeMount(monaco: Monaco): void {
   registerMonacoThemes(monaco)
 }
 
+function SortableTab({
+  file,
+  isActive,
+  onSelect,
+  onClose
+}: {
+  file: OpenFile
+  isActive: boolean
+  onSelect: () => void
+  onClose: (e: React.MouseEvent) => void
+}): React.ReactElement {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: file.path })
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`group flex shrink-0 cursor-pointer select-none items-center gap-1.5 border-r border-zinc-800 px-3 py-2 text-xs ${
+        isActive
+          ? 'bg-zinc-950 text-zinc-200'
+          : 'text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300'
+      }`}
+      onClick={onSelect}
+    >
+      <span className="truncate max-w-[120px]">{file.name}</span>
+      {file.isDirty && (
+        <Circle size={8} className="shrink-0 fill-zinc-400 text-zinc-400" />
+      )}
+      <button
+        className="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-zinc-700"
+        title="Close file"
+        onClick={onClose}
+      >
+        <X size={12} />
+      </button>
+    </div>
+  )
+}
+
 const EMPTY_FILES: OpenFile[] = []
 
 export function CodeEditor({ projectId }: { projectId: string }): React.ReactElement {
@@ -318,7 +373,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   const bracketPairColorization = useEditorPrefsStore((s) => s.bracketPairColorization)
   const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? EMPTY_FILES)
   const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
-  const { setActiveFile, closeFile, editFileContent, saveFile } = useEditorStore()
+  const { setActiveFile, closeFile, editFileContent, saveFile, reorderFiles } = useEditorStore()
   const [showSaved, setShowSaved] = useState(false)
   const savedTimer = useRef<ReturnType<typeof setTimeout>>(null)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout>>(null)
@@ -363,6 +418,18 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
     editorRef.current?.getModel()?.updateOptions({ tabSize })
   }, [tabSize, activeFilePath])
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
+  const handleTabDragEnd = useCallback((event: DragEndEvent): void => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const fromIndex = openFiles.findIndex((f) => f.path === active.id)
+    const toIndex = openFiles.findIndex((f) => f.path === over.id)
+    if (fromIndex !== -1 && toIndex !== -1) {
+      reorderFiles(projectId, fromIndex, toIndex)
+    }
+  }, [projectId, openFiles, reorderFiles])
+
   const handleChange = useCallback((value: string | undefined) => {
     if (value === undefined || !activeFilePath) return
     editFileContent(projectId, activeFilePath, value)
@@ -384,32 +451,22 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   return (
     <div className="flex h-full flex-col bg-zinc-950">
       <div className="flex min-h-[36px] items-center gap-0 overflow-x-auto border-b border-zinc-800 bg-zinc-900/50">
-        {openFiles.map((file) => (
-          <div
-            key={file.path}
-            className={`group flex shrink-0 cursor-pointer items-center gap-1.5 border-r border-zinc-800 px-3 py-2 text-xs ${
-              file.path === activeFilePath
-                ? 'bg-zinc-950 text-zinc-200'
-                : 'text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300'
-            }`}
-            onClick={() => setActiveFile(projectId, file.path)}
-          >
-            <span className="truncate max-w-[120px]">{file.name}</span>
-            {file.isDirty && (
-              <Circle size={8} className="shrink-0 fill-zinc-400 text-zinc-400" />
-            )}
-            <button
-              className="ml-1 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-zinc-700"
-              title="Close file"
-              onClick={(e) => {
-                e.stopPropagation()
-                closeFile(projectId, file.path)
-              }}
-            >
-              <X size={12} />
-            </button>
-          </div>
-        ))}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTabDragEnd}>
+          <SortableContext items={openFiles.map((f) => f.path)} strategy={horizontalListSortingStrategy}>
+            {openFiles.map((file) => (
+              <SortableTab
+                key={file.path}
+                file={file}
+                isActive={file.path === activeFilePath}
+                onSelect={() => setActiveFile(projectId, file.path)}
+                onClose={(e) => {
+                  e.stopPropagation()
+                  closeFile(projectId, file.path)
+                }}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
         <span
           className={`ml-2 text-[10px] text-emerald-400 transition-opacity duration-300 ${showSaved ? 'opacity-100' : 'opacity-0'}`}
         >
