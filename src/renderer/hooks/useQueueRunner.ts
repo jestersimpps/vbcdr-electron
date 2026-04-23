@@ -18,7 +18,7 @@ export function useQueueRunner(): void {
   const items = activeProjectId ? itemsPerProject[activeProjectId] ?? [] : []
   const autoRun = activeProjectId ? autoRunPerProject[activeProjectId] ?? false : false
 
-  const lastDispatchedRef = useRef<string | null>(null)
+  const lastDispatchAtRef = useRef<number>(0)
 
   useEffect(() => {
     if (!activeProjectId || !activeTabId || !activeTab) return
@@ -26,11 +26,11 @@ export function useQueueRunner(): void {
     if (!autoRun) return
     if (status !== 'idle') return
     if (items.length === 0) return
+    if (Date.now() - lastDispatchAtRef.current < 2000) return
 
     const next = items[0]
-    if (lastDispatchedRef.current === next.id) return
-
-    lastDispatchedRef.current = next.id
+    lastDispatchAtRef.current = Date.now()
+    useTerminalStore.getState().setTabStatus(activeTabId, 'busy')
     useQueueStore.getState().dequeue(activeProjectId)
     sendToTerminal(activeTabId, next.text)
   }, [activeProjectId, activeTabId, activeTab?.initialCommand, status, autoRun, items])
