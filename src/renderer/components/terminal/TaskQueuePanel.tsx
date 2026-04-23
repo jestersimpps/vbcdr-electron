@@ -61,7 +61,7 @@ export function TaskQueuePanel({ projectId }: TaskQueuePanelProps): React.ReactE
   }
 
   return (
-    <div className="relative z-30 flex shrink-0 flex-col gap-1.5 border-t border-zinc-800 bg-zinc-950/95 px-2 py-1.5">
+    <div className="flex shrink-0 flex-col gap-1.5 border-t border-zinc-800 bg-zinc-950 px-2 py-1.5">
       {items.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {items.map((item, idx) => {
