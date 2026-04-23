@@ -230,9 +230,90 @@ export function Statistics(): React.ReactElement {
       .slice(0, 10)
   }, [data])
 
-  const recentSessions = useMemo(() => {
-    return [...sessions].sort((a, b) => b.end - a.end).slice(0, 12)
-  }, [sessions])
+  type SessionSortKey = 'project' | 'started' | 'duration' | 'commits'
+  type ProjectSortKey = 'project' | 'hours' | 'sessions' | 'commits' | 'lastActive'
+  type SortDir = 'asc' | 'desc'
+
+  const [tableTab, setTableTab] = useState<'sessions' | 'projects'>('sessions')
+  const [sessionSortKey, setSessionSortKey] = useState<SessionSortKey>('started')
+  const [sessionSortDir, setSessionSortDir] = useState<SortDir>('desc')
+  const [projectSortKey, setProjectSortKey] = useState<ProjectSortKey>('hours')
+  const [projectSortDir, setProjectSortDir] = useState<SortDir>('desc')
+
+  const sortedSessions = useMemo(() => {
+    const out = [...sessions]
+    const dir = sessionSortDir === 'asc' ? 1 : -1
+    out.sort((a, b) => {
+      let cmp = 0
+      if (sessionSortKey === 'project') cmp = a.projectName.localeCompare(b.projectName)
+      else if (sessionSortKey === 'started') cmp = a.start - b.start
+      else if (sessionSortKey === 'duration') cmp = a.durationMs - b.durationMs
+      else cmp = a.commitCount - b.commitCount
+      if (cmp === 0) cmp = a.start - b.start
+      return cmp * dir
+    })
+    return out
+  }, [sessions, sessionSortKey, sessionSortDir])
+
+  interface ProjectRow {
+    projectId: string
+    projectName: string
+    totalMs: number
+    sessionCount: number
+    commitCount: number
+    lastActive: number
+  }
+
+  const projectRows = useMemo<ProjectRow[]>(() => {
+    const map: Record<string, ProjectRow> = {}
+    for (const s of sessions) {
+      let row = map[s.projectId]
+      if (!row) {
+        row = {
+          projectId: s.projectId,
+          projectName: s.projectName,
+          totalMs: 0,
+          sessionCount: 0,
+          commitCount: 0,
+          lastActive: 0
+        }
+        map[s.projectId] = row
+      }
+      row.totalMs += s.durationMs
+      row.sessionCount += 1
+      row.commitCount += s.commitCount
+      if (s.end > row.lastActive) row.lastActive = s.end
+    }
+    const rows = Object.values(map)
+    const dir = projectSortDir === 'asc' ? 1 : -1
+    rows.sort((a, b) => {
+      let cmp = 0
+      if (projectSortKey === 'project') cmp = a.projectName.localeCompare(b.projectName)
+      else if (projectSortKey === 'hours') cmp = a.totalMs - b.totalMs
+      else if (projectSortKey === 'sessions') cmp = a.sessionCount - b.sessionCount
+      else if (projectSortKey === 'commits') cmp = a.commitCount - b.commitCount
+      else cmp = a.lastActive - b.lastActive
+      if (cmp === 0) cmp = b.totalMs - a.totalMs
+      return cmp * dir
+    })
+    return rows
+  }, [sessions, projectSortKey, projectSortDir])
+
+  const toggleSessionSort = (key: SessionSortKey): void => {
+    if (sessionSortKey === key) setSessionSortDir(sessionSortDir === 'asc' ? 'desc' : 'asc')
+    else {
+      setSessionSortKey(key)
+      setSessionSortDir(key === 'project' ? 'asc' : 'desc')
+    }
+  }
+
+  const toggleProjectSort = (key: ProjectSortKey): void => {
+    if (projectSortKey === key) setProjectSortDir(projectSortDir === 'asc' ? 'desc' : 'asc')
+    else {
+      setProjectSortKey(key)
+      setProjectSortDir(key === 'project' ? 'asc' : 'desc')
+    }
+  }
 
   return (
     <div className="min-h-full bg-zinc-950 p-6 text-zinc-200">
@@ -401,35 +482,95 @@ export function Statistics(): React.ReactElement {
           </Card>
         </div>
 
-        <Card title="Recent sessions">
-          {recentSessions.length === 0 ? (
-            <div className="py-6 text-center text-xs text-zinc-500">No sessions in range</div>
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+              <button
+                onClick={() => setTableTab('sessions')}
+                className={cn(
+                  'rounded px-3 py-1 text-xs font-medium transition-colors',
+                  tableTab === 'sessions' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                )}
+              >
+                Sessions
+              </button>
+              <button
+                onClick={() => setTableTab('projects')}
+                className={cn(
+                  'rounded px-3 py-1 text-xs font-medium transition-colors',
+                  tableTab === 'projects' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                )}
+              >
+                Projects
+              </button>
+            </div>
+            <span className="text-xs text-zinc-500">
+              {tableTab === 'sessions' ? `${sortedSessions.length} sessions` : `${projectRows.length} projects`}
+            </span>
+          </div>
+
+          {tableTab === 'sessions' ? (
+            sortedSessions.length === 0 ? (
+              <div className="py-6 text-center text-xs text-zinc-500">No sessions in range</div>
+            ) : (
+              <div className="max-h-[480px] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-zinc-900">
+                    <tr className="text-left text-zinc-500">
+                      <SortHeader label="Project" active={sessionSortKey === 'project'} dir={sessionSortDir} onClick={() => toggleSessionSort('project')} />
+                      <SortHeader label="Started" active={sessionSortKey === 'started'} dir={sessionSortDir} onClick={() => toggleSessionSort('started')} />
+                      <SortHeader label="Duration" active={sessionSortKey === 'duration'} dir={sessionSortDir} onClick={() => toggleSessionSort('duration')} />
+                      <SortHeader label="Commits" active={sessionSortKey === 'commits'} dir={sessionSortDir} onClick={() => toggleSessionSort('commits')} align="right" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedSessions.map((s, i) => (
+                      <tr key={i} className="border-t border-zinc-800">
+                        <td className="py-1.5">
+                          <span className="inline-block h-2 w-2 rounded-full align-middle" style={{ background: colorForProject[s.projectId] }} />
+                          <span className="ml-2">{s.projectName}</span>
+                        </td>
+                        <td className="py-1.5 text-zinc-400">{new Date(s.start).toLocaleString()}</td>
+                        <td className="py-1.5 text-zinc-300">{formatDuration(s.durationMs)}</td>
+                        <td className="py-1.5 text-right text-zinc-400">{s.commitCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : projectRows.length === 0 ? (
+            <div className="py-6 text-center text-xs text-zinc-500">No activity in range</div>
           ) : (
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-left text-zinc-500">
-                  <th className="py-1.5 font-medium">Project</th>
-                  <th className="py-1.5 font-medium">Started</th>
-                  <th className="py-1.5 font-medium">Duration</th>
-                  <th className="py-1.5 font-medium text-right">Commits</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentSessions.map((s, i) => (
-                  <tr key={i} className="border-t border-zinc-800/60">
-                    <td className="py-1.5">
-                      <span className="inline-block h-2 w-2 rounded-full align-middle" style={{ background: colorForProject[s.projectId] }} />
-                      <span className="ml-2">{s.projectName}</span>
-                    </td>
-                    <td className="py-1.5 text-zinc-400">{new Date(s.start).toLocaleString()}</td>
-                    <td className="py-1.5 text-zinc-300">{formatDuration(s.durationMs)}</td>
-                    <td className="py-1.5 text-right text-zinc-400">{s.commitCount}</td>
+            <div className="max-h-[480px] overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-zinc-900">
+                  <tr className="text-left text-zinc-500">
+                    <SortHeader label="Project" active={projectSortKey === 'project'} dir={projectSortDir} onClick={() => toggleProjectSort('project')} />
+                    <SortHeader label="Time" active={projectSortKey === 'hours'} dir={projectSortDir} onClick={() => toggleProjectSort('hours')} align="right" />
+                    <SortHeader label="Sessions" active={projectSortKey === 'sessions'} dir={projectSortDir} onClick={() => toggleProjectSort('sessions')} align="right" />
+                    <SortHeader label="Commits" active={projectSortKey === 'commits'} dir={projectSortDir} onClick={() => toggleProjectSort('commits')} align="right" />
+                    <SortHeader label="Last active" active={projectSortKey === 'lastActive'} dir={projectSortDir} onClick={() => toggleProjectSort('lastActive')} />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {projectRows.map((p) => (
+                    <tr key={p.projectId} className="border-t border-zinc-800">
+                      <td className="py-1.5">
+                        <span className="inline-block h-2 w-2 rounded-full align-middle" style={{ background: colorForProject[p.projectId] }} />
+                        <span className="ml-2">{p.projectName}</span>
+                      </td>
+                      <td className="py-1.5 text-right text-zinc-300">{formatDuration(p.totalMs)}</td>
+                      <td className="py-1.5 text-right text-zinc-400">{p.sessionCount}</td>
+                      <td className="py-1.5 text-right text-zinc-400">{p.commitCount}</td>
+                      <td className="py-1.5 text-zinc-400">{p.lastActive ? new Date(p.lastActive).toLocaleString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   )
@@ -450,6 +591,35 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       <div className="mb-2 text-xs font-medium text-zinc-400">{title}</div>
       {children}
     </div>
+  )
+}
+
+function SortHeader({
+  label,
+  active,
+  dir,
+  onClick,
+  align = 'left'
+}: {
+  label: string
+  active: boolean
+  dir: 'asc' | 'desc'
+  onClick: () => void
+  align?: 'left' | 'right'
+}): React.ReactElement {
+  return (
+    <th className={cn('py-1.5 font-medium', align === 'right' && 'text-right')}>
+      <button
+        onClick={onClick}
+        className={cn(
+          'inline-flex items-center gap-1 hover:text-zinc-200 transition-colors',
+          active ? 'text-zinc-200' : 'text-zinc-500'
+        )}
+      >
+        {label}
+        <span className="text-[9px]">{active ? (dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+      </button>
+    </th>
   )
 }
 
@@ -483,7 +653,7 @@ function Heatmap({ grid, max, baseColor, emptyColor }: { grid: number[][]; max: 
               return (
                 <div
                   key={h}
-                  className="m-px h-5 w-5 rounded-sm border border-zinc-900"
+                  className="m-px h-5 w-5 rounded-sm border border-zinc-800"
                   style={{ background: bg }}
                   title={`${days[dayIdx]} ${h}:00 — ${hours.toFixed(2)}h`}
                 />
