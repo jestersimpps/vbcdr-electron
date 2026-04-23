@@ -171,6 +171,15 @@ const api = {
       ipcRenderer.invoke('passwords:delete', projectId, credentialId),
     update: (projectId: string, credentialId: string, username: string, password: string) =>
       ipcRenderer.invoke('passwords:update', projectId, credentialId, username, password)
+  },
+
+  activity: {
+    record: (projectId: string, kind: 'i' | 'o') =>
+      ipcRenderer.invoke('activity:record', projectId, kind),
+    sessions: (projectId: string, sinceIso: string | null, idleMinutes?: number) =>
+      ipcRenderer.invoke('activity:sessions', projectId, sinceIso, idleMinutes),
+    allSessions: (sinceIso: string | null, idleMinutes?: number) =>
+      ipcRenderer.invoke('activity:all-sessions', sinceIso, idleMinutes)
   }
 }
 

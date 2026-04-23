@@ -1,5 +1,16 @@
 import type { StatsCommit } from '@/models/types'
 
+export type SessionSource = 'commits' | 'terminal' | 'both'
+
+export interface ActivitySessionInput {
+  projectId: string
+  start: number
+  end: number
+  durationMs: number
+  inputCount: number
+  outputCount: number
+}
+
 export interface Session {
   projectId: string
   projectName: string
@@ -98,6 +109,52 @@ export function buildSessions(
   }
 
   return sessions
+}
+
+export function activityToSessions(
+  activity: ActivitySessionInput[],
+  projectNameById: Record<string, string>
+): Session[] {
+  return activity
+    .filter((a) => projectNameById[a.projectId])
+    .map((a) => ({
+      projectId: a.projectId,
+      projectName: projectNameById[a.projectId],
+      start: a.start,
+      end: a.end,
+      durationMs: a.durationMs,
+      commitCount: 0
+    }))
+}
+
+export function mergeSessions(sessions: Session[]): Session[] {
+  const byProject: Record<string, Session[]> = {}
+  for (const s of sessions) {
+    if (!byProject[s.projectId]) byProject[s.projectId] = []
+    byProject[s.projectId].push(s)
+  }
+  const merged: Session[] = []
+  for (const projectId of Object.keys(byProject)) {
+    const arr = byProject[projectId]
+    arr.sort((a: Session, b: Session) => a.start - b.start)
+    let current: Session | null = null
+    for (const s of arr) {
+      if (!current) {
+        current = { ...s }
+        continue
+      }
+      if (s.start <= current.end) {
+        current.end = Math.max(current.end, s.end)
+        current.durationMs = current.end - current.start
+        current.commitCount += s.commitCount
+      } else {
+        merged.push(current)
+        current = { ...s }
+      }
+    }
+    if (current) merged.push(current)
+  }
+  return merged
 }
 
 export function clipSessionsToRange(sessions: Session[], startMs: number | null): Session[] {

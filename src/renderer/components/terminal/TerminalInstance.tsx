@@ -28,6 +28,19 @@ interface TerminalEntry {
 const terminalsMap = new Map<string, TerminalEntry>()
 const bufferReadTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
+const ACTIVITY_DEBOUNCE_MS = 1000
+const activityLastSent = new Map<string, number>()
+
+function recordActivityDebounced(projectId: string, kind: 'i' | 'o'): void {
+  if (!projectId) return
+  const key = `${projectId}:${kind}`
+  const now = Date.now()
+  const last = activityLastSent.get(key) ?? 0
+  if (now - last < ACTIVITY_DEBOUNCE_MS) return
+  activityLastSent.set(key, now)
+  window.api.activity.record(projectId, kind)
+}
+
 let globalDataUnsub: (() => void) | null = null
 
 function ensureGlobalDataDispatcher(): void {
@@ -143,6 +156,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
       terminal.onData((data) => {
         window.api.terminal.write(tabId, data)
+        recordActivityDebounced(projectId, 'i')
       })
 
       terminal.onResize(({ cols, rows }) => {
@@ -159,6 +173,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       const isLlm = !!initialCommand
 
       const onIncomingData = (data: string): void => {
+        recordActivityDebounced(projectId, 'o')
         try {
           const buf = terminal.buffer.active
           const atBottom = buf.baseY - buf.viewportY <= 1

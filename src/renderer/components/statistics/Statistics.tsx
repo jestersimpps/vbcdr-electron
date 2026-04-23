@@ -20,13 +20,23 @@ import {
   rangeStartMs,
   buildSessions,
   clipSessionsToRange,
+  activityToSessions,
+  mergeSessions,
   formatHours,
   formatDuration,
   type ProjectCommits,
-  type Session
+  type Session,
+  type ActivitySessionInput,
+  type SessionSource
 } from '@/lib/sessions'
 import type { StatsCommit, LanguageTally } from '@/models/types'
 import { cn } from '@/lib/utils'
+
+const SOURCE_OPTIONS: { key: SessionSource; label: string }[] = [
+  { key: 'commits', label: 'Commits' },
+  { key: 'terminal', label: 'Terminal' },
+  { key: 'both', label: 'Both' }
+]
 
 interface ProjectData {
   projectId: string
@@ -42,14 +52,19 @@ export function Statistics(): React.ReactElement {
   const gapMinutes = useStatsStore((s) => s.gapMinutes)
   const leadInMinutes = useStatsStore((s) => s.leadInMinutes)
   const includeAllAuthors = useStatsStore((s) => s.includeAllAuthors)
+  const source = useStatsStore((s) => s.source)
+  const idleMinutes = useStatsStore((s) => s.idleMinutes)
   const setRange = useStatsStore((s) => s.setRange)
   const setGapMinutes = useStatsStore((s) => s.setGapMinutes)
   const setLeadInMinutes = useStatsStore((s) => s.setLeadInMinutes)
   const setIncludeAllAuthors = useStatsStore((s) => s.setIncludeAllAuthors)
+  const setSource = useStatsStore((s) => s.setSource)
+  const setIdleMinutes = useStatsStore((s) => s.setIdleMinutes)
   const themeId = useThemeStore((s) => s.getFullThemeId())
   const palette = useMemo(() => getChartPalette(themeId), [themeId])
 
   const [data, setData] = useState<ProjectData[]>([])
+  const [activity, setActivity] = useState<ActivitySessionInput[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -80,6 +95,25 @@ export function Statistics(): React.ReactElement {
     }
   }, [projects, range])
 
+  useEffect(() => {
+    if (source === 'commits') {
+      setActivity([])
+      return
+    }
+    let cancelled = false
+    const load = async (): Promise<void> => {
+      const sinceMs = rangeStartMs(range)
+      const sinceIso = sinceMs === null ? null : new Date(sinceMs).toISOString()
+      const sessions = await window.api.activity.allSessions(sinceIso, idleMinutes)
+      if (cancelled) return
+      setActivity(sessions as ActivitySessionInput[])
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [range, source, idleMinutes, projects])
+
   const colorForProject = useMemo(() => {
     const map: Record<string, string> = {}
     const sorted = [...data].map((d) => d.projectId).sort()
@@ -99,10 +133,21 @@ export function Statistics(): React.ReactElement {
     }))
   }, [data, includeAllAuthors])
 
+  const projectNameById = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {}
+    for (const p of projects) map[p.id] = p.name
+    return map
+  }, [projects])
+
   const sessions = useMemo<Session[]>(() => {
-    const raw = buildSessions(filteredCommits, gapMinutes, leadInMinutes)
-    return clipSessionsToRange(raw, rangeStartMs(range))
-  }, [filteredCommits, gapMinutes, leadInMinutes, range])
+    const commitSessions = buildSessions(filteredCommits, gapMinutes, leadInMinutes)
+    const activitySessions = activityToSessions(activity, projectNameById)
+    let combined: Session[]
+    if (source === 'commits') combined = commitSessions
+    else if (source === 'terminal') combined = activitySessions
+    else combined = mergeSessions([...commitSessions, ...activitySessions])
+    return clipSessionsToRange(combined, rangeStartMs(range))
+  }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, range, source])
 
   const perProjectHours = useMemo(() => {
     const map: Record<string, { projectId: string; projectName: string; ms: number }> = {}
@@ -119,12 +164,15 @@ export function Statistics(): React.ReactElement {
 
   const todayMs = useMemo(() => {
     const start = rangeStartMs('today')!
-    const todaySessions = clipSessionsToRange(
-      buildSessions(filteredCommits, gapMinutes, leadInMinutes),
-      start
-    )
+    const commitSessions = buildSessions(filteredCommits, gapMinutes, leadInMinutes)
+    const activitySessions = activityToSessions(activity, projectNameById)
+    let combined: Session[]
+    if (source === 'commits') combined = commitSessions
+    else if (source === 'terminal') combined = activitySessions
+    else combined = mergeSessions([...commitSessions, ...activitySessions])
+    const todaySessions = clipSessionsToRange(combined, start)
     return todaySessions.reduce((acc, s) => acc + s.durationMs, 0)
-  }, [filteredCommits, gapMinutes, leadInMinutes])
+  }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, source])
 
   const topProject = perProjectHours[0]?.projectName ?? '—'
 
@@ -153,7 +201,12 @@ export function Statistics(): React.ReactElement {
 
   const heatmap = useMemo(() => {
     const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0))
-    const allTimeSessions = buildSessions(filteredCommits, gapMinutes, leadInMinutes)
+    const commitSessions = buildSessions(filteredCommits, gapMinutes, leadInMinutes)
+    const activitySessions = activityToSessions(activity, projectNameById)
+    let allTimeSessions: Session[]
+    if (source === 'commits') allTimeSessions = commitSessions
+    else if (source === 'terminal') allTimeSessions = activitySessions
+    else allTimeSessions = mergeSessions([...commitSessions, ...activitySessions])
     for (const s of allTimeSessions) {
       const d = new Date(s.start)
       const dayIdx = (d.getDay() + 6) % 7
@@ -162,7 +215,7 @@ export function Statistics(): React.ReactElement {
     }
     const max = Math.max(...grid.flat(), 0.0001)
     return { grid, max }
-  }, [filteredCommits, gapMinutes, leadInMinutes])
+  }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, source])
 
   const languagePie = useMemo(() => {
     const totals: Record<string, number> = {}
@@ -200,39 +253,73 @@ export function Statistics(): React.ReactElement {
               </button>
             ))}
           </div>
-          <label className="flex items-center gap-1.5 text-xs text-zinc-400">
-            <input
-              type="checkbox"
-              checked={includeAllAuthors}
-              onChange={(e) => setIncludeAllAuthors(e.target.checked)}
-              className="h-3 w-3 accent-zinc-400"
-            />
-            Include all authors
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-zinc-400">
-            Gap
-            <input
-              type="number"
-              min={1}
-              max={240}
-              value={gapMinutes}
-              onChange={(e) => setGapMinutes(Math.max(1, Math.min(240, parseInt(e.target.value, 10) || 30)))}
-              className="w-14 rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-xs"
-            />
-            min
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-zinc-400">
-            Lead-in
-            <input
-              type="number"
-              min={0}
-              max={120}
-              value={leadInMinutes}
-              onChange={(e) => setLeadInMinutes(Math.max(0, Math.min(120, parseInt(e.target.value, 10) || 15)))}
-              className="w-14 rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-xs"
-            />
-            min
-          </label>
+          <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+            {SOURCE_OPTIONS.map((o) => (
+              <button
+                key={o.key}
+                onClick={() => setSource(o.key)}
+                className={cn(
+                  'rounded px-3 py-1 text-xs font-medium transition-colors',
+                  source === o.key ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                )}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          {source !== 'terminal' && (
+            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
+              <input
+                type="checkbox"
+                checked={includeAllAuthors}
+                onChange={(e) => setIncludeAllAuthors(e.target.checked)}
+                className="h-3 w-3 accent-zinc-400"
+              />
+              Include all authors
+            </label>
+          )}
+          {source !== 'terminal' && (
+            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
+              Gap
+              <input
+                type="number"
+                min={1}
+                max={240}
+                value={gapMinutes}
+                onChange={(e) => setGapMinutes(Math.max(1, Math.min(240, parseInt(e.target.value, 10) || 30)))}
+                className="w-14 rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-xs"
+              />
+              min
+            </label>
+          )}
+          {source !== 'terminal' && (
+            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
+              Lead-in
+              <input
+                type="number"
+                min={0}
+                max={120}
+                value={leadInMinutes}
+                onChange={(e) => setLeadInMinutes(Math.max(0, Math.min(120, parseInt(e.target.value, 10) || 15)))}
+                className="w-14 rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-xs"
+              />
+              min
+            </label>
+          )}
+          {source !== 'commits' && (
+            <label className="flex items-center gap-1.5 text-xs text-zinc-400">
+              Idle
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={idleMinutes}
+                onChange={(e) => setIdleMinutes(Math.max(1, Math.min(60, parseInt(e.target.value, 10) || 5)))}
+                className="w-14 rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 text-xs"
+              />
+              min
+            </label>
+          )}
           {loading && <span className="text-xs text-zinc-500">Loading…</span>}
         </div>
 
