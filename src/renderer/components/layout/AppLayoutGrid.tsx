@@ -3,6 +3,16 @@ import ReactGridLayout from 'react-grid-layout/legacy'
 import type { Layout } from 'react-grid-layout/legacy'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import type { ImperativePanelHandle } from 'react-resizable-panels'
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from '@dnd-kit/core'
+import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { DraggablePanel } from '@/components/layout/DraggablePanel'
 import { BrowserViewPanel } from '@/components/browser/BrowserViewPanel'
 import { DevToolsPanel } from '@/components/browser/DevToolsPanel'
@@ -25,6 +35,7 @@ import { Usage } from '@/components/usage/Usage'
 import { Settings } from '@/components/settings/Settings'
 import { Globe, Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, ChevronLeft, ChevronRight, LayoutDashboard, PieChart, Gauge, Settings as SettingsIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { Project } from '@/models/types'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 
@@ -43,8 +54,59 @@ const ProjectTabStatus = memo(function ProjectTabStatus({ projectId }: { project
   return null
 })
 
+function SortableProjectTab({
+  project,
+  isActive,
+  onSelect,
+  onRemove
+}: {
+  project: Project
+  isActive: boolean
+  onSelect: () => void
+  onRemove: () => void
+}): React.ReactElement {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    maxWidth: '160px',
+    opacity: isDragging ? 0.5 : undefined,
+    WebkitAppRegion: 'no-drag'
+  } as React.CSSProperties
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={onSelect}
+      title={project.name}
+      className={cn(
+        'group relative flex items-center gap-1 h-full px-2 text-xs font-medium transition-colors border-b-2 min-w-0 flex-1 basis-0 cursor-pointer select-none',
+        isActive
+          ? 'border-zinc-400 text-zinc-200 bg-zinc-800/50'
+          : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
+      )}
+    >
+      <FolderOpen size={12} className="shrink-0" />
+      <span className="truncate min-w-0 flex-1 text-left">{project.name}</span>
+      <ProjectTabStatus projectId={project.id} />
+      <span
+        onClick={(e) => {
+          e.stopPropagation()
+          onRemove()
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="shrink-0 rounded p-0.5 opacity-0 hover:bg-zinc-700 hover:text-red-400 group-hover:opacity-100 transition-opacity"
+      >
+        <X size={10} />
+      </span>
+    </div>
+  )
+}
+
 export function AppLayoutGrid(): React.ReactElement {
-  const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, loadProjects, addProject, removeProject, setActiveProject, showDashboard, showStatistics, showUsage, showSettings } =
+  const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, loadProjects, addProject, removeProject, setActiveProject, reorderProjects, showDashboard, showStatistics, showUsage, showSettings } =
     useProjectStore()
   const browserless = useLayoutStore((s) => activeProjectId ? s.isBrowserless(activeProjectId) : false)
   const defaultTab = browserless ? 'terminals' : 'browser'
@@ -58,6 +120,16 @@ export function AppLayoutGrid(): React.ReactElement {
     }
   )
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
+  const projectTabSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const handleProjectDragEnd = useCallback((event: DragEndEvent): void => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const fromIndex = projects.findIndex((p) => p.id === active.id)
+    const toIndex = projects.findIndex((p) => p.id === over.id)
+    if (fromIndex !== -1 && toIndex !== -1) {
+      reorderProjects(fromIndex, toIndex)
+    }
+  }, [projects, reorderProjects])
   const { getLayout, isLocked, saveLayout, isDevToolsCollapsed, setDevToolsCollapsed } = useLayoutStore()
   const resetVersion = useLayoutStore((s) => s.resetVersion)
   const backgroundImage = useLayoutStore((s) => s.backgroundImage)
@@ -374,33 +446,19 @@ export function AppLayoutGrid(): React.ReactElement {
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <div className="flex items-center h-full min-w-0 flex-1">
-            {[...projects].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map((project) => (
-              <button
-                key={project.id}
-                onClick={() => setActiveProject(project.id)}
-                title={project.name}
-                className={cn(
-                  'group relative flex items-center gap-1 h-full px-2 text-xs font-medium transition-colors border-b-2 min-w-0 flex-1 basis-0',
-                  activeProjectId === project.id && !dashboardActive && !statisticsActive && !settingsActive
-                    ? 'border-zinc-400 text-zinc-200 bg-zinc-800/50'
-                    : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
-                )}
-                style={{ maxWidth: '160px' }}
-              >
-                <FolderOpen size={12} className="shrink-0" />
-                <span className="truncate min-w-0 flex-1 text-left">{project.name}</span>
-                <ProjectTabStatus projectId={project.id} />
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    removeProject(project.id)
-                  }}
-                  className="shrink-0 rounded p-0.5 opacity-0 hover:bg-zinc-700 hover:text-red-400 group-hover:opacity-100 transition-opacity"
-                >
-                  <X size={10} />
-                </span>
-              </button>
-            ))}
+            <DndContext sensors={projectTabSensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
+              <SortableContext items={projects.map((p) => p.id)} strategy={horizontalListSortingStrategy}>
+                {projects.map((project) => (
+                  <SortableProjectTab
+                    key={project.id}
+                    project={project}
+                    isActive={activeProjectId === project.id && !dashboardActive && !statisticsActive && !usageActive && !settingsActive}
+                    onSelect={() => setActiveProject(project.id)}
+                    onRemove={() => removeProject(project.id)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
           <button
             onClick={addProject}

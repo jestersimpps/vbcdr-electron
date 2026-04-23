@@ -51,4 +51,20 @@ export function registerProjectHandlers(): void {
     clearProjectCredentials(id)
     return true
   })
+
+  ipcMain.handle('projects:reorder', (_event, orderedIds: string[]): boolean => {
+    const projects = store.get('projects')
+    const byId = new Map(projects.map((p) => [p.id, p]))
+    const reordered: Project[] = []
+    for (const id of orderedIds) {
+      const project = byId.get(id)
+      if (project) {
+        reordered.push(project)
+        byId.delete(id)
+      }
+    }
+    for (const remaining of byId.values()) reordered.push(remaining)
+    store.set('projects', reordered)
+    return true
+  })
 }

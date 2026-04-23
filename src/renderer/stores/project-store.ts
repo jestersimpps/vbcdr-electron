@@ -13,6 +13,7 @@ interface ProjectStore {
   loadProjects: () => Promise<void>
   addProject: () => Promise<Project | null>
   removeProject: (id: string) => Promise<void>
+  reorderProjects: (fromIndex: number, toIndex: number) => void
   setActiveProject: (id: string) => void
   showDashboard: () => void
   showStatistics: () => void
@@ -55,6 +56,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       set({ activeProjectId: null, dashboardActive: true, statisticsActive: false, usageActive: false, settingsActive: false })
     }
     await state.loadProjects()
+  },
+
+  reorderProjects: (fromIndex: number, toIndex: number) => {
+    set((state) => {
+      if (fromIndex === toIndex) return state
+      if (fromIndex < 0 || fromIndex >= state.projects.length) return state
+      if (toIndex < 0 || toIndex >= state.projects.length) return state
+      const reordered = [...state.projects]
+      const [moved] = reordered.splice(fromIndex, 1)
+      reordered.splice(toIndex, 0, moved)
+      void window.api.projects.reorder(reordered.map((p) => p.id))
+      return { projects: reordered }
+    })
   },
 
   setActiveProject: (id: string) => {
