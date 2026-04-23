@@ -336,50 +336,55 @@ export function AppLayoutGrid(): React.ReactElement {
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div
-          className="flex items-center gap-0.5 h-full"
+          className="flex items-center gap-0.5 h-full flex-1 min-w-0"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <button
             onClick={showDashboard}
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             className={cn(
-              'flex items-center gap-1.5 h-full px-3 text-xs font-medium transition-colors border-b-2',
+              'flex items-center justify-center h-full px-3 transition-colors',
               dashboardActive
-                ? 'border-zinc-400 text-zinc-200 bg-zinc-800/50'
-                : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
+                ? 'text-zinc-200 bg-zinc-800/50'
+                : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
             )}
+            title="Dashboard"
           >
-            <LayoutDashboard size={12} className="shrink-0" />
-            <span>Dashboard</span>
+            <LayoutDashboard size={14} />
           </button>
           <div className="mx-1 h-4 w-px bg-zinc-700/60" />
-          {[...projects].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map((project) => (
-            <button
-              key={project.id}
-              onClick={() => setActiveProject(project.id)}
-              className={cn(
-                'group flex items-center gap-1.5 h-full px-3 text-xs font-medium transition-colors border-b-2',
-                activeProjectId === project.id && !dashboardActive
-                  ? 'border-zinc-400 text-zinc-200 bg-zinc-800/50'
-                  : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
-              )}
-            >
-              <FolderOpen size={12} className="shrink-0" />
-              <span className="truncate max-w-[120px]">{project.name}</span>
-              <ProjectTabStatus projectId={project.id} />
-              <span
-                onClick={(e) => {
-                  e.stopPropagation()
-                  removeProject(project.id)
-                }}
-                className="ml-1 rounded p-0.5 opacity-0 hover:bg-zinc-700 hover:text-red-400 group-hover:opacity-100 transition-opacity"
+          <div className="flex items-center h-full min-w-0 flex-1">
+            {[...projects].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map((project) => (
+              <button
+                key={project.id}
+                onClick={() => setActiveProject(project.id)}
+                title={project.name}
+                className={cn(
+                  'group relative flex items-center gap-1 h-full px-2 text-xs font-medium transition-colors border-b-2 min-w-0 flex-1 basis-0',
+                  activeProjectId === project.id && !dashboardActive
+                    ? 'border-zinc-400 text-zinc-200 bg-zinc-800/50'
+                    : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
+                )}
+                style={{ maxWidth: '160px' }}
               >
-                <X size={10} />
-              </span>
-            </button>
-          ))}
+                <FolderOpen size={12} className="shrink-0" />
+                <span className="truncate min-w-0 flex-1 text-left">{project.name}</span>
+                <ProjectTabStatus projectId={project.id} />
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    removeProject(project.id)
+                  }}
+                  className="shrink-0 rounded p-0.5 opacity-0 hover:bg-zinc-700 hover:text-red-400 group-hover:opacity-100 transition-opacity"
+                >
+                  <X size={10} />
+                </span>
+              </button>
+            ))}
+          </div>
           <button
             onClick={addProject}
-            className="flex items-center justify-center h-full px-2 text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="flex items-center justify-center h-full px-2 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
             title="Add project"
           >
             <Plus size={14} />

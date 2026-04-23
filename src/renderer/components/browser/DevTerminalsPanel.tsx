@@ -5,15 +5,8 @@ import { TerminalInstance, disposeTerminal, focusTerminal } from '@/components/t
 import { Plus, X } from 'lucide-react'
 
 function getGridLayout(count: number): { cols: number; rows: number[] } {
-  switch (count) {
-    case 1: return { cols: 1, rows: [1] }
-    case 2: return { cols: 1, rows: [1, 1] }
-    case 3: return { cols: 2, rows: [2, 1] }
-    case 4: return { cols: 2, rows: [2, 2] }
-    case 5: return { cols: 3, rows: [3, 2] }
-    case 6: return { cols: 3, rows: [3, 3] }
-    default: return { cols: 3, rows: [3, 3] }
-  }
+  const n = Math.max(1, count)
+  return { cols: 1, rows: Array.from({ length: n }, () => 1) }
 }
 
 export function DevTerminalsPanel(): React.ReactElement {
