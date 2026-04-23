@@ -177,7 +177,7 @@ export function Usage(): React.ReactElement {
 
   return (
     <div className="min-h-full bg-zinc-950 p-6 text-zinc-200">
-      <div className="mx-auto max-w-[1200px] space-y-4">
+      <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold">Usage</h1>
           <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
