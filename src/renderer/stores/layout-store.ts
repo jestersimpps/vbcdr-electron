@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Layout } from 'react-grid-layout'
+import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
 
 export type PanelId = 'browser-editor' | 'git' | 'llm-terminals'
 
@@ -49,6 +50,8 @@ interface LayoutState {
   backgroundImage: string | null
   backgroundBlur: number
   tokenCap: number
+  idleSoundEnabled: boolean
+  idleSoundId: string
   resetVersion: number
   getLayout: (projectId: string, browserless?: boolean) => Layout[]
   isLocked: (projectId: string, panelId: PanelId) => boolean
@@ -62,6 +65,8 @@ interface LayoutState {
   setBackgroundImage: (dataUrl: string | null) => void
   setBackgroundBlur: (blur: number) => void
   setTokenCap: (cap: number) => void
+  setIdleSoundEnabled: (enabled: boolean) => void
+  setIdleSoundId: (id: string) => void
 }
 
 export const DEFAULT_TOKEN_CAP = 160_000
@@ -85,6 +90,8 @@ export const useLayoutStore = create<LayoutState>()(
       backgroundImage: null,
       backgroundBlur: 0,
       tokenCap: DEFAULT_TOKEN_CAP,
+      idleSoundEnabled: false,
+      idleSoundId: DEFAULT_IDLE_SOUND_ID,
       resetVersion: 0,
 
       getLayout: (projectId: string, browserless?: boolean) => {
@@ -157,6 +164,14 @@ export const useLayoutStore = create<LayoutState>()(
         set({ tokenCap: safe })
       },
 
+      setIdleSoundEnabled: (enabled: boolean) => {
+        set({ idleSoundEnabled: enabled })
+      },
+
+      setIdleSoundId: (id: string) => {
+        set({ idleSoundId: id })
+      },
+
       resetLayout: (projectId: string) => {
         const lpp = { ...get().layoutsPerProject }
         const lkp = { ...get().locksPerProject }
@@ -181,7 +196,9 @@ export const useLayoutStore = create<LayoutState>()(
         browserlessPerProject: state.browserlessPerProject,
         backgroundImage: state.backgroundImage,
         backgroundBlur: state.backgroundBlur,
-        tokenCap: state.tokenCap
+        tokenCap: state.tokenCap,
+        idleSoundEnabled: state.idleSoundEnabled,
+        idleSoundId: state.idleSoundId
       })
     }
   )

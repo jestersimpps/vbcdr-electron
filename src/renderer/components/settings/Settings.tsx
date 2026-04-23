@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react'
-import { Image as ImageIcon, X, Palette, Moon, Sun, Pencil, Zap, RotateCcw, type LucideIcon } from 'lucide-react'
+import { Image as ImageIcon, X, Palette, Moon, Sun, Pencil, Zap, RotateCcw, Volume2, Play, type LucideIcon } from 'lucide-react'
 import { useLayoutStore, DEFAULT_TOKEN_CAP } from '@/stores/layout-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { getThemesByCategory, getThemeById, type ThemeDefinition } from '@/config/theme-registry'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
+import { IDLE_SOUNDS } from '@/config/sound-registry'
 import { CustomThemeEditor } from '@/components/theme/CustomThemeEditor'
 import { applyBackgroundTransparency } from '@/components/terminal/TerminalInstance'
+import { playSound } from '@/lib/sound'
 import { cn } from '@/lib/utils'
 
 const TOKEN_CAP_PRESETS: { label: string; value: number }[] = [
@@ -35,6 +37,7 @@ export function Settings(): React.ReactElement {
         <h1 className="text-2xl font-semibold text-zinc-100">Settings</h1>
         <TokenCapSection />
         <BackgroundSection />
+        <SoundSection />
         <ThemeSection />
       </div>
     </div>
@@ -231,6 +234,67 @@ function BackgroundSection(): React.ReactElement {
               className="h-1 w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
             />
           </div>
+        </div>
+      </div>
+    </SectionCard>
+  )
+}
+
+function SoundSection(): React.ReactElement {
+  const idleSoundEnabled = useLayoutStore((s) => s.idleSoundEnabled)
+  const setIdleSoundEnabled = useLayoutStore((s) => s.setIdleSoundEnabled)
+  const idleSoundId = useLayoutStore((s) => s.idleSoundId)
+  const setIdleSoundId = useLayoutStore((s) => s.setIdleSoundId)
+  const accent = useAccent()
+
+  return (
+    <SectionCard
+      title="Sounds"
+      description="Play a sound when an LLM terminal becomes idle."
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={() => setIdleSoundEnabled(!idleSoundEnabled)}
+          className={cn(
+            'relative h-5 w-9 rounded-full border transition-colors',
+            idleSoundEnabled ? 'border-transparent' : 'border-zinc-700 bg-zinc-800'
+          )}
+          style={idleSoundEnabled ? { backgroundColor: accent, borderColor: accent } : undefined}
+          aria-pressed={idleSoundEnabled}
+          aria-label="Toggle idle sound"
+        >
+          <span
+            className={cn(
+              'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform',
+              idleSoundEnabled ? 'translate-x-4' : 'translate-x-0.5'
+            )}
+          />
+        </button>
+        <span className="text-xs text-zinc-400">Play sound on idle</span>
+
+        <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2 rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1">
+            <Volume2 size={13} style={{ color: idleSoundEnabled ? accent : '#71717a' }} />
+            <select
+              value={idleSoundId}
+              onChange={(e) => setIdleSoundId(e.target.value)}
+              className="cursor-pointer bg-transparent text-xs text-zinc-200 outline-none"
+            >
+              {IDLE_SOUNDS.map((s) => (
+                <option key={s.id} value={s.id} className="bg-zinc-900">
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={() => playSound(idleSoundId)}
+            className="flex items-center gap-1 rounded border border-zinc-800 bg-zinc-900/30 px-2 py-1 text-xs text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200"
+            title="Preview"
+          >
+            <Play size={11} />
+            Preview
+          </button>
         </div>
       </div>
     </SectionCard>

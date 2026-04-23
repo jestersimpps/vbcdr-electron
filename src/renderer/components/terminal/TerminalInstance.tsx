@@ -9,6 +9,7 @@ import { useThemeStore } from '@/stores/theme-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
+import { playSound } from '@/lib/sound'
 
 interface TerminalInstanceProps {
   tabId: string
@@ -199,7 +200,12 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           if (idleTimer) clearTimeout(idleTimer)
           idleTimer = setTimeout(() => {
             if (busyTimer) { clearTimeout(busyTimer); busyTimer = null }
+            const prev = useTerminalStore.getState().tabStatuses[tabId]
             useTerminalStore.getState().setTabStatus(tabId, 'idle')
+            if (prev === 'busy') {
+              const { idleSoundEnabled, idleSoundId } = useLayoutStore.getState()
+              if (idleSoundEnabled) playSound(idleSoundId)
+            }
           }, 3000)
 
           const prevTimer = bufferReadTimers.get(tabId)
