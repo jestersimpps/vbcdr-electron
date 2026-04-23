@@ -253,6 +253,8 @@ function EditorSection(): React.ReactElement {
   const setFontSize = useEditorPrefsStore((s) => s.setFontSize)
   const tabSize = useEditorPrefsStore((s) => s.tabSize)
   const setTabSize = useEditorPrefsStore((s) => s.setTabSize)
+  const bracketPairColorization = useEditorPrefsStore((s) => s.bracketPairColorization)
+  const setBracketPairColorization = useEditorPrefsStore((s) => s.setBracketPairColorization)
   const accent = useAccent()
 
   return (
@@ -263,6 +265,13 @@ function EditorSection(): React.ReactElement {
           description="Show code minimap on the right edge of the editor."
           enabled={minimapEnabled}
           onToggle={() => setMinimapEnabled(!minimapEnabled)}
+          accent={accent}
+        />
+        <PrefToggle
+          label="Bracket pair colorization"
+          description="Match matching brackets with the same color."
+          enabled={bracketPairColorization}
+          onToggle={() => setBracketPairColorization(!bracketPairColorization)}
           accent={accent}
         />
         <PrefToggle

@@ -315,6 +315,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   const autosaveDelayMs = useEditorPrefsStore((s) => s.autosaveDelayMs)
   const fontSize = useEditorPrefsStore((s) => s.fontSize)
   const tabSize = useEditorPrefsStore((s) => s.tabSize)
+  const bracketPairColorization = useEditorPrefsStore((s) => s.bracketPairColorization)
   const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? EMPTY_FILES)
   const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
   const { setActiveFile, closeFile, editFileContent, saveFile } = useEditorStore()
@@ -439,7 +440,8 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
                 wordWrap: 'on',
-                padding: { top: 8 }
+                padding: { top: 8 },
+                bracketPairColorization: { enabled: bracketPairColorization }
               }}
             />
           ) : (
@@ -457,7 +459,8 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
                 wordWrap: 'on',
-                padding: { top: 8 }
+                padding: { top: 8 },
+                bracketPairColorization: { enabled: bracketPairColorization }
               }}
             />
           )
