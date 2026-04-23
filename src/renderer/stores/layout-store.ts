@@ -20,7 +20,7 @@ export const panelConfigs: PanelConfig[] = [
 ]
 
 export const browserlessPanelConfigs: PanelConfig[] = [
-  { id: 'browser-editor', title: 'Terminals' },
+  { id: 'browser-editor', title: 'Workspace' },
   { id: 'git', title: 'Git' }
 ]
 

@@ -3,6 +3,7 @@ import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
 import { GitBranch as GitBranchIcon, ArrowDown, GitMerge, RefreshCw } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
+import { DiffOverlay } from '@/components/git/DiffOverlay'
 
 const LANE_COLORS = [
   '#4ade80',
@@ -318,6 +319,7 @@ export function GitTree(): React.ReactElement {
         )}
       </div>
 
+      <DiffOverlay projectId={activeProject.id} cwd={activeProject.path} />
     </div>
   )
 }
