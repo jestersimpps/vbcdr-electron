@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react'
 import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
-import { GitBranch as GitBranchIcon, ArrowDown, GitMerge, RefreshCw } from 'lucide-react'
+import { useDiffOverlayStore } from '@/stores/diff-overlay-store'
+import { GitBranch as GitBranchIcon, ArrowDown, GitMerge, RefreshCw, FileDiff } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 import { DiffOverlay } from '@/components/git/DiffOverlay'
 import { BranchSwitcher } from '@/components/git/BranchSwitcher'
@@ -207,7 +208,15 @@ export function GitTree(): React.ReactElement {
   const drift = useGitStore((s) => activeProjectId ? s.driftPerProject[activeProjectId] : undefined)
   const pullAction = useGitStore((s) => s.pull)
   const rebaseAction = useGitStore((s) => s.rebaseRemote)
+  const loadStatus = useGitStore((s) => s.loadStatus)
+  const resetDismiss = useDiffOverlayStore((s) => s.resetDismiss)
   const { loadGitData } = useGitStore()
+
+  const openDiffOverlayManually = async (): Promise<void> => {
+    if (!activeProject) return
+    resetDismiss(activeProject.id)
+    await loadStatus(activeProject.id, activeProject.path)
+  }
 
   useEffect(() => {
     if (!activeProject) return
@@ -265,13 +274,22 @@ export function GitTree(): React.ReactElement {
             </button>
           )}
         </div>
-        <button
-          onClick={() => activeProject && loadGitData(activeProject.id, activeProject.path)}
-          className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-          title="Refresh"
-        >
-          <RefreshCw size={12} />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={openDiffOverlayManually}
+            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+            title="Open diff overlay for current changes"
+          >
+            <FileDiff size={12} />
+          </button>
+          <button
+            onClick={() => activeProject && loadGitData(activeProject.id, activeProject.path)}
+            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+            title="Refresh"
+          >
+            <RefreshCw size={12} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto">

@@ -11,12 +11,15 @@ import {
   getConflicts,
   pull,
   rebaseRemote,
+  commitAll,
+  commitPaths,
+  getFirstChangedLine,
   getCommitsSince,
   getUserEmail,
   getLanguageTally
 } from '@main/services/git-service'
 import { registerProject, unregisterProject, fetchNow } from '@main/services/git-fetch-service'
-import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
+import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
 
 export function registerGitHandlers(): void {
   ipcMain.handle('git:is-repo', async (_event, cwd: string): Promise<boolean> => {
@@ -78,6 +81,18 @@ export function registerGitHandlers(): void {
 
   ipcMain.handle('git:rebase-remote', async (_event, cwd: string): Promise<string> => {
     return rebaseRemote(cwd)
+  })
+
+  ipcMain.handle('git:commit-all', async (_event, cwd: string, message: string): Promise<GitCommitResult> => {
+    return commitAll(cwd, message)
+  })
+
+  ipcMain.handle('git:commit-paths', async (_event, cwd: string, message: string, paths: string[]): Promise<GitCommitResult> => {
+    return commitPaths(cwd, message, paths)
+  })
+
+  ipcMain.handle('git:first-changed-line', async (_event, cwd: string, filePath: string): Promise<number | null> => {
+    return getFirstChangedLine(cwd, filePath)
   })
 
   ipcMain.handle('git:conflicts', async (_event, cwd: string): Promise<ConflictInfo[]> => {

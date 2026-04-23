@@ -1,8 +1,9 @@
-import { useEffect, useMemo } from 'react'
-import { X, RotateCcw, FileText } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { X, RotateCcw, FileText, GitCommit } from 'lucide-react'
 import { useDiffOverlayStore } from '@/stores/diff-overlay-store'
 import { useGitStore } from '@/stores/git-store'
 import { useEditorStore } from '@/stores/editor-store'
+import { useTerminalStore } from '@/stores/terminal-store'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
 import type { GitFileStatus } from '@/models/types'
 
@@ -32,22 +33,34 @@ function basename(path: string): string {
 }
 
 export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactElement | null {
-  const isOpen = useDiffOverlayStore((s) => s.openPerProject[projectId] ?? false)
-  const paths = useDiffOverlayStore((s) => s.pendingPerProject[projectId])
+  const dismissed = useDiffOverlayStore((s) => s.dismissedPerProject[projectId] ?? false)
+  const excluded = useDiffOverlayStore((s) => s.excludedPerProject[projectId])
   const closeForProject = useDiffOverlayStore((s) => s.closeForProject)
-  const removePath = useDiffOverlayStore((s) => s.removePath)
+  const resetDismiss = useDiffOverlayStore((s) => s.resetDismiss)
+  const toggleExcluded = useDiffOverlayStore((s) => s.toggleExcluded)
+  const clearExcluded = useDiffOverlayStore((s) => s.clearExcluded)
   const statusMap = useGitStore((s) => s.statusPerProject[projectId])
   const loadStatus = useGitStore((s) => s.loadStatus)
 
   const files = useMemo<ChangedFile[]>(() => {
-    if (!paths) return []
-    return paths.map((absolutePath) => ({
+    if (!statusMap) return []
+    const allPaths = Object.keys(statusMap).filter((p) => p !== cwd)
+    const leafPaths = allPaths.filter(
+      (p) => !allPaths.some((other) => other !== p && other.startsWith(p + '/'))
+    )
+    return leafPaths.map((absolutePath) => ({
       absolutePath,
       name: basename(absolutePath),
       relativePath: toRelative(absolutePath, cwd),
-      status: statusMap?.[absolutePath]
+      status: statusMap[absolutePath]
     }))
-  }, [paths, cwd, statusMap])
+  }, [cwd, statusMap])
+
+  const isOpen = files.length > 0 && !dismissed
+
+  useEffect(() => {
+    if (files.length === 0 && dismissed) resetDismiss(projectId)
+  }, [files.length, dismissed, projectId, resetDismiss])
 
   useEffect(() => {
     if (!isOpen) return
@@ -62,14 +75,18 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
   }, [isOpen, projectId, closeForProject])
 
   const handleOpenFile = async (file: ChangedFile): Promise<void> => {
+    const line = await window.api.git.firstChangedLine(cwd, file.absolutePath)
+    if (line && line >= 1) {
+      useEditorStore.getState().setPendingRevealLine(file.absolutePath, line)
+    }
     await useEditorStore.getState().openFile(projectId, file.absolutePath, file.name, cwd, file.status)
+    closeForProject(projectId)
   }
 
   const handleRevert = async (file: ChangedFile): Promise<void> => {
     const headContent = await window.api.git.fileAtHead(cwd, file.absolutePath)
     if (headContent === null) return
     await window.api.fs.writeFile(file.absolutePath, headContent)
-    removePath(projectId, file.absolutePath)
     await loadStatus(projectId, cwd)
   }
 
@@ -80,8 +97,54 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
         await window.api.fs.writeFile(file.absolutePath, headContent)
       }
     }
-    closeForProject(projectId)
     await loadStatus(projectId, cwd)
+  }
+
+  const [commitMessage, setCommitMessage] = useState('')
+  const [committing, setCommitting] = useState(false)
+  const [commitError, setCommitError] = useState<string | null>(null)
+
+  const llmCommit = (): void => {
+    const tState = useTerminalStore.getState()
+    const llmTab = tState.tabs.find((t) => t.projectId === projectId && !!t.initialCommand)
+    if (!llmTab) {
+      setCommitError('No LLM tab found in this project')
+      return
+    }
+    tState.setActiveTab(projectId, llmTab.id)
+    useEditorStore.getState().setCenterTab(projectId, 'terminals')
+    window.api.terminal.write(llmTab.id, 'commit the current changes\r')
+  }
+
+  const includedPaths = useMemo(
+    () => files.filter((f) => !excluded?.has(f.absolutePath)).map((f) => f.absolutePath),
+    [files, excluded]
+  )
+
+  const handleCommit = async (): Promise<void> => {
+    if (committing) return
+    if (includedPaths.length === 0) return
+    const message = commitMessage.trim()
+    if (!message) {
+      llmCommit()
+      return
+    }
+    setCommitting(true)
+    setCommitError(null)
+    const hasExclusions = includedPaths.length !== files.length
+    const result = hasExclusions
+      ? await window.api.git.commitPaths(cwd, message, includedPaths)
+      : await window.api.git.commitAll(cwd, message)
+    setCommitting(false)
+    if (!result.success) {
+      setCommitError(result.error ?? 'Commit failed')
+      return
+    }
+    setCommitMessage('')
+    clearExcluded(projectId)
+    useEditorStore.getState().setCenterTab(projectId, 'terminals')
+    await loadStatus(projectId, cwd)
+    await useGitStore.getState().loadGitData(projectId, cwd)
   }
 
   return (
@@ -96,7 +159,7 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
           <span className="shrink-0 text-[11px] text-zinc-300">Changes from LLM</span>
           {files.length > 0 && (
             <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
-              {files.length}
+              {includedPaths.length === files.length ? files.length : `${includedPaths.length}/${files.length}`}
             </span>
           )}
         </div>
@@ -120,18 +183,28 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-auto">
         {files.length === 0 ? (
           <div className="p-4 text-center text-xs text-zinc-600">No changes</div>
         ) : (
           files.map((file) => {
             const statusColor = file.status ? GIT_STATUS_COLORS[file.status] : 'text-zinc-400'
             const statusLabel = file.status ? GIT_STATUS_LABELS[file.status] : '?'
+            const isExcluded = excluded?.has(file.absolutePath) ?? false
             return (
               <div
                 key={file.absolutePath}
-                className="group flex items-center gap-1.5 border-b border-zinc-900 px-2 py-1.5 hover:bg-zinc-800/40"
+                className={`group flex items-center gap-1.5 border-b border-zinc-900 px-2 py-1.5 hover:bg-zinc-800/40 ${
+                  isExcluded ? 'opacity-40' : ''
+                }`}
               >
+                <input
+                  type="checkbox"
+                  checked={!isExcluded}
+                  onChange={() => toggleExcluded(projectId, file.absolutePath)}
+                  className="shrink-0 cursor-pointer accent-emerald-500"
+                  title={isExcluded ? 'Include in commit' : 'Exclude from commit'}
+                />
                 <span className={`shrink-0 w-3 text-center text-[10px] font-semibold tabular-nums ${statusColor}`}>
                   {statusLabel}
                 </span>
@@ -140,7 +213,7 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
                   className="min-w-0 flex-1 text-left"
                   title={file.relativePath}
                 >
-                  <div className={`truncate text-[11px] leading-tight ${statusColor}`}>
+                  <div className={`truncate text-[11px] leading-tight ${statusColor} ${isExcluded ? 'line-through' : ''}`}>
                     {file.name}
                   </div>
                   <div className="truncate text-[9px] text-zinc-500">
@@ -159,6 +232,47 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
           })
         )}
       </div>
+
+      {files.length > 0 && (
+        <div className="shrink-0 border-t border-zinc-800 bg-zinc-900/50 p-2">
+          {commitError && (
+            <div className="mb-1 truncate text-[10px] text-red-400" title={commitError}>
+              {commitError}
+            </div>
+          )}
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              value={commitMessage}
+              onChange={(e) => setCommitMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleCommit()
+                }
+              }}
+              placeholder="Commit message — empty for LLM commit"
+              disabled={committing}
+              className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-[11px] text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-700"
+            />
+            <button
+              onClick={handleCommit}
+              disabled={committing || includedPaths.length === 0}
+              className="flex shrink-0 items-center gap-1 rounded bg-emerald-500/15 px-2 py-1 text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+              title={
+                includedPaths.length === 0
+                  ? 'No files included'
+                  : commitMessage.trim()
+                    ? `Commit ${includedPaths.length} file${includedPaths.length === 1 ? '' : 's'}`
+                    : 'Have the LLM commit the current changes'
+              }
+            >
+              <GitCommit size={11} />
+              <span>{committing ? 'Committing…' : commitMessage.trim() ? 'Commit' : 'LLM commit'}</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

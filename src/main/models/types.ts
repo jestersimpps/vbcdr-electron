@@ -94,6 +94,12 @@ export interface GitCheckoutResult {
   error?: string
 }
 
+export interface GitCommitResult {
+  success: boolean
+  hash?: string
+  error?: string
+}
+
 export interface BranchDriftInfo {
   ahead: number
   behind: number

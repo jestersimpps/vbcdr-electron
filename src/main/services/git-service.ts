@@ -2,7 +2,7 @@ import { execFile as execFileCb } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
 import fs from 'fs'
-import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
+import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
 import { EXT_TO_LANGUAGE } from '@main/services/language-map'
 
 const execFile = promisify(execFileCb)
@@ -265,6 +265,49 @@ export async function rebaseRemote(cwd: string): Promise<string> {
     return await runGit(cwd, ['pull', '--rebase'], 15000)
   } catch (err) {
     return (err as Error).message
+  }
+}
+
+export async function commitAll(cwd: string, message: string): Promise<GitCommitResult> {
+  try {
+    await runGit(cwd, ['add', '-A'], 15000)
+    await runGit(cwd, ['commit', '-m', message], 15000)
+    const hash = await runGit(cwd, ['rev-parse', 'HEAD'])
+    return { success: true, hash }
+  } catch (err) {
+    return { success: false, error: (err as Error).message }
+  }
+}
+
+export async function commitPaths(cwd: string, message: string, absolutePaths: string[]): Promise<GitCommitResult> {
+  try {
+    if (absolutePaths.length === 0) {
+      return { success: false, error: 'No files selected to commit' }
+    }
+    const relativePaths = absolutePaths.map((p) => path.relative(cwd, p))
+    await runGit(cwd, ['reset', '--', '.'], 15000)
+    await runGit(cwd, ['add', '--', ...relativePaths], 15000)
+    await runGit(cwd, ['commit', '--only', '-m', message, '--', ...relativePaths], 15000)
+    const hash = await runGit(cwd, ['rev-parse', 'HEAD'])
+    return { success: true, hash }
+  } catch (err) {
+    return { success: false, error: (err as Error).message }
+  }
+}
+
+export async function getFirstChangedLine(cwd: string, absolutePath: string): Promise<number | null> {
+  try {
+    const relativePath = path.relative(cwd, absolutePath)
+    if (relativePath.startsWith('..')) return null
+    const raw = await runGit(cwd, ['diff', '--unified=0', 'HEAD', '--', relativePath])
+    if (!raw) {
+      const untracked = await runGit(cwd, ['ls-files', '--others', '--exclude-standard', '--', relativePath])
+      return untracked ? 1 : null
+    }
+    const match = raw.match(/^@@ -\d+(?:,\d+)? \+(\d+)/m)
+    return match ? parseInt(match[1], 10) || 1 : null
+  } catch {
+    return null
   }
 }
 

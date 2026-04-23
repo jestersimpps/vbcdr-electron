@@ -2,19 +2,39 @@ import { create } from 'zustand'
 
 interface DiffOverlayStore {
   changedFilesPerTab: Record<string, Set<string>>
-  pendingPerProject: Record<string, string[]>
-  openPerProject: Record<string, boolean>
+  dismissedPerProject: Record<string, boolean>
+  excludedPerProject: Record<string, Set<string>>
   markFileChanged: (tabId: string, path: string) => void
   clearForTab: (tabId: string) => void
-  openForProject: (projectId: string, paths: string[]) => void
   closeForProject: (projectId: string) => void
-  removePath: (projectId: string, path: string) => void
+  resetDismiss: (projectId: string) => void
+  toggleExcluded: (projectId: string, path: string) => void
+  clearExcluded: (projectId: string) => void
 }
 
 export const useDiffOverlayStore = create<DiffOverlayStore>((set) => ({
   changedFilesPerTab: {},
-  pendingPerProject: {},
-  openPerProject: {},
+  dismissedPerProject: {},
+  excludedPerProject: {},
+
+  toggleExcluded: (projectId: string, path: string) => {
+    set((s) => {
+      const existing = s.excludedPerProject[projectId] ?? new Set<string>()
+      const next = new Set(existing)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return { excludedPerProject: { ...s.excludedPerProject, [projectId]: next } }
+    })
+  },
+
+  clearExcluded: (projectId: string) => {
+    set((s) => {
+      if (!s.excludedPerProject[projectId]) return s
+      const next = { ...s.excludedPerProject }
+      delete next[projectId]
+      return { excludedPerProject: next }
+    })
+  },
 
   markFileChanged: (tabId: string, path: string) => {
     set((s) => {
@@ -35,27 +55,18 @@ export const useDiffOverlayStore = create<DiffOverlayStore>((set) => ({
     })
   },
 
-  openForProject: (projectId: string, paths: string[]) => {
-    set((s) => ({
-      pendingPerProject: { ...s.pendingPerProject, [projectId]: paths },
-      openPerProject: { ...s.openPerProject, [projectId]: true }
-    }))
-  },
-
   closeForProject: (projectId: string) => {
     set((s) => ({
-      openPerProject: { ...s.openPerProject, [projectId]: false }
+      dismissedPerProject: { ...s.dismissedPerProject, [projectId]: true }
     }))
   },
 
-  removePath: (projectId: string, path: string) => {
+  resetDismiss: (projectId: string) => {
     set((s) => {
-      const current = s.pendingPerProject[projectId] ?? []
-      const next = current.filter((p) => p !== path)
-      return {
-        pendingPerProject: { ...s.pendingPerProject, [projectId]: next },
-        openPerProject: next.length === 0 ? { ...s.openPerProject, [projectId]: false } : s.openPerProject
-      }
+      if (!s.dismissedPerProject[projectId]) return s
+      const next = { ...s.dismissedPerProject }
+      delete next[projectId]
+      return { dismissedPerProject: next }
     })
   }
 }))

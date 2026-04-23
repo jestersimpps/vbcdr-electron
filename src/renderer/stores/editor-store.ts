@@ -11,6 +11,7 @@ interface ProjectEditorState {
 interface EditorStore {
   statePerProject: Record<string, ProjectEditorState>
   centerTabPerProject: Record<string, CenterTab>
+  pendingRevealLine: Record<string, number>
   setCenterTab: (projectId: string, tab: CenterTab) => void
   openFile: (projectId: string, path: string, name: string, cwd?: string, gitStatus?: GitFileStatus) => Promise<void>
   closeFile: (projectId: string, path: string) => void
@@ -20,6 +21,8 @@ interface EditorStore {
   saveFile: (projectId: string, filePath: string) => Promise<boolean>
   reorderFiles: (projectId: string, fromIndex: number, toIndex: number) => void
   openDefaultFile: (projectId: string, tree: FileNode) => Promise<void>
+  setPendingRevealLine: (filePath: string, line: number) => void
+  consumePendingRevealLine: (filePath: string) => number | null
 }
 
 const EMPTY_STATE: ProjectEditorState = { openFiles: [], activeFilePath: null }
@@ -56,6 +59,22 @@ function findDefaultFile(tree: FileNode): { path: string; name: string } | null 
 export const useEditorStore = create<EditorStore>((set, get) => ({
   statePerProject: {},
   centerTabPerProject: {},
+  pendingRevealLine: {},
+
+  setPendingRevealLine: (filePath: string, line: number) => {
+    set((s) => ({ pendingRevealLine: { ...s.pendingRevealLine, [filePath]: line } }))
+  },
+
+  consumePendingRevealLine: (filePath: string): number | null => {
+    const line = get().pendingRevealLine[filePath]
+    if (line === undefined) return null
+    set((s) => {
+      const next = { ...s.pendingRevealLine }
+      delete next[filePath]
+      return { pendingRevealLine: next }
+    })
+    return line
+  },
 
   setCenterTab: (projectId: string, tab: CenterTab) => {
     set((s) => ({

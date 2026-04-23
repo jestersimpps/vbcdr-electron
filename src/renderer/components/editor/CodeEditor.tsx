@@ -423,6 +423,17 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
     return useEditorStore.getState().saveFile(projectId, filePath)
   }, [projectId])
 
+  const applyPendingReveal = useCallback((filePath: string | null): void => {
+    if (!filePath) return
+    const ed = editorRef.current
+    if (!ed) return
+    const line = useEditorStore.getState().consumePendingRevealLine(filePath)
+    if (line === null || line < 1) return
+    ed.revealLineInCenter(line)
+    ed.setPosition({ lineNumber: line, column: 1 })
+    ed.focus()
+  }, [])
+
   const handleEditorMount = useCallback((editorInstance: editor.IStandaloneCodeEditor) => {
     editorRef.current = editorInstance
     editorInstance.getModel()?.updateOptions({ tabSize })
@@ -439,11 +450,19 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
         }
       }
     })
-  }, [projectId, flashSaved, tabSize, saveActiveFile])
+    const activePath = useEditorStore.getState().statePerProject[projectId]?.activeFilePath
+    requestAnimationFrame(() => applyPendingReveal(activePath))
+  }, [projectId, flashSaved, tabSize, saveActiveFile, applyPendingReveal])
 
   useEffect(() => {
     editorRef.current?.getModel()?.updateOptions({ tabSize })
   }, [tabSize, activeFilePath])
+
+  useEffect(() => {
+    if (!activeFilePath) return
+    const id = requestAnimationFrame(() => applyPendingReveal(activeFilePath))
+    return () => cancelAnimationFrame(id)
+  }, [activeFilePath, applyPendingReveal])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 

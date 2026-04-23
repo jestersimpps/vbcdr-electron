@@ -8,8 +8,6 @@ import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { useThemeStore } from '@/stores/theme-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
-import { useDiffOverlayStore } from '@/stores/diff-overlay-store'
-import { useGitStore } from '@/stores/git-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import { playSound } from '@/lib/sound'
 
@@ -53,37 +51,6 @@ function ensureGlobalDataDispatcher(): void {
   })
 }
 
-let globalFsUnsub: (() => void) | null = null
-
-function ensureGlobalFsWatcher(): void {
-  if (globalFsUnsub) return
-  globalFsUnsub = window.api.fs.onFileChanged((path: string) => {
-    const { tabs } = useTerminalStore.getState()
-    const { tabStatuses } = useTerminalStore.getState()
-    for (const tab of tabs) {
-      if (!tab.initialCommand) continue
-      if (tabStatuses[tab.id] !== 'busy') continue
-      if (!path.startsWith(tab.cwd)) continue
-      useDiffOverlayStore.getState().markFileChanged(tab.id, path)
-    }
-  })
-}
-
-async function maybeOpenDiffOverlay(tabId: string, projectId: string, cwd: string): Promise<void> {
-  const changed = useDiffOverlayStore.getState().changedFilesPerTab[tabId]
-  if (!changed || changed.size === 0) return
-
-  const activeTabId = useTerminalStore.getState().activeTabPerProject[projectId]
-  if (activeTabId !== tabId) return
-
-  await useGitStore.getState().loadStatus(projectId, cwd)
-  const statusMap = useGitStore.getState().statusPerProject[projectId] ?? {}
-
-  const paths = Array.from(changed).filter((p) => statusMap[p])
-  if (paths.length === 0) return
-
-  useDiffOverlayStore.getState().openForProject(projectId, paths)
-}
 
 export function applyThemeToAll(themeId: string): void {
   const xtermTheme = getTerminalTheme(themeId)
@@ -199,7 +166,6 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           const currentStatus = useTerminalStore.getState().tabStatuses[tabId]
           if (currentStatus !== 'busy') {
             useTerminalStore.getState().setTabStatus(tabId, 'busy')
-            useDiffOverlayStore.getState().clearForTab(tabId)
           }
         }
       })
@@ -230,17 +196,15 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           const currentStatus = useTerminalStore.getState().tabStatuses[tabId]
           if (!suppressed && currentStatus !== 'busy') {
             useTerminalStore.getState().setTabStatus(tabId, 'busy')
-            useDiffOverlayStore.getState().clearForTab(tabId)
           }
 
           if (idleTimer) clearTimeout(idleTimer)
-          idleTimer = setTimeout(async () => {
+          idleTimer = setTimeout(() => {
             const prev = useTerminalStore.getState().tabStatuses[tabId]
             useTerminalStore.getState().setTabStatus(tabId, 'idle')
             if (prev === 'busy') {
               const { idleSoundEnabled, idleSoundId } = useLayoutStore.getState()
               if (idleSoundEnabled) playSound(idleSoundId)
-              await maybeOpenDiffOverlay(tabId, projectId, cwd)
             }
           }, 3000)
 
@@ -274,7 +238,6 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       }
       terminalsMap.get(tabId)!.onIncomingData = onIncomingData
       ensureGlobalDataDispatcher()
-      ensureGlobalFsWatcher()
 
       let opened = false
       const openWhenSized = (): void => {
