@@ -7,6 +7,7 @@ import { registerBrowserHandlers } from '@main/ipc/browser'
 import { registerGitHandlers } from '@main/ipc/git'
 import { registerPasswordHandlers } from '@main/ipc/passwords'
 import { registerClaudeConfigHandlers } from '@main/ipc/claude-config'
+import { registerSkillsHandlers } from '@main/ipc/skills'
 import { registerActivityHandlers } from '@main/ipc/activity'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
 import { killAll, killOrphanedPtys } from '@main/services/pty-manager'
@@ -120,6 +121,7 @@ registerBrowserHandlers()
 registerGitHandlers()
 registerPasswordHandlers()
 registerClaudeConfigHandlers()
+registerSkillsHandlers()
 registerUpdaterHandlers()
 registerActivityHandlers()
 registerTokenUsageHandlers()

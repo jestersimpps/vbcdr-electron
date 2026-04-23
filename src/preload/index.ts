@@ -188,6 +188,20 @@ const api = {
     resetTab: (tabId: string) => ipcRenderer.invoke('token-usage:reset-tab', tabId),
     daily: (sinceIso: string | null) => ipcRenderer.invoke('token-usage:daily', sinceIso),
     events: (sinceIso: string | null) => ipcRenderer.invoke('token-usage:events', sinceIso)
+  },
+
+  skills: {
+    search: (query: string) => ipcRenderer.invoke('skills:search', query),
+    list: (projectPath: string | null) => ipcRenderer.invoke('skills:list', projectPath),
+    install: (repo: string, skillId: string, scope: 'project' | 'global', projectPath: string | null) =>
+      ipcRenderer.invoke('skills:install', repo, skillId, scope, projectPath),
+    uninstall: (skillName: string, scope: 'project' | 'global', projectPath: string | null) =>
+      ipcRenderer.invoke('skills:uninstall', skillName, scope, projectPath),
+    onOutput: (callback: (chunk: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, chunk: string) => callback(chunk)
+      ipcRenderer.on('skills:output', handler)
+      return () => ipcRenderer.removeListener('skills:output', handler)
+    }
   }
 }
 

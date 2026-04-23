@@ -18,11 +18,12 @@ import { useLayoutStore, GRID_COLS, GRID_ROWS, getPanelConfigs } from '@/stores/
 import { StatusBar } from '@/components/layout/StatusBar'
 import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
 import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
+import { SkillsPanel } from '@/components/skills/SkillsPanel'
 import { Dashboard } from '@/components/dashboard/Dashboard'
 import { Statistics } from '@/components/statistics/Statistics'
 import { Usage } from '@/components/usage/Usage'
 import { Settings } from '@/components/settings/Settings'
-import { Globe, Code, Bot, TerminalSquare, Plus, X, FolderOpen, ChevronLeft, ChevronRight, LayoutDashboard, PieChart, Gauge, Settings as SettingsIcon } from 'lucide-react'
+import { Globe, Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, ChevronLeft, ChevronRight, LayoutDashboard, PieChart, Gauge, Settings as SettingsIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -166,6 +167,18 @@ export function AppLayoutGrid(): React.ReactElement {
           <Bot size={12} />
           Claude
         </button>
+        <button
+          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'skills')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            centerTab === 'skills'
+              ? 'border-b-2 border-zinc-400 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          )}
+        >
+          <Wand2 size={12} />
+          Skills
+        </button>
       </div>
       <div className="relative flex-1 min-h-0 overflow-hidden">
         <div className={cn('absolute inset-0', centerTab === 'terminals' ? 'z-10' : 'z-0 invisible')}>
@@ -209,6 +222,9 @@ export function AppLayoutGrid(): React.ReactElement {
             </PanelGroup>
           )}
         </div>
+        <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'skills' ? 'z-10' : 'z-0 invisible')}>
+          {activeProjectId && <SkillsPanel projectId={activeProjectId} />}
+        </div>
       </div>
     </div>
   )
@@ -251,6 +267,18 @@ export function AppLayoutGrid(): React.ReactElement {
         >
           <Bot size={12} />
           Claude
+        </button>
+        <button
+          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'skills')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            centerTab === 'skills'
+              ? 'border-b-2 border-zinc-400 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          )}
+        >
+          <Wand2 size={12} />
+          Skills
         </button>
         <button
           onClick={toggleDevTools}
@@ -297,6 +325,9 @@ export function AppLayoutGrid(): React.ReactElement {
                     </Panel>
                   </PanelGroup>
                 )}
+              </div>
+              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'skills' ? 'z-10' : 'z-0 invisible')}>
+                {activeProjectId && <SkillsPanel projectId={activeProjectId} />}
               </div>
             </div>
           </Panel>
