@@ -313,6 +313,8 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   const minimapEnabled = useEditorPrefsStore((s) => s.minimapEnabled)
   const autosaveEnabled = useEditorPrefsStore((s) => s.autosaveEnabled)
   const autosaveDelayMs = useEditorPrefsStore((s) => s.autosaveDelayMs)
+  const fontSize = useEditorPrefsStore((s) => s.fontSize)
+  const tabSize = useEditorPrefsStore((s) => s.tabSize)
   const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? EMPTY_FILES)
   const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
   const { setActiveFile, closeFile, editFileContent, saveFile } = useEditorStore()
@@ -336,7 +338,11 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
     })
   }, [])
 
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
+
   const handleEditorMount = useCallback((editorInstance: editor.IStandaloneCodeEditor) => {
+    editorRef.current = editorInstance
+    editorInstance.getModel()?.updateOptions({ tabSize })
     editorInstance.addAction({
       id: 'file-save',
       label: 'Save',
@@ -350,7 +356,11 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
         }
       }
     })
-  }, [projectId, flashSaved])
+  }, [projectId, flashSaved, tabSize])
+
+  useEffect(() => {
+    editorRef.current?.getModel()?.updateOptions({ tabSize })
+  }, [tabSize, activeFilePath])
 
   const handleChange = useCallback((value: string | undefined) => {
     if (value === undefined || !activeFilePath) return
@@ -425,7 +435,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
                 originalEditable: false,
                 renderSideBySide: false,
                 minimap: { enabled: minimapEnabled },
-                fontSize: 13,
+                fontSize,
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
                 wordWrap: 'on',
@@ -443,7 +453,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
               onChange={handleChange}
               options={{
                 minimap: { enabled: minimapEnabled },
-                fontSize: 13,
+                fontSize,
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
                 wordWrap: 'on',

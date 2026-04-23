@@ -249,6 +249,10 @@ function EditorSection(): React.ReactElement {
   const setAutosaveEnabled = useEditorPrefsStore((s) => s.setAutosaveEnabled)
   const autosaveDelayMs = useEditorPrefsStore((s) => s.autosaveDelayMs)
   const setAutosaveDelayMs = useEditorPrefsStore((s) => s.setAutosaveDelayMs)
+  const fontSize = useEditorPrefsStore((s) => s.fontSize)
+  const setFontSize = useEditorPrefsStore((s) => s.setFontSize)
+  const tabSize = useEditorPrefsStore((s) => s.tabSize)
+  const setTabSize = useEditorPrefsStore((s) => s.setTabSize)
   const accent = useAccent()
 
   return (
@@ -286,6 +290,48 @@ function EditorSection(): React.ReactElement {
             />
           </div>
         )}
+        <div className="border-t border-zinc-800 pt-3">
+          <div className="mb-1 flex items-center justify-between text-xs text-zinc-500">
+            <span>Font size</span>
+            <span className="tabular-nums text-zinc-400">{fontSize}px</span>
+          </div>
+          <input
+            type="range"
+            min={8}
+            max={32}
+            step={1}
+            value={fontSize}
+            onChange={(e) => setFontSize(Number(e.target.value))}
+            style={{ accentColor: accent }}
+            className="h-1 w-full cursor-pointer"
+          />
+        </div>
+        <div>
+          <div className="mb-1 flex items-center justify-between text-xs text-zinc-500">
+            <span>Tab size</span>
+            <span className="tabular-nums text-zinc-400">{tabSize} spaces</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {[2, 4, 8].map((n) => {
+              const active = tabSize === n
+              return (
+                <button
+                  key={n}
+                  onClick={() => setTabSize(n)}
+                  className={cn(
+                    'rounded border px-2 py-1 text-xs transition-colors',
+                    active
+                      ? 'border-transparent'
+                      : 'border-zinc-800 bg-zinc-900/30 text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
+                  )}
+                  style={active ? { backgroundColor: `${accent}26`, color: accent } : undefined}
+                >
+                  {n}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
     </SectionCard>
   )
