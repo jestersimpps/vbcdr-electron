@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
 
-interface TokenEvent {
+export interface TokenEvent {
   t: number
   p: string
   d: number
@@ -17,10 +17,13 @@ export interface DailyTokenUsage {
 const RETENTION_DAYS = 365
 const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000
 const FLUSH_DEBOUNCE_MS = 1500
+const COMPACT_INTERVAL_MS = 24 * 60 * 60 * 1000
 
 const pendingLines: string[] = []
 let flushTimer: ReturnType<typeof setTimeout> | null = null
-let compacted = false
+let lastCompactAt = 0
+
+let eventsCache: TokenEvent[] | null = null
 
 const lastTokensByTab = new Map<string, number>()
 
@@ -44,6 +47,7 @@ export function recordTokenSnapshot(tabId: string, projectId: string, tokens: nu
   if (delta <= 0) return
   const ev: TokenEvent = { t: Date.now(), p: projectId, d: delta }
   pendingLines.push(JSON.stringify(ev) + '\n')
+  if (eventsCache) eventsCache.push(ev)
   scheduleFlush()
 }
 
@@ -74,7 +78,8 @@ export function flushTokenUsage(): void {
   }
 }
 
-function readEvents(sinceMs: number | null): TokenEvent[] {
+function loadEventsCache(): TokenEvent[] {
+  if (eventsCache) return eventsCache
   const events: TokenEvent[] = []
   try {
     const raw = fs.readFileSync(tokenFile(), 'utf-8')
@@ -84,7 +89,6 @@ function readEvents(sinceMs: number | null): TokenEvent[] {
       try {
         const ev = JSON.parse(line) as TokenEvent
         if (typeof ev.t !== 'number' || typeof ev.d !== 'number' || typeof ev.p !== 'string') continue
-        if (sinceMs !== null && ev.t < sinceMs) continue
         events.push(ev)
       } catch {
         /* skip */
@@ -93,17 +97,18 @@ function readEvents(sinceMs: number | null): TokenEvent[] {
   } catch {
     /* file may not exist */
   }
-  for (const line of pendingLines) {
-    try {
-      const ev = JSON.parse(line.trim()) as TokenEvent
-      if (typeof ev.t !== 'number' || typeof ev.d !== 'number' || typeof ev.p !== 'string') continue
-      if (sinceMs !== null && ev.t < sinceMs) continue
-      events.push(ev)
-    } catch {
-      /* skip */
-    }
-  }
+  eventsCache = events
   return events
+}
+
+function readEvents(sinceMs: number | null): TokenEvent[] {
+  const cached = loadEventsCache()
+  if (sinceMs === null) return cached.slice()
+  const out: TokenEvent[] = []
+  for (const ev of cached) {
+    if (ev.t >= sinceMs) out.push(ev)
+  }
+  return out
 }
 
 function formatDate(d: Date): string {
@@ -113,16 +118,9 @@ function formatDate(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-export interface TokenEventOut {
-  t: number
-  projectId: string
-  delta: number
-}
-
-export function getEvents(sinceIso: string | null): TokenEventOut[] {
+export function getEvents(sinceIso: string | null): TokenEvent[] {
   const sinceMs = sinceIso ? new Date(sinceIso).getTime() : null
-  const events = readEvents(sinceMs)
-  return events.map((e) => ({ t: e.t, projectId: e.p, delta: e.d }))
+  return readEvents(sinceMs)
 }
 
 export function getDailyUsage(sinceIso: string | null): DailyTokenUsage[] {
@@ -143,9 +141,10 @@ export function getDailyUsage(sinceIso: string | null): DailyTokenUsage[] {
 }
 
 export function compactTokenUsage(): void {
-  if (compacted) return
-  compacted = true
-  const cutoff = Date.now() - RETENTION_MS
+  const now = Date.now()
+  if (now - lastCompactAt < COMPACT_INTERVAL_MS) return
+  lastCompactAt = now
+  const cutoff = now - RETENTION_MS
   try {
     const raw = fs.readFileSync(tokenFile(), 'utf-8')
     const lines = raw.split('\n')
@@ -160,10 +159,13 @@ export function compactTokenUsage(): void {
         /* skip */
       }
     }
+    const originalCount = lines.filter(Boolean).length
     if (kept.length === 0) {
       fs.unlinkSync(tokenFile())
-    } else if (kept.length !== lines.filter(Boolean).length) {
+      eventsCache = []
+    } else if (kept.length !== originalCount) {
       fs.writeFileSync(tokenFile(), kept.join('\n') + '\n', 'utf-8')
+      eventsCache = null
     }
   } catch {
     /* file may not exist */

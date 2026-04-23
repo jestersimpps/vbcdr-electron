@@ -5,7 +5,7 @@ import {
   getDailyUsage,
   getEvents,
   type DailyTokenUsage,
-  type TokenEventOut
+  type TokenEvent
 } from '@main/services/token-usage-service'
 
 export function registerTokenUsageHandlers(): void {
@@ -29,7 +29,7 @@ export function registerTokenUsageHandlers(): void {
 
   ipcMain.handle(
     'token-usage:events',
-    (_event, sinceIso: string | null): TokenEventOut[] => {
+    (_event, sinceIso: string | null): TokenEvent[] => {
       return getEvents(sinceIso)
     }
   )

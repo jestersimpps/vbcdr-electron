@@ -270,8 +270,8 @@ export function Usage(): React.ReactElement {
 
 interface TokenEvent {
   t: number
-  projectId: string
-  delta: number
+  p: string
+  d: number
 }
 
 interface UsageChartProps {
@@ -313,7 +313,7 @@ function UsageChart({ range, rangeLabel }: UsageChartProps): React.ReactElement 
     for (const ev of events) {
       const idx = findBucket(out, ev.t)
       if (idx === -1) continue
-      out[idx].total += ev.delta
+      out[idx].total += ev.d
     }
     return out
   }, [buckets, events])
