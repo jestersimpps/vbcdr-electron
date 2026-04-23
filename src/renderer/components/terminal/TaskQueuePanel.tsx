@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { ListTodo, Pause, Play, X } from 'lucide-react'
+import { GitCommit, ListTodo, Pause, Play, X } from 'lucide-react'
 import { useQueueStore, type QueueItem } from '@/stores/queue-store'
 import { cn } from '@/lib/utils'
 
@@ -115,6 +115,18 @@ export function TaskQueuePanel({ projectId }: TaskQueuePanelProps): React.ReactE
         >
           {autoRun ? <Pause size={11} /> : <Play size={11} />}
           Auto
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            addItem(projectId, '/commit')
+            addItem(projectId, '/clear')
+          }}
+          className="flex h-7 shrink-0 items-center gap-1 rounded bg-zinc-800 px-2 text-[11px] font-medium text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
+          title="Queue /commit then /clear"
+        >
+          <GitCommit size={11} />
+          Commit & Clear
         </button>
         <div className="relative flex-1">
           <ListTodo

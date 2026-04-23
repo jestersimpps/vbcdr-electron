@@ -40,7 +40,8 @@ export const useQueueStore = create<QueueStore>()(
           itemsPerProject: {
             ...state.itemsPerProject,
             [projectId]: [...(state.itemsPerProject[projectId] ?? []), item]
-          }
+          },
+          autoRunPerProject: { ...state.autoRunPerProject, [projectId]: true }
         }))
         return item
       },
