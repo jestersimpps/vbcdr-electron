@@ -18,8 +18,8 @@ export function playSound(soundId: string, volume = 0.6): void {
     audio.pause()
     audio.currentTime = 0
     audio.volume = Math.max(0, Math.min(1, volume))
-    void audio.play().catch(() => {})
-  } catch {
-    // ignore — audio can fail before user interaction
+    void audio.play().catch((e) => console.warn('[idle-sound] play failed:', e))
+  } catch (e) {
+    console.warn('[idle-sound] setup failed:', e)
   }
 }

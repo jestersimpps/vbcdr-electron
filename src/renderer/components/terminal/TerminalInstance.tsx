@@ -170,7 +170,6 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
       let idleTimer: ReturnType<typeof setTimeout> | null = null
       let busyTimer: ReturnType<typeof setTimeout> | null = null
-      let lastDataAt = 0
       const isLlm = !!initialCommand
 
       const onIncomingData = (data: string): void => {
@@ -186,15 +185,11 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         }
 
         if (isLlm) {
-          lastDataAt = Date.now()
-
           if (!busyTimer) {
             busyTimer = setTimeout(() => {
               busyTimer = null
-              if (Date.now() - lastDataAt < 300) {
-                useTerminalStore.getState().setTabStatus(tabId, 'busy')
-              }
-            }, 1000)
+              useTerminalStore.getState().setTabStatus(tabId, 'busy')
+            }, 250)
           }
 
           if (idleTimer) clearTimeout(idleTimer)
