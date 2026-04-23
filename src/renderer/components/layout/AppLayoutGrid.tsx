@@ -19,7 +19,9 @@ import { StatusBar } from '@/components/layout/StatusBar'
 import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
 import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
 import { Dashboard } from '@/components/dashboard/Dashboard'
-import { Globe, Code, Bot, TerminalSquare, Plus, X, FolderOpen, ChevronLeft, ChevronRight, LayoutDashboard } from 'lucide-react'
+import { Statistics } from '@/components/statistics/Statistics'
+import { Settings } from '@/components/settings/Settings'
+import { Globe, Code, Bot, TerminalSquare, Plus, X, FolderOpen, ChevronLeft, ChevronRight, LayoutDashboard, PieChart, Settings as SettingsIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -40,7 +42,7 @@ const ProjectTabStatus = memo(function ProjectTabStatus({ projectId }: { project
 })
 
 export function AppLayoutGrid(): React.ReactElement {
-  const { projects, activeProjectId, dashboardActive, loadProjects, addProject, removeProject, setActiveProject, showDashboard } =
+  const { projects, activeProjectId, dashboardActive, statisticsActive, settingsActive, loadProjects, addProject, removeProject, setActiveProject, showDashboard, showStatistics, showSettings } =
     useProjectStore()
   const browserless = useLayoutStore((s) => activeProjectId ? s.isBrowserless(activeProjectId) : false)
   const defaultTab = browserless ? 'terminals' : 'browser'
@@ -84,7 +86,7 @@ export function AppLayoutGrid(): React.ReactElement {
     const ro = new ResizeObserver(measure)
     ro.observe(containerRef.current)
     return () => ro.disconnect()
-  }, [dashboardActive])
+  }, [dashboardActive, statisticsActive, settingsActive])
 
   useEffect(() => {
     if (browserless) return
@@ -339,20 +341,6 @@ export function AppLayoutGrid(): React.ReactElement {
           className="flex items-center gap-0.5 h-full flex-1 min-w-0"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
-          <button
-            onClick={showDashboard}
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            className={cn(
-              'flex items-center justify-center h-full px-3 transition-colors',
-              dashboardActive
-                ? 'text-zinc-200 bg-zinc-800/50'
-                : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
-            )}
-            title="Dashboard"
-          >
-            <LayoutDashboard size={14} />
-          </button>
-          <div className="mx-1 h-4 w-px bg-zinc-700/60" />
           <div className="flex items-center h-full min-w-0 flex-1">
             {[...projects].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map((project) => (
               <button
@@ -361,7 +349,7 @@ export function AppLayoutGrid(): React.ReactElement {
                 title={project.name}
                 className={cn(
                   'group relative flex items-center gap-1 h-full px-2 text-xs font-medium transition-colors border-b-2 min-w-0 flex-1 basis-0',
-                  activeProjectId === project.id && !dashboardActive
+                  activeProjectId === project.id && !dashboardActive && !statisticsActive && !settingsActive
                     ? 'border-zinc-400 text-zinc-200 bg-zinc-800/50'
                     : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
                 )}
@@ -392,7 +380,48 @@ export function AppLayoutGrid(): React.ReactElement {
         </div>
       </div>
 
-      <div className="relative flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0">
+        <nav className="flex w-12 flex-col items-center justify-between border-r border-zinc-800 bg-zinc-900/80 py-2">
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={showDashboard}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                dashboardActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Dashboard"
+            >
+              <LayoutDashboard size={18} />
+            </button>
+            <button
+              onClick={showStatistics}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                statisticsActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Statistics"
+            >
+              <PieChart size={18} />
+            </button>
+          </div>
+          <button
+            onClick={showSettings}
+            className={cn(
+              'flex h-10 w-10 items-center justify-center rounded transition-colors',
+              settingsActive
+                ? 'text-zinc-200 bg-zinc-800'
+                : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+            )}
+            title="Settings"
+          >
+            <SettingsIcon size={18} />
+          </button>
+        </nav>
+        <div className="relative flex-1 min-h-0 overflow-hidden">
         {backgroundImage && (
           <div
             className="absolute inset-0 pointer-events-none bg-cover bg-center"
@@ -406,7 +435,7 @@ export function AppLayoutGrid(): React.ReactElement {
         <div
           ref={containerRef}
           className="absolute inset-0"
-          style={{ visibility: dashboardActive ? 'hidden' : 'visible' }}
+          style={{ visibility: dashboardActive || statisticsActive || settingsActive ? 'hidden' : 'visible' }}
         >
           {width > 0 && height > 0 && (
             <ReactGridLayout
@@ -443,6 +472,17 @@ export function AppLayoutGrid(): React.ReactElement {
             <Dashboard />
           </div>
         )}
+        {statisticsActive && (
+          <div className="absolute inset-0 z-10 overflow-auto">
+            <Statistics />
+          </div>
+        )}
+        {settingsActive && (
+          <div className="absolute inset-0 z-10 overflow-auto">
+            <Settings />
+          </div>
+        )}
+        </div>
       </div>
       <StatusBar />
     </div>

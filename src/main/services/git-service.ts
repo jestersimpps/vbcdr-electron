@@ -2,17 +2,19 @@ import { execFile as execFileCb } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
 import fs from 'fs'
-import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, BranchDriftInfo, ConflictInfo } from '@main/models/types'
+import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
+import { EXT_TO_LANGUAGE } from '@main/services/language-map'
 
 const execFile = promisify(execFileCb)
 const SEPARATOR = '<<SEP>>'
 const FORMAT = ['%H', '%h', '%s', '%an', '%ar', '%D', '%P'].join(SEPARATOR)
 
-async function runGit(cwd: string, args: string[], timeout: number = 5000): Promise<string> {
+async function runGit(cwd: string, args: string[], timeout: number = 5000, maxBuffer: number = 10 * 1024 * 1024): Promise<string> {
   const { stdout } = await execFile('git', args, {
     cwd,
     encoding: 'utf-8',
     timeout,
+    maxBuffer,
     env: {
       ...process.env,
       GIT_TERMINAL_PROMPT: '0',
@@ -263,5 +265,58 @@ export async function rebaseRemote(cwd: string): Promise<string> {
     return await runGit(cwd, ['pull', '--rebase'], 15000)
   } catch (err) {
     return (err as Error).message
+  }
+}
+
+const STATS_FORMAT = ['%H', '%at', '%ae', '%an'].join('<<SEP>>')
+
+export async function getCommitsSince(cwd: string, sinceIso: string | null): Promise<StatsCommit[]> {
+  try {
+    const args = ['log', '--all', `--format=${STATS_FORMAT}`, '--no-merges']
+    if (sinceIso) args.push(`--since=${sinceIso}`)
+    const raw = await runGit(cwd, args, 15000)
+    if (!raw) return []
+
+    return raw.split('\n').map((line) => {
+      const [hash, tsRaw, authorEmail, authorName] = line.split('<<SEP>>')
+      return {
+        hash,
+        timestamp: parseInt(tsRaw, 10) * 1000,
+        authorEmail: authorEmail ?? '',
+        authorName: authorName ?? ''
+      }
+    })
+  } catch {
+    return []
+  }
+}
+
+export async function getUserEmail(cwd: string): Promise<string> {
+  try {
+    return await runGit(cwd, ['config', 'user.email'])
+  } catch {
+    return ''
+  }
+}
+
+export async function getLanguageTally(cwd: string): Promise<LanguageTally> {
+  try {
+    const raw = await runGit(cwd, ['ls-files'], 15000, 50 * 1024 * 1024)
+    if (!raw) return {}
+
+    const tally: LanguageTally = {}
+    for (const file of raw.split('\n')) {
+      const dot = file.lastIndexOf('.')
+      if (dot < 0 || dot === file.length - 1) continue
+      const slash = file.lastIndexOf('/')
+      if (dot < slash) continue
+      const ext = file.slice(dot + 1).toLowerCase()
+      const lang = EXT_TO_LANGUAGE[ext]
+      if (!lang) continue
+      tally[lang] = (tally[lang] ?? 0) + 1
+    }
+    return tally
+  } catch {
+    return {}
   }
 }

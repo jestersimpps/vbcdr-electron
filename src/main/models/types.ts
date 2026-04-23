@@ -76,6 +76,17 @@ export interface GitBranch {
   remote: boolean
 }
 
+export interface StatsCommit {
+  hash: string
+  timestamp: number
+  authorEmail: string
+  authorName: string
+}
+
+export interface LanguageTally {
+  [language: string]: number
+}
+
 export interface GitCheckoutResult {
   success: boolean
   branch: string

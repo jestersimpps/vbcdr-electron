@@ -7,11 +7,15 @@ interface ProjectStore {
   projects: Project[]
   activeProjectId: string | null
   dashboardActive: boolean
+  statisticsActive: boolean
+  settingsActive: boolean
   loadProjects: () => Promise<void>
   addProject: () => Promise<Project | null>
   removeProject: (id: string) => Promise<void>
   setActiveProject: (id: string) => void
   showDashboard: () => void
+  showStatistics: () => void
+  showSettings: () => void
   activeProject: () => Project | undefined
 }
 
@@ -19,6 +23,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   projects: [],
   activeProjectId: null,
   dashboardActive: true,
+  statisticsActive: false,
+  settingsActive: false,
 
   loadProjects: async () => {
     const projects = await window.api.projects.list()
@@ -29,7 +35,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const project = await window.api.projects.add()
     if (project) {
       await get().loadProjects()
-      set({ activeProjectId: project.id, dashboardActive: false })
+      set({ activeProjectId: project.id, dashboardActive: false, statisticsActive: false, settingsActive: false })
     }
     return project
   },
@@ -43,17 +49,25 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     await window.api.projects.remove(id)
     const state = get()
     if (state.activeProjectId === id) {
-      set({ activeProjectId: null, dashboardActive: true })
+      set({ activeProjectId: null, dashboardActive: true, statisticsActive: false, settingsActive: false })
     }
     await state.loadProjects()
   },
 
   setActiveProject: (id: string) => {
-    set({ activeProjectId: id, dashboardActive: false })
+    set({ activeProjectId: id, dashboardActive: false, statisticsActive: false, settingsActive: false })
   },
 
   showDashboard: () => {
-    set({ dashboardActive: true })
+    set({ dashboardActive: true, statisticsActive: false, settingsActive: false })
+  },
+
+  showStatistics: () => {
+    set({ statisticsActive: true, dashboardActive: false, settingsActive: false })
+  },
+
+  showSettings: () => {
+    set({ settingsActive: true, dashboardActive: false, statisticsActive: false })
   },
 
   activeProject: () => {

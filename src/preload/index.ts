@@ -84,6 +84,9 @@ const api = {
     pull: (cwd: string) => ipcRenderer.invoke('git:pull', cwd),
     rebaseRemote: (cwd: string) => ipcRenderer.invoke('git:rebase-remote', cwd),
     conflicts: (cwd: string) => ipcRenderer.invoke('git:conflicts', cwd),
+    commitsSince: (cwd: string, sinceIso: string | null) => ipcRenderer.invoke('git:commits-since', cwd, sinceIso),
+    userEmail: (cwd: string) => ipcRenderer.invoke('git:user-email', cwd),
+    languageTally: (cwd: string) => ipcRenderer.invoke('git:language-tally', cwd),
     onDrift: (callback: (projectId: string, drift: unknown) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, projectId: string, drift: unknown) =>
         callback(projectId, drift)

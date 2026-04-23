@@ -10,10 +10,13 @@ import {
   getDiffSummary,
   getConflicts,
   pull,
-  rebaseRemote
+  rebaseRemote,
+  getCommitsSince,
+  getUserEmail,
+  getLanguageTally
 } from '@main/services/git-service'
 import { registerProject, unregisterProject, fetchNow } from '@main/services/git-fetch-service'
-import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, BranchDriftInfo, ConflictInfo } from '@main/models/types'
+import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
 
 export function registerGitHandlers(): void {
   ipcMain.handle('git:is-repo', async (_event, cwd: string): Promise<boolean> => {
@@ -79,5 +82,17 @@ export function registerGitHandlers(): void {
 
   ipcMain.handle('git:conflicts', async (_event, cwd: string): Promise<ConflictInfo[]> => {
     return getConflicts(cwd)
+  })
+
+  ipcMain.handle('git:commits-since', async (_event, cwd: string, sinceIso: string | null): Promise<StatsCommit[]> => {
+    return getCommitsSince(cwd, sinceIso)
+  })
+
+  ipcMain.handle('git:user-email', async (_event, cwd: string): Promise<string> => {
+    return getUserEmail(cwd)
+  })
+
+  ipcMain.handle('git:language-tally', async (_event, cwd: string): Promise<LanguageTally> => {
+    return getLanguageTally(cwd)
   })
 }
