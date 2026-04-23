@@ -255,6 +255,8 @@ function EditorSection(): React.ReactElement {
   const setTabSize = useEditorPrefsStore((s) => s.setTabSize)
   const bracketPairColorization = useEditorPrefsStore((s) => s.bracketPairColorization)
   const setBracketPairColorization = useEditorPrefsStore((s) => s.setBracketPairColorization)
+  const formatOnSave = useEditorPrefsStore((s) => s.formatOnSave)
+  const setFormatOnSave = useEditorPrefsStore((s) => s.setFormatOnSave)
   const accent = useAccent()
 
   return (
@@ -272,6 +274,13 @@ function EditorSection(): React.ReactElement {
           description="Match matching brackets with the same color."
           enabled={bracketPairColorization}
           onToggle={() => setBracketPairColorization(!bracketPairColorization)}
+          accent={accent}
+        />
+        <PrefToggle
+          label="Format on save"
+          description="Run Monaco's formatter before saving (supported langs: JS/TS, JSON, HTML, CSS)."
+          enabled={formatOnSave}
+          onToggle={() => setFormatOnSave(!formatOnSave)}
           accent={accent}
         />
         <PrefToggle

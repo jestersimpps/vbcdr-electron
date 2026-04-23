@@ -382,10 +382,11 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   const fontSize = useEditorPrefsStore((s) => s.fontSize)
   const tabSize = useEditorPrefsStore((s) => s.tabSize)
   const bracketPairColorization = useEditorPrefsStore((s) => s.bracketPairColorization)
+  const formatOnSave = useEditorPrefsStore((s) => s.formatOnSave)
   const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? EMPTY_FILES)
   const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
   const gitStatusMap = useGitStore((s) => s.statusPerProject[projectId])
-  const { setActiveFile, closeFile, editFileContent, saveFile, reorderFiles } = useEditorStore()
+  const { setActiveFile, closeFile, editFileContent, reorderFiles } = useEditorStore()
   const [showSaved, setShowSaved] = useState(false)
   const savedTimer = useRef<ReturnType<typeof setTimeout>>(null)
   const autosaveTimer = useRef<ReturnType<typeof setTimeout>>(null)
@@ -407,6 +408,20 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   }, [])
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
+  const formatOnSaveRef = useRef(formatOnSave)
+  useEffect(() => { formatOnSaveRef.current = formatOnSave }, [formatOnSave])
+
+  const saveActiveFile = useCallback(async (filePath: string): Promise<boolean> => {
+    const ed = editorRef.current
+    if (formatOnSaveRef.current && ed) {
+      try {
+        await ed.getAction('editor.action.formatDocument')?.run()
+      } catch {
+        // Formatter may not exist for this language — fall through to save
+      }
+    }
+    return useEditorStore.getState().saveFile(projectId, filePath)
+  }, [projectId])
 
   const handleEditorMount = useCallback((editorInstance: editor.IStandaloneCodeEditor) => {
     editorRef.current = editorInstance
@@ -419,12 +434,12 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
         const state = useEditorStore.getState()
         const filePath = state.statePerProject[projectId]?.activeFilePath
         if (filePath) {
-          const saved = await state.saveFile(projectId, filePath)
+          const saved = await saveActiveFile(filePath)
           if (saved) flashSaved()
         }
       }
     })
-  }, [projectId, flashSaved, tabSize])
+  }, [projectId, flashSaved, tabSize, saveActiveFile])
 
   useEffect(() => {
     editorRef.current?.getModel()?.updateOptions({ tabSize })
@@ -449,10 +464,10 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
     const filePath = activeFilePath
     autosaveTimer.current = setTimeout(async () => {
-      const saved = await saveFile(projectId, filePath)
+      const saved = await saveActiveFile(filePath)
       if (saved) flashSaved()
     }, autosaveDelayMs)
-  }, [projectId, activeFilePath, editFileContent, autosaveEnabled, autosaveDelayMs, saveFile, flashSaved])
+  }, [projectId, activeFilePath, editFileContent, autosaveEnabled, autosaveDelayMs, saveActiveFile, flashSaved])
 
   useEffect(() => {
     return () => {
