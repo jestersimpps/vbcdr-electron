@@ -189,9 +189,19 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         return true
       })
 
+      const isLlm = !!initialCommand
+      let idleTimer: ReturnType<typeof setTimeout> | null = null
+
       terminal.onData((data) => {
         window.api.terminal.write(tabId, data)
         recordActivityDebounced(projectId, 'i')
+        if (isLlm) {
+          const currentStatus = useTerminalStore.getState().tabStatuses[tabId]
+          if (currentStatus !== 'busy') {
+            useTerminalStore.getState().setTabStatus(tabId, 'busy')
+            useDiffOverlayStore.getState().clearForTab(tabId)
+          }
+        }
       })
 
       terminal.onResize(({ cols, rows }) => {
@@ -201,9 +211,6 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       terminal.onTitleChange((title) => {
         useTerminalStore.getState().setTabTitle(tabId, title)
       })
-
-      let idleTimer: ReturnType<typeof setTimeout> | null = null
-      const isLlm = !!initialCommand
 
       const onIncomingData = (data: string): void => {
         recordActivityDebounced(projectId, 'o')

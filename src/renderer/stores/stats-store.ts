@@ -24,7 +24,7 @@ export const useStatsStore = create<StatsStore>()(
       gapMinutes: 30,
       leadInMinutes: 15,
       includeAllAuthors: false,
-      source: 'commits',
+      source: 'terminal',
       idleMinutes: 5,
       setRange: (range) => set({ range }),
       setGapMinutes: (gapMinutes) => set({ gapMinutes }),

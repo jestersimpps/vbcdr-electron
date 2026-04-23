@@ -218,6 +218,24 @@ export function Statistics(): React.ReactElement {
     return { grid, max }
   }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, source])
 
+  const calendarAll = useMemo(() => buildCalendar(sessions, range), [sessions, range])
+
+  const [calendarProjectId, setCalendarProjectId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (calendarProjectId && !projects.some((p) => p.id === calendarProjectId)) {
+      setCalendarProjectId(null)
+    }
+  }, [projects, calendarProjectId])
+
+  const effectiveCalendarProjectId = calendarProjectId ?? perProjectHours[0]?.projectId ?? null
+
+  const calendarProject = useMemo(() => {
+    if (!effectiveCalendarProjectId) return null
+    const filtered = sessions.filter((s) => s.projectId === effectiveCalendarProjectId)
+    return buildCalendar(filtered, range)
+  }, [sessions, range, effectiveCalendarProjectId])
+
   const languagePie = useMemo(() => {
     const totals: Record<string, number> = {}
     for (const d of data) {
@@ -427,7 +445,7 @@ export function Statistics(): React.ReactElement {
 
         <Section title="Patterns">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <Card title="Activity pattern (all time)">
+            <Card title={`Activity pattern (${TIME_RANGES.find((r) => r.key === range)?.label.toLowerCase() ?? range})`}>
               <Heatmap grid={heatmap.grid} max={heatmap.max} baseColor={palette.heatmapBase} emptyColor={palette.emptyCell} />
             </Card>
 
@@ -443,6 +461,38 @@ export function Statistics(): React.ReactElement {
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                 </RPieChart>
               </ResponsiveContainer>
+            </Card>
+
+            <Card title="Calendar (all projects)">
+              {calendarAll.weeks.length === 0 ? (
+                <div className="py-6 text-center text-xs text-zinc-500">No activity in range</div>
+              ) : (
+                <CalendarHeatmap calendar={calendarAll} baseColor={palette.heatmapBase} emptyColor={palette.emptyCell} />
+              )}
+            </Card>
+
+            <Card
+              title="Calendar (per project)"
+              right={
+                <select
+                  value={effectiveCalendarProjectId ?? ''}
+                  onChange={(e) => setCalendarProjectId(e.target.value || null)}
+                  className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                >
+                  {perProjectHours.length === 0 && <option value="">No projects</option>}
+                  {perProjectHours.map((p) => (
+                    <option key={p.projectId} value={p.projectId}>
+                      {p.projectName}
+                    </option>
+                  ))}
+                </select>
+              }
+            >
+              {!calendarProject || calendarProject.weeks.length === 0 ? (
+                <div className="py-6 text-center text-xs text-zinc-500">No activity in range</div>
+              ) : (
+                <CalendarHeatmap calendar={calendarProject} baseColor={palette.heatmapBase} emptyColor={palette.emptyCell} />
+              )}
             </Card>
           </div>
         </Section>
@@ -693,10 +743,13 @@ function Kpi({ icon, label, value }: { icon?: React.ReactNode; label: string; va
   )
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
+function Card({ title, children, right }: { title: string; children: React.ReactNode; right?: React.ReactNode }): React.ReactElement {
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-      <div className="mb-2 text-xs font-medium text-zinc-400">{title}</div>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="text-xs font-medium text-zinc-400">{title}</div>
+        {right}
+      </div>
       {children}
     </div>
   )
@@ -736,6 +789,117 @@ function hexToRgb(hex: string): [number, number, number] {
   const full = m.length === 3 ? m.split('').map((c) => c + c).join('') : m
   const n = parseInt(full, 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+interface CalendarCell {
+  dateMs: number
+  hours: number
+}
+
+interface CalendarData {
+  weeks: CalendarCell[][]
+  max: number
+}
+
+function startOfWeekMs(ms: number): number {
+  const d = new Date(ms)
+  d.setHours(0, 0, 0, 0)
+  const dow = (d.getDay() + 6) % 7
+  d.setDate(d.getDate() - dow)
+  return d.getTime()
+}
+
+function startOfDayMs(ms: number): number {
+  const d = new Date(ms)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+function buildCalendar(sessions: Session[], range: string): CalendarData {
+  if (sessions.length === 0) return { weeks: [], max: 0.0001 }
+  const rangeStart = rangeStartMs(range)
+  const firstMs = rangeStart ?? Math.min(...sessions.map((s) => s.start))
+  const endMs = Date.now()
+  const weekStart = startOfWeekMs(firstMs)
+  const totals = new Map<number, number>()
+  const DAY = 86_400_000
+  for (const s of sessions) {
+    const segStart = Math.max(s.start, weekStart)
+    const segEnd = Math.min(s.end, endMs)
+    if (segEnd <= segStart) continue
+    let cursor = startOfDayMs(segStart)
+    while (cursor <= segEnd) {
+      const dayEnd = cursor + DAY
+      const overlap = Math.min(segEnd, dayEnd) - Math.max(segStart, cursor)
+      if (overlap > 0) {
+        totals.set(cursor, (totals.get(cursor) ?? 0) + overlap / 3_600_000)
+      }
+      cursor = dayEnd
+    }
+  }
+  const weeks: CalendarCell[][] = []
+  let max = 0.0001
+  let weekCursor = weekStart
+  while (weekCursor <= endMs) {
+    const week: CalendarCell[] = []
+    for (let d = 0; d < 7; d++) {
+      const dayMs = weekCursor + d * DAY
+      const hours = totals.get(dayMs) ?? 0
+      if (hours > max) max = hours
+      week.push({ dateMs: dayMs, hours })
+    }
+    weeks.push(week)
+    weekCursor += 7 * DAY
+  }
+  return { weeks, max }
+}
+
+function CalendarHeatmap({ calendar, baseColor, emptyColor }: { calendar: CalendarData; baseColor: string; emptyColor: string }): React.ReactElement {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const [r, g, b] = hexToRgb(baseColor)
+  const now = Date.now()
+  const weekLabels = calendar.weeks.map((w) => {
+    const d = new Date(w[0].dateMs)
+    return `${d.getMonth() + 1}/${d.getDate()}`
+  })
+  return (
+    <div className="overflow-x-auto">
+      <div className="inline-block">
+        <div className="flex text-[10px] text-zinc-500">
+          <div className="w-10" />
+          {calendar.weeks.map((_, i) => (
+            <div key={i} className="w-5 text-center">
+              {i % 4 === 0 ? weekLabels[i] : ''}
+            </div>
+          ))}
+        </div>
+        {days.map((day, dayIdx) => (
+          <div key={day} className="flex items-center">
+            <div className="w-10 text-[10px] text-zinc-500">{day}</div>
+            {calendar.weeks.map((week, wIdx) => {
+              const cell = week[dayIdx]
+              const future = cell.dateMs > now
+              const intensity = cell.hours / calendar.max
+              const bg = future
+                ? 'transparent'
+                : cell.hours === 0
+                  ? emptyColor
+                  : `rgba(${r}, ${g}, ${b}, ${0.15 + intensity * 0.85})`
+              const dateLabel = new Date(cell.dateMs).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+              return (
+                <div
+                  key={wIdx}
+                  className="m-px h-5 w-5 rounded-sm border border-zinc-800"
+                  style={{ background: bg, opacity: future ? 0.2 : 1 }}
+                  title={future ? dateLabel : `${dateLabel} — ${cell.hours.toFixed(2)}h`}
+                />
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function Heatmap({ grid, max, baseColor, emptyColor }: { grid: number[][]; max: number; baseColor: string; emptyColor: string }): React.ReactElement {
