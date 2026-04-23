@@ -8,12 +8,14 @@ interface EditorPrefsState {
   fontSize: number
   tabSize: number
   bracketPairColorization: boolean
+  formatOnSave: boolean
   setMinimapEnabled: (enabled: boolean) => void
   setAutosaveEnabled: (enabled: boolean) => void
   setAutosaveDelayMs: (ms: number) => void
   setFontSize: (px: number) => void
   setTabSize: (n: number) => void
   setBracketPairColorization: (enabled: boolean) => void
+  setFormatOnSave: (enabled: boolean) => void
 }
 
 export const DEFAULT_AUTOSAVE_DELAY_MS = 1000
@@ -39,6 +41,7 @@ export const useEditorPrefsStore = create<EditorPrefsState>()(
       fontSize: DEFAULT_FONT_SIZE,
       tabSize: DEFAULT_TAB_SIZE,
       bracketPairColorization: true,
+      formatOnSave: false,
       setMinimapEnabled: (enabled: boolean) => set({ minimapEnabled: enabled }),
       setAutosaveEnabled: (enabled: boolean) => set({ autosaveEnabled: enabled }),
       setAutosaveDelayMs: (ms: number) => {
@@ -47,7 +50,8 @@ export const useEditorPrefsStore = create<EditorPrefsState>()(
       },
       setFontSize: (px: number) => set({ fontSize: clampFontSize(px) }),
       setTabSize: (n: number) => set({ tabSize: clampTabSize(n) }),
-      setBracketPairColorization: (enabled: boolean) => set({ bracketPairColorization: enabled })
+      setBracketPairColorization: (enabled: boolean) => set({ bracketPairColorization: enabled }),
+      setFormatOnSave: (enabled: boolean) => set({ formatOnSave: enabled })
     }),
     {
       name: 'vbcdr-editor-prefs',
@@ -57,7 +61,8 @@ export const useEditorPrefsStore = create<EditorPrefsState>()(
         autosaveDelayMs: state.autosaveDelayMs,
         fontSize: state.fontSize,
         tabSize: state.tabSize,
-        bracketPairColorization: state.bracketPairColorization
+        bracketPairColorization: state.bracketPairColorization,
+        formatOnSave: state.formatOnSave
       })
     }
   )
