@@ -7,25 +7,8 @@ import {
   ChevronRight, ChevronDown, File, Folder, RefreshCw, Copy, ExternalLink,
   Eye, EyeOff, Trash2, FilePlus, FolderPlus, Pencil, Files, Search, FileText
 } from 'lucide-react'
-import type { FileNode, GitFileStatus, SearchResult } from '@/models/types'
-
-const GIT_STATUS_COLORS: Record<GitFileStatus, string> = {
-  modified: 'text-amber-300',
-  added: 'text-emerald-400',
-  untracked: 'text-emerald-400',
-  deleted: 'text-red-400',
-  renamed: 'text-emerald-400',
-  conflict: 'text-red-500'
-}
-
-const GIT_STATUS_LABELS: Record<GitFileStatus, string> = {
-  modified: 'M',
-  added: 'A',
-  untracked: 'U',
-  deleted: 'D',
-  renamed: 'R',
-  conflict: 'C'
-}
+import type { FileNode, SearchResult } from '@/models/types'
+import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
 
 interface ContextMenuState {
   x: number

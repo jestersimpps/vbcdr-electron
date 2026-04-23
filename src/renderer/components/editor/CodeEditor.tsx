@@ -14,8 +14,10 @@ import { useEditorStore } from '@/stores/editor-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
+import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
+import { useGitStore } from '@/stores/git-store'
 import { X, FileWarning, Circle } from 'lucide-react'
-import type { OpenFile } from '@/models/types'
+import type { OpenFile, GitFileStatus } from '@/models/types'
 import type { editor } from 'monaco-editor'
 
 const EXT_LANG: Record<string, string> = {
@@ -319,11 +321,13 @@ function handleBeforeMount(monaco: Monaco): void {
 function SortableTab({
   file,
   isActive,
+  gitStatus,
   onSelect,
   onClose
 }: {
   file: OpenFile
   isActive: boolean
+  gitStatus?: GitFileStatus
   onSelect: () => void
   onClose: (e: React.MouseEvent) => void
 }): React.ReactElement {
@@ -333,6 +337,8 @@ function SortableTab({
     transition,
     opacity: isDragging ? 0.5 : undefined
   }
+  const statusColor = gitStatus ? GIT_STATUS_COLORS[gitStatus] : ''
+  const statusLabel = gitStatus ? GIT_STATUS_LABELS[gitStatus] : null
   return (
     <div
       ref={setNodeRef}
@@ -346,7 +352,12 @@ function SortableTab({
       }`}
       onClick={onSelect}
     >
-      <span className="truncate max-w-[120px]">{file.name}</span>
+      <span className={`truncate max-w-[120px] ${statusColor}`}>{file.name}</span>
+      {statusLabel && (
+        <span className={`shrink-0 text-[10px] font-semibold tabular-nums ${statusColor}`}>
+          {statusLabel}
+        </span>
+      )}
       {file.isDirty && (
         <Circle size={8} className="shrink-0 fill-zinc-400 text-zinc-400" />
       )}
@@ -373,6 +384,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   const bracketPairColorization = useEditorPrefsStore((s) => s.bracketPairColorization)
   const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? EMPTY_FILES)
   const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
+  const gitStatusMap = useGitStore((s) => s.statusPerProject[projectId])
   const { setActiveFile, closeFile, editFileContent, saveFile, reorderFiles } = useEditorStore()
   const [showSaved, setShowSaved] = useState(false)
   const savedTimer = useRef<ReturnType<typeof setTimeout>>(null)
@@ -458,6 +470,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
                 key={file.path}
                 file={file}
                 isActive={file.path === activeFilePath}
+                gitStatus={gitStatusMap?.[file.path]}
                 onSelect={() => setActiveFile(projectId, file.path)}
                 onClose={(e) => {
                   e.stopPropagation()
