@@ -1,0 +1,119 @@
+:root.afternoon-dark body {
+  background: #130f48;
+  color: #ffffff;
+}
+
+:root.afternoon-dark ::-webkit-scrollbar-thumb {
+  background: #8f883860;
+}
+
+:root.afternoon-dark ::-webkit-scrollbar-thumb:hover {
+  background: #cdff7080;
+}
+
+:root.afternoon-dark .bg-zinc-950 {
+  background-color: #130f48;
+}
+
+:root.afternoon-dark .bg-zinc-900\/80 {
+  background-color: rgba(75, 70, 155, 0.9);
+}
+
+:root.afternoon-dark .bg-zinc-900\/50 {
+  background-color: rgba(75, 70, 155, 0.6);
+}
+
+:root.afternoon-dark .bg-zinc-900\/30 {
+  background-color: rgba(75, 70, 155, 0.5);
+}
+
+:root.afternoon-dark .bg-zinc-900 {
+  background-color: #4b469b;
+}
+
+:root.afternoon-dark .bg-zinc-800 {
+  background-color: #8f8838;
+}
+
+:root.afternoon-dark .bg-zinc-800\/50 {
+  background-color: rgba(143, 136, 56, 0.5);
+}
+
+:root.afternoon-dark .hover\:bg-zinc-800:hover {
+  background-color: #a79f44;
+}
+
+:root.afternoon-dark .hover\:bg-zinc-700:hover {
+  background-color: #cdff70;
+}
+
+:root.afternoon-dark .hover\:bg-zinc-800\/50:hover {
+  background-color: rgba(167, 159, 68, 0.5);
+}
+
+:root.afternoon-dark .border-zinc-800 {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+:root.afternoon-dark .border-zinc-700 {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+:root.afternoon-dark .text-zinc-50 {
+  color: #ffffff;
+}
+
+:root.afternoon-dark .text-zinc-200 {
+  color: #ffffff;
+}
+
+:root.afternoon-dark .text-zinc-300 {
+  color: #e8e4ff;
+}
+
+:root.afternoon-dark .text-zinc-400 {
+  color: #e8e4ff;
+}
+
+:root.afternoon-dark .text-zinc-500 {
+  color: #bfb8e8;
+}
+
+:root.afternoon-dark .text-zinc-600 {
+  color: #bfb8e8;
+}
+
+:root.afternoon-dark .hover\:text-zinc-200:hover {
+  color: #ffffff;
+}
+
+:root.afternoon-dark .hover\:text-zinc-300:hover {
+  color: #e8e4ff;
+}
+
+:root.afternoon-dark .bg-blue-500 { background-color: #cdff70; }
+:root.afternoon-dark .bg-blue-600 { background-color: #b8e85a; }
+:root.afternoon-dark .hover\:bg-blue-500:hover { background-color: #dcff88; }
+:root.afternoon-dark .bg-blue-500\/15 { background-color: rgba(205, 255, 112, 0.15); }
+:root.afternoon-dark .bg-emerald-400 { background-color: #cdff70; }
+:root.afternoon-dark .bg-amber-400 { background-color: #8f8838; }
+:root.afternoon-dark .bg-amber-600 { background-color: #8f8838; }
+:root.afternoon-dark .bg-amber-500\/15 { background-color: rgba(143, 136, 56, 0.25); }
+:root.afternoon-dark .bg-red-500\/20 { background-color: rgba(255, 123, 114, 0.2); }
+:root.afternoon-dark .bg-red-600 { background-color: #ff7b72; }
+:root.afternoon-dark .bg-green-400 { background-color: #cdff70; }
+:root.afternoon-dark .bg-green-400\/15 { background-color: rgba(205, 255, 112, 0.15); }
+:root.afternoon-dark .bg-green-600 { background-color: #b8e85a; }
+
+:root.afternoon-dark .text-blue-400 { color: #cdff70; }
+:root.afternoon-dark .text-emerald-400 { color: #cdff70; }
+:root.afternoon-dark .text-amber-300 { color: #ffe066; }
+:root.afternoon-dark .text-amber-400 { color: #ffe066; }
+:root.afternoon-dark .text-red-400 { color: #ff7b72; }
+:root.afternoon-dark .text-red-500 { color: #ffa198; }
+:root.afternoon-dark .text-green-400 { color: #cdff70; }
+:root.afternoon-dark .text-yellow-400 { color: #ffe066; }
+:root.afternoon-dark .fill-yellow-400 { fill: #ffe066; }
+:root.afternoon-dark .hover\:text-red-400:hover { color: #ffa198; }
+
+:root.afternoon-dark .focus\:ring-zinc-600:focus { --tw-ring-color: #cdff70; }

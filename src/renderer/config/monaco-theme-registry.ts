@@ -1258,6 +1258,88 @@ const TROPICAL_LIGHT: editor.IStandaloneThemeData = {
   }
 }
 
+const AFTERNOON_DARK: editor.IStandaloneThemeData = {
+  base: 'vs-dark',
+  inherit: true,
+  rules: [
+    { token: '', foreground: 'ffffff' },
+    { token: 'comment', foreground: 'bfb8e8', fontStyle: 'italic' },
+    { token: 'keyword', foreground: 'cdff70', fontStyle: 'bold' },
+    { token: 'keyword.control', foreground: 'cdff70', fontStyle: 'bold' },
+    { token: 'string', foreground: 'ffe066' },
+    { token: 'number', foreground: 'ffa657' },
+    { token: 'type', foreground: 'cdff70' },
+    { token: 'type.identifier', foreground: 'cdff70' },
+    { token: 'identifier', foreground: 'ffffff' },
+    { token: 'variable', foreground: 'e8e4ff' },
+    { token: 'constant', foreground: 'ffa657' },
+    { token: 'function', foreground: 'cdff70' },
+    { token: 'operator', foreground: 'ff7b72' },
+    { token: 'delimiter', foreground: 'bfb8e8' },
+    { token: 'tag', foreground: 'cdff70' },
+    { token: 'attribute.name', foreground: 'ffa657' },
+    { token: 'attribute.value', foreground: 'ffe066' },
+    { token: 'metatag', foreground: 'ff7b72' },
+    { token: 'regexp', foreground: 'ffe066' }
+  ],
+  colors: {
+    'editor.background': '#130f48',
+    'editor.foreground': '#ffffff',
+    'editor.lineHighlightBackground': '#4b469b30',
+    'editor.selectionBackground': '#cdff7030',
+    'editorCursor.foreground': '#cdff70',
+    'editorWhitespace.foreground': '#4b469b',
+    'editorLineNumber.foreground': '#8f8838',
+    'editorLineNumber.activeForeground': '#cdff70',
+    'editorIndentGuide.background': '#4b469b',
+    'editorIndentGuide.activeBackground': '#8f8838',
+    'editor.selectionHighlightBackground': '#cdff7025',
+    'editorBracketMatch.background': '#cdff7030',
+    'editorBracketMatch.border': '#cdff70aa'
+  }
+}
+
+const AFTERNOON_LIGHT: editor.IStandaloneThemeData = {
+  base: 'vs',
+  inherit: true,
+  rules: [
+    { token: '', foreground: '130f48' },
+    { token: 'comment', foreground: '8f8838', fontStyle: 'italic' },
+    { token: 'keyword', foreground: '4b469b', fontStyle: 'bold' },
+    { token: 'keyword.control', foreground: '4b469b', fontStyle: 'bold' },
+    { token: 'string', foreground: '70692a' },
+    { token: 'number', foreground: '8f8838' },
+    { token: 'type', foreground: '4b469b' },
+    { token: 'type.identifier', foreground: '4b469b' },
+    { token: 'identifier', foreground: '130f48' },
+    { token: 'variable', foreground: '3a3680' },
+    { token: 'constant', foreground: '8f8838' },
+    { token: 'function', foreground: '4b469b' },
+    { token: 'operator', foreground: 'cf2330' },
+    { token: 'delimiter', foreground: '6a6380' },
+    { token: 'tag', foreground: '4b469b' },
+    { token: 'attribute.name', foreground: '8f8838' },
+    { token: 'attribute.value', foreground: '70692a' },
+    { token: 'metatag', foreground: 'cf2330' },
+    { token: 'regexp', foreground: '70692a' }
+  ],
+  colors: {
+    'editor.background': '#faf8ff',
+    'editor.foreground': '#130f48',
+    'editor.lineHighlightBackground': '#ece8fc',
+    'editor.selectionBackground': '#cdff7080',
+    'editorCursor.foreground': '#4b469b',
+    'editorWhitespace.foreground': '#d8d4f0',
+    'editorLineNumber.foreground': '#8f8838',
+    'editorLineNumber.activeForeground': '#4b469b',
+    'editorIndentGuide.background': '#ece8fc',
+    'editorIndentGuide.activeBackground': '#d8d4f0',
+    'editor.selectionHighlightBackground': '#cdff7040',
+    'editorBracketMatch.background': '#4b469b30',
+    'editorBracketMatch.border': '#4b469baa'
+  }
+}
+
 export const MONACO_THEMES: Record<string, editor.IStandaloneThemeData> = {
   'github-dark': GITHUB_DARK,
   'github-light': GITHUB_LIGHT,
@@ -1288,7 +1370,9 @@ export const MONACO_THEMES: Record<string, editor.IStandaloneThemeData> = {
   'rainbow-dark': RAINBOW_DARK,
   'rainbow-light': RAINBOW_LIGHT,
   'tropical-dark': TROPICAL_DARK,
-  'tropical-light': TROPICAL_LIGHT
+  'tropical-light': TROPICAL_LIGHT,
+  'afternoon-dark': AFTERNOON_DARK,
+  'afternoon-light': AFTERNOON_LIGHT
 }
 
 export const MONACO_THEME_NAME: Record<string, string> = {
@@ -1322,6 +1406,8 @@ export const MONACO_THEME_NAME: Record<string, string> = {
   'rainbow-light': 'rainbow-light',
   'tropical-dark': 'tropical-dark',
   'tropical-light': 'tropical-light',
+  'afternoon-dark': 'afternoon-dark',
+  'afternoon-light': 'afternoon-light',
   dark: 'github-dark',
   light: 'github-light',
   psychedelic: 'psychedelic-dark'

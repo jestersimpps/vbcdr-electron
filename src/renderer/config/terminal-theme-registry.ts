@@ -515,6 +515,54 @@ TERMINAL_THEMES['tropical-dark'] = {
   brightWhite: '#ffffff'
 }
 
+TERMINAL_THEMES['afternoon-dark'] = {
+  background: '#4f47b8',
+  foreground: '#e6edf3',
+  cursor: '#58a6ff',
+  cursorAccent: '#0d1117',
+  selectionBackground: '#cdff7040',
+  black: '#161b22',
+  red: '#ff7b72',
+  green: '#7ee787',
+  yellow: '#ffa657',
+  blue: '#79c0ff',
+  magenta: '#d2a8ff',
+  cyan: '#a5d6ff',
+  white: '#e6edf3',
+  brightBlack: '#30363d',
+  brightRed: '#ffa198',
+  brightGreen: '#9be9a8',
+  brightYellow: '#ffbe7c',
+  brightBlue: '#a5d6ff',
+  brightMagenta: '#dbb7ff',
+  brightCyan: '#c9e0ff',
+  brightWhite: '#ffffff'
+}
+
+TERMINAL_THEMES['afternoon-light'] = {
+  background: '#faf8ff',
+  foreground: '#130f48',
+  cursor: '#4b469b',
+  cursorAccent: '#faf8ff',
+  selectionBackground: '#cdff7080',
+  black: '#130f48',
+  red: '#cf2330',
+  green: '#70692a',
+  yellow: '#8f8838',
+  blue: '#4b469b',
+  magenta: '#8250df',
+  cyan: '#1b7c83',
+  white: '#6a6380',
+  brightBlack: '#4b469b',
+  brightRed: '#a4423f',
+  brightGreen: '#8f8838',
+  brightYellow: '#70692a',
+  brightBlue: '#5c55b0',
+  brightMagenta: '#a475f9',
+  brightCyan: '#31aaa0',
+  brightWhite: '#130f48'
+}
+
 TERMINAL_THEMES['tropical-light'] = {
   background: '#fff8f0',
   foreground: '#1a1810',

@@ -21,6 +21,7 @@ export const THEME_REGISTRY: ThemeDefinition[] = [
   { id: 'cyberpunk', name: 'Cyberpunk', category: 'experimental', supportsLightMode: true },
   { id: 'rainbow', name: 'Rainbow', category: 'experimental', supportsLightMode: true },
   { id: 'tropical', name: 'Tropical', category: 'experimental', supportsLightMode: true },
+  { id: 'afternoon', name: 'Afternoon', category: 'experimental', supportsLightMode: true },
   { id: 'custom', name: 'Custom', category: 'custom', supportsLightMode: true },
 ]
 

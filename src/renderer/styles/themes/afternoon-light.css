@@ -1,0 +1,72 @@
+:root.afternoon-light body {
+  background: #faf8ff;
+  color: #130f48;
+}
+
+:root.afternoon-light ::-webkit-scrollbar-thumb {
+  background: #8f883880;
+}
+
+:root.afternoon-light ::-webkit-scrollbar-thumb:hover {
+  background: #4b469bbb;
+}
+
+:root.afternoon-light .bg-zinc-950 { background-color: #faf8ff; }
+:root.afternoon-light .bg-zinc-900\/80 { background-color: #ece8fcf0; }
+:root.afternoon-light .bg-zinc-900\/50 { background-color: #ece8fc99; }
+:root.afternoon-light .bg-zinc-900\/30 { background-color: #ece8fc66; }
+:root.afternoon-light .bg-zinc-900 { background-color: #ece8fc; }
+:root.afternoon-light .bg-zinc-800 { background-color: #e4ffb8; }
+:root.afternoon-light .bg-zinc-800\/70 { background-color: #e4ffb8b3; }
+:root.afternoon-light .bg-zinc-800\/50 { background-color: #e4ffb880; }
+:root.afternoon-light .bg-zinc-800\/30 { background-color: #e4ffb84d; }
+:root.afternoon-light .bg-zinc-700 { background-color: #d0ff8c; }
+:root.afternoon-light .bg-zinc-700\/30 { background-color: #d0ff8c4d; }
+
+:root.afternoon-light .hover\:bg-zinc-800:hover { background-color: #d8f4a0; }
+:root.afternoon-light .hover\:bg-zinc-800\/50:hover { background-color: #d8f4a080; }
+:root.afternoon-light .hover\:bg-zinc-800\/30:hover { background-color: #d8f4a04d; }
+:root.afternoon-light .hover\:bg-zinc-700:hover { background-color: #c0f070; }
+
+:root.afternoon-light .border-zinc-800 { border-color: #4b469b50; }
+:root.afternoon-light .border-zinc-700 { border-color: #4b469b70; }
+:root.afternoon-light .border-zinc-600 { border-color: #4b469b70; }
+:root.afternoon-light .border-zinc-600\/40 { border-color: #4b469b40; }
+
+:root.afternoon-light .text-zinc-100 { color: #130f48; }
+:root.afternoon-light .text-zinc-200 { color: #130f48; }
+:root.afternoon-light .text-zinc-300 { color: #4b469b; }
+:root.afternoon-light .text-zinc-400 { color: #6a6380; }
+:root.afternoon-light .text-zinc-500 { color: #7a7060; }
+:root.afternoon-light .text-zinc-600 { color: #8f8838; }
+
+:root.afternoon-light .hover\:text-zinc-200:hover { color: #130f48; }
+:root.afternoon-light .hover\:text-zinc-300:hover { color: #4b469b; }
+:root.afternoon-light .hover\:text-zinc-400:hover { color: #8f8838; }
+
+:root.afternoon-light .bg-blue-500 { background-color: #4b469b; }
+:root.afternoon-light .bg-blue-600 { background-color: #3a3680; }
+:root.afternoon-light .hover\:bg-blue-500:hover { background-color: #5c55b0; }
+:root.afternoon-light .bg-blue-500\/15 { background-color: rgba(75, 70, 155, 0.15); }
+:root.afternoon-light .bg-emerald-400 { background-color: #8f8838; }
+:root.afternoon-light .bg-amber-400 { background-color: #8f8838; }
+:root.afternoon-light .bg-amber-600 { background-color: #70692a; }
+:root.afternoon-light .bg-amber-500\/15 { background-color: rgba(143, 136, 56, 0.15); }
+:root.afternoon-light .bg-red-500\/20 { background-color: rgba(207, 35, 48, 0.2); }
+:root.afternoon-light .bg-red-600 { background-color: #cf2330; }
+:root.afternoon-light .bg-green-400 { background-color: #8f8838; }
+:root.afternoon-light .bg-green-400\/15 { background-color: rgba(143, 136, 56, 0.15); }
+:root.afternoon-light .bg-green-600 { background-color: #70692a; }
+
+:root.afternoon-light .text-blue-400 { color: #4b469b; }
+:root.afternoon-light .text-emerald-400 { color: #8f8838; }
+:root.afternoon-light .text-amber-300 { color: #8f8838; }
+:root.afternoon-light .text-amber-400 { color: #8f8838; }
+:root.afternoon-light .text-red-400 { color: #cf2330; }
+:root.afternoon-light .text-red-500 { color: #a4423f; }
+:root.afternoon-light .text-green-400 { color: #8f8838; }
+:root.afternoon-light .text-yellow-400 { color: #8f8838; }
+:root.afternoon-light .fill-yellow-400 { fill: #8f8838; }
+:root.afternoon-light .hover\:text-red-400:hover { color: #a4423f; }
+
+:root.afternoon-light .focus\:ring-zinc-600:focus { --tw-ring-color: #4b469b; }
