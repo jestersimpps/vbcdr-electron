@@ -245,17 +245,48 @@ function BackgroundSection(): React.ReactElement {
 function EditorSection(): React.ReactElement {
   const minimapEnabled = useEditorPrefsStore((s) => s.minimapEnabled)
   const setMinimapEnabled = useEditorPrefsStore((s) => s.setMinimapEnabled)
+  const autosaveEnabled = useEditorPrefsStore((s) => s.autosaveEnabled)
+  const setAutosaveEnabled = useEditorPrefsStore((s) => s.setAutosaveEnabled)
+  const autosaveDelayMs = useEditorPrefsStore((s) => s.autosaveDelayMs)
+  const setAutosaveDelayMs = useEditorPrefsStore((s) => s.setAutosaveDelayMs)
   const accent = useAccent()
 
   return (
     <SectionCard title="Editor" description="Code editor preferences.">
-      <PrefToggle
-        label="Minimap"
-        description="Show code minimap on the right edge of the editor."
-        enabled={minimapEnabled}
-        onToggle={() => setMinimapEnabled(!minimapEnabled)}
-        accent={accent}
-      />
+      <div className="space-y-3">
+        <PrefToggle
+          label="Minimap"
+          description="Show code minimap on the right edge of the editor."
+          enabled={minimapEnabled}
+          onToggle={() => setMinimapEnabled(!minimapEnabled)}
+          accent={accent}
+        />
+        <PrefToggle
+          label="Autosave"
+          description={`Save automatically ${autosaveDelayMs}ms after you stop typing.`}
+          enabled={autosaveEnabled}
+          onToggle={() => setAutosaveEnabled(!autosaveEnabled)}
+          accent={accent}
+        />
+        {autosaveEnabled && (
+          <div className="ml-12">
+            <div className="mb-1 flex items-center justify-between text-xs text-zinc-500">
+              <span>Delay</span>
+              <span className="tabular-nums text-zinc-400">{autosaveDelayMs}ms</span>
+            </div>
+            <input
+              type="range"
+              min={250}
+              max={5000}
+              step={250}
+              value={autosaveDelayMs}
+              onChange={(e) => setAutosaveDelayMs(Number(e.target.value))}
+              style={{ accentColor: accent }}
+              className="h-1 w-full cursor-pointer"
+            />
+          </div>
+        )}
+      </div>
     </SectionCard>
   )
 }

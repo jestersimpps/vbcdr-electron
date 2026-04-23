@@ -311,11 +311,14 @@ const EMPTY_FILES: OpenFile[] = []
 export function CodeEditor({ projectId }: { projectId: string }): React.ReactElement {
   const getFullThemeId = useThemeStore((s) => s.getFullThemeId)
   const minimapEnabled = useEditorPrefsStore((s) => s.minimapEnabled)
+  const autosaveEnabled = useEditorPrefsStore((s) => s.autosaveEnabled)
+  const autosaveDelayMs = useEditorPrefsStore((s) => s.autosaveDelayMs)
   const openFiles = useEditorStore((s) => s.statePerProject[projectId]?.openFiles ?? EMPTY_FILES)
   const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
   const { setActiveFile, closeFile, editFileContent, saveFile } = useEditorStore()
   const [showSaved, setShowSaved] = useState(false)
   const savedTimer = useRef<ReturnType<typeof setTimeout>>(null)
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout>>(null)
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath)
   const themeId = getFullThemeId()
@@ -352,7 +355,20 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   const handleChange = useCallback((value: string | undefined) => {
     if (value === undefined || !activeFilePath) return
     editFileContent(projectId, activeFilePath, value)
-  }, [projectId, activeFilePath, editFileContent])
+    if (!autosaveEnabled) return
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    const filePath = activeFilePath
+    autosaveTimer.current = setTimeout(async () => {
+      const saved = await saveFile(projectId, filePath)
+      if (saved) flashSaved()
+    }, autosaveDelayMs)
+  }, [projectId, activeFilePath, editFileContent, autosaveEnabled, autosaveDelayMs, saveFile, flashSaved])
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    }
+  }, [])
 
   return (
     <div className="flex h-full flex-col bg-zinc-950">
