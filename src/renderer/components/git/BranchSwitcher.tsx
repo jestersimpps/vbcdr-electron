@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { GitBranch as GitBranchIcon, ChevronDown, Loader2 } from 'lucide-react'
+import { ChevronDown, Loader2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
@@ -33,15 +33,11 @@ export function BranchSwitcher(): React.ReactElement | null {
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={switchingBranch}
-        className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-50"
+        className="flex shrink-0 items-center gap-1 rounded bg-green-400/15 px-1.5 py-px text-[10px] font-medium text-green-400 transition-colors hover:bg-green-400/25 disabled:opacity-50"
       >
-        {switchingBranch ? (
-          <Loader2 size={13} className="animate-spin" />
-        ) : (
-          <GitBranchIcon size={13} />
-        )}
-        <span>{currentBranch.name}</span>
-        <ChevronDown size={10} />
+        {switchingBranch && <Loader2 size={10} className="animate-spin" />}
+        <span className="max-w-[140px] truncate">{currentBranch.name}</span>
+        <ChevronDown size={9} className="opacity-70" />
       </button>
 
       {isOpen && (
@@ -85,7 +81,7 @@ function BranchMenu({ branches, currentBranch, onSelect, onClose }: BranchMenuPr
   return (
     <div
       ref={menuRef}
-      className="absolute bottom-full left-0 mb-2 w-56 rounded border border-zinc-700 bg-zinc-900 shadow-lg max-h-72 overflow-y-auto"
+      className="absolute top-full left-0 mt-1 w-56 rounded border border-zinc-700 bg-zinc-900 shadow-lg max-h-72 overflow-y-auto z-50"
     >
       {localBranches.length > 0 && (
         <div className="p-2 border-b border-zinc-800">

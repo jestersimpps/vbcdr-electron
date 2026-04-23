@@ -4,6 +4,7 @@ import { useProjectStore } from '@/stores/project-store'
 import { GitBranch as GitBranchIcon, ArrowDown, GitMerge, RefreshCw } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 import { DiffOverlay } from '@/components/git/DiffOverlay'
+import { BranchSwitcher } from '@/components/git/BranchSwitcher'
 
 const LANE_COLORS = [
   '#4ade80',
@@ -203,7 +204,6 @@ export function GitTree(): React.ReactElement {
 
   const isRepo = useGitStore((s) => activeProjectId ? s.isRepoPerProject[activeProjectId] : false)
   const commits = useGitStore((s) => activeProjectId ? s.commitsPerProject[activeProjectId] : undefined)
-  const branches = useGitStore((s) => activeProjectId ? s.branchesPerProject[activeProjectId] : undefined)
   const drift = useGitStore((s) => activeProjectId ? s.driftPerProject[activeProjectId] : undefined)
   const pullAction = useGitStore((s) => s.pull)
   const rebaseAction = useGitStore((s) => s.rebaseRemote)
@@ -220,7 +220,6 @@ export function GitTree(): React.ReactElement {
     const maxCols = Math.max(1, ...graphRows.map((r) => Math.max(r.col + 1, ...r.lines.map((l) => Math.max(l.fromCol, l.toCol) + 1))))
     return maxCols * COL_WIDTH + 12
   }, [graphRows])
-  const currentBranch = branches?.find((b) => b.current)
 
   if (!activeProject) {
     return (
@@ -244,11 +243,7 @@ export function GitTree(): React.ReactElement {
         <div className="flex min-w-0 items-center gap-1.5">
           <GitBranchIcon size={13} className="shrink-0 text-zinc-500" />
           <span className="shrink-0 text-[11px] text-zinc-400">Git</span>
-          {currentBranch && (
-            <span className="truncate rounded bg-green-400/15 px-1.5 py-px text-[10px] font-medium text-green-400">
-              {currentBranch.name}
-            </span>
-          )}
+          <BranchSwitcher />
           {drift && drift.behind > 0 && !drift.diverged && activeProjectId && activeProject && (
             <button
               onClick={() => pullAction(activeProjectId, activeProject.path)}
