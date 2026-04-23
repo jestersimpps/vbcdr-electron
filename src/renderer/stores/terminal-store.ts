@@ -19,6 +19,7 @@ interface TerminalStore {
   setActiveTab: (projectId: string, tabId: string) => void
   setTabStatus: (tabId: string, status: TabStatus) => void
   setTabTitle: (tabId: string, title: string) => void
+  reorderTabs: (projectId: string, fromIndex: number, toIndex: number) => void
   setOutput: (projectId: string, lines: string[]) => void
   setTokenUsage: (tabId: string, tokens: number) => void
   initProject: (projectId: string, cwd: string) => Promise<void>
@@ -104,6 +105,20 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     set((state) => ({
       activeTabPerProject: { ...state.activeTabPerProject, [projectId]: tabId }
     }))
+  },
+
+  reorderTabs: (projectId: string, fromIndex: number, toIndex: number) => {
+    set((state) => {
+      if (fromIndex === toIndex) return state
+      const projectTabs = state.tabs.filter((t) => t.projectId === projectId)
+      if (fromIndex < 0 || fromIndex >= projectTabs.length) return state
+      if (toIndex < 0 || toIndex >= projectTabs.length) return state
+      const reordered = [...projectTabs]
+      const [moved] = reordered.splice(fromIndex, 1)
+      reordered.splice(toIndex, 0, moved)
+      const others = state.tabs.filter((t) => t.projectId !== projectId)
+      return { tabs: [...others, ...reordered] }
+    })
   },
 
   setOutput: (projectId: string, lines: string[]) => {

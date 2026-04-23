@@ -1,13 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from '@dnd-kit/core'
+import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
-import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus, Zap, Palette } from 'lucide-react'
+import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { TerminalTab } from '@/models/types'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
 import { GitActions } from '@/components/git/GitActions'
 import { TaskQueuePanel } from './TaskQueuePanel'
@@ -32,6 +43,56 @@ function tokenBarFill(pct: number, theme: ITheme): string {
   return theme.red ?? '#ff7b72'
 }
 
+function SortableTerminalTab({
+  tab,
+  isActive,
+  status,
+  onSelect,
+  onClose
+}: {
+  tab: TerminalTab
+  isActive: boolean
+  status: 'idle' | 'busy' | undefined
+  onSelect: () => void
+  onClose: (e: React.MouseEvent) => void
+}): React.ReactElement {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tab.id })
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        'group flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-t-md px-3 py-1.5 text-xs',
+        isActive ? 'bg-zinc-950 text-zinc-200' : 'text-zinc-500 hover:text-zinc-400'
+      )}
+      onClick={onSelect}
+    >
+      {tab.initialCommand && status === 'busy' && (
+        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+      )}
+      {tab.initialCommand && status === 'idle' && (
+        <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+      )}
+      <span>{tab.title}</span>
+      <button
+        onClick={onClose}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="hidden rounded p-0.5 hover:text-red-400 group-hover:block"
+        title="Close tab"
+      >
+        <X size={10} />
+      </button>
+    </div>
+  )
+}
+
 export function TerminalPanel(): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => {
@@ -43,7 +104,7 @@ export function TerminalPanel(): React.ReactElement {
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
-  const { createTab, closeTab, replaceTab, setActiveTab, initProject } = useTerminalStore()
+  const { createTab, closeTab, replaceTab, setActiveTab, initProject, reorderTabs } = useTerminalStore()
 
   const fullThemeId = useThemeStore((s) => s.getFullThemeId())
   const terminalThemeId = useThemeStore((s) => s.terminalThemeId)
@@ -116,6 +177,18 @@ export function TerminalPanel(): React.ReactElement {
     createTab(activeProject.id, activeProject.path, 'claude')
   }
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
+  const handleTabDragEnd = useCallback((event: DragEndEvent): void => {
+    const { active, over } = event
+    if (!over || active.id === over.id || !activeProjectId) return
+    const fromIndex = projectTabs.findIndex((t) => t.id === active.id)
+    const toIndex = projectTabs.findIndex((t) => t.id === over.id)
+    if (fromIndex !== -1 && toIndex !== -1) {
+      reorderTabs(activeProjectId, fromIndex, toIndex)
+    }
+  }, [activeProjectId, projectTabs, reorderTabs])
+
   const handleCloseTab = (tabId: string): void => {
     window.api.terminal.kill(tabId)
     disposeTerminal(tabId)
@@ -131,36 +204,23 @@ export function TerminalPanel(): React.ReactElement {
     <div data-terminal-panel className={backgroundImage ? '' : 'bg-zinc-950'} style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
       <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex flex-1 items-center gap-0.5 overflow-x-auto px-1">
-          {projectTabs.map((tab) => (
-            <div
-              key={tab.id}
-              className={cn(
-                'group flex cursor-pointer items-center gap-1.5 rounded-t-md px-3 py-1.5 text-xs',
-                activeTabId === tab.id
-                  ? 'bg-zinc-950 text-zinc-200'
-                  : 'text-zinc-500 hover:text-zinc-400'
-              )}
-              onClick={() => activeProjectId && setActiveTab(activeProjectId, tab.id)}
-            >
-              {tab.initialCommand && tabStatuses[tab.id] === 'busy' && (
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
-              )}
-              {tab.initialCommand && tabStatuses[tab.id] === 'idle' && (
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
-              )}
-              <span>{tab.title}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleCloseTab(tab.id)
-                }}
-                className="hidden rounded p-0.5 hover:text-red-400 group-hover:block"
-                title="Close tab"
-              >
-                <X size={10} />
-              </button>
-            </div>
-          ))}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTabDragEnd}>
+            <SortableContext items={projectTabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
+              {projectTabs.map((tab) => (
+                <SortableTerminalTab
+                  key={tab.id}
+                  tab={tab}
+                  isActive={activeTabId === tab.id}
+                  status={tabStatuses[tab.id]}
+                  onSelect={() => activeProjectId && setActiveTab(activeProjectId, tab.id)}
+                  onClose={(e) => {
+                    e.stopPropagation()
+                    handleCloseTab(tab.id)
+                  }}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
         <button
           onClick={handleNewTab}
@@ -345,8 +405,22 @@ export function TerminalPanel(): React.ReactElement {
 
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         {projectTabs.length === 0 && (
-          <div className="flex h-full items-center justify-center text-xs text-zinc-600">
-            {activeProject ? 'Click + to open a terminal' : 'Select a project first'}
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-zinc-500">
+            {activeProject ? (
+              <>
+                <Sparkles size={28} className="text-zinc-600" />
+                <button
+                  onClick={handleNewTab}
+                  className="flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-medium text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/20"
+                >
+                  <Sparkles size={14} />
+                  Start Claude Code here
+                </button>
+                <div className="text-[10px] text-zinc-600">or click + above for an empty shell</div>
+              </>
+            ) : (
+              <div className="text-xs text-zinc-600">Select a project first</div>
+            )}
           </div>
         )}
         {tabs.map((tab) => (

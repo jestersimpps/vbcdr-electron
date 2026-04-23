@@ -3,6 +3,7 @@ import { AppLayoutGrid } from '@/components/layout/AppLayoutGrid'
 import { UpdateBanner } from '@/components/layout/UpdateBanner'
 
 import { ConflictBanner } from '@/components/git/ConflictBanner'
+import { CommandPalette } from '@/components/palette/CommandPalette'
 import { useThemeStore } from '@/stores/theme-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
@@ -173,6 +174,7 @@ export function App(): React.ReactElement {
       <UpdateBanner />
       <ConflictBanner />
       <AppLayoutGrid />
+      <CommandPalette />
     </div>
   )
 }
