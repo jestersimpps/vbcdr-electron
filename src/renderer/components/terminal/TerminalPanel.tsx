@@ -11,7 +11,9 @@ import { cn } from '@/lib/utils'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
 import { GitActions } from '@/components/git/GitActions'
 import { TaskQueuePanel } from './TaskQueuePanel'
+import { Sparkline } from './Sparkline'
 import { useQueueRunner } from '@/hooks/useQueueRunner'
+import { useTokenVelocity } from '@/hooks/useTokenVelocity'
 import type { ITheme } from '@xterm/xterm'
 
 const TERMINAL_THEME_OPTIONS = [
@@ -55,6 +57,9 @@ export function TerminalPanel(): React.ReactElement {
   const projectTabs = tabs.filter((t) => t.projectId === activeProjectId)
   const activeTabId = activeProjectId ? (activeTabPerProject[activeProjectId] || null) : null
   const activeTab = projectTabs.find((t) => t.id === activeTabId)
+
+  const tokenVelocityTabId = activeTab?.initialCommand ? activeTabId : null
+  const { velocityPerSample, tokensPerMinute } = useTokenVelocity(tokenVelocityTabId)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -320,6 +325,17 @@ export function TerminalPanel(): React.ReactElement {
                 style={{ width: `${pct * 100}%`, backgroundColor: fill }}
               />
             </div>
+            {velocityPerSample.length >= 2 && (
+              <div
+                className="flex items-center gap-1"
+                title={`${tokensPerMinute.toLocaleString()} tokens/min (last 60s)`}
+              >
+                <Sparkline values={velocityPerSample} color={fill} fillColor={`${fill}20`} />
+                <span className="shrink-0 text-[10px] tabular-nums" style={{ color: `${fill}aa` }}>
+                  {formatTokens(tokensPerMinute)}/min
+                </span>
+              </div>
+            )}
             <span className="shrink-0 text-[10px] tabular-nums" style={{ color: `${fill}aa` }}>
               {formatTokens(tokens)} / {formatTokens(tokenCap)}
             </span>

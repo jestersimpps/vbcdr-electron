@@ -180,6 +180,14 @@ const api = {
       ipcRenderer.invoke('activity:sessions', projectId, sinceIso, idleMinutes),
     allSessions: (sinceIso: string | null, idleMinutes?: number) =>
       ipcRenderer.invoke('activity:all-sessions', sinceIso, idleMinutes)
+  },
+
+  tokenUsage: {
+    record: (tabId: string, projectId: string, tokens: number) =>
+      ipcRenderer.invoke('token-usage:record', tabId, projectId, tokens),
+    resetTab: (tabId: string) => ipcRenderer.invoke('token-usage:reset-tab', tabId),
+    daily: (sinceIso: string | null) => ipcRenderer.invoke('token-usage:daily', sinceIso),
+    events: (sinceIso: string | null) => ipcRenderer.invoke('token-usage:events', sinceIso)
   }
 }
 

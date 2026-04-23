@@ -8,8 +8,10 @@ import { registerGitHandlers } from '@main/ipc/git'
 import { registerPasswordHandlers } from '@main/ipc/passwords'
 import { registerClaudeConfigHandlers } from '@main/ipc/claude-config'
 import { registerActivityHandlers } from '@main/ipc/activity'
+import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
 import { killAll, killOrphanedPtys } from '@main/services/pty-manager'
 import { compactActivity, flushActivity } from '@main/services/activity-service'
+import { compactTokenUsage, flushTokenUsage } from '@main/services/token-usage-service'
 import { stopWatching } from '@main/services/file-watcher'
 import { detachAllTabs } from '@main/services/browser-view'
 import { registerUpdaterHandlers } from '@main/ipc/updater'
@@ -120,6 +122,7 @@ registerPasswordHandlers()
 registerClaudeConfigHandlers()
 registerUpdaterHandlers()
 registerActivityHandlers()
+registerTokenUsageHandlers()
 
 function buildMenu(): Electron.MenuItemConstructorOptions[] {
   const isMac = process.platform === 'darwin'
@@ -291,6 +294,7 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
 app.whenReady().then(() => {
   killOrphanedPtys()
   compactActivity()
+  compactTokenUsage()
   createWindow()
   Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenu()))
 
@@ -352,6 +356,7 @@ app.on('window-all-closed', () => {
   detachAllTabs()
   stopAutoFetch()
   flushActivity()
+  flushTokenUsage()
   if (process.platform !== 'darwin') app.quit()
 })
 
@@ -361,4 +366,5 @@ app.on('before-quit', () => {
   detachAllTabs()
   stopAutoFetch()
   flushActivity()
+  flushTokenUsage()
 })

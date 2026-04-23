@@ -225,6 +225,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
             }
             if (latestTokens !== null) {
               useTerminalStore.getState().setTokenUsage(tabId, latestTokens)
+              window.api.tokenUsage.record(tabId, projectId, latestTokens)
             }
           }, 200))
         }
@@ -453,4 +454,5 @@ export function disposeTerminal(tabId: string): void {
     try { entry.terminal.dispose() } catch { /* WebGL addon may throw during dispose */ }
     terminalsMap.delete(tabId)
   }
+  window.api.tokenUsage.resetTab(tabId)
 }

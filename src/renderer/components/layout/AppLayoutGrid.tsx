@@ -20,8 +20,9 @@ import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
 import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
 import { Dashboard } from '@/components/dashboard/Dashboard'
 import { Statistics } from '@/components/statistics/Statistics'
+import { Usage } from '@/components/usage/Usage'
 import { Settings } from '@/components/settings/Settings'
-import { Globe, Code, Bot, TerminalSquare, Plus, X, FolderOpen, ChevronLeft, ChevronRight, LayoutDashboard, PieChart, Settings as SettingsIcon } from 'lucide-react'
+import { Globe, Code, Bot, TerminalSquare, Plus, X, FolderOpen, ChevronLeft, ChevronRight, LayoutDashboard, PieChart, Gauge, Settings as SettingsIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -42,7 +43,7 @@ const ProjectTabStatus = memo(function ProjectTabStatus({ projectId }: { project
 })
 
 export function AppLayoutGrid(): React.ReactElement {
-  const { projects, activeProjectId, dashboardActive, statisticsActive, settingsActive, loadProjects, addProject, removeProject, setActiveProject, showDashboard, showStatistics, showSettings } =
+  const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, loadProjects, addProject, removeProject, setActiveProject, showDashboard, showStatistics, showUsage, showSettings } =
     useProjectStore()
   const browserless = useLayoutStore((s) => activeProjectId ? s.isBrowserless(activeProjectId) : false)
   const defaultTab = browserless ? 'terminals' : 'browser'
@@ -407,6 +408,18 @@ export function AppLayoutGrid(): React.ReactElement {
             >
               <PieChart size={18} />
             </button>
+            <button
+              onClick={showUsage}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                usageActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Usage"
+            >
+              <Gauge size={18} />
+            </button>
           </div>
           <button
             onClick={showSettings}
@@ -435,7 +448,7 @@ export function AppLayoutGrid(): React.ReactElement {
         <div
           ref={containerRef}
           className="absolute inset-0"
-          style={{ visibility: dashboardActive || statisticsActive || settingsActive ? 'hidden' : 'visible' }}
+          style={{ visibility: dashboardActive || statisticsActive || usageActive || settingsActive ? 'hidden' : 'visible' }}
         >
           {width > 0 && height > 0 && (
             <ReactGridLayout
@@ -475,6 +488,11 @@ export function AppLayoutGrid(): React.ReactElement {
         {statisticsActive && (
           <div className="absolute inset-0 z-10 overflow-auto">
             <Statistics />
+          </div>
+        )}
+        {usageActive && (
+          <div className="absolute inset-0 z-10 overflow-auto">
+            <Usage />
           </div>
         )}
         {settingsActive && (

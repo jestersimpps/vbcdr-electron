@@ -8,6 +8,7 @@ interface ProjectStore {
   activeProjectId: string | null
   dashboardActive: boolean
   statisticsActive: boolean
+  usageActive: boolean
   settingsActive: boolean
   loadProjects: () => Promise<void>
   addProject: () => Promise<Project | null>
@@ -15,6 +16,7 @@ interface ProjectStore {
   setActiveProject: (id: string) => void
   showDashboard: () => void
   showStatistics: () => void
+  showUsage: () => void
   showSettings: () => void
   activeProject: () => Project | undefined
 }
@@ -24,6 +26,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   activeProjectId: null,
   dashboardActive: true,
   statisticsActive: false,
+  usageActive: false,
   settingsActive: false,
 
   loadProjects: async () => {
@@ -35,7 +38,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const project = await window.api.projects.add()
     if (project) {
       await get().loadProjects()
-      set({ activeProjectId: project.id, dashboardActive: false, statisticsActive: false, settingsActive: false })
+      set({ activeProjectId: project.id, dashboardActive: false, statisticsActive: false, usageActive: false, settingsActive: false })
     }
     return project
   },
@@ -49,25 +52,29 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     await window.api.projects.remove(id)
     const state = get()
     if (state.activeProjectId === id) {
-      set({ activeProjectId: null, dashboardActive: true, statisticsActive: false, settingsActive: false })
+      set({ activeProjectId: null, dashboardActive: true, statisticsActive: false, usageActive: false, settingsActive: false })
     }
     await state.loadProjects()
   },
 
   setActiveProject: (id: string) => {
-    set({ activeProjectId: id, dashboardActive: false, statisticsActive: false, settingsActive: false })
+    set({ activeProjectId: id, dashboardActive: false, statisticsActive: false, usageActive: false, settingsActive: false })
   },
 
   showDashboard: () => {
-    set({ dashboardActive: true, statisticsActive: false, settingsActive: false })
+    set({ dashboardActive: true, statisticsActive: false, usageActive: false, settingsActive: false })
   },
 
   showStatistics: () => {
-    set({ statisticsActive: true, dashboardActive: false, settingsActive: false })
+    set({ statisticsActive: true, dashboardActive: false, usageActive: false, settingsActive: false })
+  },
+
+  showUsage: () => {
+    set({ usageActive: true, dashboardActive: false, statisticsActive: false, settingsActive: false })
   },
 
   showSettings: () => {
-    set({ settingsActive: true, dashboardActive: false, statisticsActive: false })
+    set({ settingsActive: true, dashboardActive: false, statisticsActive: false, usageActive: false })
   },
 
   activeProject: () => {
