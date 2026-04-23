@@ -9,15 +9,32 @@ import {
   BarChart3,
   Activity,
   LayoutGrid,
-  ArrowRight
+  ArrowRight,
+  Plus,
+  X,
+  Save,
+  RotateCw,
+  Trash2,
+  Sun,
+  Moon,
+  Eye,
+  ImagePlus,
+  RefreshCw,
+  ListPlus,
+  Code,
+  Globe,
+  Sparkles
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useEditorStore } from '@/stores/editor-store'
+import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { useQueueStore } from '@/stores/queue-store'
 import { useLayoutStore } from '@/stores/layout-store'
+import { useThemeStore } from '@/stores/theme-store'
 import { sendToTerminal } from '@/lib/send-to-terminal'
+import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 import type { FileNode } from '@/models/types'
 import { cn } from '@/lib/utils'
 
@@ -107,14 +124,24 @@ export function CommandPalette(): React.ReactElement | null {
   const projects = useProjectStore((s) => s.projects)
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const terminalTabs = useTerminalStore((s) => s.tabs)
-  const queueItems = useQueueStore((s) => (activeProjectId ? s.itemsPerProject[activeProjectId] ?? [] : []))
-  const fileTree = useFileTreeStore((s) => (activeProjectId ? s.treePerProject[activeProjectId] : undefined))
-  const openFiles = useEditorStore((s) => (activeProjectId ? s.statePerProject[activeProjectId]?.openFiles ?? [] : []))
+  const itemsPerProject = useQueueStore((s) => s.itemsPerProject)
+  const treePerProject = useFileTreeStore((s) => s.treePerProject)
+  const editorStatePerProject = useEditorStore((s) => s.statePerProject)
+
+  const queueItems = useMemo(
+    () => (activeProjectId ? itemsPerProject[activeProjectId] ?? [] : []),
+    [activeProjectId, itemsPerProject]
+  )
+  const fileTree = activeProjectId ? treePerProject[activeProjectId] : undefined
+  const openFiles = useMemo(
+    () => (activeProjectId ? editorStatePerProject[activeProjectId]?.openFiles ?? [] : []),
+    [activeProjectId, editorStatePerProject]
+  )
 
   const allFiles = useMemo(() => flattenTree(fileTree), [fileTree])
   const recentFilePaths = useMemo(() => [...openFiles].reverse().map((f) => f.path), [openFiles])
 
-  const items = useMemo<PaletteItem[]>(() => {
+  const items = useMemo((): PaletteItem[] => {
     const list: PaletteItem[] = []
 
     for (const p of projects) {
@@ -173,14 +200,203 @@ export function CommandPalette(): React.ReactElement | null {
         })
       }
 
-      list.push({
-        id: 'action:toggle-browserless',
-        label: 'Toggle browserless layout',
-        group: 'Actions',
-        icon: <LayoutGrid size={14} />,
-        run: () => useLayoutStore.getState().toggleBrowserless(activeProjectId)
-      })
+      const activeTabId = useTerminalStore.getState().activeTabPerProject[activeProjectId] ?? null
+      const activeTab = terminalTabs.find((t) => t.id === activeTabId)
+      const editorActive = useEditorStore.getState().statePerProject[activeProjectId]?.activeFilePath ?? null
+
+      list.push(
+        {
+          id: 'action:new-llm-terminal',
+          label: 'New Claude Code terminal',
+          hint: 'opens a new LLM tab',
+          group: 'Terminal',
+          icon: <Sparkles size={14} />,
+          run: () => {
+            if (!project) return
+            useTerminalStore.getState().createTab(activeProjectId, project.path, 'claude')
+          }
+        },
+        {
+          id: 'action:new-shell',
+          label: 'New shell terminal',
+          group: 'Terminal',
+          icon: <Plus size={14} />,
+          run: () => {
+            if (!project) return
+            useTerminalStore.getState().createTab(activeProjectId, project.path)
+          }
+        },
+        {
+          id: 'action:restart-llm',
+          label: 'Restart active LLM terminal',
+          group: 'Terminal',
+          icon: <RotateCw size={14} />,
+          run: () => {
+            if (!project || !activeTabId || !activeTab?.initialCommand) return
+            window.api.terminal.kill(activeTabId)
+            disposeTerminal(activeTabId)
+            useTerminalStore.getState().replaceTab(activeTabId, activeProjectId, project.path, 'claude')
+          }
+        },
+        {
+          id: 'action:clear-context',
+          label: 'Clear LLM context (/clear)',
+          group: 'Terminal',
+          icon: <Trash2 size={14} />,
+          run: () => {
+            if (!activeTabId) return
+            window.api.terminal.write(activeTabId, '/clear\r')
+          }
+        },
+        {
+          id: 'action:paste-screenshot',
+          label: 'Paste screenshot to terminal',
+          group: 'Terminal',
+          icon: <ImagePlus size={14} />,
+          run: () => {
+            if (!activeTabId) return
+            window.api.terminal.pasteClipboardImage(activeTabId)
+          }
+        }
+      )
+
+      list.push(
+        {
+          id: 'action:save-file',
+          label: 'Save current file',
+          group: 'Editor',
+          icon: <Save size={14} />,
+          run: () => {
+            if (!editorActive) return
+            void useEditorStore.getState().saveFile(activeProjectId, editorActive)
+          }
+        },
+        {
+          id: 'action:close-file',
+          label: 'Close current file tab',
+          group: 'Editor',
+          icon: <X size={14} />,
+          run: () => {
+            if (!editorActive) return
+            useEditorStore.getState().closeFile(activeProjectId, editorActive)
+          }
+        },
+        {
+          id: 'action:center-editor',
+          label: 'Show editor',
+          group: 'Editor',
+          icon: <Code size={14} />,
+          run: () => useEditorStore.getState().setCenterTab(activeProjectId, 'editor')
+        },
+        {
+          id: 'action:center-browser',
+          label: 'Show browser',
+          group: 'Editor',
+          icon: <Globe size={14} />,
+          run: () => useEditorStore.getState().setCenterTab(activeProjectId, 'browser')
+        },
+        {
+          id: 'action:center-claude',
+          label: 'Show Claude config',
+          group: 'Editor',
+          icon: <Settings size={14} />,
+          run: () => useEditorStore.getState().setCenterTab(activeProjectId, 'claude')
+        }
+      )
+
+      list.push(
+        {
+          id: 'action:toggle-browserless',
+          label: 'Toggle browserless layout',
+          group: 'Project',
+          icon: <LayoutGrid size={14} />,
+          run: () => useLayoutStore.getState().toggleBrowserless(activeProjectId)
+        },
+        {
+          id: 'action:reload-tree',
+          label: 'Reload file tree',
+          group: 'Project',
+          icon: <RefreshCw size={14} />,
+          run: () => {
+            if (!project) return
+            void useFileTreeStore.getState().loadTree(activeProjectId, project.path)
+          }
+        },
+        {
+          id: 'action:close-project',
+          label: 'Close current project',
+          group: 'Project',
+          icon: <X size={14} />,
+          run: () => {
+            void useProjectStore.getState().removeProject(activeProjectId)
+          }
+        }
+      )
+
+      const trimmed = query.trim()
+      if (trimmed.length > 0) {
+        const preview = trimmed.length > 60 ? trimmed.slice(0, 60) + '…' : trimmed
+        list.push({
+          id: 'action:enqueue',
+          label: `Send to LLM: "${preview}"`,
+          hint: 'enter to queue · auto-runs if active LLM is idle',
+          group: 'Prompt',
+          icon: <ListPlus size={14} />,
+          run: () => {
+            useQueueStore.getState().addItem(activeProjectId, trimmed)
+          }
+        })
+      }
     }
+
+    list.push(
+      {
+        id: 'action:new-project',
+        label: 'New project (open folder)',
+        group: 'Project',
+        icon: <Folder size={14} />,
+        run: () => {
+          void useProjectStore.getState().addProject()
+        }
+      },
+      {
+        id: 'action:toggle-variant',
+        label: 'Toggle dark / light mode',
+        group: 'Theme',
+        icon: useThemeStore.getState().variant === 'dark' ? <Sun size={14} /> : <Moon size={14} />,
+        run: () => useThemeStore.getState().toggleVariant()
+      },
+      {
+        id: 'action:toggle-minimap',
+        label: 'Toggle editor minimap',
+        group: 'Editor',
+        icon: <Eye size={14} />,
+        run: () => {
+          const s = useEditorPrefsStore.getState()
+          s.setMinimapEnabled(!s.minimapEnabled)
+        }
+      },
+      {
+        id: 'action:toggle-autosave',
+        label: 'Toggle autosave',
+        group: 'Editor',
+        icon: <Save size={14} />,
+        run: () => {
+          const s = useEditorPrefsStore.getState()
+          s.setAutosaveEnabled(!s.autosaveEnabled)
+        }
+      },
+      {
+        id: 'action:toggle-format-on-save',
+        label: 'Toggle format on save',
+        group: 'Editor',
+        icon: <Save size={14} />,
+        run: () => {
+          const s = useEditorPrefsStore.getState()
+          s.setFormatOnSave(!s.formatOnSave)
+        }
+      }
+    )
 
     list.push(
       {
@@ -214,7 +430,7 @@ export function CommandPalette(): React.ReactElement | null {
     )
 
     return list
-  }, [projects, activeProjectId, terminalTabs, allFiles, queueItems])
+  }, [projects, activeProjectId, terminalTabs, allFiles, queueItems, query])
 
   const filtered = useMemo(() => {
     const q = query.trim()
@@ -233,8 +449,12 @@ export function CommandPalette(): React.ReactElement | null {
       return pool.filter((i) => i.group !== 'Open file').slice(0, 50)
     }
 
+    const enqueueItem = mode === 'all' ? pool.find((i) => i.id === 'action:enqueue') : undefined
+    const looksLikePrompt = mode === 'all' && (q.length >= 4 || q.includes(' '))
+
     const scored: { item: PaletteItem; score: number }[] = []
     for (const item of pool) {
+      if (item.id === 'action:enqueue') continue
       const labelMatch = fuzzyMatch(q, item.label)
       const hintMatch = item.hint ? fuzzyMatch(q, item.hint) : { score: 0, matched: false }
       if (!labelMatch.matched && !hintMatch.matched) continue
@@ -242,10 +462,12 @@ export function CommandPalette(): React.ReactElement | null {
       scored.push({ item, score })
     }
     scored.sort((a, b) => b.score - a.score)
+
+    let result: PaletteItem[]
     const fileCount = scored.filter((s) => s.item.group === 'Open file').length
     if (fileCount > MAX_FILE_RESULTS) {
       let kept = 0
-      return scored
+      result = scored
         .filter((s) => {
           if (s.item.group !== 'Open file') return true
           if (kept >= MAX_FILE_RESULTS) return false
@@ -253,8 +475,17 @@ export function CommandPalette(): React.ReactElement | null {
           return true
         })
         .map((s) => s.item)
+    } else {
+      result = scored.map((s) => s.item)
     }
-    return scored.map((s) => s.item)
+
+    if (enqueueItem && looksLikePrompt) {
+      return [enqueueItem, ...result]
+    }
+    if (enqueueItem) {
+      result.push(enqueueItem)
+    }
+    return result
   }, [items, query, mode, recentFilePaths])
 
   useEffect(() => {
@@ -312,7 +543,7 @@ export function CommandPalette(): React.ReactElement | null {
             setSelectedIdx(0)
           }}
           onKeyDown={handleKeyDown}
-          placeholder={mode === 'files' ? 'Search files...' : 'Type a command, project, file, or queued prompt...'}
+          placeholder={mode === 'files' ? 'Search files...' : 'Type a prompt for Claude, or search commands / files / projects...'}
           className="w-full border-b border-zinc-800 bg-transparent px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
         />
         <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-1">
