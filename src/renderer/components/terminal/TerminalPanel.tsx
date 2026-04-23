@@ -10,6 +10,8 @@ import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, Ima
 import { cn } from '@/lib/utils'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
 import { GitActions } from '@/components/git/GitActions'
+import { TaskQueuePanel } from './TaskQueuePanel'
+import { useQueueRunner } from '@/hooks/useQueueRunner'
 import type { ITheme } from '@xterm/xterm'
 
 const TERMINAL_THEME_OPTIONS = [
@@ -118,8 +120,10 @@ export function TerminalPanel(): React.ReactElement {
   const backgroundImage = useLayoutStore((s) => s.backgroundImage)
   const tokenCap = useLayoutStore((s) => s.tokenCap)
 
+  useQueueRunner()
+
   return (
-    <div data-terminal-panel className={backgroundImage ? '' : 'bg-zinc-950'} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div data-terminal-panel className={backgroundImage ? '' : 'bg-zinc-950'} style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
       <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex flex-1 items-center gap-0.5 overflow-x-auto px-1">
           {projectTabs.map((tab) => (
@@ -348,6 +352,8 @@ export function TerminalPanel(): React.ReactElement {
           </div>
         ))}
       </div>
+
+      <TaskQueuePanel projectId={activeProjectId} />
     </div>
   )
 }
