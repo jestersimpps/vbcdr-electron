@@ -15,6 +15,13 @@ interface DailyUsageRow {
   perProject: Record<string, number>
 }
 
+interface ArchivedProjectInfo {
+  id: string
+  name: string
+  path: string
+  archivedAt: number
+}
+
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
@@ -125,11 +132,23 @@ export function Usage(): React.ReactElement {
     }
   }, [])
 
+  const [archivedProjects, setArchivedProjects] = useState<ArchivedProjectInfo[]>([])
+  useEffect(() => {
+    let cancelled = false
+    window.api.projects.listArchived().then((rows: ArchivedProjectInfo[]) => {
+      if (!cancelled) setArchivedProjects(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const projectNameById = useMemo(() => {
     const map: Record<string, string> = {}
+    for (const a of archivedProjects) map[a.id] = a.name
     for (const p of projects) map[p.id] = p.name
     return map
-  }, [projects])
+  }, [projects, archivedProjects])
 
   const claudeTabs = useMemo(() => {
     return tabs

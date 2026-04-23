@@ -5,6 +5,7 @@ const api = {
 
   projects: {
     list: () => ipcRenderer.invoke('projects:list'),
+    listArchived: () => ipcRenderer.invoke('projects:listArchived'),
     add: () => ipcRenderer.invoke('projects:add'),
     remove: (id: string) => ipcRenderer.invoke('projects:remove', id),
     reorder: (orderedIds: string[]) => ipcRenderer.invoke('projects:reorder', orderedIds)
