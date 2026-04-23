@@ -203,7 +203,6 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       })
 
       let idleTimer: ReturnType<typeof setTimeout> | null = null
-      let busyTimer: ReturnType<typeof setTimeout> | null = null
       const isLlm = !!initialCommand
 
       const onIncomingData = (data: string): void => {
@@ -219,17 +218,16 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         }
 
         if (isLlm) {
-          if (!busyTimer) {
-            busyTimer = setTimeout(() => {
-              busyTimer = null
-              useTerminalStore.getState().setTabStatus(tabId, 'busy')
-              useDiffOverlayStore.getState().clearForTab(tabId)
-            }, 250)
+          const entry = terminalsMap.get(tabId)
+          const suppressed = entry && Date.now() < entry.suppressBusyUntil
+          const currentStatus = useTerminalStore.getState().tabStatuses[tabId]
+          if (!suppressed && currentStatus !== 'busy') {
+            useTerminalStore.getState().setTabStatus(tabId, 'busy')
+            useDiffOverlayStore.getState().clearForTab(tabId)
           }
 
           if (idleTimer) clearTimeout(idleTimer)
           idleTimer = setTimeout(async () => {
-            if (busyTimer) { clearTimeout(busyTimer); busyTimer = null }
             const prev = useTerminalStore.getState().tabStatuses[tabId]
             useTerminalStore.getState().setTabStatus(tabId, 'idle')
             if (prev === 'busy') {

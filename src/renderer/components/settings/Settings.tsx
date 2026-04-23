@@ -373,17 +373,17 @@ function PrefToggle({
       <button
         onClick={onToggle}
         className={cn(
-          'relative h-5 w-9 shrink-0 rounded-full border transition-colors',
-          enabled ? 'border-transparent' : 'border-zinc-700 bg-zinc-800'
+          'relative h-5 w-9 shrink-0 rounded-full border border-transparent transition-colors',
+          enabled ? '' : 'bg-zinc-800'
         )}
-        style={enabled ? { backgroundColor: accent, borderColor: accent } : undefined}
+        style={enabled ? { backgroundColor: accent } : undefined}
         aria-pressed={enabled}
         aria-label={`Toggle ${label}`}
       >
         <span
           className={cn(
-            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform',
-            enabled ? 'translate-x-4' : 'translate-x-0.5'
+            'absolute left-0.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-white shadow transition-transform',
+            enabled ? 'translate-x-4' : 'translate-x-0'
           )}
         />
       </button>
