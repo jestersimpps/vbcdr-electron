@@ -52,6 +52,7 @@ interface LayoutState {
   tokenCap: number
   idleSoundEnabled: boolean
   idleSoundId: string
+  commitPanelEnabled: boolean
   resetVersion: number
   getLayout: (projectId: string, browserless?: boolean) => Layout[]
   isLocked: (projectId: string, panelId: PanelId) => boolean
@@ -67,6 +68,7 @@ interface LayoutState {
   setTokenCap: (cap: number) => void
   setIdleSoundEnabled: (enabled: boolean) => void
   setIdleSoundId: (id: string) => void
+  setCommitPanelEnabled: (enabled: boolean) => void
 }
 
 export const DEFAULT_TOKEN_CAP = 160_000
@@ -92,6 +94,7 @@ export const useLayoutStore = create<LayoutState>()(
       tokenCap: DEFAULT_TOKEN_CAP,
       idleSoundEnabled: false,
       idleSoundId: DEFAULT_IDLE_SOUND_ID,
+      commitPanelEnabled: false,
       resetVersion: 0,
 
       getLayout: (projectId: string, browserless?: boolean) => {
@@ -172,6 +175,10 @@ export const useLayoutStore = create<LayoutState>()(
         set({ idleSoundId: id })
       },
 
+      setCommitPanelEnabled: (enabled: boolean) => {
+        set({ commitPanelEnabled: enabled })
+      },
+
       resetLayout: (projectId: string) => {
         const lpp = { ...get().layoutsPerProject }
         const lkp = { ...get().locksPerProject }
@@ -198,7 +205,8 @@ export const useLayoutStore = create<LayoutState>()(
         backgroundBlur: state.backgroundBlur,
         tokenCap: state.tokenCap,
         idleSoundEnabled: state.idleSoundEnabled,
-        idleSoundId: state.idleSoundId
+        idleSoundId: state.idleSoundId,
+        commitPanelEnabled: state.commitPanelEnabled
       })
     }
   )

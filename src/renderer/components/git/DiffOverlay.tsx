@@ -4,6 +4,7 @@ import { useDiffOverlayStore } from '@/stores/diff-overlay-store'
 import { useGitStore } from '@/stores/git-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useTerminalStore } from '@/stores/terminal-store'
+import { useLayoutStore } from '@/stores/layout-store'
 import { sendToTerminal } from '@/lib/send-to-terminal'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
 import type { GitFileStatus } from '@/models/types'
@@ -34,6 +35,7 @@ function basename(path: string): string {
 }
 
 export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactElement | null {
+  const commitPanelEnabled = useLayoutStore((s) => s.commitPanelEnabled)
   const dismissed = useDiffOverlayStore((s) => s.dismissedPerProject[projectId] ?? false)
   const excluded = useDiffOverlayStore((s) => s.excludedPerProject[projectId])
   const closeForProject = useDiffOverlayStore((s) => s.closeForProject)
@@ -57,7 +59,7 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
     }))
   }, [cwd, statusMap])
 
-  const isOpen = files.length > 0 && !dismissed
+  const isOpen = commitPanelEnabled && files.length > 0 && !dismissed
 
   useEffect(() => {
     if (files.length === 0 && dismissed) resetDismiss(projectId)

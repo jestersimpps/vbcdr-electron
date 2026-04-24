@@ -38,6 +38,7 @@ export function Settings(): React.ReactElement {
         <h1 className="text-2xl font-semibold text-zinc-100">Settings</h1>
         <TokenCapSection />
         <EditorSection />
+        <GitSection />
         <BackgroundSection />
         <SoundSection />
         <ThemeSection />
@@ -412,6 +413,24 @@ function PrefToggle({
         {description && <span className="text-[11px] text-zinc-500">{description}</span>}
       </div>
     </div>
+  )
+}
+
+function GitSection(): React.ReactElement {
+  const commitPanelEnabled = useLayoutStore((s) => s.commitPanelEnabled)
+  const setCommitPanelEnabled = useLayoutStore((s) => s.setCommitPanelEnabled)
+  const accent = useAccent()
+
+  return (
+    <SectionCard title="Git" description="Git panel behavior.">
+      <PrefToggle
+        label="Slide-in commit panel"
+        description="Show the commit panel that slides in over the git area when files change."
+        enabled={commitPanelEnabled}
+        onToggle={() => setCommitPanelEnabled(!commitPanelEnabled)}
+        accent={accent}
+      />
+    </SectionCard>
   )
 }
 
