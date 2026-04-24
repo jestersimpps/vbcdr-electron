@@ -92,6 +92,9 @@ const api = {
     commitsSince: (cwd: string, sinceIso: string | null) => ipcRenderer.invoke('git:commits-since', cwd, sinceIso),
     userEmail: (cwd: string) => ipcRenderer.invoke('git:user-email', cwd),
     languageTally: (cwd: string) => ipcRenderer.invoke('git:language-tally', cwd),
+    ignorePath: (cwd: string, filePath: string) => ipcRenderer.invoke('git:ignore-path', cwd, filePath),
+    gitignoreList: (cwd: string) => ipcRenderer.invoke('git:gitignore-list', cwd),
+    gitignoreRemove: (cwd: string, entry: string) => ipcRenderer.invoke('git:gitignore-remove', cwd, entry),
     onDrift: (callback: (projectId: string, drift: unknown) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, projectId: string, drift: unknown) =>
         callback(projectId, drift)

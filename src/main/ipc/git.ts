@@ -16,7 +16,10 @@ import {
   getFirstChangedLine,
   getCommitsSince,
   getUserEmail,
-  getLanguageTally
+  getLanguageTally,
+  addToGitignore,
+  listGitignore,
+  removeFromGitignore
 } from '@main/services/git-service'
 import { registerProject, unregisterProject, fetchNow } from '@main/services/git-fetch-service'
 import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
@@ -109,5 +112,17 @@ export function registerGitHandlers(): void {
 
   ipcMain.handle('git:language-tally', async (_event, cwd: string): Promise<LanguageTally> => {
     return getLanguageTally(cwd)
+  })
+
+  ipcMain.handle('git:ignore-path', async (_event, cwd: string, filePath: string): Promise<GitCommitResult> => {
+    return addToGitignore(cwd, filePath)
+  })
+
+  ipcMain.handle('git:gitignore-list', async (_event, cwd: string): Promise<string[]> => {
+    return listGitignore(cwd)
+  })
+
+  ipcMain.handle('git:gitignore-remove', async (_event, cwd: string, entry: string): Promise<GitCommitResult> => {
+    return removeFromGitignore(cwd, entry)
   })
 }

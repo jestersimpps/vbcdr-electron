@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { X, RotateCcw, FileText, GitCommit } from 'lucide-react'
+import { X, RotateCcw, FileText, GitCommit, EyeOff, Eye, List } from 'lucide-react'
 import { useDiffOverlayStore } from '@/stores/diff-overlay-store'
 import { useGitStore } from '@/stores/git-store'
 import { useEditorStore } from '@/stores/editor-store'
@@ -103,6 +103,35 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
   const [commitMessage, setCommitMessage] = useState('')
   const [committing, setCommitting] = useState(false)
   const [commitError, setCommitError] = useState<string | null>(null)
+  const [showIgnored, setShowIgnored] = useState(false)
+  const [ignoredEntries, setIgnoredEntries] = useState<string[]>([])
+
+  const loadIgnored = async (): Promise<void> => {
+    const entries = await window.api.git.gitignoreList(cwd)
+    setIgnoredEntries(entries)
+  }
+
+  useEffect(() => {
+    loadIgnored()
+  }, [cwd, statusMap])
+
+  const handleUnignore = async (entry: string): Promise<void> => {
+    const result = await window.api.git.gitignoreRemove(cwd, entry)
+    if (!result.success) return
+    await loadIgnored()
+    await loadStatus(projectId, cwd)
+  }
+
+  const handleToggleIgnore = async (file: ChangedFile): Promise<void> => {
+    const entry = file.relativePath
+    const isIgnored = ignoredEntries.includes(entry)
+    const result = isIgnored
+      ? await window.api.git.gitignoreRemove(cwd, entry)
+      : await window.api.git.ignorePath(cwd, file.absolutePath)
+    if (!result.success) return
+    await loadIgnored()
+    await loadStatus(projectId, cwd)
+  }
 
   const llmCommit = (): void => {
     const tState = useTerminalStore.getState()
@@ -155,16 +184,26 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
     >
       <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2 py-1">
         <div className="flex min-w-0 items-center gap-1.5">
-          <FileText size={13} className="shrink-0 text-emerald-400" />
-          <span className="shrink-0 text-[11px] text-zinc-300">Changes from LLM</span>
-          {files.length > 0 && (
-            <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
-              {includedPaths.length === files.length ? files.length : `${includedPaths.length}/${files.length}`}
-            </span>
+          <FileText size={13} className={`shrink-0 ${showIgnored ? 'text-amber-400' : 'text-emerald-400'}`} />
+          <span className="shrink-0 text-[11px] text-zinc-300">
+            {showIgnored ? '.gitignore' : 'Changes from LLM'}
+          </span>
+          {showIgnored ? (
+            ignoredEntries.length > 0 && (
+              <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-px text-[10px] font-medium text-amber-400">
+                {ignoredEntries.length}
+              </span>
+            )
+          ) : (
+            files.length > 0 && (
+              <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
+                {includedPaths.length === files.length ? files.length : `${includedPaths.length}/${files.length}`}
+              </span>
+            )
           )}
         </div>
         <div className="flex items-center gap-1">
-          {files.length > 0 && (
+          {files.length > 0 && !showIgnored && (
             <button
               onClick={handleRevertAll}
               className="rounded px-1.5 py-0.5 text-[10px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
@@ -173,6 +212,13 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
               Revert all
             </button>
           )}
+          <button
+            onClick={() => setShowIgnored((v) => !v)}
+            className={`rounded p-1 hover:bg-zinc-800 ${showIgnored ? 'text-amber-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+            title={showIgnored ? 'Show changes' : 'Show .gitignore entries'}
+          >
+            {showIgnored ? <FileText size={12} /> : <List size={12} />}
+          </button>
           <button
             onClick={() => closeForProject(projectId)}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
@@ -184,7 +230,30 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
-        {files.length === 0 ? (
+        {showIgnored ? (
+          ignoredEntries.length === 0 ? (
+            <div className="p-4 text-center text-xs text-zinc-600">No .gitignore entries</div>
+          ) : (
+            ignoredEntries.map((entry) => (
+              <div
+                key={entry}
+                className="group flex items-center gap-1.5 border-b border-zinc-900 px-2 py-1.5 hover:bg-zinc-800/40"
+              >
+                <span className="shrink-0 w-3 text-center text-[10px] font-semibold tabular-nums text-amber-400">I</span>
+                <div className="min-w-0 flex-1 truncate text-[11px] leading-tight text-zinc-300" title={entry}>
+                  {entry}
+                </div>
+                <button
+                  onClick={() => handleUnignore(entry)}
+                  className="shrink-0 rounded p-1 text-zinc-600 opacity-0 group-hover:opacity-100 hover:bg-zinc-800 hover:text-emerald-400"
+                  title="Remove from .gitignore"
+                >
+                  <Eye size={11} />
+                </button>
+              </div>
+            ))
+          )
+        ) : files.length === 0 ? (
           <div className="p-4 text-center text-xs text-zinc-600">No changes</div>
         ) : (
           files.map((file) => {
@@ -220,6 +289,22 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
                     {file.relativePath}
                   </div>
                 </button>
+                {(() => {
+                  const isIgnored = ignoredEntries.includes(file.relativePath)
+                  return (
+                    <button
+                      onClick={() => handleToggleIgnore(file)}
+                      className={`shrink-0 rounded p-1 hover:bg-zinc-800 ${
+                        isIgnored
+                          ? 'text-amber-400 opacity-100 hover:text-emerald-400'
+                          : 'text-zinc-600 opacity-0 group-hover:opacity-100 hover:text-amber-400'
+                      }`}
+                      title={isIgnored ? 'Remove from .gitignore' : 'Add to .gitignore'}
+                    >
+                      {isIgnored ? <Eye size={11} /> : <EyeOff size={11} />}
+                    </button>
+                  )
+                })()}
                 <button
                   onClick={() => handleRevert(file)}
                   className="shrink-0 rounded p-1 text-zinc-600 opacity-0 group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
@@ -233,7 +318,7 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
         )}
       </div>
 
-      {files.length > 0 && (
+      {files.length > 0 && !showIgnored && (
         <div className="shrink-0 border-t border-zinc-800 bg-zinc-900/50 p-2">
           {commitError && (
             <div className="mb-1 truncate text-[10px] text-red-400" title={commitError}>

@@ -342,6 +342,100 @@ export async function getUserEmail(cwd: string): Promise<string> {
   }
 }
 
+async function isTracked(cwd: string, relativePath: string): Promise<boolean> {
+  try {
+    await execFile('git', ['ls-files', '--error-unmatch', '--', relativePath], {
+      cwd,
+      encoding: 'utf-8',
+      timeout: 5000
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function addToGitignore(cwd: string, absolutePath: string): Promise<GitCommitResult> {
+  try {
+    const relativePath = path.relative(cwd, absolutePath)
+    if (!relativePath || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      return { success: false, error: 'Path is outside the project' }
+    }
+
+    const entry = relativePath.split(path.sep).join('/')
+    const gitignorePath = path.join(cwd, '.gitignore')
+
+    let existing = ''
+    try {
+      existing = await fs.promises.readFile(gitignorePath, 'utf-8')
+    } catch {
+      existing = ''
+    }
+
+    const lines = existing.split('\n').map((l) => l.trim())
+    if (!lines.includes(entry)) {
+      const needsNewline = existing.length > 0 && !existing.endsWith('\n')
+      const toAppend = (needsNewline ? '\n' : '') + entry + '\n'
+      await fs.promises.appendFile(gitignorePath, toAppend, 'utf-8')
+    }
+
+    if (await isTracked(cwd, relativePath)) {
+      await runGit(cwd, ['rm', '--cached', '--', relativePath])
+    }
+
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { success: false, error: message }
+  }
+}
+
+export async function listGitignore(cwd: string): Promise<string[]> {
+  try {
+    const gitignorePath = path.join(cwd, '.gitignore')
+    const content = await fs.promises.readFile(gitignorePath, 'utf-8')
+    return content
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !l.startsWith('#'))
+  } catch {
+    return []
+  }
+}
+
+export async function removeFromGitignore(cwd: string, entry: string): Promise<GitCommitResult> {
+  try {
+    const target = entry.trim()
+    if (!target) return { success: false, error: 'Empty entry' }
+
+    const gitignorePath = path.join(cwd, '.gitignore')
+    let existing = ''
+    try {
+      existing = await fs.promises.readFile(gitignorePath, 'utf-8')
+    } catch {
+      return { success: false, error: '.gitignore not found' }
+    }
+
+    const endsWithNewline = existing.endsWith('\n')
+    const lines = existing.split('\n')
+    const filtered = lines.filter((l) => l.trim() !== target)
+
+    if (filtered.length === lines.length) {
+      return { success: false, error: 'Entry not found' }
+    }
+
+    let next = filtered.join('\n')
+    if (endsWithNewline && !next.endsWith('\n')) next += '\n'
+    if (!endsWithNewline && next.endsWith('\n')) next = next.slice(0, -1)
+
+    await fs.promises.writeFile(gitignorePath, next, 'utf-8')
+    return { success: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { success: false, error: message }
+  }
+}
+
 export async function getLanguageTally(cwd: string): Promise<LanguageTally> {
   try {
     const raw = await runGit(cwd, ['ls-files'], 15000, 50 * 1024 * 1024)
