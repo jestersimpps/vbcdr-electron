@@ -39,6 +39,67 @@ const SOURCE_OPTIONS: { key: SessionSource; label: string }[] = [
   { key: 'both', label: 'Both' }
 ]
 
+type HistoryWindow = 'today' | 'week' | 'month' | 'year' | 'custom'
+type HistoryMetric = 'hours' | 'commits'
+
+const HISTORY_WINDOWS: { key: HistoryWindow; label: string }[] = [
+  { key: 'today', label: 'Today' },
+  { key: 'week', label: 'This week' },
+  { key: 'month', label: 'This month' },
+  { key: 'year', label: 'This year' },
+  { key: 'custom', label: 'Custom' }
+]
+
+function parseDateInput(value: string): number | null {
+  if (!value) return null
+  const [y, m, d] = value.split('-').map((n) => parseInt(n, 10))
+  if (!y || !m || !d) return null
+  const date = new Date(y, m - 1, d, 0, 0, 0, 0)
+  if (isNaN(date.getTime())) return null
+  return date.getTime()
+}
+
+function formatDateInput(ms: number): string {
+  const d = new Date(ms)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+interface HistoryRange {
+  start: number
+  end: number
+}
+
+function historyRange(w: HistoryWindow, customFromMs: number | null, customToMs: number | null): HistoryRange {
+  const now = new Date()
+  const today = new Date(now)
+  today.setHours(0, 0, 0, 0)
+  const endOfToday = today.getTime() + 86_400_000 - 1
+  if (w === 'custom') {
+    const start = customFromMs ?? today.getTime()
+    const endDay = customToMs ?? today.getTime()
+    const end = Math.min(endDay + 86_400_000 - 1, Date.now())
+    return { start: Math.min(start, end), end }
+  }
+  if (w === 'today') return { start: today.getTime(), end: endOfToday }
+  if (w === 'week') {
+    const d = new Date(today)
+    const dow = (d.getDay() + 6) % 7
+    d.setDate(d.getDate() - dow)
+    return { start: d.getTime(), end: endOfToday }
+  }
+  if (w === 'month') {
+    const d = new Date(today)
+    d.setDate(1)
+    return { start: d.getTime(), end: endOfToday }
+  }
+  const d = new Date(today)
+  d.setMonth(0, 1)
+  return { start: d.getTime(), end: endOfToday }
+}
+
 interface ProjectData {
   projectId: string
   projectName: string
@@ -67,6 +128,28 @@ export function Statistics(): React.ReactElement {
   const [data, setData] = useState<ProjectData[]>([])
   const [activity, setActivity] = useState<ActivitySessionInput[]>([])
   const [loading, setLoading] = useState(false)
+
+  const [historyWindow, setHistoryWindow] = useState<HistoryWindow>('year')
+  const [historyMetric, setHistoryMetric] = useState<HistoryMetric>('hours')
+  const [historyProjectId, setHistoryProjectId] = useState<string | null>(null)
+  const [historyCommits, setHistoryCommits] = useState<ProjectCommits[]>([])
+  const [historyActivity, setHistoryActivity] = useState<ActivitySessionInput[]>([])
+  const [historyFromMs, setHistoryFromMs] = useState<number | null>(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    d.setDate(d.getDate() - 30)
+    return d.getTime()
+  })
+  const [historyToMs, setHistoryToMs] = useState<number | null>(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d.getTime()
+  })
+
+  const currentHistoryRange = useMemo(
+    () => historyRange(historyWindow, historyFromMs, historyToMs),
+    [historyWindow, historyFromMs, historyToMs]
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -114,6 +197,55 @@ export function Statistics(): React.ReactElement {
       cancelled = true
     }
   }, [range, source, idleMinutes, projects])
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async (): Promise<void> => {
+      const sinceIso = new Date(currentHistoryRange.start).toISOString()
+      const results = await Promise.all(
+        projects.map(async (p) => {
+          const isRepo = await window.api.git.isRepo(p.path)
+          if (!isRepo) return null
+          const [commits, userEmail] = await Promise.all([
+            window.api.git.commitsSince(p.path, sinceIso) as Promise<StatsCommit[]>,
+            window.api.git.userEmail(p.path) as Promise<string>
+          ])
+          return { projectId: p.id, projectName: p.name, commits, userEmail }
+        })
+      )
+      if (cancelled) return
+      const filtered = results.filter((r): r is NonNullable<typeof r> => r !== null)
+      setHistoryCommits(
+        filtered.map((r) => ({
+          projectId: r.projectId,
+          projectName: r.projectName,
+          commits: includeAllAuthors ? r.commits : r.commits.filter((c: StatsCommit) => c.authorEmail === r.userEmail)
+        }))
+      )
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [projects, currentHistoryRange.start, includeAllAuthors])
+
+  useEffect(() => {
+    if (source === 'commits') {
+      setHistoryActivity([])
+      return
+    }
+    let cancelled = false
+    const load = async (): Promise<void> => {
+      const sinceIso = new Date(currentHistoryRange.start).toISOString()
+      const sessions = await window.api.activity.allSessions(sinceIso, idleMinutes)
+      if (cancelled) return
+      setHistoryActivity(sessions as ActivitySessionInput[])
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [currentHistoryRange.start, source, idleMinutes, projects])
 
   const colorForProject = useMemo(() => {
     const map: Record<string, string> = {}
@@ -218,23 +350,50 @@ export function Statistics(): React.ReactElement {
     return { grid, max }
   }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, source])
 
-  const calendarAll = useMemo(() => buildCalendar(sessions, range), [sessions, range])
-
-  const [calendarProjectId, setCalendarProjectId] = useState<string | null>(null)
-
   useEffect(() => {
-    if (calendarProjectId && !projects.some((p) => p.id === calendarProjectId)) {
-      setCalendarProjectId(null)
+    if (historyProjectId && !projects.some((p) => p.id === historyProjectId)) {
+      setHistoryProjectId(null)
     }
-  }, [projects, calendarProjectId])
+  }, [projects, historyProjectId])
 
-  const effectiveCalendarProjectId = calendarProjectId ?? perProjectHours[0]?.projectId ?? null
+  const historySessions = useMemo<Session[]>(() => {
+    const commitSessions = buildSessions(historyCommits, gapMinutes, leadInMinutes)
+    const activitySessions = activityToSessions(historyActivity, projectNameById)
+    let combined: Session[]
+    if (source === 'commits') combined = commitSessions
+    else if (source === 'terminal') combined = activitySessions
+    else combined = mergeSessions([...commitSessions, ...activitySessions])
+    const clipped = clipSessionsToRange(combined, currentHistoryRange.start)
+    return clipped.filter((s) => s.start <= currentHistoryRange.end)
+  }, [historyCommits, historyActivity, projectNameById, gapMinutes, leadInMinutes, source, currentHistoryRange.start, currentHistoryRange.end])
 
-  const calendarProject = useMemo(() => {
-    if (!effectiveCalendarProjectId) return null
-    const filtered = sessions.filter((s) => s.projectId === effectiveCalendarProjectId)
-    return buildCalendar(filtered, range)
-  }, [sessions, range, effectiveCalendarProjectId])
+  const historyFilteredSessions = useMemo<Session[]>(() => {
+    if (!historyProjectId) return historySessions
+    return historySessions.filter((s) => s.projectId === historyProjectId)
+  }, [historySessions, historyProjectId])
+
+  const historyFilteredCommits = useMemo<StatsCommit[]>(() => {
+    const { start, end } = currentHistoryRange
+    const out: StatsCommit[] = []
+    for (const pc of historyCommits) {
+      if (historyProjectId && pc.projectId !== historyProjectId) continue
+      for (const c of pc.commits) {
+        if (c.timestamp < start || c.timestamp > end) continue
+        out.push(c)
+      }
+    }
+    return out
+  }, [historyCommits, currentHistoryRange.start, currentHistoryRange.end, historyProjectId])
+
+  const historyCalendar = useMemo(() => {
+    return buildHistoryCalendar({
+      startMs: currentHistoryRange.start,
+      endMs: currentHistoryRange.end,
+      sessions: historyFilteredSessions,
+      commits: historyFilteredCommits,
+      metric: historyMetric
+    })
+  }, [currentHistoryRange.start, currentHistoryRange.end, historyMetric, historyFilteredSessions, historyFilteredCommits])
 
   const languagePie = useMemo(() => {
     const totals: Record<string, number> = {}
@@ -463,37 +622,24 @@ export function Statistics(): React.ReactElement {
               </ResponsiveContainer>
             </Card>
 
-            <Card title="Calendar (all projects)">
-              {calendarAll.weeks.length === 0 ? (
-                <div className="py-6 text-center text-xs text-zinc-500">No activity in range</div>
-              ) : (
-                <CalendarHeatmap calendar={calendarAll} baseColor={palette.heatmapBase} emptyColor={palette.emptyCell} />
-              )}
-            </Card>
-
-            <Card
-              title="Calendar (per project)"
-              right={
-                <select
-                  value={effectiveCalendarProjectId ?? ''}
-                  onChange={(e) => setCalendarProjectId(e.target.value || null)}
-                  className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
-                >
-                  {perProjectHours.length === 0 && <option value="">No projects</option>}
-                  {perProjectHours.map((p) => (
-                    <option key={p.projectId} value={p.projectId}>
-                      {p.projectName}
-                    </option>
-                  ))}
-                </select>
-              }
-            >
-              {!calendarProject || calendarProject.weeks.length === 0 ? (
-                <div className="py-6 text-center text-xs text-zinc-500">No activity in range</div>
-              ) : (
-                <CalendarHeatmap calendar={calendarProject} baseColor={palette.heatmapBase} emptyColor={palette.emptyCell} />
-              )}
-            </Card>
+            <div className="lg:col-span-2">
+              <HistoricalWorkCard
+                calendar={historyCalendar}
+                window={historyWindow}
+                setWindow={setHistoryWindow}
+                metric={historyMetric}
+                setMetric={setHistoryMetric}
+                projectId={historyProjectId}
+                setProjectId={setHistoryProjectId}
+                projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+                fromMs={historyFromMs}
+                setFromMs={setHistoryFromMs}
+                toMs={historyToMs}
+                setToMs={setHistoryToMs}
+                baseColor={palette.heatmapBase}
+                emptyColor={palette.emptyCell}
+              />
+            </div>
           </div>
         </Section>
 
@@ -755,6 +901,144 @@ function Card({ title, children, right }: { title: string; children: React.React
   )
 }
 
+interface HistoricalWorkCardProps {
+  calendar: HistoryCalendarData
+  window: HistoryWindow
+  setWindow: (w: HistoryWindow) => void
+  metric: HistoryMetric
+  setMetric: (m: HistoryMetric) => void
+  projectId: string | null
+  setProjectId: (id: string | null) => void
+  projects: { id: string; name: string }[]
+  fromMs: number | null
+  setFromMs: (ms: number | null) => void
+  toMs: number | null
+  setToMs: (ms: number | null) => void
+  baseColor: string
+  emptyColor: string
+}
+
+function HistoricalWorkCard({
+  calendar,
+  window: historyWindow,
+  setWindow,
+  metric,
+  setMetric,
+  projectId,
+  setProjectId,
+  projects,
+  fromMs,
+  setFromMs,
+  toMs,
+  setToMs,
+  baseColor,
+  emptyColor
+}: HistoricalWorkCardProps): React.ReactElement {
+  const stats = useMemo(() => computeHistoryStats(calendar), [calendar])
+  const hasCells = calendar.weeks.length > 0 && stats.possibleDays > 0
+  const valueLabel = metric === 'hours' ? `${stats.totalHours.toFixed(1)}h` : `${stats.totalCommits} commit${stats.totalCommits === 1 ? '' : 's'}`
+
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-xs font-medium text-zinc-400">Historical work</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+            {HISTORY_WINDOWS.map((w) => (
+              <button
+                key={w.key}
+                onClick={() => setWindow(w.key)}
+                className={cn(
+                  'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                  historyWindow === w.key ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                )}
+              >
+                {w.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+            <button
+              onClick={() => setMetric('hours')}
+              className={cn(
+                'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                metric === 'hours' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              Hours
+            </button>
+            <button
+              onClick={() => setMetric('commits')}
+              className={cn(
+                'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                metric === 'commits' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+              )}
+            >
+              Commits
+            </button>
+          </div>
+          <select
+            value={projectId ?? ''}
+            onChange={(e) => setProjectId(e.target.value || null)}
+            className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+          >
+            <option value="">All projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {historyWindow === 'custom' && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
+          <span>From</span>
+          <input
+            type="date"
+            value={fromMs !== null ? formatDateInput(fromMs) : ''}
+            max={toMs !== null ? formatDateInput(toMs) : undefined}
+            onChange={(e) => setFromMs(parseDateInput(e.target.value))}
+            className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+          />
+          <span>to</span>
+          <input
+            type="date"
+            value={toMs !== null ? formatDateInput(toMs) : ''}
+            min={fromMs !== null ? formatDateInput(fromMs) : undefined}
+            max={formatDateInput(Date.now())}
+            onChange={(e) => setToMs(parseDateInput(e.target.value))}
+            className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+          />
+        </div>
+      )}
+
+      {hasCells ? (
+        <YearHeatmap calendar={calendar} baseColor={baseColor} emptyColor={emptyColor} />
+      ) : (
+        <div className="py-6 text-center text-xs text-zinc-500">No activity in this window</div>
+      )}
+
+      <div className="mt-3 grid grid-cols-2 gap-3 text-[11px] sm:grid-cols-4">
+        <HistoryStat label="Current streak" value={`${stats.currentStreak} day${stats.currentStreak === 1 ? '' : 's'}`} />
+        <HistoryStat label="Longest streak" value={`${stats.longestStreak} day${stats.longestStreak === 1 ? '' : 's'}`} />
+        <HistoryStat label="Active days" value={`${stats.activeDays} / ${stats.possibleDays}`} />
+        <HistoryStat label={metric === 'hours' ? 'Total time' : 'Total commits'} value={valueLabel} />
+      </div>
+    </div>
+  )
+}
+
+function HistoryStat({ label, value }: { label: string; value: string }): React.ReactElement {
+  return (
+    <div className="rounded-md border border-zinc-800 bg-zinc-950/40 px-2.5 py-1.5">
+      <div className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</div>
+      <div className="mt-0.5 text-sm font-semibold text-zinc-100">{value}</div>
+    </div>
+  )
+}
+
 function SortHeader({
   label,
   active,
@@ -791,14 +1075,20 @@ function hexToRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
-interface CalendarCell {
+interface HistoryCalendarCell {
   dateMs: number
   hours: number
+  commits: number
+  topProjectName: string | null
+  topProjectMs: number
 }
 
-interface CalendarData {
-  weeks: CalendarCell[][]
+interface HistoryCalendarData {
+  weeks: HistoryCalendarCell[][]
   max: number
+  metric: HistoryMetric
+  startMs: number
+  endMs: number
 }
 
 function startOfWeekMs(ms: number): number {
@@ -815,14 +1105,25 @@ function startOfDayMs(ms: number): number {
   return d.getTime()
 }
 
-function buildCalendar(sessions: Session[], range: string): CalendarData {
-  if (sessions.length === 0) return { weeks: [], max: 0.0001 }
-  const rangeStart = rangeStartMs(range)
-  const firstMs = rangeStart ?? Math.min(...sessions.map((s) => s.start))
-  const endMs = Date.now()
-  const weekStart = startOfWeekMs(firstMs)
-  const totals = new Map<number, number>()
+function buildHistoryCalendar({
+  startMs,
+  endMs,
+  sessions,
+  commits,
+  metric
+}: {
+  startMs: number
+  endMs: number
+  sessions: Session[]
+  commits: StatsCommit[]
+  metric: HistoryMetric
+}): HistoryCalendarData {
   const DAY = 86_400_000
+  const weekStart = startOfWeekMs(startMs)
+  const hoursPerDay = new Map<number, number>()
+  const commitsPerDay = new Map<number, number>()
+  const projectMsPerDay = new Map<number, Map<string, number>>()
+
   for (const s of sessions) {
     const segStart = Math.max(s.start, weekStart)
     const segEnd = Math.min(s.end, endMs)
@@ -832,66 +1133,160 @@ function buildCalendar(sessions: Session[], range: string): CalendarData {
       const dayEnd = cursor + DAY
       const overlap = Math.min(segEnd, dayEnd) - Math.max(segStart, cursor)
       if (overlap > 0) {
-        totals.set(cursor, (totals.get(cursor) ?? 0) + overlap / 3_600_000)
+        hoursPerDay.set(cursor, (hoursPerDay.get(cursor) ?? 0) + overlap / 3_600_000)
+        let perProject = projectMsPerDay.get(cursor)
+        if (!perProject) {
+          perProject = new Map<string, number>()
+          projectMsPerDay.set(cursor, perProject)
+        }
+        perProject.set(s.projectName, (perProject.get(s.projectName) ?? 0) + overlap)
       }
       cursor = dayEnd
     }
   }
-  const weeks: CalendarCell[][] = []
+
+  for (const c of commits) {
+    if (c.timestamp < weekStart || c.timestamp > endMs) continue
+    const day = startOfDayMs(c.timestamp)
+    commitsPerDay.set(day, (commitsPerDay.get(day) ?? 0) + 1)
+  }
+
+  const weeks: HistoryCalendarCell[][] = []
   let max = 0.0001
   let weekCursor = weekStart
   while (weekCursor <= endMs) {
-    const week: CalendarCell[] = []
+    const week: HistoryCalendarCell[] = []
     for (let d = 0; d < 7; d++) {
       const dayMs = weekCursor + d * DAY
-      const hours = totals.get(dayMs) ?? 0
-      if (hours > max) max = hours
-      week.push({ dateMs: dayMs, hours })
+      const hours = hoursPerDay.get(dayMs) ?? 0
+      const commitCount = commitsPerDay.get(dayMs) ?? 0
+      let topProjectName: string | null = null
+      let topProjectMs = 0
+      const perProject = projectMsPerDay.get(dayMs)
+      if (perProject) {
+        perProject.forEach((ms, name) => {
+          if (ms > topProjectMs) {
+            topProjectMs = ms
+            topProjectName = name
+          }
+        })
+      }
+      const value = metric === 'hours' ? hours : commitCount
+      if (value > max) max = value
+      week.push({ dateMs: dayMs, hours, commits: commitCount, topProjectName, topProjectMs })
     }
     weeks.push(week)
     weekCursor += 7 * DAY
   }
-  return { weeks, max }
+  return { weeks, max, metric, startMs: weekStart, endMs }
 }
 
-function CalendarHeatmap({ calendar, baseColor, emptyColor }: { calendar: CalendarData; baseColor: string; emptyColor: string }): React.ReactElement {
+interface HistoryStats {
+  totalHours: number
+  totalCommits: number
+  activeDays: number
+  possibleDays: number
+  currentStreak: number
+  longestStreak: number
+}
+
+function computeHistoryStats(calendar: HistoryCalendarData): HistoryStats {
+  const now = Date.now()
+  let totalHours = 0
+  let totalCommits = 0
+  let activeDays = 0
+  let possibleDays = 0
+  let longestStreak = 0
+  let currentStreak = 0
+  let runningStreak = 0
+  const today = startOfDayMs(now)
+  const dayValues: { dateMs: number; active: boolean }[] = []
+  for (const week of calendar.weeks) {
+    for (const cell of week) {
+      if (cell.dateMs > now) continue
+      if (cell.dateMs > calendar.endMs) continue
+      if (cell.dateMs < calendar.startMs) continue
+      possibleDays += 1
+      totalHours += cell.hours
+      totalCommits += cell.commits
+      const active = calendar.metric === 'hours' ? cell.hours > 0 : cell.commits > 0
+      if (active) activeDays += 1
+      dayValues.push({ dateMs: cell.dateMs, active })
+    }
+  }
+  dayValues.sort((a, b) => a.dateMs - b.dateMs)
+  for (const d of dayValues) {
+    if (d.active) {
+      runningStreak += 1
+      if (runningStreak > longestStreak) longestStreak = runningStreak
+    } else {
+      runningStreak = 0
+    }
+  }
+  for (let i = dayValues.length - 1; i >= 0; i--) {
+    const d = dayValues[i]
+    if (d.dateMs === today && !d.active) continue
+    if (d.active) currentStreak += 1
+    else break
+  }
+  return { totalHours, totalCommits, activeDays, possibleDays, currentStreak, longestStreak }
+}
+
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function YearHeatmap({
+  calendar,
+  baseColor,
+  emptyColor
+}: {
+  calendar: HistoryCalendarData
+  baseColor: string
+  emptyColor: string
+}): React.ReactElement {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
   const [r, g, b] = hexToRgb(baseColor)
   const now = Date.now()
-  const weekLabels = calendar.weeks.map((w) => {
-    const d = new Date(w[0].dateMs)
-    return `${d.getMonth() + 1}/${d.getDate()}`
+  const monthRow = calendar.weeks.map((week, i) => {
+    const d = new Date(week[0].dateMs)
+    const month = d.getMonth()
+    if (i === 0) return MONTH_LABELS[month]
+    const prev = new Date(calendar.weeks[i - 1][0].dateMs)
+    return prev.getMonth() === month ? '' : MONTH_LABELS[month]
   })
   return (
     <div className="overflow-x-auto">
       <div className="inline-block">
         <div className="flex text-[10px] text-zinc-500">
-          <div className="w-10" />
-          {calendar.weeks.map((_, i) => (
-            <div key={i} className="w-5 text-center">
-              {i % 4 === 0 ? weekLabels[i] : ''}
+          <div className="w-8" />
+          {monthRow.map((label, i) => (
+            <div key={i} className="w-[14px] text-left">
+              {label}
             </div>
           ))}
         </div>
         {days.map((day, dayIdx) => (
           <div key={day} className="flex items-center">
-            <div className="w-10 text-[10px] text-zinc-500">{day}</div>
+            <div className="w-8 text-[10px] text-zinc-500">{dayIdx % 2 === 0 ? day : ''}</div>
             {calendar.weeks.map((week, wIdx) => {
               const cell = week[dayIdx]
-              const future = cell.dateMs > now
-              const intensity = cell.hours / calendar.max
-              const bg = future
+              const outOfWindow = cell.dateMs > now || cell.dateMs > calendar.endMs || cell.dateMs < calendar.startMs
+              const value = calendar.metric === 'hours' ? cell.hours : cell.commits
+              const intensity = value / calendar.max
+              const bg = outOfWindow
                 ? 'transparent'
-                : cell.hours === 0
+                : value === 0
                   ? emptyColor
                   : `rgba(${r}, ${g}, ${b}, ${0.15 + intensity * 0.85})`
               const dateLabel = new Date(cell.dateMs).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+              const tip = outOfWindow
+                ? dateLabel
+                : `${dateLabel} — ${cell.hours.toFixed(2)}h · ${cell.commits} commit${cell.commits === 1 ? '' : 's'}${cell.topProjectName ? ` · ${cell.topProjectName}` : ''}`
               return (
                 <div
                   key={wIdx}
-                  className="m-px h-5 w-5 rounded-sm border border-zinc-800"
-                  style={{ background: bg, opacity: future ? 0.2 : 1 }}
-                  title={future ? dateLabel : `${dateLabel} — ${cell.hours.toFixed(2)}h`}
+                  className="m-px h-[12px] w-[12px] rounded-sm border border-zinc-800"
+                  style={{ background: bg, opacity: outOfWindow ? 0.15 : 1 }}
+                  title={tip}
                 />
               )
             })}
