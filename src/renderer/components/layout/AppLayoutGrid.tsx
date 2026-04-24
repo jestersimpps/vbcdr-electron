@@ -66,6 +66,10 @@ function SortableProjectTab({
   onRemove: () => void
 }): React.ReactElement {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id })
+  const needsAttention = useTerminalStore((s) => !isActive && !!s.attentionProjectIds[project.id])
+  useEffect(() => {
+    if (isActive) useTerminalStore.getState().clearProjectAttention(project.id)
+  }, [isActive, project.id])
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -85,7 +89,8 @@ function SortableProjectTab({
         'group relative flex items-center gap-1 h-full px-2 text-xs font-medium transition-colors border-b-2 min-w-0 flex-1 basis-0 cursor-pointer select-none',
         isActive
           ? 'border-zinc-400 text-zinc-200 bg-zinc-800/50'
-          : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
+          : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30',
+        needsAttention && 'animate-pulse'
       )}
     >
       <FolderOpen size={12} className="shrink-0" />
@@ -453,7 +458,10 @@ export function AppLayoutGrid(): React.ReactElement {
                     key={project.id}
                     project={project}
                     isActive={activeProjectId === project.id && !dashboardActive && !statisticsActive && !usageActive && !settingsActive}
-                    onSelect={() => setActiveProject(project.id)}
+                    onSelect={() => {
+                      setActiveProject(project.id)
+                      useTerminalStore.getState().clearProjectAttention(project.id)
+                    }}
                     onRemove={() => removeProject(project.id)}
                   />
                 ))}

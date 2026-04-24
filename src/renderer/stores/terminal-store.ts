@@ -13,6 +13,7 @@ interface TerminalStore {
   outputBufferPerProject: Record<string, string[]>
   tokenUsagePerTab: Record<string, number>
   lastActivityPerProject: Record<string, number>
+  attentionProjectIds: Record<string, boolean>
   focusedTabId: string | null
   createTab: (projectId: string, cwd: string, initialCommand?: string) => string
   closeTab: (tabId: string) => void
@@ -24,6 +25,8 @@ interface TerminalStore {
   setOutput: (projectId: string, lines: string[]) => void
   setTokenUsage: (tabId: string, tokens: number) => void
   setFocusedTabId: (tabId: string | null) => void
+  markProjectAttention: (projectId: string) => void
+  clearProjectAttention: (projectId: string) => void
   initProject: (projectId: string, cwd: string) => Promise<void>
 }
 
@@ -34,6 +37,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   outputBufferPerProject: {},
   tokenUsagePerTab: {},
   lastActivityPerProject: {},
+  attentionProjectIds: {},
   focusedTabId: null,
 
   createTab: (projectId: string, cwd: string, initialCommand?: string) => {
@@ -110,6 +114,19 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     set((state) => ({
       activeTabPerProject: { ...state.activeTabPerProject, [projectId]: tabId }
     }))
+  },
+
+  markProjectAttention: (projectId: string) => {
+    set((state) => ({
+      attentionProjectIds: { ...state.attentionProjectIds, [projectId]: true }
+    }))
+  },
+
+  clearProjectAttention: (projectId: string) => {
+    const next = { ...get().attentionProjectIds }
+    if (!(projectId in next)) return
+    delete next[projectId]
+    set({ attentionProjectIds: next })
   },
 
   reorderTabs: (projectId: string, fromIndex: number, toIndex: number) => {

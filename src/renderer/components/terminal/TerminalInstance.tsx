@@ -8,6 +8,7 @@ import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { useThemeStore } from '@/stores/theme-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
+import { useProjectStore } from '@/stores/project-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import { playSound } from '@/lib/sound'
 
@@ -212,6 +213,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
               if (busyPromoteTimer) { clearTimeout(busyPromoteTimer); busyPromoteTimer = null }
               const prev = useTerminalStore.getState().tabStatuses[tabId]
               useTerminalStore.getState().setTabStatus(tabId, 'idle')
+              if (prev !== 'idle' && useProjectStore.getState().activeProjectId !== projectId) {
+                useTerminalStore.getState().markProjectAttention(projectId)
+              }
               if (prev === 'busy') {
                 const { idleSoundEnabled, idleSoundId } = useLayoutStore.getState()
                 if (idleSoundEnabled) playSound(idleSoundId)
