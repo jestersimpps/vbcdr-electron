@@ -1,8 +1,24 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import { spawn } from 'child_process'
+import { spawn, execSync } from 'child_process'
 import { ipcMain, BrowserWindow } from 'electron'
+
+let cachedLoginPath: string | undefined
+
+function resolvedPath(): string | undefined {
+  const current = process.env.PATH
+  if (current && current.includes('/usr/local/bin')) return current
+  if (cachedLoginPath !== undefined) return cachedLoginPath || current
+  try {
+    const loginPath = execSync('/bin/bash -ilc "echo $PATH"', { encoding: 'utf-8' }).trim()
+    cachedLoginPath = loginPath
+    return loginPath || current
+  } catch {
+    cachedLoginPath = ''
+    return current
+  }
+}
 
 interface SkillSearchResult {
   id: string
@@ -75,7 +91,7 @@ function runSkillsCli(
   return new Promise((resolve) => {
     const proc = spawn('npx', ['-y', 'skills', ...args], {
       cwd,
-      env: { ...process.env, CI: '1', FORCE_COLOR: '0' },
+      env: { ...process.env, PATH: resolvedPath(), CI: '1', FORCE_COLOR: '0' },
       shell: false
     })
     let output = ''

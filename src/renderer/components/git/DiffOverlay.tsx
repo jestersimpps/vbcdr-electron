@@ -4,6 +4,7 @@ import { useDiffOverlayStore } from '@/stores/diff-overlay-store'
 import { useGitStore } from '@/stores/git-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useTerminalStore } from '@/stores/terminal-store'
+import { sendToTerminal } from '@/lib/send-to-terminal'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
 import type { GitFileStatus } from '@/models/types'
 
@@ -133,6 +134,16 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
     await loadStatus(projectId, cwd)
   }
 
+  const includedFiles = useMemo(
+    () => files.filter((f) => !excluded?.has(f.absolutePath)),
+    [files, excluded]
+  )
+
+  const includedPaths = useMemo(
+    () => includedFiles.map((f) => f.absolutePath),
+    [includedFiles]
+  )
+
   const llmCommit = (): void => {
     const tState = useTerminalStore.getState()
     const llmTab = tState.tabs.find((t) => t.projectId === projectId && !!t.initialCommand)
@@ -142,13 +153,12 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
     }
     tState.setActiveTab(projectId, llmTab.id)
     useEditorStore.getState().setCenterTab(projectId, 'terminals')
-    window.api.terminal.write(llmTab.id, 'commit the current changes\r')
+    const fileList = includedFiles.map((f) => `- ${f.relativePath} (${f.status})`).join('\n')
+    const message = fileList
+      ? `commit the following changes:\n${fileList}`
+      : 'commit the current changes'
+    sendToTerminal(llmTab.id, message)
   }
-
-  const includedPaths = useMemo(
-    () => files.filter((f) => !excluded?.has(f.absolutePath)).map((f) => f.absolutePath),
-    [files, excluded]
-  )
 
   const handleCommit = async (): Promise<void> => {
     if (committing) return

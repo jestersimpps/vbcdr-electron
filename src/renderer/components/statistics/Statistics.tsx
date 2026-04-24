@@ -41,6 +41,7 @@ const SOURCE_OPTIONS: { key: SessionSource; label: string }[] = [
 
 type HistoryWindow = 'today' | 'week' | 'month' | 'year' | 'custom'
 type HistoryMetric = 'hours' | 'commits'
+type HistoryView = 'heatmap' | 'timeline'
 
 const HISTORY_WINDOWS: { key: HistoryWindow; label: string }[] = [
   { key: 'today', label: 'Today' },
@@ -131,6 +132,7 @@ export function Statistics(): React.ReactElement {
 
   const [historyWindow, setHistoryWindow] = useState<HistoryWindow>('year')
   const [historyMetric, setHistoryMetric] = useState<HistoryMetric>('hours')
+  const [historyView, setHistoryView] = useState<HistoryView>('timeline')
   const [historyProjectId, setHistoryProjectId] = useState<string | null>(null)
   const [historyCommits, setHistoryCommits] = useState<ProjectCommits[]>([])
   const [historyActivity, setHistoryActivity] = useState<ActivitySessionInput[]>([])
@@ -255,6 +257,15 @@ export function Statistics(): React.ReactElement {
     })
     return map
   }, [data, palette])
+
+  const colorForAnyProject = useMemo(() => {
+    const map: Record<string, string> = {}
+    const sorted = projects.map((p) => p.id).sort()
+    sorted.forEach((id, i) => {
+      map[id] = palette.colors[i % palette.colors.length]
+    })
+    return map
+  }, [projects, palette])
 
   const filteredCommits = useMemo<ProjectCommits[]>(() => {
     return data.map((d) => ({
@@ -629,6 +640,11 @@ export function Statistics(): React.ReactElement {
                 setWindow={setHistoryWindow}
                 metric={historyMetric}
                 setMetric={setHistoryMetric}
+                view={historyView}
+                setView={setHistoryView}
+                sessions={historyFilteredSessions}
+                range={currentHistoryRange}
+                colorForProject={colorForAnyProject}
                 projectId={historyProjectId}
                 setProjectId={setHistoryProjectId}
                 projects={projects.map((p) => ({ id: p.id, name: p.name }))}
@@ -907,6 +923,11 @@ interface HistoricalWorkCardProps {
   setWindow: (w: HistoryWindow) => void
   metric: HistoryMetric
   setMetric: (m: HistoryMetric) => void
+  view: HistoryView
+  setView: (v: HistoryView) => void
+  sessions: Session[]
+  range: HistoryRange
+  colorForProject: Record<string, string>
   projectId: string | null
   setProjectId: (id: string | null) => void
   projects: { id: string; name: string }[]
@@ -924,6 +945,11 @@ function HistoricalWorkCard({
   setWindow,
   metric,
   setMetric,
+  view,
+  setView,
+  sessions,
+  range,
+  colorForProject,
   projectId,
   setProjectId,
   projects,
@@ -959,24 +985,46 @@ function HistoricalWorkCard({
           </div>
           <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
             <button
-              onClick={() => setMetric('hours')}
+              onClick={() => setView('timeline')}
               className={cn(
                 'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
-                metric === 'hours' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                view === 'timeline' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
               )}
             >
-              Hours
+              Timeline
             </button>
             <button
-              onClick={() => setMetric('commits')}
+              onClick={() => setView('heatmap')}
               className={cn(
                 'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
-                metric === 'commits' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                view === 'heatmap' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
               )}
             >
-              Commits
+              Heatmap
             </button>
           </div>
+          {view === 'heatmap' && (
+            <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+              <button
+                onClick={() => setMetric('hours')}
+                className={cn(
+                  'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                  metric === 'hours' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                )}
+              >
+                Hours
+              </button>
+              <button
+                onClick={() => setMetric('commits')}
+                className={cn(
+                  'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                  metric === 'commits' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                )}
+              >
+                Commits
+              </button>
+            </div>
+          )}
           <select
             value={projectId ?? ''}
             onChange={(e) => setProjectId(e.target.value || null)}
@@ -1014,7 +1062,14 @@ function HistoricalWorkCard({
         </div>
       )}
 
-      {hasCells ? (
+      {view === 'timeline' ? (
+        <DailyTimeline
+          sessions={sessions}
+          range={range}
+          colorForProject={colorForProject}
+          emptyColor={emptyColor}
+        />
+      ) : hasCells ? (
         <YearHeatmap calendar={calendar} baseColor={baseColor} emptyColor={emptyColor} />
       ) : (
         <div className="py-6 text-center text-xs text-zinc-500">No activity in this window</div>
@@ -1303,6 +1358,190 @@ function YearHeatmap({
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+interface DailyTimelineProps {
+  sessions: Session[]
+  range: HistoryRange
+  colorForProject: Record<string, string>
+  emptyColor: string
+}
+
+interface DayBlock {
+  projectId: string
+  projectName: string
+  startHour: number
+  endHour: number
+  start: number
+  end: number
+  durationMs: number
+}
+
+interface DayRow {
+  dateMs: number
+  blocks: DayBlock[]
+  totalMs: number
+  byProject: Map<string, number>
+}
+
+function buildDayRows(sessions: Session[], range: HistoryRange): DayRow[] {
+  const byDay = new Map<number, DayRow>()
+  const ensureDay = (dayMs: number): DayRow => {
+    let row = byDay.get(dayMs)
+    if (!row) {
+      row = { dateMs: dayMs, blocks: [], totalMs: 0, byProject: new Map() }
+      byDay.set(dayMs, row)
+    }
+    return row
+  }
+  for (const s of sessions) {
+    const segStart = Math.max(s.start, range.start)
+    const segEnd = Math.min(s.end, range.end)
+    if (segEnd <= segStart) continue
+    let cursor = startOfDayMs(segStart)
+    while (cursor <= segEnd) {
+      const dayEnd = addDaysMs(cursor, 1)
+      const blockStart = Math.max(segStart, cursor)
+      const blockEnd = Math.min(segEnd, dayEnd)
+      if (blockEnd > blockStart) {
+        const row = ensureDay(cursor)
+        const startHour = (blockStart - cursor) / 3_600_000
+        const endHour = (blockEnd - cursor) / 3_600_000
+        const dur = blockEnd - blockStart
+        row.blocks.push({
+          projectId: s.projectId,
+          projectName: s.projectName,
+          startHour,
+          endHour,
+          start: blockStart,
+          end: blockEnd,
+          durationMs: dur
+        })
+        row.totalMs += dur
+        row.byProject.set(s.projectId, (row.byProject.get(s.projectId) ?? 0) + dur)
+      }
+      cursor = dayEnd
+    }
+  }
+  const rows = Array.from(byDay.values())
+  rows.sort((a, b) => b.dateMs - a.dateMs)
+  for (const r of rows) r.blocks.sort((a, b) => a.startHour - b.startHour)
+  return rows
+}
+
+function formatDayLabel(ms: number): string {
+  const d = new Date(ms)
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+function formatHourMinute(ms: number): string {
+  const d = new Date(ms)
+  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
+
+function DailyTimeline({ sessions, range, colorForProject, emptyColor }: DailyTimelineProps): React.ReactElement {
+  const rows = useMemo(() => buildDayRows(sessions, range), [sessions, range])
+  const projectLegend = useMemo(() => {
+    const map = new Map<string, { projectId: string; projectName: string; ms: number }>()
+    for (const r of rows) {
+      for (const b of r.blocks) {
+        const existing = map.get(b.projectId)
+        if (existing) existing.ms += b.durationMs
+        else map.set(b.projectId, { projectId: b.projectId, projectName: b.projectName, ms: b.durationMs })
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.ms - a.ms)
+  }, [rows])
+
+  if (rows.length === 0) {
+    return <div className="py-6 text-center text-xs text-zinc-500">No activity in this window</div>
+  }
+
+  const hourTicks = Array.from({ length: 25 }, (_, i) => i)
+
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <div className="min-w-[720px]">
+          <div className="flex items-center pb-1 text-[10px] text-zinc-500">
+            <div className="w-28 shrink-0" />
+            <div className="relative flex-1">
+              <div className="flex">
+                {hourTicks.map((h) => (
+                  <div
+                    key={h}
+                    className="relative flex-1"
+                    style={{ minWidth: 0 }}
+                  >
+                    {h % 3 === 0 && h < 24 && (
+                      <span className="absolute left-0 -translate-x-1/2 whitespace-nowrap">
+                        {h.toString().padStart(2, '0')}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="w-14 shrink-0 text-right">Total</div>
+          </div>
+
+          <div className="space-y-1">
+            {rows.map((row) => (
+              <div key={row.dateMs} className="flex items-center">
+                <div className="w-28 shrink-0 text-[11px] text-zinc-400">
+                  {formatDayLabel(row.dateMs)}
+                </div>
+                <div
+                  className="relative h-6 flex-1 rounded-sm border border-zinc-800"
+                  style={{ background: emptyColor }}
+                >
+                  {[6, 12, 18].map((h) => (
+                    <div
+                      key={h}
+                      className="absolute top-0 bottom-0 w-px bg-zinc-800/80"
+                      style={{ left: `${(h / 24) * 100}%` }}
+                    />
+                  ))}
+                  {row.blocks.map((b, i) => {
+                    const left = (b.startHour / 24) * 100
+                    const width = Math.max(((b.endHour - b.startHour) / 24) * 100, 0.4)
+                    const color = colorForProject[b.projectId] ?? '#60a5fa'
+                    const tip = `${b.projectName} · ${formatHourMinute(b.start)}–${formatHourMinute(b.end)} · ${formatDuration(b.durationMs)}`
+                    return (
+                      <div
+                        key={i}
+                        className="absolute top-0 bottom-0 rounded-sm"
+                        style={{ left: `${left}%`, width: `${width}%`, background: color }}
+                        title={tip}
+                      />
+                    )
+                  })}
+                </div>
+                <div className="w-14 shrink-0 text-right text-[11px] tabular-nums text-zinc-300">
+                  {formatDuration(row.totalMs)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {projectLegend.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-[11px] text-zinc-400">
+          {projectLegend.map((p) => (
+            <div key={p.projectId} className="flex items-center gap-1.5">
+              <span
+                className="inline-block h-2 w-2 rounded-sm"
+                style={{ background: colorForProject[p.projectId] ?? '#60a5fa' }}
+              />
+              <span>{p.projectName}</span>
+              <span className="text-zinc-500">· {formatDuration(p.ms)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -158,15 +158,17 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
       const isLlm = !!initialCommand
       let idleTimer: ReturnType<typeof setTimeout> | null = null
+      let busyPromoteTimer: ReturnType<typeof setTimeout> | null = null
+      let lastOutputAt = 0
+      const BUSY_SUSTAIN_MS = 3000
+      const STREAK_GAP_MS = 500
 
       terminal.onData((data) => {
         window.api.terminal.write(tabId, data)
         recordActivityDebounced(projectId, 'i')
         if (isLlm) {
-          const currentStatus = useTerminalStore.getState().tabStatuses[tabId]
-          if (currentStatus !== 'busy') {
-            useTerminalStore.getState().setTabStatus(tabId, 'busy')
-          }
+          const e = terminalsMap.get(tabId)
+          if (e) e.suppressBusyUntil = Date.now() + 300
         }
       })
 
@@ -177,6 +179,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       terminal.onTitleChange((title) => {
         useTerminalStore.getState().setTabTitle(tabId, title)
       })
+
 
       const onIncomingData = (data: string): void => {
         recordActivityDebounced(projectId, 'o')
@@ -192,21 +195,29 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
         if (isLlm) {
           const entry = terminalsMap.get(tabId)
-          const suppressed = entry && Date.now() < entry.suppressBusyUntil
-          const currentStatus = useTerminalStore.getState().tabStatuses[tabId]
-          if (!suppressed && currentStatus !== 'busy') {
-            useTerminalStore.getState().setTabStatus(tabId, 'busy')
-          }
-
-          if (idleTimer) clearTimeout(idleTimer)
-          idleTimer = setTimeout(() => {
-            const prev = useTerminalStore.getState().tabStatuses[tabId]
-            useTerminalStore.getState().setTabStatus(tabId, 'idle')
-            if (prev === 'busy') {
-              const { idleSoundEnabled, idleSoundId } = useLayoutStore.getState()
-              if (idleSoundEnabled) playSound(idleSoundId)
+          const suppressed = !!(entry && Date.now() < entry.suppressBusyUntil)
+          if (!suppressed) {
+            const now = Date.now()
+            if (now - lastOutputAt > STREAK_GAP_MS) {
+              if (busyPromoteTimer) clearTimeout(busyPromoteTimer)
+              busyPromoteTimer = setTimeout(() => {
+                const s = useTerminalStore.getState().tabStatuses[tabId]
+                if (s !== 'busy') useTerminalStore.getState().setTabStatus(tabId, 'busy')
+              }, BUSY_SUSTAIN_MS)
             }
-          }, 3000)
+            lastOutputAt = now
+
+            if (idleTimer) clearTimeout(idleTimer)
+            idleTimer = setTimeout(() => {
+              if (busyPromoteTimer) { clearTimeout(busyPromoteTimer); busyPromoteTimer = null }
+              const prev = useTerminalStore.getState().tabStatuses[tabId]
+              useTerminalStore.getState().setTabStatus(tabId, 'idle')
+              if (prev === 'busy') {
+                const { idleSoundEnabled, idleSoundId } = useLayoutStore.getState()
+                if (idleSoundEnabled) playSound(idleSoundId)
+              }
+            }, 3000)
+          }
 
           const prevTimer = bufferReadTimers.get(tabId)
           if (prevTimer) clearTimeout(prevTimer)
@@ -247,6 +258,18 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         sizeObserver.disconnect()
 
         terminal.open(el)
+
+        const textarea = terminal.textarea
+        if (textarea) {
+          textarea.addEventListener('focus', () => {
+            useTerminalStore.getState().setFocusedTabId(tabId)
+          })
+          textarea.addEventListener('blur', () => {
+            if (useTerminalStore.getState().focusedTabId === tabId) {
+              useTerminalStore.getState().setFocusedTabId(null)
+            }
+          })
+        }
 
         if (!transparent) {
           let webglRetry = 0
@@ -301,6 +324,8 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           if (terminal.cols === prevCols && terminal.rows === prevRows) return
           prevCols = terminal.cols
           prevRows = terminal.rows
+          const e = terminalsMap.get(tabId)
+          if (e) e.suppressBusyUntil = Date.now() + 1000
           if (atBottom) terminal.scrollToBottom()
         } catch { /* element may be unmounted during resize */ }
       }, 80)

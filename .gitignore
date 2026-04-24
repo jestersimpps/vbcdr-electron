@@ -3,3 +3,5 @@ out/
 dist/
 .DS_Store
 *.log
+ackage-lock.json
+docs/changelog-2026-04.md

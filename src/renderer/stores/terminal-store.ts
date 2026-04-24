@@ -13,6 +13,7 @@ interface TerminalStore {
   outputBufferPerProject: Record<string, string[]>
   tokenUsagePerTab: Record<string, number>
   lastActivityPerProject: Record<string, number>
+  focusedTabId: string | null
   createTab: (projectId: string, cwd: string, initialCommand?: string) => string
   closeTab: (tabId: string) => void
   replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => string
@@ -22,6 +23,7 @@ interface TerminalStore {
   reorderTabs: (projectId: string, fromIndex: number, toIndex: number) => void
   setOutput: (projectId: string, lines: string[]) => void
   setTokenUsage: (tabId: string, tokens: number) => void
+  setFocusedTabId: (tabId: string | null) => void
   initProject: (projectId: string, cwd: string) => Promise<void>
 }
 
@@ -32,6 +34,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   outputBufferPerProject: {},
   tokenUsagePerTab: {},
   lastActivityPerProject: {},
+  focusedTabId: null,
 
   createTab: (projectId: string, cwd: string, initialCommand?: string) => {
     const tabId = uuid()
@@ -67,7 +70,9 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       const tokenUsagePerTab = { ...state.tokenUsagePerTab }
       delete tokenUsagePerTab[tabId]
 
-      return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab }
+      const focusedTabId = state.focusedTabId === tabId ? null : state.focusedTabId
+
+      return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab, focusedTabId }
     })
   },
 
@@ -135,6 +140,10 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     set((state) => ({
       tokenUsagePerTab: { ...state.tokenUsagePerTab, [tabId]: tokens }
     }))
+  },
+
+  setFocusedTabId: (tabId: string | null) => {
+    set({ focusedTabId: tabId })
   },
 
   initProject: async (projectId: string, cwd: string) => {

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useDevTerminalStore } from '@/stores/dev-terminal-store'
 import { useProjectStore } from '@/stores/project-store'
+import { useTerminalStore } from '@/stores/terminal-store'
 import { TerminalInstance, disposeTerminal, focusTerminal } from '@/components/terminal/TerminalInstance'
 import { Plus, X } from 'lucide-react'
 
@@ -18,6 +19,7 @@ export function DevTerminalsPanel(): React.ReactElement {
 
   const tabs = useDevTerminalStore((s) => s.tabs)
   const { createTab, closeTab, initProject } = useDevTerminalStore()
+  const focusedTabId = useTerminalStore((s) => s.focusedTabId)
 
   const projectTabs = tabs.filter((t) => t.projectId === activeProjectId)
 
@@ -97,20 +99,29 @@ export function DevTerminalsPanel(): React.ReactElement {
                         const tab = pTabs[tabIndex]
                         tabIndex++
                         if (!tab) return null
+                        const isFocused = focusedTabId === tab.id
                         return (
                           <div
                             key={tab.id}
-                            className="flex flex-1 flex-col"
+                            className="relative flex flex-1 flex-col"
                             style={{
                               minWidth: 0,
                               minHeight: 0,
                               borderRight: colIdx < colCount - 1 ? '1px solid rgb(39 39 42)' : undefined,
-                              borderBottom: rowIdx < layout.rows.length - 1 ? '1px solid rgb(39 39 42)' : undefined
+                              borderBottom: rowIdx < layout.rows.length - 1 ? '1px solid rgb(39 39 42)' : undefined,
+                              boxShadow: isFocused ? 'inset 0 0 0 1px rgb(96 165 250)' : undefined,
+                              transition: 'box-shadow 120ms ease'
                             }}
                             onClick={() => focusTerminal(tab.id)}
                           >
-                            <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2 py-0.5">
-                              <span className="text-[10px] text-zinc-500">{tab.title}</span>
+                            <div
+                              className={`flex items-center justify-between border-b px-2 py-0.5 ${
+                                isFocused ? 'border-blue-400/40 bg-blue-400/10' : 'border-zinc-800 bg-zinc-900/50'
+                              }`}
+                            >
+                              <span className={`text-[10px] ${isFocused ? 'text-blue-300' : 'text-zinc-500'}`}>
+                                {tab.title}
+                              </span>
                               <button
                                 onClick={() => handleClose(tab.id)}
                                 className="rounded p-0.5 text-zinc-600 hover:text-red-400"
