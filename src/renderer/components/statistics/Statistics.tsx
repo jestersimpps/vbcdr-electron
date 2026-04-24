@@ -1105,6 +1105,12 @@ function startOfDayMs(ms: number): number {
   return d.getTime()
 }
 
+function addDaysMs(ms: number, days: number): number {
+  const d = new Date(ms)
+  d.setDate(d.getDate() + days)
+  return d.getTime()
+}
+
 function buildHistoryCalendar({
   startMs,
   endMs,
@@ -1118,7 +1124,6 @@ function buildHistoryCalendar({
   commits: StatsCommit[]
   metric: HistoryMetric
 }): HistoryCalendarData {
-  const DAY = 86_400_000
   const weekStart = startOfWeekMs(startMs)
   const hoursPerDay = new Map<number, number>()
   const commitsPerDay = new Map<number, number>()
@@ -1130,7 +1135,7 @@ function buildHistoryCalendar({
     if (segEnd <= segStart) continue
     let cursor = startOfDayMs(segStart)
     while (cursor <= segEnd) {
-      const dayEnd = cursor + DAY
+      const dayEnd = addDaysMs(cursor, 1)
       const overlap = Math.min(segEnd, dayEnd) - Math.max(segStart, cursor)
       if (overlap > 0) {
         hoursPerDay.set(cursor, (hoursPerDay.get(cursor) ?? 0) + overlap / 3_600_000)
@@ -1157,7 +1162,7 @@ function buildHistoryCalendar({
   while (weekCursor <= endMs) {
     const week: HistoryCalendarCell[] = []
     for (let d = 0; d < 7; d++) {
-      const dayMs = weekCursor + d * DAY
+      const dayMs = addDaysMs(weekCursor, d)
       const hours = hoursPerDay.get(dayMs) ?? 0
       const commitCount = commitsPerDay.get(dayMs) ?? 0
       let topProjectName: string | null = null
@@ -1176,7 +1181,7 @@ function buildHistoryCalendar({
       week.push({ dateMs: dayMs, hours, commits: commitCount, topProjectName, topProjectMs })
     }
     weeks.push(week)
-    weekCursor += 7 * DAY
+    weekCursor = addDaysMs(weekCursor, 7)
   }
   return { weeks, max, metric, startMs: weekStart, endMs }
 }
@@ -1247,20 +1252,25 @@ function YearHeatmap({
   const [r, g, b] = hexToRgb(baseColor)
   const now = Date.now()
   const monthRow = calendar.weeks.map((week, i) => {
-    const d = new Date(week[0].dateMs)
+    if (week.every((c) => c.dateMs < calendar.startMs || c.dateMs > calendar.endMs)) return ''
+    const firstInWindow = week.find((c) => c.dateMs >= calendar.startMs && c.dateMs <= calendar.endMs) ?? week[0]
+    const d = new Date(firstInWindow.dateMs)
     const month = d.getMonth()
     if (i === 0) return MONTH_LABELS[month]
-    const prev = new Date(calendar.weeks[i - 1][0].dateMs)
-    return prev.getMonth() === month ? '' : MONTH_LABELS[month]
+    const prevWeek = calendar.weeks[i - 1]
+    const prevFirstInWindow = prevWeek.find((c) => c.dateMs >= calendar.startMs && c.dateMs <= calendar.endMs)
+    if (!prevFirstInWindow) return MONTH_LABELS[month]
+    const prevMonth = new Date(prevFirstInWindow.dateMs).getMonth()
+    return prevMonth === month ? '' : MONTH_LABELS[month]
   })
   return (
     <div className="overflow-x-auto">
       <div className="inline-block">
-        <div className="flex text-[10px] text-zinc-500">
-          <div className="w-8" />
+        <div className="flex h-3 text-[10px] text-zinc-500">
+          <div className="w-8 shrink-0" />
           {monthRow.map((label, i) => (
-            <div key={i} className="w-[14px] text-left">
-              {label}
+            <div key={i} className="relative w-[14px] shrink-0">
+              {label && <span className="absolute left-0 top-0 whitespace-nowrap">{label}</span>}
             </div>
           ))}
         </div>
