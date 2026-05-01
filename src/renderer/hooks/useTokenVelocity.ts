@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useTerminalStore } from '@/stores/terminal-store'
 
 interface TokenSample {
@@ -15,6 +15,38 @@ interface TokenVelocity {
 const SAMPLE_INTERVAL_MS = 1000
 const WINDOW_MS = 60_000
 const MAX_SAMPLES = Math.ceil(WINDOW_MS / SAMPLE_INTERVAL_MS)
+
+let sharedTick = 0
+const sharedListeners = new Set<() => void>()
+let sharedInterval: ReturnType<typeof setInterval> | null = null
+
+function startSharedInterval(): void {
+  if (sharedInterval) return
+  sharedInterval = setInterval(() => {
+    sharedTick++
+    sharedListeners.forEach((l) => l())
+  }, SAMPLE_INTERVAL_MS)
+}
+
+function subscribeShared(listener: () => void): () => void {
+  sharedListeners.add(listener)
+  startSharedInterval()
+  return () => {
+    sharedListeners.delete(listener)
+    if (sharedListeners.size === 0 && sharedInterval) {
+      clearInterval(sharedInterval)
+      sharedInterval = null
+    }
+  }
+}
+
+function getSharedTick(): number {
+  return sharedTick
+}
+
+export function useSecondsTick(): number {
+  return useSyncExternalStore(subscribeShared, getSharedTick, getSharedTick)
+}
 
 export function useTokenVelocity(tabId: string | null): TokenVelocity {
   const [samples, setSamples] = useState<TokenSample[]>([])
@@ -45,8 +77,8 @@ export function useTokenVelocity(tabId: string | null): TokenVelocity {
     }
 
     tick()
-    const id = setInterval(tick, SAMPLE_INTERVAL_MS)
-    return () => clearInterval(id)
+    const unsub = subscribeShared(tick)
+    return unsub
   }, [tabId])
 
   const tokensPerMinute = computeTokensPerMinute(samples)

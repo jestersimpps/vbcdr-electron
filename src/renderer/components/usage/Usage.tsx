@@ -4,7 +4,7 @@ import { Activity, BarChart3, Cpu, Gauge, History, Layers, Zap } from 'lucide-re
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useLayoutStore } from '@/stores/layout-store'
-import { useTokenVelocity } from '@/hooks/useTokenVelocity'
+import { useSecondsTick, useTokenVelocity } from '@/hooks/useTokenVelocity'
 import { Sparkline } from '@/components/terminal/Sparkline'
 import { TIME_RANGES, rangeStartMs, type TimeRange } from '@/lib/sessions'
 import { cn } from '@/lib/utils'
@@ -108,11 +108,7 @@ export function Usage(): React.ReactElement {
 
   const [range, setRange] = useState<TimeRange['key']>('week')
 
-  const [, forceTick] = useState(0)
-  useEffect(() => {
-    const id = setInterval(() => forceTick((t) => t + 1), 1000)
-    return () => clearInterval(id)
-  }, [])
+  useSecondsTick()
 
   const [dailyUsage, setDailyUsage] = useState<DailyUsageRow[]>([])
   useEffect(() => {
