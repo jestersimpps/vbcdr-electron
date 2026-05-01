@@ -371,6 +371,10 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       if (otherPaths.length > 0) {
         terminalsMap.get(tabId)?.terminal.paste(otherPaths.join(' '))
       }
+
+      if (imagePaths.length > 0 || otherPaths.length > 0) {
+        focusTerminal(tabId)
+      }
     }
 
     const onPaste = (e: ClipboardEvent): void => {
@@ -380,6 +384,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         e.preventDefault()
         e.stopPropagation()
         window.api.terminal.pasteClipboardImage(tabId)
+        focusTerminal(tabId)
       }
     }
 
