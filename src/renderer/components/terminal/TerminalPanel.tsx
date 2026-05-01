@@ -15,7 +15,7 @@ import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useLayoutStore } from '@/stores/layout-store'
-import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance, setActiveWebglTerminal } from './TerminalInstance'
+import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
 import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TerminalTab } from '@/models/types'
@@ -148,10 +148,6 @@ export function TerminalPanel(): React.ReactElement {
     applyThemeToAll(useThemeStore.getState().getTerminalThemeId())
   }, [fullThemeId, terminalThemeId])
 
-
-  useEffect(() => {
-    setActiveWebglTerminal(activeTabId)
-  }, [activeTabId])
 
   useEffect(() => {
     if (!activeTabId) return

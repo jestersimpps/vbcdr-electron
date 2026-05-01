@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
-import { WebglAddon } from '@xterm/addon-webgl'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
@@ -23,57 +22,12 @@ interface TerminalEntry {
   terminal: Terminal
   fitAddon: FitAddon
   searchAddon: SearchAddon
-  webglAddon?: WebglAddon
-  webglAllowed: boolean
   onIncomingData?: (data: string) => void
   suppressBusyUntil: number
 }
 
 const terminalsMap = new Map<string, TerminalEntry>()
 const bufferReadTimers = new Map<string, ReturnType<typeof setTimeout>>()
-let activeWebglTabId: string | null = null
-
-function attachWebgl(tabId: string): void {
-  const entry = terminalsMap.get(tabId)
-  if (!entry || !entry.webglAllowed || entry.webglAddon) return
-  if (!entry.terminal.element) return
-  const { terminal } = entry
-  let retry = 0
-  const load = (): void => {
-    try {
-      const webgl = new WebglAddon()
-      webgl.onContextLoss(() => {
-        try { webgl.dispose() } catch { /* context already gone */ }
-        const e = terminalsMap.get(tabId)
-        if (e) e.webglAddon = undefined
-        try { terminal.refresh(0, terminal.rows - 1) } catch { /* disposed */ }
-        if (retry++ < 2 && activeWebglTabId === tabId) setTimeout(load, 1000)
-      })
-      terminal.loadAddon(webgl)
-      const e = terminalsMap.get(tabId)
-      if (e) e.webglAddon = webgl
-    } catch {
-      try { terminal.refresh(0, terminal.rows - 1) } catch { /* disposed */ }
-    }
-  }
-  load()
-}
-
-function detachWebgl(tabId: string): void {
-  const entry = terminalsMap.get(tabId)
-  if (!entry || !entry.webglAddon) return
-  try { entry.webglAddon.dispose() } catch { /* already disposed */ }
-  entry.webglAddon = undefined
-  try { entry.terminal.refresh(0, entry.terminal.rows - 1) } catch { /* disposed */ }
-}
-
-export function setActiveWebglTerminal(tabId: string | null): void {
-  if (activeWebglTabId === tabId) return
-  const prev = activeWebglTabId
-  activeWebglTabId = tabId
-  if (prev && prev !== tabId) detachWebgl(prev)
-  if (tabId) attachWebgl(tabId)
-}
 
 const ACTIVITY_DEBOUNCE_MS = 1000
 const activityLastSent = new Map<string, number>()
@@ -154,9 +108,13 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
     if (entry) {
       const xtermEl = entry.terminal.element
       if (xtermEl && xtermEl.parentElement !== el) {
-        try { entry.terminal.open(el) } catch { /* re-open may throw if element was disposed */ }
+        try { el.appendChild(xtermEl) } catch { /* element may have been removed */ }
         try { entry.fitAddon.fit() } catch { /* container may not be sized yet */ }
         try { entry.terminal.refresh(0, entry.terminal.rows - 1) } catch { /* disposed */ }
+      } else if (!xtermEl) {
+        try { entry.terminal.dispose() } catch { /* not yet open */ }
+        terminalsMap.delete(tabId)
+        entry = undefined
       }
     }
 
@@ -186,7 +144,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
       terminal.unicode.activeVersion = '11'
 
-      entry = { terminal, fitAddon, searchAddon, webglAllowed: !transparent, suppressBusyUntil: 0 }
+      entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0 }
       terminalsMap.set(tabId, entry)
 
       terminal.attachCustomKeyEventHandler((e) => {
@@ -316,8 +274,6 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
             }
           })
         }
-
-        if (activeWebglTabId === tabId) attachWebgl(tabId)
 
         fitAddon.fit()
         terminal.scrollToBottom()
@@ -508,8 +464,7 @@ export function disposeTerminal(tabId: string): void {
     const timer = bufferReadTimers.get(tabId)
     if (timer) clearTimeout(timer)
     bufferReadTimers.delete(tabId)
-    if (activeWebglTabId === tabId) activeWebglTabId = null
-    try { entry.terminal.dispose() } catch { /* WebGL addon may throw during dispose */ }
+    try { entry.terminal.dispose() } catch { /* dispose may throw if already gone */ }
     terminalsMap.delete(tabId)
   }
   window.api.tokenUsage.resetTab(tabId)
