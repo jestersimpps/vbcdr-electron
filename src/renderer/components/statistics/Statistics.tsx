@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts'
-import { Clock, CalendarDays, Folder, Timer, SlidersHorizontal } from 'lucide-react'
+import { Clock, CalendarDays, Folder, Timer, SlidersHorizontal, Flame, Trophy, CalendarCheck } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useStatsStore } from '@/stores/stats-store'
 import { useThemeStore } from '@/stores/theme-store'
@@ -28,7 +28,8 @@ import {
   type ProjectCommits,
   type Session,
   type ActivitySessionInput,
-  type SessionSource
+  type SessionSource,
+  type TimeRange
 } from '@/lib/sessions'
 import type { StatsCommit, LanguageTally } from '@/models/types'
 import { cn } from '@/lib/utils'
@@ -71,6 +72,7 @@ function formatDateInput(ms: number): string {
 interface HistoryRange {
   start: number
   end: number
+  windowEnd: number
 }
 
 function historyRange(w: HistoryWindow, customFromMs: number | null, customToMs: number | null): HistoryRange {
@@ -82,23 +84,29 @@ function historyRange(w: HistoryWindow, customFromMs: number | null, customToMs:
     const start = customFromMs ?? today.getTime()
     const endDay = customToMs ?? today.getTime()
     const end = Math.min(endDay + 86_400_000 - 1, Date.now())
-    return { start: Math.min(start, end), end }
+    return { start: Math.min(start, end), end, windowEnd: endDay + 86_400_000 - 1 }
   }
-  if (w === 'today') return { start: today.getTime(), end: endOfToday }
+  if (w === 'today') return { start: today.getTime(), end: endOfToday, windowEnd: endOfToday }
   if (w === 'week') {
     const d = new Date(today)
     const dow = (d.getDay() + 6) % 7
     d.setDate(d.getDate() - dow)
-    return { start: d.getTime(), end: endOfToday }
+    const weekEnd = new Date(d)
+    weekEnd.setDate(weekEnd.getDate() + 7)
+    return { start: d.getTime(), end: endOfToday, windowEnd: weekEnd.getTime() - 1 }
   }
   if (w === 'month') {
     const d = new Date(today)
     d.setDate(1)
-    return { start: d.getTime(), end: endOfToday }
+    const monthEnd = new Date(d)
+    monthEnd.setMonth(monthEnd.getMonth() + 1)
+    return { start: d.getTime(), end: endOfToday, windowEnd: monthEnd.getTime() - 1 }
   }
   const d = new Date(today)
   d.setMonth(0, 1)
-  return { start: d.getTime(), end: endOfToday }
+  const yearEnd = new Date(d)
+  yearEnd.setFullYear(yearEnd.getFullYear() + 1)
+  return { start: d.getTime(), end: endOfToday, windowEnd: yearEnd.getTime() - 1 }
 }
 
 interface ProjectData {
@@ -195,6 +203,16 @@ export function Statistics(): React.ReactElement {
     () => historyRange(historyWindow, historyFromMs, historyToMs),
     [historyWindow, historyFromMs, historyToMs]
   )
+
+  useEffect(() => {
+    const mapped: TimeRange['key'] =
+      historyWindow === 'today' ? 'today'
+      : historyWindow === 'week' ? 'week'
+      : historyWindow === 'month' ? 'month'
+      : historyWindow === 'year' ? 'ytd'
+      : 'all'
+    if (mapped !== range) setRange(mapped)
+  }, [historyWindow, range, setRange])
 
   useEffect(() => {
     let cancelled = false
@@ -462,11 +480,14 @@ export function Statistics(): React.ReactElement {
     return buildHistoryCalendar({
       startMs: currentHistoryRange.start,
       endMs: currentHistoryRange.end,
+      windowEndMs: currentHistoryRange.windowEnd,
       sessions: historyFilteredSessions,
       commits: historyFilteredCommits,
       metric: historyMetric
     })
-  }, [currentHistoryRange.start, currentHistoryRange.end, historyMetric, historyFilteredSessions, historyFilteredCommits])
+  }, [currentHistoryRange.start, currentHistoryRange.end, currentHistoryRange.windowEnd, historyMetric, historyFilteredSessions, historyFilteredCommits])
+
+  const historyStats = useMemo(() => computeHistoryStats(historyCalendar), [historyCalendar])
 
   const languagePie = useMemo(() => {
     const totals: Record<string, number> = {}
@@ -481,30 +502,25 @@ export function Statistics(): React.ReactElement {
       .slice(0, 10)
   }, [data])
 
-  type SessionSortKey = 'project' | 'started' | 'duration' | 'commits'
   type ProjectSortKey = 'project' | 'hours' | 'sessions' | 'commits' | 'lastActive'
   type SortDir = 'asc' | 'desc'
 
-  const [tableTab, setTableTab] = useState<'sessions' | 'projects'>('sessions')
-  const [sessionSortKey, setSessionSortKey] = useState<SessionSortKey>('started')
-  const [sessionSortDir, setSessionSortDir] = useState<SortDir>('desc')
   const [projectSortKey, setProjectSortKey] = useState<ProjectSortKey>('hours')
   const [projectSortDir, setProjectSortDir] = useState<SortDir>('desc')
 
-  const sortedSessions = useMemo(() => {
-    const out = [...sessions]
-    const dir = sessionSortDir === 'asc' ? 1 : -1
-    out.sort((a, b) => {
-      let cmp = 0
-      if (sessionSortKey === 'project') cmp = a.projectName.localeCompare(b.projectName)
-      else if (sessionSortKey === 'started') cmp = a.start - b.start
-      else if (sessionSortKey === 'duration') cmp = a.durationMs - b.durationMs
-      else cmp = a.commitCount - b.commitCount
-      if (cmp === 0) cmp = a.start - b.start
-      return cmp * dir
-    })
-    return out
-  }, [sessions, sessionSortKey, sessionSortDir])
+  const commitsByProjectInRange = useMemo<Record<string, number>>(() => {
+    const startMs = rangeStartMs(range)
+    const map: Record<string, number> = {}
+    for (const p of filteredCommits) {
+      let count = 0
+      for (const c of p.commits) {
+        if (startMs !== null && c.timestamp < startMs) continue
+        count++
+      }
+      map[p.projectId] = count
+    }
+    return map
+  }, [filteredCommits, range])
 
   interface ProjectRow {
     projectId: string
@@ -532,8 +548,11 @@ export function Statistics(): React.ReactElement {
       }
       row.totalMs += s.durationMs
       row.sessionCount += 1
-      row.commitCount += s.commitCount
       if (s.end > row.lastActive) row.lastActive = s.end
+    }
+    for (const projectId of Object.keys(commitsByProjectInRange)) {
+      if (!map[projectId]) continue
+      map[projectId].commitCount = commitsByProjectInRange[projectId]
     }
     const rows = Object.values(map)
     const dir = projectSortDir === 'asc' ? 1 : -1
@@ -548,15 +567,7 @@ export function Statistics(): React.ReactElement {
       return cmp * dir
     })
     return rows
-  }, [sessions, projectSortKey, projectSortDir])
-
-  const toggleSessionSort = (key: SessionSortKey): void => {
-    if (sessionSortKey === key) setSessionSortDir(sessionSortDir === 'asc' ? 'desc' : 'asc')
-    else {
-      setSessionSortKey(key)
-      setSessionSortDir(key === 'project' ? 'asc' : 'desc')
-    }
-  }
+  }, [sessions, commitsByProjectInRange, projectSortKey, projectSortDir])
 
   const toggleProjectSort = (key: ProjectSortKey): void => {
     if (projectSortKey === key) setProjectSortDir(projectSortDir === 'asc' ? 'desc' : 'asc')
@@ -571,50 +582,46 @@ export function Statistics(): React.ReactElement {
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold">Statistics</h1>
-          <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
-            {TIME_RANGES.map((r) => (
-              <button
-                key={r.key}
-                onClick={() => setRange(r.key)}
-                className={cn(
-                  'rounded px-3 py-1 text-xs font-medium transition-colors',
-                  range === r.key ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-                )}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
-            {SOURCE_OPTIONS.map((o) => (
-              <button
-                key={o.key}
-                onClick={() => setSource(o.key)}
-                className={cn(
-                  'rounded px-3 py-1 text-xs font-medium transition-colors',
-                  source === o.key ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-                )}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <SessionSettingsPopover
-            source={source}
-            includeAllAuthors={includeAllAuthors}
-            setIncludeAllAuthors={setIncludeAllAuthors}
-            gapMinutes={gapMinutes}
-            setGapMinutes={setGapMinutes}
-            leadInMinutes={leadInMinutes}
-            setLeadInMinutes={setLeadInMinutes}
-            idleMinutes={idleMinutes}
-            setIdleMinutes={setIdleMinutes}
-          />
           {loading && <span className="text-xs text-zinc-500">Loading…</span>}
         </div>
 
+        <HistoricalWorkCard
+          calendar={historyCalendar}
+          window={historyWindow}
+          setWindow={setHistoryWindow}
+          metric={historyMetric}
+          setMetric={setHistoryMetric}
+          view={historyView}
+          setView={setHistoryView}
+          source={source}
+          setSource={setSource}
+          includeAllAuthors={includeAllAuthors}
+          setIncludeAllAuthors={setIncludeAllAuthors}
+          gapMinutes={gapMinutes}
+          setGapMinutes={setGapMinutes}
+          leadInMinutes={leadInMinutes}
+          setLeadInMinutes={setLeadInMinutes}
+          idleMinutes={idleMinutes}
+          setIdleMinutes={setIdleMinutes}
+          sessions={historyFilteredSessions}
+          range={currentHistoryRange}
+          colorForProject={colorForAnyProject}
+          projectId={historyProjectId}
+          setProjectId={setHistoryProjectId}
+          projects={allStatsProjects.map((p) => ({ id: p.id, name: p.archived ? `${p.name} (archived)` : p.name }))}
+          fromMs={historyFromMs}
+          setFromMs={setHistoryFromMs}
+          toMs={historyToMs}
+          setToMs={setHistoryToMs}
+          baseColor={palette.heatmapBase}
+          emptyColor={palette.emptyCell}
+        />
+
         <Section title="Overview">
           <div className="grid grid-cols-4 gap-3">
+            <Kpi icon={<Flame size={14} />} label="Current streak" value={`${historyStats.currentStreak} day${historyStats.currentStreak === 1 ? '' : 's'}`} />
+            <Kpi icon={<Trophy size={14} />} label="Longest streak" value={`${historyStats.longestStreak} day${historyStats.longestStreak === 1 ? '' : 's'}`} />
+            <Kpi icon={<CalendarCheck size={14} />} label="Active days" value={`${historyStats.activeDays} / ${historyStats.possibleDays}`} />
             <Kpi icon={<Clock size={14} />} label="Total time" value={formatHours(totalMs)} />
             <Kpi icon={<CalendarDays size={14} />} label="Today" value={formatHours(todayMs)} />
             <Kpi icon={<Folder size={14} />} label="Top project" value={topProject} />
@@ -693,103 +700,34 @@ export function Statistics(): React.ReactElement {
                 </RPieChart>
               </ResponsiveContainer>
             </Card>
-
-            <div className="lg:col-span-2">
-              <HistoricalWorkCard
-                calendar={historyCalendar}
-                window={historyWindow}
-                setWindow={setHistoryWindow}
-                metric={historyMetric}
-                setMetric={setHistoryMetric}
-                view={historyView}
-                setView={setHistoryView}
-                sessions={historyFilteredSessions}
-                range={currentHistoryRange}
-                colorForProject={colorForAnyProject}
-                projectId={historyProjectId}
-                setProjectId={setHistoryProjectId}
-                projects={allStatsProjects.map((p) => ({ id: p.id, name: p.archived ? `${p.name} (archived)` : p.name }))}
-                fromMs={historyFromMs}
-                setFromMs={setHistoryFromMs}
-                toMs={historyToMs}
-                setToMs={setHistoryToMs}
-                baseColor={palette.heatmapBase}
-                emptyColor={palette.emptyCell}
-              />
-            </div>
           </div>
         </Section>
 
-        <Section title="Detail">
+        <Section title="Projects">
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
-              <button
-                onClick={() => setTableTab('sessions')}
-                className={cn(
-                  'rounded px-3 py-1 text-xs font-medium transition-colors',
-                  tableTab === 'sessions' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-                )}
-              >
-                Sessions
-              </button>
-              <button
-                onClick={() => setTableTab('projects')}
-                className={cn(
-                  'rounded px-3 py-1 text-xs font-medium transition-colors',
-                  tableTab === 'projects' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-                )}
-              >
-                Projects
-              </button>
-            </div>
-            <span className="text-xs text-zinc-500">
-              {tableTab === 'sessions' ? `${sortedSessions.length} sessions` : `${projectRows.length} projects`}
-            </span>
+            <span className="text-xs text-zinc-500">{projectRows.length} projects</span>
           </div>
 
-          {tableTab === 'sessions' ? (
-            sortedSessions.length === 0 ? (
-              <div className="py-6 text-center text-xs text-zinc-500">No sessions in range</div>
-            ) : (
-              <div className="max-h-[480px] overflow-y-auto">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-zinc-900">
-                    <tr className="text-left text-zinc-500">
-                      <SortHeader label="Project" active={sessionSortKey === 'project'} dir={sessionSortDir} onClick={() => toggleSessionSort('project')} />
-                      <SortHeader label="Started" active={sessionSortKey === 'started'} dir={sessionSortDir} onClick={() => toggleSessionSort('started')} />
-                      <SortHeader label="Duration" active={sessionSortKey === 'duration'} dir={sessionSortDir} onClick={() => toggleSessionSort('duration')} />
-                      <SortHeader label="Commits" active={sessionSortKey === 'commits'} dir={sessionSortDir} onClick={() => toggleSessionSort('commits')} align="right" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedSessions.map((s, i) => (
-                      <tr key={i} className="border-t border-zinc-800">
-                        <td className="py-1.5">
-                          <span className="inline-block h-2 w-2 rounded-full align-middle" style={{ background: colorForProject[s.projectId] }} />
-                          <span className="ml-2">{s.projectName}</span>
-                        </td>
-                        <td className="py-1.5 text-zinc-400">{new Date(s.start).toLocaleString()}</td>
-                        <td className="py-1.5 text-zinc-300">{formatDuration(s.durationMs)}</td>
-                        <td className="py-1.5 text-right text-zinc-400">{s.commitCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
-          ) : projectRows.length === 0 ? (
+          {projectRows.length === 0 ? (
             <div className="py-6 text-center text-xs text-zinc-500">No activity in range</div>
           ) : (
             <div className="max-h-[480px] overflow-y-auto">
               <table className="w-full text-xs">
+                <colgroup>
+                  <col />
+                  <col className="w-24" />
+                  <col className="w-24" />
+                  <col className="w-24" />
+                  <col className="w-48" />
+                </colgroup>
                 <thead className="sticky top-0 bg-zinc-900">
                   <tr className="text-left text-zinc-500">
                     <SortHeader label="Project" active={projectSortKey === 'project'} dir={projectSortDir} onClick={() => toggleProjectSort('project')} />
                     <SortHeader label="Time" active={projectSortKey === 'hours'} dir={projectSortDir} onClick={() => toggleProjectSort('hours')} align="right" />
                     <SortHeader label="Sessions" active={projectSortKey === 'sessions'} dir={projectSortDir} onClick={() => toggleProjectSort('sessions')} align="right" />
                     <SortHeader label="Commits" active={projectSortKey === 'commits'} dir={projectSortDir} onClick={() => toggleProjectSort('commits')} align="right" />
-                    <SortHeader label="Last active" active={projectSortKey === 'lastActive'} dir={projectSortDir} onClick={() => toggleProjectSort('lastActive')} />
+                    <SortHeader label="Last active" active={projectSortKey === 'lastActive'} dir={projectSortDir} onClick={() => toggleProjectSort('lastActive')} align="right" />
                   </tr>
                 </thead>
                 <tbody>
@@ -799,10 +737,10 @@ export function Statistics(): React.ReactElement {
                         <span className="inline-block h-2 w-2 rounded-full align-middle" style={{ background: colorForProject[p.projectId] }} />
                         <span className="ml-2">{p.projectName}</span>
                       </td>
-                      <td className="py-1.5 text-right text-zinc-300">{formatDuration(p.totalMs)}</td>
-                      <td className="py-1.5 text-right text-zinc-400">{p.sessionCount}</td>
-                      <td className="py-1.5 text-right text-zinc-400">{p.commitCount}</td>
-                      <td className="py-1.5 text-zinc-400">{p.lastActive ? new Date(p.lastActive).toLocaleString() : '—'}</td>
+                      <td className="py-1.5 text-right text-zinc-300 tabular-nums">{formatDuration(p.totalMs)}</td>
+                      <td className="py-1.5 text-right text-zinc-400 tabular-nums">{p.sessionCount}</td>
+                      <td className="py-1.5 text-right text-zinc-400 tabular-nums">{p.commitCount}</td>
+                      <td className="py-1.5 text-right text-zinc-400 tabular-nums">{p.lastActive ? new Date(p.lastActive).toLocaleString() : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1038,6 +976,16 @@ interface HistoricalWorkCardProps {
   setToMs: (ms: number | null) => void
   baseColor: string
   emptyColor: string
+  source: SessionSource
+  setSource: (s: SessionSource) => void
+  includeAllAuthors: boolean
+  setIncludeAllAuthors: (v: boolean) => void
+  gapMinutes: number
+  setGapMinutes: (v: number) => void
+  leadInMinutes: number
+  setLeadInMinutes: (v: number) => void
+  idleMinutes: number
+  setIdleMinutes: (v: number) => void
 }
 
 function HistoricalWorkCard({
@@ -1059,17 +1007,39 @@ function HistoricalWorkCard({
   toMs,
   setToMs,
   baseColor,
-  emptyColor
+  emptyColor,
+  source,
+  setSource,
+  includeAllAuthors,
+  setIncludeAllAuthors,
+  gapMinutes,
+  setGapMinutes,
+  leadInMinutes,
+  setLeadInMinutes,
+  idleMinutes,
+  setIdleMinutes
 }: HistoricalWorkCardProps): React.ReactElement {
-  const stats = useMemo(() => computeHistoryStats(calendar), [calendar])
-  const hasCells = calendar.weeks.length > 0 && stats.possibleDays > 0
-  const valueLabel = metric === 'hours' ? `${stats.totalHours.toFixed(1)}h` : `${stats.totalCommits} commit${stats.totalCommits === 1 ? '' : 's'}`
+  const hasCells = calendar.weeks.length > 0 && computeHistoryStats(calendar).possibleDays > 0
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="text-xs font-medium text-zinc-400">Historical work</div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+            {SOURCE_OPTIONS.map((o) => (
+              <button
+                key={o.key}
+                onClick={() => setSource(o.key)}
+                className={cn(
+                  'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                  source === o.key ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                )}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
           <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
             {HISTORY_WINDOWS.map((w) => (
               <button
@@ -1138,6 +1108,17 @@ function HistoricalWorkCard({
               </option>
             ))}
           </select>
+          <SessionSettingsPopover
+            source={source}
+            includeAllAuthors={includeAllAuthors}
+            setIncludeAllAuthors={setIncludeAllAuthors}
+            gapMinutes={gapMinutes}
+            setGapMinutes={setGapMinutes}
+            leadInMinutes={leadInMinutes}
+            setLeadInMinutes={setLeadInMinutes}
+            idleMinutes={idleMinutes}
+            setIdleMinutes={setIdleMinutes}
+          />
         </div>
       </div>
 
@@ -1175,22 +1156,6 @@ function HistoricalWorkCard({
       ) : (
         <div className="py-6 text-center text-xs text-zinc-500">No activity in this window</div>
       )}
-
-      <div className="mt-3 grid grid-cols-2 gap-3 text-[11px] sm:grid-cols-4">
-        <HistoryStat label="Current streak" value={`${stats.currentStreak} day${stats.currentStreak === 1 ? '' : 's'}`} />
-        <HistoryStat label="Longest streak" value={`${stats.longestStreak} day${stats.longestStreak === 1 ? '' : 's'}`} />
-        <HistoryStat label="Active days" value={`${stats.activeDays} / ${stats.possibleDays}`} />
-        <HistoryStat label={metric === 'hours' ? 'Total time' : 'Total commits'} value={valueLabel} />
-      </div>
-    </div>
-  )
-}
-
-function HistoryStat({ label, value }: { label: string; value: string }): React.ReactElement {
-  return (
-    <div className="rounded-md border border-zinc-800 bg-zinc-950/40 px-2.5 py-1.5">
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</div>
-      <div className="mt-0.5 text-sm font-semibold text-zinc-100">{value}</div>
     </div>
   )
 }
@@ -1245,6 +1210,7 @@ interface HistoryCalendarData {
   metric: HistoryMetric
   startMs: number
   endMs: number
+  windowEndMs: number
 }
 
 function startOfWeekMs(ms: number): number {
@@ -1272,10 +1238,12 @@ function buildHistoryCalendar({
   endMs,
   sessions,
   commits,
-  metric
+  metric,
+  windowEndMs
 }: {
   startMs: number
   endMs: number
+  windowEndMs: number
   sessions: Session[]
   commits: StatsCommit[]
   metric: HistoryMetric
@@ -1315,7 +1283,7 @@ function buildHistoryCalendar({
   const weeks: HistoryCalendarCell[][] = []
   let max = 0.0001
   let weekCursor = weekStart
-  while (weekCursor <= endMs) {
+  while (weekCursor <= windowEndMs) {
     const week: HistoryCalendarCell[] = []
     for (let d = 0; d < 7; d++) {
       const dayMs = addDaysMs(weekCursor, d)
@@ -1339,7 +1307,7 @@ function buildHistoryCalendar({
     weeks.push(week)
     weekCursor = addDaysMs(weekCursor, 7)
   }
-  return { weeks, max, metric, startMs: weekStart, endMs }
+  return { weeks, max, metric, startMs: weekStart, endMs, windowEndMs }
 }
 
 interface HistoryStats {
@@ -1364,10 +1332,10 @@ function computeHistoryStats(calendar: HistoryCalendarData): HistoryStats {
   const dayValues: { dateMs: number; active: boolean }[] = []
   for (const week of calendar.weeks) {
     for (const cell of week) {
-      if (cell.dateMs > now) continue
-      if (cell.dateMs > calendar.endMs) continue
+      if (cell.dateMs > calendar.windowEndMs) continue
       if (cell.dateMs < calendar.startMs) continue
       possibleDays += 1
+      if (cell.dateMs > now) continue
       totalHours += cell.hours
       totalCommits += cell.commits
       const active = calendar.metric === 'hours' ? cell.hours > 0 : cell.commits > 0
