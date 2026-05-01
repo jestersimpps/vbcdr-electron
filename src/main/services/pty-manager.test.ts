@@ -216,5 +216,62 @@ describe('pty-manager', () => {
       expect(mod.hasPty('t1')).toBe(false)
       expect(mod.hasPty('t2')).toBe(false)
     })
+
+    it('clears any pending flush timer when killing the last instance', async () => {
+      const mod = await importFresh()
+      const win = makeWin()
+      mod.createPty('t1', 'p1', '/cwd', win as never)
+      ptyInstances[0].emitData('buffered')
+
+      mod.killAll()
+
+      // Timer should be cleared, so advancing past the batch interval must
+      // not produce any more terminal:data sends after killAll.
+      win.webContents.send.mockClear()
+      vi.advanceTimersByTime(50)
+      expect(win.webContents.send).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('killPty timer cleanup', () => {
+    it('clears the pending flush timer instead of sending a stale batch', async () => {
+      const mod = await importFresh()
+      const win = makeWin()
+      mod.createPty('t1', 'p1', '/cwd', win as never)
+      ptyInstances[0].emitData('queued')
+      win.webContents.send.mockClear()
+
+      mod.killPty('t1')
+      vi.advanceTimersByTime(50)
+
+      expect(win.webContents.send).not.toHaveBeenCalledWith('terminal:data', 't1', 'queued')
+      expect(ptyInstances[0].kill).toHaveBeenCalled()
+    })
+  })
+
+  describe('flushPending guards', () => {
+    it('skips the IPC send when the window is destroyed at flush time', async () => {
+      const mod = await importFresh()
+      let destroyed = false
+      const win = {
+        isDestroyed: () => destroyed,
+        webContents: { send: vi.fn() }
+      }
+      mod.createPty('t1', 'p1', '/cwd', win as never)
+      ptyInstances[0].emitData('hello')
+
+      destroyed = true
+      vi.advanceTimersByTime(16)
+
+      expect(win.webContents.send).not.toHaveBeenCalledWith('terminal:data', 't1', 'hello')
+    })
+  })
+
+  describe('createPty cwd fallback', () => {
+    it('creates the pty when the requested cwd exists', async () => {
+      const mod = await importFresh()
+      mod.createPty('t1', 'p1', '/some/cwd', makeWin() as never)
+      expect(ptyInstances[0].cwd).toBe('/some/cwd')
+    })
   })
 })

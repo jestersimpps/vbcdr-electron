@@ -119,6 +119,7 @@
     "@types/react-grid-layout": "^1.3.6",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^4.1.5",
     "@vitest/ui": "^4.1.5",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",

@@ -7,13 +7,43 @@ vi.mock('electron', () => ({
   BrowserWindow: class {}
 }))
 
+interface FakeWatcher {
+  ignored?: (filePath: string) => boolean
+  emit: (event: string, filePath: string) => void
+  close: ReturnType<typeof vi.fn>
+}
+
+const watchers: FakeWatcher[] = []
+
+vi.mock('chokidar', () => ({
+  watch: vi.fn((_root: string, opts: { ignored?: (p: string) => boolean }) => {
+    let allCb: ((event: string, filePath: string) => void) | null = null
+    const watcher: FakeWatcher = {
+      ignored: opts.ignored,
+      emit: (event, filePath) => allCb?.(event, filePath),
+      close: vi.fn()
+    }
+    watchers.push(watcher)
+    return {
+      on: (event: string, cb: (event: string, filePath: string) => void) => {
+        if (event === 'all') allCb = cb
+      },
+      close: watcher.close
+    }
+  })
+}))
+
 let root: string
 
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'fw-'))
+  watchers.length = 0
 })
 
-afterEach(() => {
+afterEach(async () => {
+  // Always clear any active watcher between tests so module state is clean.
+  const { stopWatching } = await import('./file-watcher')
+  stopWatching()
   fs.rmSync(root, { recursive: true, force: true })
 })
 
@@ -159,5 +189,135 @@ describe('stopWatching', () => {
   it('is safe to call when no watcher is active', async () => {
     const { stopWatching } = await import('./file-watcher')
     expect(() => stopWatching()).not.toThrow()
+  })
+
+  it('closes the active chokidar watcher', async () => {
+    const { startWatching, stopWatching } = await import('./file-watcher')
+    const win = { isDestroyed: () => false, webContents: { send: vi.fn() } }
+    startWatching(root, win as never)
+    expect(watchers).toHaveLength(1)
+    stopWatching()
+    expect(watchers[0].close).toHaveBeenCalled()
+  })
+})
+
+describe('startWatching', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('debounces tree changes and emits a single fs:tree-changed event', async () => {
+    writeFile('a.ts', '')
+    const { startWatching } = await import('./file-watcher')
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    startWatching(root, win as never)
+
+    const watcher = watchers[0]
+    watcher.emit('add', path.join(root, 'a.ts'))
+    watcher.emit('add', path.join(root, 'a.ts'))
+    expect(send).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(200)
+    const treeCalls = send.mock.calls.filter((c) => c[0] === 'fs:tree-changed')
+    expect(treeCalls).toHaveLength(1)
+    expect(treeCalls[0][1]).toMatchObject({ path: root, isDirectory: true })
+  })
+
+  it('reads the changed text file and sends fs:file-changed after the file debounce', async () => {
+    const filePath = writeFile('a.ts', 'initial')
+    const { startWatching } = await import('./file-watcher')
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    startWatching(root, win as never)
+
+    fs.writeFileSync(filePath, 'updated')
+    watchers[0].emit('change', filePath)
+
+    vi.advanceTimersByTime(150)
+    const fileCalls = send.mock.calls.filter((c) => c[0] === 'fs:file-changed')
+    expect(fileCalls).toHaveLength(1)
+    expect(fileCalls[0]).toEqual(['fs:file-changed', filePath, 'updated'])
+  })
+
+  it('skips file content reads for binary extensions on change events', async () => {
+    const filePath = writeFile('pic.png', '')
+    const { startWatching } = await import('./file-watcher')
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    startWatching(root, win as never)
+
+    watchers[0].emit('change', filePath)
+    vi.advanceTimersByTime(200)
+
+    expect(send.mock.calls.some((c) => c[0] === 'fs:file-changed')).toBe(false)
+  })
+
+  it('does not throw when the changed file disappears before the read fires', async () => {
+    const filePath = writeFile('temp.ts', '')
+    const { startWatching } = await import('./file-watcher')
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    startWatching(root, win as never)
+
+    watchers[0].emit('change', filePath)
+    fs.rmSync(filePath)
+    expect(() => vi.advanceTimersByTime(200)).not.toThrow()
+    expect(send.mock.calls.some((c) => c[0] === 'fs:file-changed')).toBe(false)
+  })
+
+  it('stops emitting once the window is destroyed', async () => {
+    writeFile('a.ts', '')
+    const { startWatching } = await import('./file-watcher')
+    const send = vi.fn()
+    let destroyed = false
+    const win = { isDestroyed: () => destroyed, webContents: { send } }
+    startWatching(root, win as never)
+
+    destroyed = true
+    watchers[0].emit('add', path.join(root, 'a.ts'))
+    vi.advanceTimersByTime(200)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('configures chokidar to ignore .git, node_modules and gitignored paths', async () => {
+    writeFile('.gitignore', 'secret.env\n')
+    const { startWatching } = await import('./file-watcher')
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    startWatching(root, win as never)
+
+    const ignored = watchers[0].ignored!
+    expect(ignored(path.join(root, '.git', 'HEAD'))).toBe(true)
+    expect(ignored(path.join(root, 'node_modules', 'x.js'))).toBe(true)
+    expect(ignored(path.join(root, 'secret.env'))).toBe(true)
+    expect(ignored(path.join(root, 'src', 'main.ts'))).toBe(false)
+    expect(ignored(root)).toBe(false)
+  })
+
+  it('includes gitignored paths in the watcher when showIgnored=true', async () => {
+    writeFile('.gitignore', 'secret.env\n')
+    const { startWatching } = await import('./file-watcher')
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    startWatching(root, win as never, true)
+
+    const ignored = watchers[0].ignored!
+    expect(ignored(path.join(root, 'secret.env'))).toBe(false)
+    expect(ignored(path.join(root, '.git', 'HEAD'))).toBe(true)
+  })
+
+  it('replaces a previous watcher when called twice', async () => {
+    const { startWatching } = await import('./file-watcher')
+    const win = { isDestroyed: () => false, webContents: { send: vi.fn() } }
+    startWatching(root, win as never)
+    startWatching(root, win as never)
+
+    expect(watchers).toHaveLength(2)
+    expect(watchers[0].close).toHaveBeenCalled()
   })
 })
