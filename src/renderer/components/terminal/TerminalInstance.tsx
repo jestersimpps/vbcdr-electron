@@ -24,6 +24,7 @@ interface TerminalEntry {
   searchAddon: SearchAddon
   onIncomingData?: (data: string) => void
   suppressBusyUntil: number
+  textareaListeners?: { textarea: HTMLTextAreaElement; onFocus: () => void; onBlur: () => void }
 }
 
 const terminalsMap = new Map<string, TerminalEntry>()
@@ -265,14 +266,18 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
         const textarea = terminal.textarea
         if (textarea) {
-          textarea.addEventListener('focus', () => {
+          const onFocus = (): void => {
             useTerminalStore.getState().setFocusedTabId(tabId)
-          })
-          textarea.addEventListener('blur', () => {
+          }
+          const onBlur = (): void => {
             if (useTerminalStore.getState().focusedTabId === tabId) {
               useTerminalStore.getState().setFocusedTabId(null)
             }
-          })
+          }
+          textarea.addEventListener('focus', onFocus)
+          textarea.addEventListener('blur', onBlur)
+          const e = terminalsMap.get(tabId)
+          if (e) e.textareaListeners = { textarea, onFocus, onBlur }
         }
 
         fitAddon.fit()
@@ -464,6 +469,12 @@ export function disposeTerminal(tabId: string): void {
     const timer = bufferReadTimers.get(tabId)
     if (timer) clearTimeout(timer)
     bufferReadTimers.delete(tabId)
+    if (entry.textareaListeners) {
+      const { textarea, onFocus, onBlur } = entry.textareaListeners
+      try { textarea.removeEventListener('focus', onFocus) } catch { /* textarea may already be gone */ }
+      try { textarea.removeEventListener('blur', onBlur) } catch { /* textarea may already be gone */ }
+      entry.textareaListeners = undefined
+    }
     try { entry.terminal.dispose() } catch { /* dispose may throw if already gone */ }
     terminalsMap.delete(tabId)
   }
