@@ -9,19 +9,19 @@ export function useQueueRunner(): void {
   const tabs = useTerminalStore((s) => s.tabs)
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
-  const itemsPerProject = useQueueStore((s) => s.itemsPerProject)
-  const autoRunPerProject = useQueueStore((s) => s.autoRunPerProject)
+  const itemsPerTab = useQueueStore((s) => s.itemsPerTab)
+  const autoRunPerTab = useQueueStore((s) => s.autoRunPerTab)
 
   const activeTabId = activeProjectId ? activeTabPerProject[activeProjectId] ?? null : null
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const status = activeTabId ? tabStatuses[activeTabId] : undefined
-  const items = activeProjectId ? itemsPerProject[activeProjectId] ?? [] : []
-  const autoRun = activeProjectId ? autoRunPerProject[activeProjectId] ?? false : false
+  const items = activeTabId ? itemsPerTab[activeTabId] ?? [] : []
+  const autoRun = activeTabId ? autoRunPerTab[activeTabId] ?? false : false
 
   const lastDispatchAtRef = useRef<number>(0)
 
   useEffect(() => {
-    if (!activeProjectId || !activeTabId || !activeTab) return
+    if (!activeTabId || !activeTab) return
     if (!activeTab.initialCommand) return
     if (!autoRun) return
     if (status !== 'idle') return
@@ -31,7 +31,7 @@ export function useQueueRunner(): void {
     const next = items[0]
     lastDispatchAtRef.current = Date.now()
     useTerminalStore.getState().setTabStatus(activeTabId, 'busy')
-    useQueueStore.getState().dequeue(activeProjectId)
+    useQueueStore.getState().dequeue(activeTabId)
     sendToTerminal(activeTabId, next.text)
-  }, [activeProjectId, activeTabId, activeTab?.initialCommand, status, autoRun, items])
+  }, [activeTabId, activeTab?.initialCommand, status, autoRun, items])
 }

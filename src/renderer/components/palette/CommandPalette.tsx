@@ -124,13 +124,22 @@ export function CommandPalette(): React.ReactElement | null {
   const projects = useProjectStore((s) => s.projects)
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const terminalTabs = useTerminalStore((s) => s.tabs)
-  const itemsPerProject = useQueueStore((s) => s.itemsPerProject)
+  const itemsPerTab = useQueueStore((s) => s.itemsPerTab)
+  const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
   const treePerProject = useFileTreeStore((s) => s.treePerProject)
   const editorStatePerProject = useEditorStore((s) => s.statePerProject)
 
+  const activeLlmTabId = useMemo(() => {
+    if (!activeProjectId) return null
+    const tabId = activeTabPerProject[activeProjectId] ?? null
+    if (!tabId) return null
+    const tab = terminalTabs.find((t) => t.id === tabId)
+    return tab?.initialCommand ? tabId : null
+  }, [activeProjectId, activeTabPerProject, terminalTabs])
+
   const queueItems = useMemo(
-    () => (activeProjectId ? itemsPerProject[activeProjectId] ?? [] : []),
-    [activeProjectId, itemsPerProject]
+    () => (activeLlmTabId ? itemsPerTab[activeLlmTabId] ?? [] : []),
+    [activeLlmTabId, itemsPerTab]
   )
   const fileTree = activeProjectId ? treePerProject[activeProjectId] : undefined
   const openFiles = useMemo(
@@ -192,10 +201,9 @@ export function CommandPalette(): React.ReactElement | null {
           group: 'Run queued command',
           icon: <Play size={14} />,
           run: () => {
-            const activeTabId = useTerminalStore.getState().activeTabPerProject[activeProjectId]
-            if (!activeTabId) return
-            useQueueStore.getState().removeItem(activeProjectId, q.id)
-            sendToTerminal(activeTabId, q.text)
+            if (!activeLlmTabId) return
+            useQueueStore.getState().removeItem(activeLlmTabId, q.id)
+            sendToTerminal(activeLlmTabId, q.text)
           }
         })
       }
@@ -334,7 +342,7 @@ export function CommandPalette(): React.ReactElement | null {
       )
 
       const trimmed = query.trim()
-      if (trimmed.length > 0) {
+      if (trimmed.length > 0 && activeLlmTabId) {
         const preview = trimmed.length > 60 ? trimmed.slice(0, 60) + '…' : trimmed
         list.push({
           id: 'action:enqueue',
@@ -343,7 +351,7 @@ export function CommandPalette(): React.ReactElement | null {
           group: 'Prompt',
           icon: <ListPlus size={14} />,
           run: () => {
-            useQueueStore.getState().addItem(activeProjectId, trimmed)
+            useQueueStore.getState().addItem(activeLlmTabId, trimmed)
           }
         })
       }
@@ -430,7 +438,7 @@ export function CommandPalette(): React.ReactElement | null {
     )
 
     return list
-  }, [projects, activeProjectId, terminalTabs, allFiles, queueItems, query])
+  }, [projects, activeProjectId, activeLlmTabId, terminalTabs, allFiles, queueItems, query])
 
   const filtered = useMemo(() => {
     const q = query.trim()

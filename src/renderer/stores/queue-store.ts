@@ -9,114 +9,143 @@ export interface QueueItem {
 }
 
 interface QueueStore {
-  itemsPerProject: Record<string, QueueItem[]>
-  autoRunPerProject: Record<string, boolean>
-  panelOpenPerProject: Record<string, boolean>
-  addItem: (projectId: string, text: string) => QueueItem | null
-  updateItem: (projectId: string, id: string, text: string) => void
-  removeItem: (projectId: string, id: string) => void
-  reorderItems: (projectId: string, ids: string[]) => void
-  dequeue: (projectId: string) => QueueItem | undefined
-  clear: (projectId: string) => void
-  setAutoRun: (projectId: string, v: boolean) => void
-  setPanelOpen: (projectId: string, v: boolean) => void
-  getItems: (projectId: string) => QueueItem[]
-  isAutoRun: (projectId: string) => boolean
-  isPanelOpen: (projectId: string) => boolean
+  itemsPerTab: Record<string, QueueItem[]>
+  autoRunPerTab: Record<string, boolean>
+  panelOpenPerTab: Record<string, boolean>
+  addItem: (tabId: string, text: string) => QueueItem | null
+  updateItem: (tabId: string, id: string, text: string) => void
+  removeItem: (tabId: string, id: string) => void
+  reorderItems: (tabId: string, ids: string[]) => void
+  dequeue: (tabId: string) => QueueItem | undefined
+  clear: (tabId: string) => void
+  setAutoRun: (tabId: string, v: boolean) => void
+  setPanelOpen: (tabId: string, v: boolean) => void
+  clearTab: (tabId: string) => void
+  getItems: (tabId: string) => QueueItem[]
+  isAutoRun: (tabId: string) => boolean
+  isPanelOpen: (tabId: string) => boolean
 }
 
 export const useQueueStore = create<QueueStore>()(
   persist(
     (set, get) => ({
-      itemsPerProject: {},
-      autoRunPerProject: {},
-      panelOpenPerProject: {},
+      itemsPerTab: {},
+      autoRunPerTab: {},
+      panelOpenPerTab: {},
 
-      addItem: (projectId: string, text: string) => {
+      addItem: (tabId: string, text: string) => {
         const trimmed = text.trim()
         if (!trimmed) return null
         const item: QueueItem = { id: uuid(), text: trimmed, createdAt: Date.now() }
         set((state) => ({
-          itemsPerProject: {
-            ...state.itemsPerProject,
-            [projectId]: [...(state.itemsPerProject[projectId] ?? []), item]
+          itemsPerTab: {
+            ...state.itemsPerTab,
+            [tabId]: [...(state.itemsPerTab[tabId] ?? []), item]
           },
-          autoRunPerProject: { ...state.autoRunPerProject, [projectId]: true }
+          autoRunPerTab: { ...state.autoRunPerTab, [tabId]: true }
         }))
         return item
       },
 
-      updateItem: (projectId: string, id: string, text: string) => {
+      updateItem: (tabId: string, id: string, text: string) => {
         const trimmed = text.trim()
         if (!trimmed) return
         set((state) => ({
-          itemsPerProject: {
-            ...state.itemsPerProject,
-            [projectId]: (state.itemsPerProject[projectId] ?? []).map((item) =>
+          itemsPerTab: {
+            ...state.itemsPerTab,
+            [tabId]: (state.itemsPerTab[tabId] ?? []).map((item) =>
               item.id === id ? { ...item, text: trimmed } : item
             )
           }
         }))
       },
 
-      removeItem: (projectId: string, id: string) => {
+      removeItem: (tabId: string, id: string) => {
         set((state) => ({
-          itemsPerProject: {
-            ...state.itemsPerProject,
-            [projectId]: (state.itemsPerProject[projectId] ?? []).filter((item) => item.id !== id)
+          itemsPerTab: {
+            ...state.itemsPerTab,
+            [tabId]: (state.itemsPerTab[tabId] ?? []).filter((item) => item.id !== id)
           }
         }))
       },
 
-      reorderItems: (projectId: string, ids: string[]) => {
+      reorderItems: (tabId: string, ids: string[]) => {
         set((state) => {
-          const current = state.itemsPerProject[projectId] ?? []
+          const current = state.itemsPerTab[tabId] ?? []
           const byId = new Map(current.map((item) => [item.id, item]))
           const reordered = ids.map((id) => byId.get(id)).filter((item): item is QueueItem => !!item)
           return {
-            itemsPerProject: { ...state.itemsPerProject, [projectId]: reordered }
+            itemsPerTab: { ...state.itemsPerTab, [tabId]: reordered }
           }
         })
       },
 
-      dequeue: (projectId: string) => {
-        const current = get().itemsPerProject[projectId] ?? []
+      dequeue: (tabId: string) => {
+        const current = get().itemsPerTab[tabId] ?? []
         if (current.length === 0) return undefined
         const [head, ...rest] = current
         set((state) => ({
-          itemsPerProject: { ...state.itemsPerProject, [projectId]: rest }
+          itemsPerTab: { ...state.itemsPerTab, [tabId]: rest }
         }))
         return head
       },
 
-      clear: (projectId: string) => {
+      clear: (tabId: string) => {
         set((state) => ({
-          itemsPerProject: { ...state.itemsPerProject, [projectId]: [] }
+          itemsPerTab: { ...state.itemsPerTab, [tabId]: [] }
         }))
       },
 
-      setAutoRun: (projectId: string, v: boolean) => {
+      setAutoRun: (tabId: string, v: boolean) => {
         set((state) => ({
-          autoRunPerProject: { ...state.autoRunPerProject, [projectId]: v }
+          autoRunPerTab: { ...state.autoRunPerTab, [tabId]: v }
         }))
       },
 
-      setPanelOpen: (projectId: string, v: boolean) => {
+      setPanelOpen: (tabId: string, v: boolean) => {
         set((state) => ({
-          panelOpenPerProject: { ...state.panelOpenPerProject, [projectId]: v }
+          panelOpenPerTab: { ...state.panelOpenPerTab, [tabId]: v }
         }))
       },
 
-      getItems: (projectId: string) => get().itemsPerProject[projectId] ?? [],
-      isAutoRun: (projectId: string) => get().autoRunPerProject[projectId] ?? false,
-      isPanelOpen: (projectId: string) => get().panelOpenPerProject[projectId] ?? false
+      clearTab: (tabId: string) => {
+        set((state) => {
+          const items = { ...state.itemsPerTab }
+          const autoRun = { ...state.autoRunPerTab }
+          const panelOpen = { ...state.panelOpenPerTab }
+          delete items[tabId]
+          delete autoRun[tabId]
+          delete panelOpen[tabId]
+          return { itemsPerTab: items, autoRunPerTab: autoRun, panelOpenPerTab: panelOpen }
+        })
+      },
+
+      getItems: (tabId: string) => get().itemsPerTab[tabId] ?? [],
+      isAutoRun: (tabId: string) => get().autoRunPerTab[tabId] ?? false,
+      isPanelOpen: (tabId: string) => get().panelOpenPerTab[tabId] ?? false
     }),
     {
       name: 'vbcdr-queue',
+      version: 2,
+      migrate: (persisted: unknown, version: number) => {
+        if (version < 2 && persisted && typeof persisted === 'object') {
+          const old = persisted as {
+            itemsPerProject?: Record<string, QueueItem[]>
+            autoRunPerProject?: Record<string, boolean>
+            panelOpenPerProject?: Record<string, boolean>
+          }
+          return {
+            itemsPerTab: old.itemsPerProject ?? {},
+            autoRunPerTab: old.autoRunPerProject ?? {},
+            panelOpenPerTab: old.panelOpenPerProject ?? {}
+          }
+        }
+        return persisted as Partial<QueueStore>
+      },
       partialize: (state) => ({
-        itemsPerProject: state.itemsPerProject,
-        autoRunPerProject: state.autoRunPerProject,
-        panelOpenPerProject: state.panelOpenPerProject
+        itemsPerTab: state.itemsPerTab,
+        autoRunPerTab: state.autoRunPerTab,
+        panelOpenPerTab: state.panelOpenPerTab
       })
     }
   )

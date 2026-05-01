@@ -454,7 +454,7 @@ export function TerminalPanel(): React.ReactElement {
         })}
       </div>
 
-      <TaskQueuePanel projectId={activeProjectId} />
+      <TaskQueuePanel tabId={activeTab?.initialCommand ? activeTabId : null} />
     </div>
   )
 }

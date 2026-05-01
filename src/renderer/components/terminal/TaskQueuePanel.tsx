@@ -4,14 +4,14 @@ import { useQueueStore, type QueueItem } from '@/stores/queue-store'
 import { cn } from '@/lib/utils'
 
 interface TaskQueuePanelProps {
-  projectId: string | null
+  tabId: string | null
 }
 
 const EMPTY_ITEMS: QueueItem[] = []
 
-export function TaskQueuePanel({ projectId }: TaskQueuePanelProps): React.ReactElement | null {
-  const items = useQueueStore((s) => (projectId ? s.itemsPerProject[projectId] ?? EMPTY_ITEMS : EMPTY_ITEMS))
-  const autoRun = useQueueStore((s) => (projectId ? s.autoRunPerProject[projectId] ?? false : false))
+export function TaskQueuePanel({ tabId }: TaskQueuePanelProps): React.ReactElement | null {
+  const items = useQueueStore((s) => (tabId ? s.itemsPerTab[tabId] ?? EMPTY_ITEMS : EMPTY_ITEMS))
+  const autoRun = useQueueStore((s) => (tabId ? s.autoRunPerTab[tabId] ?? false : false))
   const addItem = useQueueStore((s) => s.addItem)
   const updateItem = useQueueStore((s) => s.updateItem)
   const removeItem = useQueueStore((s) => s.removeItem)
@@ -21,7 +21,7 @@ export function TaskQueuePanel({ projectId }: TaskQueuePanelProps): React.ReactE
   const [editingId, setEditingId] = useState<string | null>(null)
   const composerRef = useRef<HTMLInputElement>(null)
 
-  if (!projectId) return null
+  if (!tabId) return null
 
   const commitDraft = (): void => {
     const text = draft.trim()
@@ -30,19 +30,19 @@ export function TaskQueuePanel({ projectId }: TaskQueuePanelProps): React.ReactE
       return
     }
     if (editingId) {
-      updateItem(projectId, editingId, text)
+      updateItem(tabId, editingId, text)
       setEditingId(null)
     } else {
-      addItem(projectId, text)
+      addItem(tabId, text)
     }
     setDraft('')
   }
 
   const handleEditChip = (item: QueueItem): void => {
     if (editingId && draft.trim()) {
-      updateItem(projectId, editingId, draft.trim())
+      updateItem(tabId, editingId, draft.trim())
     } else if (!editingId && draft.trim()) {
-      addItem(projectId, draft.trim())
+      addItem(tabId, draft.trim())
     }
     setEditingId(item.id)
     setDraft(item.text)
@@ -89,7 +89,7 @@ export function TaskQueuePanel({ projectId }: TaskQueuePanelProps): React.ReactE
                 </button>
                 <button
                   type="button"
-                  onClick={() => removeItem(projectId, item.id)}
+                  onClick={() => removeItem(tabId, item.id)}
                   className="rounded-full p-0.5 text-zinc-500 hover:bg-zinc-700 hover:text-red-400"
                   title="Remove"
                 >
@@ -104,7 +104,7 @@ export function TaskQueuePanel({ projectId }: TaskQueuePanelProps): React.ReactE
       <div className="flex h-7 items-center gap-2">
         <button
           type="button"
-          onClick={() => setAutoRun(projectId, !autoRun)}
+          onClick={() => setAutoRun(tabId, !autoRun)}
           className={cn(
             'flex h-7 shrink-0 items-center gap-1 rounded px-2 text-[11px] font-medium transition-colors',
             autoRun
@@ -119,8 +119,8 @@ export function TaskQueuePanel({ projectId }: TaskQueuePanelProps): React.ReactE
         <button
           type="button"
           onClick={() => {
-            addItem(projectId, '/commit')
-            addItem(projectId, '/clear')
+            addItem(tabId, '/commit')
+            addItem(tabId, '/clear')
           }}
           className="flex h-7 shrink-0 items-center gap-1 rounded bg-zinc-800 px-2 text-[11px] font-medium text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
           title="Queue /commit then /clear"
