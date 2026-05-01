@@ -431,23 +431,27 @@ export function TerminalPanel(): React.ReactElement {
             )}
           </div>
         )}
-        {projectTabs.map((tab) => (
-          <div
-            key={tab.id}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              visibility: activeTabId === tab.id ? 'visible' : 'hidden'
-            }}
-          >
-            <TerminalInstance
-              tabId={tab.id}
-              projectId={tab.projectId}
-              cwd={tab.cwd}
-              initialCommand={tab.initialCommand}
-            />
-          </div>
-        ))}
+        {tabs.map((tab) => {
+          const isVisible = tab.projectId === activeProjectId && activeTabId === tab.id
+          return (
+            <div
+              key={tab.id}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                visibility: isVisible ? 'visible' : 'hidden',
+                pointerEvents: isVisible ? 'auto' : 'none'
+              }}
+            >
+              <TerminalInstance
+                tabId={tab.id}
+                projectId={tab.projectId}
+                cwd={tab.cwd}
+                initialCommand={tab.initialCommand}
+              />
+            </div>
+          )
+        })}
       </div>
 
       <TaskQueuePanel projectId={activeProjectId} />
