@@ -158,8 +158,6 @@ export function Statistics(): React.ReactElement {
     }
   }, [projects])
 
-  const archivedIds = useMemo(() => new Set(archivedProjects.map((a) => a.id)), [archivedProjects])
-
   const allStatsProjects = useMemo<StatsProject[]>(() => {
     const out: StatsProject[] = projects.map((p) => ({
       id: p.id,

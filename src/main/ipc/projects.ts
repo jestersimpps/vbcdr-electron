@@ -5,6 +5,8 @@ import path from 'path'
 import type { Project } from '@main/models/types'
 import { clearProjectTabs } from '@main/services/browser-persistence'
 import { clearProjectCredentials } from '@main/services/credential-store'
+import { purgeProjectActivity } from '@main/services/activity-service'
+import { purgeProjectTokenUsage } from '@main/services/token-usage-service'
 
 export interface ArchivedProject {
   id: string
@@ -103,6 +105,8 @@ export function registerProjectHandlers(): void {
     store.set('projectArchive', archive.filter((a) => a.id !== id))
     clearProjectTabs(id)
     clearProjectCredentials(id)
+    purgeProjectActivity(id)
+    purgeProjectTokenUsage(id)
     return true
   })
 

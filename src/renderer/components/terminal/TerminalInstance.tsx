@@ -214,10 +214,11 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
               if (busyPromoteTimer) { clearTimeout(busyPromoteTimer); busyPromoteTimer = null }
               const prev = useTerminalStore.getState().tabStatuses[tabId]
               useTerminalStore.getState().setTabStatus(tabId, 'idle')
-              if (prev !== 'idle' && useProjectStore.getState().activeProjectId !== projectId) {
+              const isActiveProject = useProjectStore.getState().activeProjectId === projectId
+              if (prev !== 'idle' && !isActiveProject) {
                 useTerminalStore.getState().markProjectAttention(projectId)
               }
-              if (prev === 'busy') {
+              if (prev === 'busy' && isActiveProject) {
                 const { idleSoundEnabled, idleSoundId } = useLayoutStore.getState()
                 if (idleSoundEnabled) playSound(idleSoundId)
               }

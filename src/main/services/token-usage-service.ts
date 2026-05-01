@@ -122,13 +122,35 @@ function loadEventsCache(): TokenEvent[] {
   return eventsCache
 }
 
+function parsePendingEvents(): TokenEvent[] {
+  if (pendingLines.length === 0) return []
+  const out: TokenEvent[] = []
+  for (const line of pendingLines) {
+    try {
+      const ev = JSON.parse(line) as TokenEvent
+      if (typeof ev.t !== 'number' || typeof ev.d !== 'number' || typeof ev.p !== 'string') continue
+      out.push(ev)
+    } catch {
+      /* skip */
+    }
+  }
+  return out
+}
+
 function readEvents(sinceMs: number | null): TokenEvent[] {
   const cached = loadEventsCache()
   const needsDiskFallback =
     sinceMs !== null &&
     cacheCoversFromMs !== null &&
     sinceMs < cacheCoversFromMs
-  const source = needsDiskFallback ? readAllEventsFromDisk() : cached
+  let source: TokenEvent[]
+  if (needsDiskFallback) {
+    source = readAllEventsFromDisk()
+    const pending = parsePendingEvents()
+    if (pending.length > 0) source = source.concat(pending)
+  } else {
+    source = cached
+  }
   if (sinceMs === null) return source.slice()
   const out: TokenEvent[] = []
   for (const ev of source) {
@@ -164,6 +186,44 @@ export function getDailyUsage(sinceIso: string | null): DailyTokenUsage[] {
     row.perProject[ev.p] = (row.perProject[ev.p] ?? 0) + ev.d
   }
   return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date))
+}
+
+export function purgeProjectTokenUsage(projectId: string): void {
+  if (!projectId) return
+  for (let i = pendingLines.length - 1; i >= 0; i--) {
+    try {
+      const ev = JSON.parse(pendingLines[i]) as TokenEvent
+      if (ev.p === projectId) pendingLines.splice(i, 1)
+    } catch {
+      /* skip malformed pending line */
+    }
+  }
+  if (eventsCache) {
+    eventsCache = eventsCache.filter((ev) => ev.p !== projectId)
+    cacheCoversFromMs = eventsCache[0]?.t ?? null
+  }
+  try {
+    const raw = fs.readFileSync(tokenFile(), 'utf-8')
+    const lines = raw.split('\n')
+    const kept: string[] = []
+    for (const line of lines) {
+      if (!line) continue
+      try {
+        const ev = JSON.parse(line) as TokenEvent
+        if (ev.p === projectId) continue
+        kept.push(line)
+      } catch {
+        /* drop malformed */
+      }
+    }
+    if (kept.length === 0) {
+      fs.unlinkSync(tokenFile())
+    } else {
+      fs.writeFileSync(tokenFile(), kept.join('\n') + '\n', 'utf-8')
+    }
+  } catch {
+    /* file may not exist */
+  }
 }
 
 export function compactTokenUsage(): void {

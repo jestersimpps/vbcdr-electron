@@ -77,17 +77,24 @@ export function flushActivity(): void {
   }
   if (pendingLines.size === 0) return
   ensureDir()
+  const flushed: string[] = []
   for (const [projectId, lines] of pendingLines) {
-    if (lines.length === 0) continue
+    if (lines.length === 0) {
+      flushed.push(projectId)
+      continue
+    }
     try {
       fs.appendFileSync(projectFile(projectId), lines.join(''), 'utf-8')
       eventsCache.delete(projectId)
+      flushed.push(projectId)
     } catch {
-      /* ignore write errors */
+      /* keep pendingLines + dirty flag so the next flush retries */
     }
   }
-  pendingLines.clear()
-  dirtyProjects.clear()
+  for (const projectId of flushed) {
+    pendingLines.delete(projectId)
+    dirtyProjects.delete(projectId)
+  }
 }
 
 function loadProjectEvents(projectId: string): ActivityEvent[] {
@@ -237,15 +244,27 @@ export function getAllSessions(
   return out
 }
 
+export function purgeProjectActivity(projectId: string): void {
+  if (!projectId) return
+  pendingLines.delete(projectId)
+  dirtyProjects.delete(projectId)
+  eventsCache.delete(projectId)
+  try {
+    fs.unlinkSync(projectFile(projectId))
+  } catch {
+    /* file may not exist */
+  }
+}
+
 export function compactActivity(): void {
   if (compacted) return
-  compacted = true
   let entries: string[] = []
   try {
     entries = fs.readdirSync(activityDir())
   } catch {
     return
   }
+  compacted = true
 
   const cutoff = Date.now() - RETENTION_MS
   for (const name of entries) {
