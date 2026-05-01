@@ -28,6 +28,14 @@ const pendingLines = new Map<string, string[]>()
 let flushTimer: ReturnType<typeof setTimeout> | null = null
 let compacted = false
 
+interface ProjectEventsCache {
+  events: ActivityEvent[]
+  fileMtimeMs: number
+}
+
+const eventsCache = new Map<string, ProjectEventsCache>()
+const dirtyProjects = new Set<string>()
+
 function activityDir(): string {
   return path.join(app.getPath('userData'), 'activity')
 }
@@ -50,6 +58,7 @@ export function recordActivity(projectId: string, kind: ActivityKind): void {
     pendingLines.set(projectId, arr)
   }
   arr.push(line)
+  dirtyProjects.add(projectId)
   scheduleFlush()
 }
 
@@ -72,33 +81,58 @@ export function flushActivity(): void {
     if (lines.length === 0) continue
     try {
       fs.appendFileSync(projectFile(projectId), lines.join(''), 'utf-8')
+      eventsCache.delete(projectId)
     } catch {
       /* ignore write errors */
     }
   }
   pendingLines.clear()
+  dirtyProjects.clear()
+}
+
+function loadProjectEvents(projectId: string): ActivityEvent[] {
+  const file = projectFile(projectId)
+  let mtime = 0
+  try {
+    mtime = fs.statSync(file).mtimeMs
+  } catch {
+    /* file may not exist */
+  }
+  const cached = eventsCache.get(projectId)
+  if (cached && cached.fileMtimeMs === mtime && !dirtyProjects.has(projectId)) {
+    return cached.events
+  }
+  const events: ActivityEvent[] = []
+  if (mtime > 0) {
+    try {
+      const raw = fs.readFileSync(file, 'utf-8')
+      const lines = raw.split('\n')
+      for (const line of lines) {
+        if (!line) continue
+        try {
+          const ev = JSON.parse(line) as ActivityEvent
+          if (typeof ev.t !== 'number' || (ev.k !== 'i' && ev.k !== 'o')) continue
+          events.push(ev)
+        } catch {
+          /* skip malformed line */
+        }
+      }
+    } catch {
+      /* file may not exist */
+    }
+  }
+  eventsCache.set(projectId, { events, fileMtimeMs: mtime })
+  return events
 }
 
 function readEvents(projectId: string, sinceMs: number | null): ActivityEvent[] {
+  const base = loadProjectEvents(projectId)
   const pending = pendingLines.get(projectId) ?? []
-  const events: ActivityEvent[] = []
+  const out: ActivityEvent[] = []
 
-  try {
-    const raw = fs.readFileSync(projectFile(projectId), 'utf-8')
-    const lines = raw.split('\n')
-    for (const line of lines) {
-      if (!line) continue
-      try {
-        const ev = JSON.parse(line) as ActivityEvent
-        if (typeof ev.t !== 'number' || (ev.k !== 'i' && ev.k !== 'o')) continue
-        if (sinceMs !== null && ev.t < sinceMs) continue
-        events.push(ev)
-      } catch {
-        /* skip malformed line */
-      }
-    }
-  } catch {
-    /* file may not exist yet */
+  for (const ev of base) {
+    if (sinceMs !== null && ev.t < sinceMs) continue
+    out.push(ev)
   }
 
   for (const line of pending) {
@@ -106,14 +140,14 @@ function readEvents(projectId: string, sinceMs: number | null): ActivityEvent[] 
       const ev = JSON.parse(line.trim()) as ActivityEvent
       if (typeof ev.t !== 'number' || (ev.k !== 'i' && ev.k !== 'o')) continue
       if (sinceMs !== null && ev.t < sinceMs) continue
-      events.push(ev)
+      out.push(ev)
     } catch {
       /* skip */
     }
   }
 
-  events.sort((a, b) => a.t - b.t)
-  return events
+  out.sort((a, b) => a.t - b.t)
+  return out
 }
 
 function buildSessionsFromEvents(
@@ -231,10 +265,13 @@ export function compactActivity(): void {
           /* skip */
         }
       }
+      const projectId = name.slice(0, -'.jsonl'.length)
       if (kept.length === 0) {
         fs.unlinkSync(file)
+        eventsCache.delete(projectId)
       } else if (kept.length !== lines.filter(Boolean).length) {
         fs.writeFileSync(file, kept.join('\n') + '\n', 'utf-8')
+        eventsCache.delete(projectId)
       }
     } catch {
       /* ignore */
