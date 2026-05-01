@@ -167,23 +167,30 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     const existing = get().tabs.filter((t) => t.projectId === projectId)
     if (existing.length > 0) {
       const liveness = await Promise.all(existing.map((t) => window.api.terminal.has(t.id)))
-      const anyLive = liveness.some(Boolean)
-      if (anyLive) return
-      const deadIds = existing.map((t) => t.id)
-      set((state) => {
-        const tabs = state.tabs.filter((t) => !deadIds.includes(t.id))
-        const activeTabPerProject = { ...state.activeTabPerProject }
-        if (deadIds.includes(activeTabPerProject[projectId])) {
-          delete activeTabPerProject[projectId]
-        }
-        const tabStatuses = { ...state.tabStatuses }
-        const tokenUsagePerTab = { ...state.tokenUsagePerTab }
-        for (const id of deadIds) {
-          delete tabStatuses[id]
-          delete tokenUsagePerTab[id]
-        }
-        return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab }
-      })
+      const deadIds = existing.filter((_, i) => !liveness[i]).map((t) => t.id)
+      const liveCount = existing.length - deadIds.length
+      if (deadIds.length > 0) {
+        set((state) => {
+          const tabs = state.tabs.filter((t) => !deadIds.includes(t.id))
+          const activeTabPerProject = { ...state.activeTabPerProject }
+          if (deadIds.includes(activeTabPerProject[projectId])) {
+            const remainingForProject = tabs.filter((t) => t.projectId === projectId)
+            if (remainingForProject.length > 0) {
+              activeTabPerProject[projectId] = remainingForProject[remainingForProject.length - 1].id
+            } else {
+              delete activeTabPerProject[projectId]
+            }
+          }
+          const tabStatuses = { ...state.tabStatuses }
+          const tokenUsagePerTab = { ...state.tokenUsagePerTab }
+          for (const id of deadIds) {
+            delete tabStatuses[id]
+            delete tokenUsagePerTab[id]
+          }
+          return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab }
+        })
+      }
+      if (liveCount > 0) return
     }
     get().createTab(projectId, cwd, 'claude')
   }
