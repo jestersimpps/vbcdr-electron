@@ -668,7 +668,6 @@ export function Statistics(): React.ReactElement {
                     ))}
                   </Pie>
                   <Tooltip wrapperStyle={{ zIndex: 1000, pointerEvents: 'none' }} contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
                 </RPieChart>
               </ResponsiveContainer>
             </Card>
