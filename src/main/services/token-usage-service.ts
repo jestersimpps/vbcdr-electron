@@ -18,12 +18,15 @@ const RETENTION_DAYS = 365
 const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000
 const FLUSH_DEBOUNCE_MS = 1500
 const COMPACT_INTERVAL_MS = 24 * 60 * 60 * 1000
+const CACHE_MAX_EVENTS = 5000
+const CACHE_TRIM_TARGET = 4000
 
 const pendingLines: string[] = []
 let flushTimer: ReturnType<typeof setTimeout> | null = null
 let lastCompactAt = 0
 
 let eventsCache: TokenEvent[] | null = null
+let cacheCoversFromMs: number | null = null
 
 const lastTokensByTab = new Map<string, number>()
 
@@ -47,7 +50,14 @@ export function recordTokenSnapshot(tabId: string, projectId: string, tokens: nu
   if (delta <= 0) return
   const ev: TokenEvent = { t: Date.now(), p: projectId, d: delta }
   pendingLines.push(JSON.stringify(ev) + '\n')
-  if (eventsCache) eventsCache.push(ev)
+  if (eventsCache) {
+    eventsCache.push(ev)
+    if (eventsCache.length > CACHE_MAX_EVENTS) {
+      const dropped = eventsCache.length - CACHE_TRIM_TARGET
+      eventsCache = eventsCache.slice(dropped)
+      cacheCoversFromMs = eventsCache[0]?.t ?? null
+    }
+  }
   scheduleFlush()
 }
 
@@ -78,8 +88,7 @@ export function flushTokenUsage(): void {
   }
 }
 
-function loadEventsCache(): TokenEvent[] {
-  if (eventsCache) return eventsCache
+function readAllEventsFromDisk(): TokenEvent[] {
   const events: TokenEvent[] = []
   try {
     const raw = fs.readFileSync(tokenFile(), 'utf-8')
@@ -97,15 +106,32 @@ function loadEventsCache(): TokenEvent[] {
   } catch {
     /* file may not exist */
   }
-  eventsCache = events
   return events
+}
+
+function loadEventsCache(): TokenEvent[] {
+  if (eventsCache) return eventsCache
+  const events = readAllEventsFromDisk()
+  if (events.length > CACHE_MAX_EVENTS) {
+    eventsCache = events.slice(events.length - CACHE_TRIM_TARGET)
+    cacheCoversFromMs = eventsCache[0]?.t ?? null
+  } else {
+    eventsCache = events
+    cacheCoversFromMs = events[0]?.t ?? null
+  }
+  return eventsCache
 }
 
 function readEvents(sinceMs: number | null): TokenEvent[] {
   const cached = loadEventsCache()
-  if (sinceMs === null) return cached.slice()
+  const needsDiskFallback =
+    sinceMs !== null &&
+    cacheCoversFromMs !== null &&
+    sinceMs < cacheCoversFromMs
+  const source = needsDiskFallback ? readAllEventsFromDisk() : cached
+  if (sinceMs === null) return source.slice()
   const out: TokenEvent[] = []
-  for (const ev of cached) {
+  for (const ev of source) {
     if (ev.t >= sinceMs) out.push(ev)
   }
   return out
@@ -163,9 +189,11 @@ export function compactTokenUsage(): void {
     if (kept.length === 0) {
       fs.unlinkSync(tokenFile())
       eventsCache = []
+      cacheCoversFromMs = null
     } else if (kept.length !== originalCount) {
       fs.writeFileSync(tokenFile(), kept.join('\n') + '\n', 'utf-8')
       eventsCache = null
+      cacheCoversFromMs = null
     }
   } catch {
     /* file may not exist */
