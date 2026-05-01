@@ -626,7 +626,7 @@ export function Statistics(): React.ReactElement {
               <BarChart data={timelineData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
                 <XAxis dataKey="label" stroke={palette.axis} tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                 <YAxis stroke={palette.axis} tick={{ fontSize: 11 }} unit="h" />
-                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
+                <Tooltip wrapperStyle={{ zIndex: 1000, pointerEvents: 'none' }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
                 {perProjectHours.map((p) => (
                   <Bar key={p.projectId} dataKey={p.projectName} stackId="s" fill={colorForProject[p.projectId]} />
                 ))}
@@ -642,7 +642,7 @@ export function Statistics(): React.ReactElement {
                 <BarChart data={perProjectHours.map((p) => ({ name: p.projectName, hours: p.ms / 3_600_000 }))} layout="vertical" margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
                   <XAxis type="number" stroke={palette.axis} tick={{ fontSize: 11 }} />
                   <YAxis type="category" dataKey="name" stroke={palette.axis} tick={{ fontSize: 11 }} width={120} />
-                  <Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
+                  <Tooltip wrapperStyle={{ zIndex: 1000, pointerEvents: 'none' }} cursor={{ fill: 'rgba(255,255,255,0.04)' }} contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
                   <Bar dataKey="hours" radius={[0, 4, 4, 0]}>
                     {perProjectHours.map((p) => (
                       <Cell key={p.projectId} fill={colorForProject[p.projectId]} />
@@ -667,7 +667,7 @@ export function Statistics(): React.ReactElement {
                       <Cell key={p.projectId} fill={colorForProject[p.projectId]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
+                  <Tooltip wrapperStyle={{ zIndex: 1000, pointerEvents: 'none' }} contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${(v as number).toFixed(2)}h`} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                 </RPieChart>
               </ResponsiveContainer>
@@ -689,7 +689,7 @@ export function Statistics(): React.ReactElement {
                       <Cell key={i} fill={palette.colors[i % palette.colors.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${v as number} files`} />
+                  <Tooltip wrapperStyle={{ zIndex: 1000, pointerEvents: 'none' }} contentStyle={{ background: palette.tooltipBg, border: `1px solid ${palette.tooltipBorder}`, fontSize: 12 }} formatter={(v) => `${v as number} files`} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                 </RPieChart>
               </ResponsiveContainer>
