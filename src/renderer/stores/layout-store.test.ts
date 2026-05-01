@@ -1,21 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import {
-  useLayoutStore,
-  panelConfigs,
-  browserlessPanelConfigs,
-  defaultLayout,
-  browserlessDefaultLayout,
-  getPanelConfigs,
-  DEFAULT_TOKEN_CAP
-} from './layout-store'
+import { useLayoutStore, defaultLayout, DEFAULT_TOKEN_CAP } from './layout-store'
 import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
 
 const resetStore = (): void => {
   useLayoutStore.setState({
     layoutsPerProject: {},
     locksPerProject: {},
-    devToolsCollapsedPerProject: {},
-    browserlessPerProject: {},
     backgroundImage: null,
     backgroundBlur: 0,
     tokenCap: DEFAULT_TOKEN_CAP,
@@ -29,54 +19,34 @@ const resetStore = (): void => {
 describe('layout-store', () => {
   beforeEach(resetStore)
 
-  describe('getPanelConfigs', () => {
-    it('returns the browser layout configs', () => {
-      expect(getPanelConfigs(false)).toBe(panelConfigs)
-    })
-    it('returns the browserless layout configs', () => {
-      expect(getPanelConfigs(true)).toBe(browserlessPanelConfigs)
-    })
-  })
-
   describe('getLayout', () => {
-    it('returns browserless defaults by default', () => {
-      const layout = useLayoutStore.getState().getLayout('p1')
-      expect(layout).toEqual(browserlessDefaultLayout)
-    })
-
-    it('returns browser defaults when explicitly requested', () => {
-      const layout = useLayoutStore.getState().getLayout('p1', false)
-      expect(layout).toEqual(defaultLayout)
-    })
-
-    it('honours per-project browserless flag', () => {
-      useLayoutStore.getState().toggleBrowserless('p1')
+    it('returns the default layout for an unknown project', () => {
       const layout = useLayoutStore.getState().getLayout('p1')
       expect(layout).toEqual(defaultLayout)
     })
 
-    it('fills in missing panels using current variant defaults', () => {
-      const partial = [{ i: 'browser-editor', x: 0, y: 0, w: 6, h: 6 }]
+    it('fills in missing panels using defaults', () => {
+      const partial = [{ i: 'workspace', x: 0, y: 0, w: 6, h: 6 }]
       useLayoutStore.setState({ layoutsPerProject: { p1: partial } })
       const layout = useLayoutStore.getState().getLayout('p1')
       const ids = layout.map((l) => l.i).sort()
-      expect(ids).toEqual(browserlessDefaultLayout.map((l) => l.i).sort())
+      expect(ids).toEqual(defaultLayout.map((l) => l.i).sort())
     })
 
-    it('strips ids that do not belong to the active variant', () => {
+    it('strips ids that are not part of the layout', () => {
       const mixed = [
-        { i: 'browser-editor', x: 0, y: 0, w: 9, h: 12 },
-        { i: 'llm-terminals', x: 9, y: 0, w: 3, h: 12 }
+        { i: 'workspace', x: 0, y: 0, w: 9, h: 12 },
+        { i: 'unknown', x: 9, y: 0, w: 3, h: 12 }
       ]
       useLayoutStore.setState({ layoutsPerProject: { p1: mixed } })
-      const layout = useLayoutStore.getState().getLayout('p1', true)
-      expect(layout.find((l) => l.i === 'llm-terminals')).toBeUndefined()
+      const layout = useLayoutStore.getState().getLayout('p1')
+      expect(layout.find((l) => l.i === 'unknown')).toBeUndefined()
     })
   })
 
   describe('saveLayout / togglePanelLock', () => {
     it('persists supplied layout for the project', () => {
-      const custom = [{ i: 'browser-editor', x: 0, y: 0, w: 8, h: 8 }]
+      const custom = [{ i: 'workspace', x: 0, y: 0, w: 8, h: 8 }]
       useLayoutStore.getState().saveLayout('p1', custom)
       expect(useLayoutStore.getState().layoutsPerProject.p1).toBe(custom)
     })
@@ -91,29 +61,15 @@ describe('layout-store', () => {
     })
   })
 
-  describe('toggleBrowserless', () => {
-    it('flips the flag, drops cached layout, and bumps resetVersion', () => {
-      useLayoutStore.getState().saveLayout('p1', [{ i: 'browser-editor', x: 0, y: 0, w: 1, h: 1 }])
-      const before = useLayoutStore.getState().resetVersion
-      useLayoutStore.getState().toggleBrowserless('p1')
-      const state = useLayoutStore.getState()
-      expect(state.isBrowserless('p1')).toBe(false)
-      expect(state.layoutsPerProject.p1).toBeUndefined()
-      expect(state.resetVersion).toBe(before + 1)
-    })
-  })
-
   describe('resetLayout', () => {
-    it('clears project-specific layout, lock, and devtools state', () => {
-      useLayoutStore.getState().saveLayout('p1', [{ i: 'browser-editor', x: 0, y: 0, w: 1, h: 1 }])
+    it('clears project-specific layout and lock state', () => {
+      useLayoutStore.getState().saveLayout('p1', [{ i: 'workspace', x: 0, y: 0, w: 1, h: 1 }])
       useLayoutStore.getState().togglePanelLock('p1', 'git')
-      useLayoutStore.getState().setDevToolsCollapsed('p1', true)
       const before = useLayoutStore.getState().resetVersion
       useLayoutStore.getState().resetLayout('p1')
       const state = useLayoutStore.getState()
       expect(state.layoutsPerProject.p1).toBeUndefined()
       expect(state.locksPerProject.p1).toBeUndefined()
-      expect(state.devToolsCollapsedPerProject.p1).toBeUndefined()
       expect(state.resetVersion).toBe(before + 1)
     })
   })

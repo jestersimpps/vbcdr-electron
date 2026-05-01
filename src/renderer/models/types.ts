@@ -21,62 +21,6 @@ export interface TerminalTab {
   initialCommand?: string
 }
 
-export type DeviceMode = 'desktop' | 'ipad' | 'mobile'
-
-export interface ConsoleEntry {
-  level: 'log' | 'warn' | 'error' | 'info'
-  message: string
-  timestamp: number
-}
-
-export interface NetworkEntry {
-  id: string
-  method: string
-  url: string
-  status: number
-  statusText: string
-  type: string
-  size: number
-  duration: number
-  timestamp: number
-  mimeType: string
-  remoteAddress: string
-  protocol: string
-  requestHeaders: Record<string, string>
-  responseHeaders: Record<string, string>
-  postData?: string
-}
-
-export interface BrowserTab {
-  id: string
-  title: string
-  projectId: string
-  url: string
-  deviceMode: DeviceMode
-  zoomLevel: number
-}
-
-export interface HistoryEntry {
-  url: string
-  title: string
-  visitCount: number
-  lastVisited: number
-}
-
-export interface Bookmark {
-  id: string
-  url: string
-  title: string
-  createdAt: number
-}
-
-export interface PersistedBrowserTab {
-  id: string
-  url: string
-  deviceMode: DeviceMode
-  title: string
-}
-
 export interface GitCommit {
   hash: string
   shortHash: string
@@ -132,21 +76,6 @@ export interface OpenFile {
   originalContent?: string | null
   isBinary?: boolean
   isDirty?: boolean
-}
-
-export interface SavedCredential {
-  id: string
-  domain: string
-  username: string
-  createdAt: number
-  updatedAt: number
-}
-
-export interface PasswordPromptData {
-  tabId: string
-  domain: string
-  username: string
-  password: string
 }
 
 export interface SearchResult {

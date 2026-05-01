@@ -3,8 +3,6 @@ import Store from 'electron-store'
 import { v4 as uuid } from 'uuid'
 import path from 'path'
 import type { Project } from '@main/models/types'
-import { clearProjectTabs } from '@main/services/browser-persistence'
-import { clearProjectCredentials } from '@main/services/credential-store'
 import { purgeProjectActivity } from '@main/services/activity-service'
 import { purgeProjectTokenUsage } from '@main/services/token-usage-service'
 
@@ -68,8 +66,6 @@ export function registerProjectHandlers(): void {
       archive.push({ id: removed.id, name: removed.name, path: removed.path, archivedAt: Date.now() })
       store.set('projectArchive', archive)
     }
-    clearProjectTabs(id)
-    clearProjectCredentials(id)
     return true
   })
 
@@ -103,8 +99,6 @@ export function registerProjectHandlers(): void {
   ipcMain.handle('projects:deleteArchived', (_event, id: string): boolean => {
     const archive = store.get('projectArchive')
     store.set('projectArchive', archive.filter((a) => a.id !== id))
-    clearProjectTabs(id)
-    clearProjectCredentials(id)
     purgeProjectActivity(id)
     purgeProjectTokenUsage(id)
     return true

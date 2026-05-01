@@ -8,7 +8,6 @@ import { useThemeStore } from '@/stores/theme-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { useLayoutStore } from '@/stores/layout-store'
 import { useUpdaterStore } from '@/stores/updater-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
@@ -122,7 +121,6 @@ export function App(): React.ReactElement {
     return window.api.onMenuAction((action: string) => {
       const projectStore = useProjectStore.getState()
       const editorStore = useEditorStore.getState()
-      const layoutStore = useLayoutStore.getState()
       const activeId = projectStore.activeProjectId
 
       const terminalStore = useTerminalStore.getState()
@@ -134,12 +132,6 @@ export function App(): React.ReactElement {
           break
         case 'close-project':
           if (activeId) projectStore.removeProject(activeId)
-          break
-        case 'center-tab-browser':
-          if (activeId) {
-            const bl = layoutStore.isBrowserless(activeId)
-            editorStore.setCenterTab(activeId, bl ? 'terminals' : 'browser')
-          }
           break
         case 'center-tab-editor':
           if (activeId) editorStore.setCenterTab(activeId, 'editor')

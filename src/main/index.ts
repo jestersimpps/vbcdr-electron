@@ -1,11 +1,9 @@
-import { app, BrowserWindow, Menu, session, shell } from 'electron'
+import { app, BrowserWindow, Menu, shell } from 'electron'
 import path from 'path'
 import { registerProjectHandlers } from '@main/ipc/projects'
 import { registerFilesystemHandlers } from '@main/ipc/filesystem'
 import { registerTerminalHandlers } from '@main/ipc/terminal'
-import { registerBrowserHandlers } from '@main/ipc/browser'
 import { registerGitHandlers } from '@main/ipc/git'
-import { registerPasswordHandlers } from '@main/ipc/passwords'
 import { registerClaudeConfigHandlers } from '@main/ipc/claude-config'
 import { registerSkillsHandlers } from '@main/ipc/skills'
 import { registerActivityHandlers } from '@main/ipc/activity'
@@ -14,7 +12,6 @@ import { killAll, killOrphanedPtys } from '@main/services/pty-manager'
 import { compactActivity, flushActivity } from '@main/services/activity-service'
 import { compactTokenUsage, flushTokenUsage } from '@main/services/token-usage-service'
 import { stopWatching } from '@main/services/file-watcher'
-import { detachAllTabs } from '@main/services/browser-view'
 import { registerUpdaterHandlers } from '@main/ipc/updater'
 import { initAutoUpdater, checkForUpdates, checkForUpdatesInteractive } from '@main/services/auto-updater'
 import { stopAutoFetch } from '@main/services/git-fetch-service'
@@ -25,38 +22,14 @@ app.setAboutPanelOptions({
   applicationVersion: app.getVersion(),
   version: '',
   copyright: '© 2026 Jo Vinkenroye',
-  credits: 'A desktop vibe coding environment for Claude Code developers.\nTerminal, browser, editor, and git — all in one window.',
+  credits: 'A desktop vibe coding environment for Claude Code developers.\nTerminal, editor, and git — all in one window.',
   iconPath: path.join(__dirname, '../../resources/icon.png')
 })
-
-const CHROME_USER_AGENT =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36'
-
-const ALLOWED_PERMISSIONS = new Set([
-  'clipboard-read',
-  'clipboard-sanitized-write',
-  'fullscreen',
-  'geolocation',
-  'media',
-  'mediaKeySystem',
-  'midi',
-  'notifications',
-  'pointerLock',
-  'window-management'
-])
-
-const configuredSessions = new WeakSet<Electron.Session>()
 
 let mainWindow: BrowserWindow | null = null
 
 function handleBeforeInput(_event: Electron.Event, input: Electron.Input): void {
   if (input.type !== 'keyDown') return
-
-  if (input.key === 'r' && input.meta && !input.shift) {
-    _event.preventDefault()
-    mainWindow?.webContents.send('browser:reload')
-    return
-  }
 
   if (input.meta && input.alt && /^[1-9]$/.test(input.key)) {
     _event.preventDefault()
@@ -95,9 +68,7 @@ function createWindow(): void {
     icon: path.join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
-      sandbox: false,
-      webviewTag: true,
-      plugins: true
+      sandbox: false
     }
   })
 
@@ -117,9 +88,7 @@ function createWindow(): void {
 registerProjectHandlers()
 registerFilesystemHandlers()
 registerTerminalHandlers()
-registerBrowserHandlers()
 registerGitHandlers()
-registerPasswordHandlers()
 registerClaudeConfigHandlers()
 registerSkillsHandlers()
 registerUpdaterHandlers()
@@ -203,25 +172,14 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
       },
       { type: 'separator' },
       {
-        label: 'Toggle Browser',
-        accelerator: 'CmdOrCtrl+1',
-        click: () => mainWindow?.webContents.send('menu:action', 'center-tab-browser')
-      },
-      {
         label: 'Toggle Editor',
-        accelerator: 'CmdOrCtrl+2',
+        accelerator: 'CmdOrCtrl+1',
         click: () => mainWindow?.webContents.send('menu:action', 'center-tab-editor')
       },
       {
         label: 'Toggle Claude Config',
-        accelerator: 'CmdOrCtrl+3',
+        accelerator: 'CmdOrCtrl+2',
         click: () => mainWindow?.webContents.send('menu:action', 'center-tab-claude')
-      },
-      { type: 'separator' },
-      {
-        label: 'Reload Browser',
-        accelerator: 'CmdOrCtrl+R',
-        click: () => mainWindow?.webContents.send('browser:reload')
       },
       { type: 'separator' },
       { role: 'toggleDevTools' },
@@ -305,48 +263,6 @@ app.whenReady().then(() => {
     setTimeout(() => checkForUpdates(), 5000)
   }
 
-  app.on('web-contents-created', (_event, contents) => {
-    if (contents.getType() === 'webview') {
-      const ses = contents.session
-      if (!configuredSessions.has(ses)) {
-        configuredSessions.add(ses)
-        ses.setUserAgent(CHROME_USER_AGENT)
-        ses.webRequest.onBeforeSendHeaders((details, callback) => {
-          details.requestHeaders['User-Agent'] = CHROME_USER_AGENT
-          details.requestHeaders['Sec-CH-UA'] = '"Chromium";v="132", "Google Chrome";v="132", "Not-A.Brand";v="99"'
-          details.requestHeaders['Sec-CH-UA-Mobile'] = '?0'
-          details.requestHeaders['Sec-CH-UA-Platform'] = '"macOS"'
-          delete details.requestHeaders['Sec-CH-UA-Full-Version-List']
-          callback({ requestHeaders: details.requestHeaders })
-        })
-        ses.setPermissionRequestHandler((_wc, permission, callback) => {
-          callback(ALLOWED_PERMISSIONS.has(permission))
-        })
-        ses.setPermissionCheckHandler((_wc, permission) => {
-          return ALLOWED_PERMISSIONS.has(permission)
-        })
-      }
-
-      contents.setWindowOpenHandler(({ url }) => {
-        if (/accounts\.google\.com/.test(url)) {
-          shell.openExternal(url)
-          return { action: 'deny' }
-        }
-        contents.loadURL(url)
-        return { action: 'deny' }
-      })
-
-      contents.on('will-navigate', (e, url) => {
-        if (/accounts\.google\.com\/o\/oauth|accounts\.google\.com\/signin/.test(url)) {
-          e.preventDefault()
-          shell.openExternal(url)
-        }
-      })
-
-      contents.on('before-input-event', handleBeforeInput)
-    }
-  })
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -355,7 +271,6 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   killAll()
   stopWatching()
-  detachAllTabs()
   stopAutoFetch()
   flushActivity()
   flushTokenUsage()
@@ -365,7 +280,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   killAll()
   stopWatching()
-  detachAllTabs()
   stopAutoFetch()
   flushActivity()
   flushTokenUsage()

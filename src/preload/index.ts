@@ -105,53 +105,6 @@ const api = {
     }
   },
 
-  browser: {
-    attach: (tabId: string, webContentsId: number) =>
-      ipcRenderer.invoke('browser:attach', tabId, webContentsId),
-    setDevice: (tabId: string, mode: string) =>
-      ipcRenderer.invoke('browser:set-device', tabId, mode),
-    detach: (tabId: string) => ipcRenderer.invoke('browser:detach', tabId),
-    openDevTools: (webContentsId: number) =>
-      ipcRenderer.invoke('browser:open-devtools', webContentsId),
-    onReload: (callback: () => void) => {
-      const handler = () => callback()
-      ipcRenderer.on('browser:reload', handler)
-      return () => ipcRenderer.removeListener('browser:reload', handler)
-    },
-    onNetwork: (callback: (tabId: string, entry: unknown) => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, tabId: string, entry: unknown) =>
-        callback(tabId, entry)
-      ipcRenderer.on('browser:network', handler)
-      return () => ipcRenderer.removeListener('browser:network', handler)
-    },
-    loadTabs: (projectId: string) => ipcRenderer.invoke('browser:load-tabs', projectId),
-    saveTabs: (
-      projectId: string,
-      tabs: { id: string; url: string; deviceMode: string; title: string }[],
-      activeTabId: string
-    ) => ipcRenderer.invoke('browser:save-tabs', projectId, tabs, activeTabId),
-    addHistory: (projectId: string, url: string, title: string) =>
-      ipcRenderer.invoke('browser:add-history', projectId, url, title),
-    getHistory: (projectId: string) =>
-      ipcRenderer.invoke('browser:get-history', projectId),
-    clearHistory: (projectId: string) =>
-      ipcRenderer.invoke('browser:clear-history', projectId),
-    addBookmark: (projectId: string, url: string, title: string) =>
-      ipcRenderer.invoke('browser:add-bookmark', projectId, url, title),
-    removeBookmark: (projectId: string, bookmarkId: string) =>
-      ipcRenderer.invoke('browser:remove-bookmark', projectId, bookmarkId),
-    getBookmarks: (projectId: string) =>
-      ipcRenderer.invoke('browser:get-bookmarks', projectId),
-    clearBodyCache: (tabId: string) =>
-      ipcRenderer.invoke('browser:clear-body-cache', tabId),
-    getResponseBody: (tabId: string, requestId: string) =>
-      ipcRenderer.invoke('browser:get-response-body', tabId, requestId),
-    captureHtml: (tabId: string) =>
-      ipcRenderer.invoke('browser:capture-html', tabId),
-    captureScreenshot: (tabId: string) =>
-      ipcRenderer.invoke('browser:capture-screenshot', tabId)
-  },
-
   onMenuAction: (callback: (action: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, action: string) => callback(action)
     ipcRenderer.on('menu:action', handler)
@@ -167,20 +120,6 @@ const api = {
       ipcRenderer.on('updater:status', handler)
       return () => ipcRenderer.removeListener('updater:status', handler)
     }
-  },
-
-  passwords: {
-    save: (projectId: string, domain: string, username: string, password: string) =>
-      ipcRenderer.invoke('passwords:save', projectId, domain, username, password),
-    getForDomain: (projectId: string, domain: string) =>
-      ipcRenderer.invoke('passwords:get-for-domain', projectId, domain),
-    decrypt: (projectId: string, credentialId: string) =>
-      ipcRenderer.invoke('passwords:decrypt', projectId, credentialId),
-    list: (projectId: string) => ipcRenderer.invoke('passwords:list', projectId),
-    delete: (projectId: string, credentialId: string) =>
-      ipcRenderer.invoke('passwords:delete', projectId, credentialId),
-    update: (projectId: string, credentialId: string, username: string, password: string) =>
-      ipcRenderer.invoke('passwords:update', projectId, credentialId, username, password)
   },
 
   activity: {

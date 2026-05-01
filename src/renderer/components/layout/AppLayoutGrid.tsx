@@ -2,7 +2,6 @@ import { useEffect, useRef, useCallback, useState, useMemo, memo } from 'react'
 import ReactGridLayout from 'react-grid-layout/legacy'
 import type { Layout } from 'react-grid-layout/legacy'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
-import type { ImperativePanelHandle } from 'react-resizable-panels'
 import {
   DndContext,
   PointerSensor,
@@ -14,17 +13,15 @@ import {
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { DraggablePanel } from '@/components/layout/DraggablePanel'
-import { BrowserViewPanel } from '@/components/browser/BrowserViewPanel'
-import { DevToolsPanel } from '@/components/browser/DevToolsPanel'
-import { DevTerminalsPanel } from '@/components/browser/DevTerminalsPanel'
 import { GitTree } from '@/components/git/GitTree'
 import { TerminalPanel } from '@/components/terminal/TerminalPanel'
+import { DevTerminalsPanel } from '@/components/terminal/DevTerminalsPanel'
 import { FileTree } from '@/components/sidebar/FileTree'
 import { CodeEditor } from '@/components/editor/CodeEditor'
 import { useEditorStore } from '@/stores/editor-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { useLayoutStore, GRID_COLS, GRID_ROWS, getPanelConfigs } from '@/stores/layout-store'
+import { useLayoutStore, GRID_COLS, GRID_ROWS, panelConfigs } from '@/stores/layout-store'
 import { StatusBar } from '@/components/layout/StatusBar'
 import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
 import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
@@ -33,7 +30,7 @@ import { Dashboard } from '@/components/dashboard/Dashboard'
 import { Statistics } from '@/components/statistics/Statistics'
 import { Usage } from '@/components/usage/Usage'
 import { Settings } from '@/components/settings/Settings'
-import { Globe, Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, ChevronLeft, ChevronRight, LayoutDashboard, PieChart, Gauge, Settings as SettingsIcon } from 'lucide-react'
+import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, Settings as SettingsIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
 import 'react-grid-layout/css/styles.css'
@@ -113,16 +110,8 @@ function SortableProjectTab({
 export function AppLayoutGrid(): React.ReactElement {
   const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, loadProjects, addProject, removeProject, setActiveProject, reorderProjects, showDashboard, showStatistics, showUsage, showSettings } =
     useProjectStore()
-  const browserless = useLayoutStore((s) => activeProjectId ? s.isBrowserless(activeProjectId) : false)
-  const defaultTab = browserless ? 'terminals' : 'browser'
   const centerTab = useEditorStore(
-    (s) => {
-      if (!activeProjectId) return defaultTab
-      const tab = s.centerTabPerProject[activeProjectId] ?? defaultTab
-      if (browserless && tab === 'browser') return 'terminals'
-      if (!browserless && tab === 'terminals') return 'browser'
-      return tab
-    }
+    (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'terminals' : 'terminals')
   )
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
   const projectTabSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -135,19 +124,16 @@ export function AppLayoutGrid(): React.ReactElement {
       reorderProjects(fromIndex, toIndex)
     }
   }, [projects, reorderProjects])
-  const { getLayout, isLocked, saveLayout, isDevToolsCollapsed, setDevToolsCollapsed } = useLayoutStore()
+  const { getLayout, isLocked, saveLayout } = useLayoutStore()
   const resetVersion = useLayoutStore((s) => s.resetVersion)
   const backgroundImage = useLayoutStore((s) => s.backgroundImage)
   const backgroundBlur = useLayoutStore((s) => s.backgroundBlur)
   const containerRef = useRef<HTMLDivElement>(null)
-  const devToolsPanelRef = useRef<ImperativePanelHandle>(null)
   const [width, setWidth] = useState(0)
   const [height, setHeight] = useState(0)
 
   const projectId = activeProjectId ?? '__default__'
-  const layout = getLayout(projectId, browserless)
-  const collapsed = isDevToolsCollapsed(projectId)
-  const activePanelConfigs = getPanelConfigs(browserless)
+  const layout = getLayout(projectId)
 
   useEffect(() => {
     loadProjects()
@@ -167,45 +153,16 @@ export function AppLayoutGrid(): React.ReactElement {
     return () => ro.disconnect()
   }, [dashboardActive, statisticsActive, settingsActive])
 
-  useEffect(() => {
-    if (browserless) return
-    const panel = devToolsPanelRef.current
-    if (!panel) return
-    if (collapsed) {
-      panel.collapse()
-    } else {
-      panel.expand()
-    }
-  }, [collapsed, resetVersion, browserless])
-
   const handleStop = (newLayout: Layout[]): void => {
     saveLayout(projectId, newLayout)
   }
-
-  const toggleDevTools = useCallback(() => {
-    const panel = devToolsPanelRef.current
-    if (!panel) return
-    if (panel.isCollapsed()) {
-      panel.expand()
-    } else {
-      panel.collapse()
-    }
-  }, [])
-
-  const handleDevToolsCollapse = useCallback(() => {
-    setDevToolsCollapsed(projectId, true)
-  }, [projectId, setDevToolsCollapsed])
-
-  const handleDevToolsExpand = useCallback(() => {
-    setDevToolsCollapsed(projectId, false)
-  }, [projectId, setDevToolsCollapsed])
 
   const gridLayout = useMemo(
     () => layout.map((item) => ({ ...item, static: isLocked(projectId, item.i as any) })),
     [layout, projectId, isLocked]
   )
 
-  const renderBrowserlessPanel = (): React.ReactNode => (
+  const renderWorkspacePanel = (): React.ReactNode => (
     <div className="flex h-full flex-col">
       <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
         <button
@@ -306,135 +263,12 @@ export function AppLayoutGrid(): React.ReactElement {
     </div>
   )
 
-  const renderBrowserPanel = (): React.ReactNode => (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
-        <button
-          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'browser')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
-            centerTab === 'browser'
-              ? 'border-b-2 border-zinc-400 text-zinc-200'
-              : 'text-zinc-500 hover:text-zinc-300'
-          )}
-        >
-          <Globe size={12} />
-          Browser
-        </button>
-        <button
-          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'editor')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
-            centerTab === 'editor'
-              ? 'border-b-2 border-zinc-400 text-zinc-200'
-              : 'text-zinc-500 hover:text-zinc-300'
-          )}
-        >
-          <Code size={12} />
-          Editor
-        </button>
-        <button
-          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'claude')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
-            centerTab === 'claude'
-              ? 'border-b-2 border-zinc-400 text-zinc-200'
-              : 'text-zinc-500 hover:text-zinc-300'
-          )}
-        >
-          <Bot size={12} />
-          Claude
-        </button>
-        <button
-          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'skills')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
-            centerTab === 'skills'
-              ? 'border-b-2 border-zinc-400 text-zinc-200'
-              : 'text-zinc-500 hover:text-zinc-300'
-          )}
-        >
-          <Wand2 size={12} />
-          Skills
-        </button>
-        <button
-          onClick={toggleDevTools}
-          className="ml-auto flex items-center gap-1 px-2 py-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-          title={collapsed ? 'Show DevTools' : 'Hide DevTools'}
-        >
-          {collapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-          <span className="text-[10px]">DevTools</span>
-        </button>
-      </div>
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <PanelGroup direction="horizontal">
-          <Panel defaultSize={65} minSize={20}>
-            <div className="relative h-full overflow-hidden">
-              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'browser' ? 'z-10' : 'z-0 invisible')}>
-                <BrowserViewPanel />
-              </div>
-              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'editor' ? 'z-10' : 'z-0 invisible')}>
-                {activeProjectId && (
-                  <PanelGroup direction="horizontal">
-                    <Panel defaultSize={25} minSize={15} maxSize={40}>
-                      <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
-                        <FileTree projectId={activeProjectId} />
-                      </div>
-                    </Panel>
-                    <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-                    <Panel defaultSize={75} minSize={30}>
-                      <CodeEditor projectId={activeProjectId} />
-                    </Panel>
-                  </PanelGroup>
-                )}
-              </div>
-              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'claude' ? 'z-10' : 'z-0 invisible')}>
-                {activeProjectId && (
-                  <PanelGroup direction="horizontal">
-                    <Panel defaultSize={25} minSize={15} maxSize={40}>
-                      <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
-                        <ClaudeFileList projectId={activeProjectId} />
-                      </div>
-                    </Panel>
-                    <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-                    <Panel defaultSize={75} minSize={30}>
-                      <ClaudeEditor projectId={activeProjectId} />
-                    </Panel>
-                  </PanelGroup>
-                )}
-              </div>
-              <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'skills' ? 'z-10' : 'z-0 invisible')}>
-                {activeProjectId && <SkillsPanel projectId={activeProjectId} />}
-              </div>
-            </div>
-          </Panel>
-          {!collapsed && (
-            <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-          )}
-          <Panel
-            ref={devToolsPanelRef}
-            defaultSize={35}
-            minSize={15}
-            collapsible
-            collapsedSize={0}
-            onCollapse={handleDevToolsCollapse}
-            onExpand={handleDevToolsExpand}
-          >
-            <DevToolsPanel />
-          </Panel>
-        </PanelGroup>
-      </div>
-    </div>
-  )
-
   const renderPanel = (id: string): React.ReactNode => {
     switch (id) {
-      case 'browser-editor':
-        return browserless ? renderBrowserlessPanel() : renderBrowserPanel()
+      case 'workspace':
+        return renderWorkspacePanel()
       case 'git':
         return <GitTree />
-      case 'llm-terminals':
-        return <TerminalPanel />
       default:
         return null
     }
@@ -562,7 +396,7 @@ export function AppLayoutGrid(): React.ReactElement {
               onDragStop={handleStop}
               onResizeStop={handleStop}
             >
-              {activePanelConfigs.map((panel) => (
+              {panelConfigs.map((panel) => (
                 <div key={panel.id}>
                   <DraggablePanel
                     id={panel.id}

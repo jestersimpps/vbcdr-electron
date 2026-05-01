@@ -55,13 +55,6 @@ const api = {
     kill: fn(async () => undefined),
     write: fn(async () => undefined)
   },
-  passwords: {
-    list: fn(async () => []),
-    save: fn(async () => undefined),
-    delete: fn(async () => undefined),
-    getForDomain: fn(async () => []),
-    decrypt: fn(async () => null)
-  },
   git: {
     isRepo: fn(async () => false),
     commits: fn(async () => []),
