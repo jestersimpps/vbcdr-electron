@@ -156,18 +156,23 @@ export function TerminalPanel(): React.ReactElement {
   }, [activeTabId, centerTab])
 
   useEffect(() => {
-    if (activeProject) {
+    if (activeProject && projectTabs.length === 0) {
       void initProject(activeProject.id, activeProject.path)
     }
-  }, [activeProject?.id])
+  }, [activeProject?.id, projectTabs.length])
+
+  const teardownInFlight = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     const unsubExit = window.api.terminal.onExit((tabId: string) => {
+      if (teardownInFlight.current.has(tabId)) return
+      teardownInFlight.current.add(tabId)
       const tab = useTerminalStore.getState().tabs.find((t) => t.id === tabId)
       if (tab) {
         disposeTerminal(tabId)
         useTerminalStore.getState().closeTab(tabId)
       }
+      teardownInFlight.current.delete(tabId)
     })
     return () => unsubExit()
   }, [])
@@ -190,9 +195,12 @@ export function TerminalPanel(): React.ReactElement {
   }, [activeProjectId, projectTabs, reorderTabs])
 
   const handleCloseTab = (tabId: string): void => {
+    if (teardownInFlight.current.has(tabId)) return
+    teardownInFlight.current.add(tabId)
     window.api.terminal.kill(tabId)
     disposeTerminal(tabId)
     closeTab(tabId)
+    teardownInFlight.current.delete(tabId)
   }
 
   const backgroundImage = useLayoutStore((s) => s.backgroundImage)
@@ -423,14 +431,13 @@ export function TerminalPanel(): React.ReactElement {
             )}
           </div>
         )}
-        {tabs.map((tab) => (
+        {projectTabs.map((tab) => (
           <div
             key={tab.id}
             style={{
               position: 'absolute',
               inset: 0,
-              visibility:
-                tab.projectId === activeProjectId && activeTabId === tab.id ? 'visible' : 'hidden'
+              visibility: activeTabId === tab.id ? 'visible' : 'hidden'
             }}
           >
             <TerminalInstance
