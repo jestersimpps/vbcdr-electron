@@ -28,11 +28,14 @@ interface CachedBody {
   base64Encoded: boolean
 }
 
+type DebuggerMessageListener = (event: Electron.Event, method: string, params: any, sessionId: string) => void
+
 interface TrackedTab {
   webContentsId: number
   pendingRequests: Map<string, PendingRequest>
   pendingResponses: Map<string, ResponseData>
   bodyCache: Map<string, CachedBody>
+  messageListener?: DebuggerMessageListener
 }
 
 const trackedTabs = new Map<string, TrackedTab>()
@@ -47,7 +50,8 @@ export function attachTab(tabId: string, webContentsId: number, win: BrowserWind
   const pendingResponses = new Map<string, ResponseData>()
   const bodyCache = new Map<string, CachedBody>()
 
-  trackedTabs.set(tabId, { webContentsId, pendingRequests, pendingResponses, bodyCache })
+  const tracked: TrackedTab = { webContentsId, pendingRequests, pendingResponses, bodyCache }
+  trackedTabs.set(tabId, tracked)
 
   try {
     wc.debugger.attach('1.3')
@@ -57,7 +61,7 @@ export function attachTab(tabId: string, webContentsId: number, win: BrowserWind
 
   wc.debugger.sendCommand('Network.enable')
 
-  wc.debugger.on('message', async (_event, method, params) => {
+  const onMessage: DebuggerMessageListener = async (_event, method, params) => {
     if (win.isDestroyed()) return
 
     if (method === 'Network.requestWillBeSent') {
@@ -129,7 +133,10 @@ export function attachTab(tabId: string, webContentsId: number, win: BrowserWind
       pendingRequests.delete(params.requestId)
       pendingResponses.delete(params.requestId)
     }
-  })
+  }
+
+  tracked.messageListener = onMessage
+  wc.debugger.on('message', onMessage)
 }
 
 export function setDevice(tabId: string, mode: DeviceMode): void {
@@ -166,12 +173,18 @@ export function detachTab(tabId: string): void {
   if (entry) {
     try {
       const wc = webContents.fromId(entry.webContentsId)
-      if (wc && wc.debugger.isAttached()) {
-        wc.debugger.detach()
+      if (wc) {
+        if (entry.messageListener) {
+          try { wc.debugger.off('message', entry.messageListener) } catch { /* ignore */ }
+        }
+        if (wc.debugger.isAttached()) {
+          wc.debugger.detach()
+        }
       }
     } catch {
       // webContents may already be destroyed
     }
+    entry.messageListener = undefined
   }
   trackedTabs.delete(tabId)
 }
