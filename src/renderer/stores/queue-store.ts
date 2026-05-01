@@ -120,7 +120,7 @@ export const useQueueStore = create<QueueStore>()(
       },
 
       getItems: (tabId: string) => get().itemsPerTab[tabId] ?? [],
-      isAutoRun: (tabId: string) => get().autoRunPerTab[tabId] ?? false,
+      isAutoRun: (tabId: string) => get().autoRunPerTab[tabId] ?? true,
       isPanelOpen: (tabId: string) => get().panelOpenPerTab[tabId] ?? false
     }),
     {

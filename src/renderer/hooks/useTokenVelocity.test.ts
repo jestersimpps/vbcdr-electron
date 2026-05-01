@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, renderHook } from '@testing-library/react'
+import { act, cleanup, renderHook } from '@testing-library/react'
 import { useTokenVelocity } from './useTokenVelocity'
 import { useTerminalStore } from '@/stores/terminal-store'
 
@@ -10,6 +10,7 @@ describe('useTokenVelocity', () => {
   })
 
   afterEach(() => {
+    cleanup()
     vi.runOnlyPendingTimers()
     vi.useRealTimers()
   })
@@ -35,6 +36,40 @@ describe('useTokenVelocity', () => {
     expect(result.current.samples[0].tokens).toBe(100)
     expect(result.current.samples[1].tokens).toBe(100)
     expect(result.current.tokensPerMinute).toBe(0)
+  })
+
+  it('captures token deltas as the shared interval fires', () => {
+    useTerminalStore.setState({ tokenUsagePerTab: { 't1': 100 } } as never)
+    const { result } = renderHook(() => useTokenVelocity('t1'))
+    expect(result.current.samples).toHaveLength(2)
+
+    act(() => {
+      useTerminalStore.setState({ tokenUsagePerTab: { 't1': 250 } } as never)
+      vi.advanceTimersByTime(1000)
+    })
+
+    const samples = result.current.samples
+    expect(samples.length).toBeGreaterThanOrEqual(2)
+    expect(samples[samples.length - 1].tokens).toBe(250)
+    expect(samples[0].tokens).toBe(100)
+    expect(result.current.tokensPerMinute).toBeGreaterThan(0)
+  })
+
+  it('clamps token regressions to zero in tokensPerMinute', () => {
+    useTerminalStore.setState({ tokenUsagePerTab: { 't1': 500 } } as never)
+    const { result } = renderHook(() => useTokenVelocity('t1'))
+
+    act(() => {
+      useTerminalStore.setState({ tokenUsagePerTab: { 't1': 100 } } as never)
+      vi.advanceTimersByTime(1000)
+    })
+
+    const last = result.current.samples[result.current.samples.length - 1]
+    expect(last.tokens).toBe(100)
+    expect(result.current.tokensPerMinute).toBe(0)
+    for (const v of result.current.velocityPerSample) {
+      expect(v).toBeGreaterThanOrEqual(0)
+    }
   })
 
   it('resets samples when the tabId changes', () => {

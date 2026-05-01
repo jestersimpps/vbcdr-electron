@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, renderHook } from '@testing-library/react'
+import { act, cleanup, renderHook } from '@testing-library/react'
 
 const sendToTerminalMock = vi.fn()
 vi.mock('@/lib/send-to-terminal', () => ({
@@ -66,6 +66,7 @@ describe('useQueueRunner', () => {
   })
 
   afterEach(() => {
+    cleanup()
     vi.useRealTimers()
   })
 
@@ -104,6 +105,19 @@ describe('useQueueRunner', () => {
     })
     renderHook(() => useQueueRunner())
     expect(sendToTerminalMock).not.toHaveBeenCalled()
+  })
+
+  it('auto-runs by default for a tab with no explicit autoRun preference', () => {
+    setupRunnerState({
+      activeProjectId: 'p1',
+      tabs: [llmTab('t1', 'p1')],
+      activeTabPerProject: { p1: 't1' },
+      itemsPerTab: { t1: [{ id: 'q1', text: 'hello' }] },
+      autoRunPerTab: {},
+      tabStatuses: { t1: 'idle' }
+    })
+    renderHook(() => useQueueRunner())
+    expect(sendToTerminalMock).toHaveBeenCalledWith('t1', 'hello')
   })
 
   it('does nothing when the tab is busy', () => {
@@ -147,7 +161,7 @@ describe('useQueueRunner', () => {
     expect(useQueueStore.getState().itemsPerTab.t1.map((i) => i.id)).toEqual(['q2'])
   })
 
-  it('marks the tab busy and dequeues the head item on dispatch', () => {
+  it('does not dispatch a second item before the 2s cooldown elapses', () => {
     setupRunnerState({
       activeProjectId: 'p1',
       tabs: [llmTab('t1', 'p1')],
@@ -158,7 +172,33 @@ describe('useQueueRunner', () => {
     })
     renderHook(() => useQueueRunner())
     expect(sendToTerminalMock).toHaveBeenCalledTimes(1)
-    expect(useTerminalStore.getState().tabStatuses.t1).toBe('busy')
-    expect(useQueueStore.getState().itemsPerTab.t1.map((i) => i.id)).toEqual(['q2'])
+
+    act(() => {
+      useTerminalStore.getState().setTabStatus('t1', 'idle')
+      vi.advanceTimersByTime(500)
+    })
+
+    expect(sendToTerminalMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches the next item once the 2s cooldown has elapsed', () => {
+    setupRunnerState({
+      activeProjectId: 'p1',
+      tabs: [llmTab('t1', 'p1')],
+      activeTabPerProject: { p1: 't1' },
+      itemsPerTab: { t1: [{ id: 'q1', text: 'first' }, { id: 'q2', text: 'second' }] },
+      autoRunPerTab: { t1: true },
+      tabStatuses: { t1: 'idle' }
+    })
+    renderHook(() => useQueueRunner())
+    expect(sendToTerminalMock).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      vi.advanceTimersByTime(2500)
+      useTerminalStore.getState().setTabStatus('t1', 'idle')
+    })
+
+    expect(sendToTerminalMock).toHaveBeenCalledTimes(2)
+    expect(sendToTerminalMock).toHaveBeenLastCalledWith('t1', 'second')
   })
 })

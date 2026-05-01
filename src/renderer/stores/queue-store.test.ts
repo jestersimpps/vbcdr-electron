@@ -13,19 +13,19 @@ describe('queue-store', () => {
   beforeEach(resetStore)
 
   describe('addItem', () => {
-    it('appends a trimmed item without enabling autoRun', () => {
+    it('appends a trimmed item with autoRun on by default', () => {
       const item = useQueueStore.getState().addItem('t1', '  hello  ')
       expect(item).not.toBeNull()
       expect(item!.text).toBe('hello')
       expect(useQueueStore.getState().getItems('t1')).toHaveLength(1)
-      expect(useQueueStore.getState().isAutoRun('t1')).toBe(false)
+      expect(useQueueStore.getState().isAutoRun('t1')).toBe(true)
     })
 
     it('returns null and does nothing for empty/whitespace text', () => {
       expect(useQueueStore.getState().addItem('t1', '')).toBeNull()
       expect(useQueueStore.getState().addItem('t1', '   ')).toBeNull()
       expect(useQueueStore.getState().getItems('t1')).toEqual([])
-      expect(useQueueStore.getState().isAutoRun('t1')).toBe(false)
+      expect(useQueueStore.getState().isAutoRun('t1')).toBe(true)
     })
 
     it('keeps items per-tab isolated', () => {
@@ -123,7 +123,7 @@ describe('queue-store', () => {
       useQueueStore.getState().setPanelOpen('t1', true)
       useQueueStore.getState().clearTab('t1')
       expect(useQueueStore.getState().getItems('t1')).toEqual([])
-      expect(useQueueStore.getState().isAutoRun('t1')).toBe(false)
+      expect(useQueueStore.getState().isAutoRun('t1')).toBe(true)
       expect(useQueueStore.getState().isPanelOpen('t1')).toBe(false)
     })
   })

@@ -11,7 +11,7 @@ const EMPTY_ITEMS: QueueItem[] = []
 
 export function TaskQueuePanel({ tabId }: TaskQueuePanelProps): React.ReactElement | null {
   const items = useQueueStore((s) => (tabId ? s.itemsPerTab[tabId] ?? EMPTY_ITEMS : EMPTY_ITEMS))
-  const autoRun = useQueueStore((s) => (tabId ? s.autoRunPerTab[tabId] ?? false : false))
+  const autoRun = useQueueStore((s) => (tabId ? s.autoRunPerTab[tabId] ?? true : true))
   const addItem = useQueueStore((s) => s.addItem)
   const updateItem = useQueueStore((s) => s.updateItem)
   const removeItem = useQueueStore((s) => s.removeItem)

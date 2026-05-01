@@ -16,7 +16,7 @@ export function useQueueRunner(): void {
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const status = activeTabId ? tabStatuses[activeTabId] : undefined
   const items = activeTabId ? itemsPerTab[activeTabId] ?? [] : []
-  const autoRun = activeTabId ? autoRunPerTab[activeTabId] ?? false : false
+  const autoRun = activeTabId ? autoRunPerTab[activeTabId] ?? true : false
 
   const lastDispatchAtRef = useRef<number>(0)
 
