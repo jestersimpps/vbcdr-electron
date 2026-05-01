@@ -3,6 +3,10 @@
   color: #0d1117;
 }
 
+:root.github-light {
+  --screen-gradient: #ffffff;
+}
+
 :root.github-light ::-webkit-scrollbar-thumb {
   background: #c8d0d8;
 }

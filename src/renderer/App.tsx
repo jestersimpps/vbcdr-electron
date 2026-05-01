@@ -12,6 +12,7 @@ import { useUpdaterStore } from '@/stores/updater-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { applyThemeToAll } from '@/components/terminal/TerminalInstance'
+import { useBackgroundOverrideStore, buildBackgroundCss } from '@/stores/background-override-store'
 import type { CustomThemeUI } from '@/models/custom-theme'
 import type { FileNode } from '@/models/types'
 
@@ -21,6 +22,16 @@ function hexToRgb(hex: string): string {
   const g = parseInt(h.slice(2, 4), 16)
   const b = parseInt(h.slice(4, 6), 16)
   return `${r}, ${g}, ${b}`
+}
+
+function applyBackgroundOverride(css: string | null): void {
+  let styleEl = document.getElementById('bg-override-vars')
+  if (!styleEl) {
+    styleEl = document.createElement('style')
+    styleEl.id = 'bg-override-vars'
+    document.head.appendChild(styleEl)
+  }
+  styleEl.textContent = css ? `:root { --screen-gradient: ${css} !important; }` : ''
 }
 
 function applyCustomVars(ui: CustomThemeUI): void {
@@ -82,6 +93,16 @@ export function App(): React.ReactElement {
     applyCustomVars(colors.ui)
     applyThemeToAll(useThemeStore.getState().getTerminalThemeId())
   }, [customDark, customLight])
+
+  const bgMode = useBackgroundOverrideStore((s) => s.mode)
+  const bgSolid = useBackgroundOverrideStore((s) => s.solidColor)
+  const bgFrom = useBackgroundOverrideStore((s) => s.gradientFrom)
+  const bgTo = useBackgroundOverrideStore((s) => s.gradientTo)
+  const bgAngle = useBackgroundOverrideStore((s) => s.gradientAngle)
+
+  useEffect(() => {
+    applyBackgroundOverride(buildBackgroundCss({ mode: bgMode, solidColor: bgSolid, gradientFrom: bgFrom, gradientTo: bgTo, gradientAngle: bgAngle }))
+  }, [bgMode, bgSolid, bgFrom, bgTo, bgAngle])
 
   useEffect(() => {
     return useUpdaterStore.getState().init()

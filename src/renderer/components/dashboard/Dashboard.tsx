@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useGitStore } from '@/stores/git-store'
+import { useLayoutStore } from '@/stores/layout-store'
 import { ProjectCard } from '@/components/dashboard/ProjectCard'
 import { ProjectModal } from '@/components/dashboard/ProjectModal'
+import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
 
 export function Dashboard(): React.ReactElement {
   const projects = useProjectStore((s) => s.projects)
   const addProject = useProjectStore((s) => s.addProject)
   const loadGitData = useGitStore((s) => s.loadGitData)
+  const backgroundImage = useLayoutStore((s) => s.backgroundImage)
   const [modalProject, setModalProject] = useState<Project | null>(null)
 
   const sorted = [...projects].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
@@ -21,7 +24,7 @@ export function Dashboard(): React.ReactElement {
   }, [projects, loadGitData])
 
   return (
-    <div className="flex h-full flex-col bg-zinc-950">
+    <div className={cn('flex h-full flex-col', !backgroundImage && 'screen-gradient')}>
       <div className="flex-1 overflow-auto p-6">
         {projects.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-zinc-600">

@@ -3,6 +3,10 @@
   color: #101008;
 }
 
+:root.cyberpunk-light {
+  --screen-gradient: #fdfaf0;
+}
+
 :root.cyberpunk-light ::-webkit-scrollbar-thumb {
   background: #b8007780;
 }

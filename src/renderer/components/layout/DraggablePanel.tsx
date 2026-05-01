@@ -25,7 +25,7 @@ export function DraggablePanel({
     <div
       className={cn(
         'flex h-full flex-col border border-zinc-800 rounded-md overflow-hidden',
-        backgroundImage ? 'bg-zinc-950/70 backdrop-blur-sm' : 'bg-zinc-950'
+        backgroundImage && 'bg-zinc-950/70 backdrop-blur-sm'
       )}
     >
       <div

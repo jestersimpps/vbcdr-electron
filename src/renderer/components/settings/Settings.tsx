@@ -1,15 +1,36 @@
-import { useRef, useState } from 'react'
-import { Image as ImageIcon, X, Palette, Moon, Sun, Pencil, Zap, RotateCcw, Volume2, Play, type LucideIcon } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Image as ImageIcon, X, Palette, Moon, Sun, Pencil, Zap, RotateCcw, Volume2, Play, Sliders, Code, Shield, type LucideIcon } from 'lucide-react'
 import { useLayoutStore, DEFAULT_TOKEN_CAP } from '@/stores/layout-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useThemeStore } from '@/stores/theme-store'
+import { useBackgroundOverrideStore, type BackgroundMode } from '@/stores/background-override-store'
 import { getThemesByCategory, getThemeById, type ThemeDefinition } from '@/config/theme-registry'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import { IDLE_SOUNDS } from '@/config/sound-registry'
 import { CustomThemeEditor } from '@/components/theme/CustomThemeEditor'
+import { PermissionPresetsSection } from '@/components/settings/PermissionPresetsSection'
 import { applyBackgroundTransparency } from '@/components/terminal/TerminalInstance'
 import { playSound } from '@/lib/sound'
 import { cn } from '@/lib/utils'
+
+type SettingsTab = 'general' | 'editor' | 'theme' | 'permissions'
+
+const TABS: { id: SettingsTab; label: string; icon: LucideIcon }[] = [
+  { id: 'general', label: 'General', icon: Sliders },
+  { id: 'editor', label: 'Editor', icon: Code },
+  { id: 'theme', label: 'Theme', icon: Palette },
+  { id: 'permissions', label: 'Permissions', icon: Shield }
+]
+
+const TAB_STORAGE_KEY = 'vbcdr-settings-tab'
+
+function loadInitialTab(): SettingsTab {
+  try {
+    const stored = localStorage.getItem(TAB_STORAGE_KEY)
+    if (stored && TABS.some((t) => t.id === stored)) return stored as SettingsTab
+  } catch { /* ignore */ }
+  return 'general'
+}
 
 const TOKEN_CAP_PRESETS: { label: string; value: number }[] = [
   { label: '100k', value: 100_000 },
@@ -32,30 +53,74 @@ function useAccent(): string {
 }
 
 export function Settings(): React.ReactElement {
+  const [tab, setTab] = useState<SettingsTab>(loadInitialTab)
+  const accent = useAccent()
+
+  useEffect(() => {
+    try { localStorage.setItem(TAB_STORAGE_KEY, tab) } catch { /* ignore */ }
+  }, [tab])
+
   return (
-    <div className="min-h-full w-full overflow-auto bg-zinc-950 p-6 text-zinc-200">
+    <div className="min-h-full w-full p-6 text-zinc-200">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold">Settings</h1>
         </div>
 
-        <Section title="Limits">
-          <TokenCapSection />
-        </Section>
+        <div className="flex flex-wrap gap-1 border-b border-zinc-800">
+          {TABS.map((t) => {
+            const active = tab === t.id
+            const Icon = t.icon
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={cn(
+                  'flex items-center gap-1.5 border-b-2 px-3 py-2 text-xs font-medium transition-colors -mb-px',
+                  active
+                    ? 'text-zinc-100'
+                    : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                )}
+                style={active ? { borderColor: accent, color: accent } : undefined}
+              >
+                <Icon size={13} />
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
 
-        <Section title="Editor">
-          <EditorSection />
-          <GitSection />
-        </Section>
+        {tab === 'general' && (
+          <>
+            <Section title="Limits">
+              <TokenCapSection />
+            </Section>
+            <Section title="Notifications">
+              <SoundSection />
+            </Section>
+          </>
+        )}
 
-        <Section title="Appearance">
-          <BackgroundSection />
-          <ThemeSection />
-        </Section>
+        {tab === 'editor' && (
+          <Section title="Editor">
+            <EditorSection />
+            <GitSection />
+          </Section>
+        )}
 
-        <Section title="Notifications">
-          <SoundSection />
-        </Section>
+        {tab === 'theme' && (
+          <Section title="Theme">
+            <ThemeSection />
+            <BackgroundSection />
+            <BackgroundOverrideSection />
+          </Section>
+        )}
+
+        {tab === 'permissions' && (
+          <Section title="Permissions">
+            <PermissionPresetsSection />
+          </Section>
+        )}
       </div>
     </div>
   )
@@ -80,7 +145,7 @@ function SectionCard({
   children: React.ReactNode
 }): React.ReactElement {
   return (
-    <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5">
+    <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5 shadow-lg shadow-black/30">
       <div className="mb-4">
         <h2 className="text-sm font-semibold text-zinc-200">{title}</h2>
         {description && <p className="mt-0.5 text-xs text-zinc-500">{description}</p>}
@@ -167,6 +232,189 @@ function TokenCapSection(): React.ReactElement {
         Current: <span className="tabular-nums text-zinc-300">{tokenCap.toLocaleString()}</span>{' '}
         ({formatTokens(tokenCap)})
       </p>
+    </SectionCard>
+  )
+}
+
+const BG_MODES: { id: BackgroundMode; label: string }[] = [
+  { id: 'theme', label: 'Theme default' },
+  { id: 'solid', label: 'Solid color' },
+  { id: 'gradient', label: 'Gradient' }
+]
+
+const GRADIENT_PRESETS: { name: string; from: string; to: string; angle: number }[] = [
+  { name: 'Midnight', from: '#1e1b4b', to: '#0f0a1f', angle: 135 },
+  { name: 'Sunset', from: '#7c2d12', to: '#1e1b4b', angle: 135 },
+  { name: 'Ocean', from: '#0c4a6e', to: '#082f49', angle: 160 },
+  { name: 'Forest', from: '#14532d', to: '#0a1f12', angle: 145 },
+  { name: 'Plum', from: '#581c87', to: '#1e1b4b', angle: 130 },
+  { name: 'Ember', from: '#7f1d1d', to: '#1c1917', angle: 140 },
+  { name: 'Dawn', from: '#fbbf24', to: '#7c2d12', angle: 135 },
+  { name: 'Aurora', from: '#064e3b', to: '#1e3a8a', angle: 150 },
+  { name: 'Slate', from: '#1e293b', to: '#020617', angle: 180 },
+  { name: 'Mono', from: '#27272a', to: '#09090b', angle: 180 }
+]
+
+function BackgroundOverrideSection(): React.ReactElement {
+  const mode = useBackgroundOverrideStore((s) => s.mode)
+  const solidColor = useBackgroundOverrideStore((s) => s.solidColor)
+  const gradientFrom = useBackgroundOverrideStore((s) => s.gradientFrom)
+  const gradientTo = useBackgroundOverrideStore((s) => s.gradientTo)
+  const gradientAngle = useBackgroundOverrideStore((s) => s.gradientAngle)
+  const setMode = useBackgroundOverrideStore((s) => s.setMode)
+  const setSolidColor = useBackgroundOverrideStore((s) => s.setSolidColor)
+  const setGradientFrom = useBackgroundOverrideStore((s) => s.setGradientFrom)
+  const setGradientTo = useBackgroundOverrideStore((s) => s.setGradientTo)
+  const setGradientAngle = useBackgroundOverrideStore((s) => s.setGradientAngle)
+  const reset = useBackgroundOverrideStore((s) => s.reset)
+  const accent = useAccent()
+
+  const previewStyle: React.CSSProperties =
+    mode === 'solid'
+      ? { background: solidColor }
+      : mode === 'gradient'
+        ? { background: `linear-gradient(${gradientAngle}deg, ${gradientFrom}, ${gradientTo})` }
+        : { background: 'var(--screen-gradient)' }
+
+  return (
+    <SectionCard
+      title="Background override"
+      description="Replace the theme background with a solid color or custom gradient."
+    >
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-1.5">
+          {BG_MODES.map((m) => {
+            const active = mode === m.id
+            return (
+              <button
+                key={m.id}
+                onClick={() => setMode(m.id)}
+                className={cn(
+                  'rounded border px-2.5 py-1 text-xs transition-colors',
+                  active
+                    ? 'border-transparent'
+                    : 'border-zinc-800 bg-zinc-900/30 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800/50 hover:text-zinc-100'
+                )}
+                style={
+                  active
+                    ? { backgroundColor: `${accent}1a`, color: accent, borderColor: `${accent}66` }
+                    : undefined
+                }
+              >
+                {m.label}
+              </button>
+            )
+          })}
+          <button
+            onClick={reset}
+            className="ml-auto flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-200"
+            title="Reset to defaults"
+          >
+            <RotateCcw size={11} />
+            Reset
+          </button>
+        </div>
+
+        <div className="h-24 w-full rounded-md border border-zinc-800 shadow-inner" style={previewStyle} />
+
+        {mode === 'solid' && (
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-zinc-400">Color</label>
+            <input
+              type="color"
+              value={solidColor}
+              onChange={(e) => setSolidColor(e.target.value)}
+              className="h-8 w-12 cursor-pointer rounded border border-zinc-800 bg-zinc-900"
+            />
+            <input
+              type="text"
+              value={solidColor}
+              onChange={(e) => setSolidColor(e.target.value)}
+              className="w-28 rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1 text-xs tabular-nums text-zinc-200 outline-none focus:border-zinc-700"
+            />
+          </div>
+        )}
+
+        {mode === 'gradient' && (
+          <div className="space-y-3">
+            <div>
+              <div className="mb-2 text-xs text-zinc-500">Presets</div>
+              <div className="flex flex-wrap gap-2">
+                {GRADIENT_PRESETS.map((p) => {
+                  const isActive =
+                    p.from.toLowerCase() === gradientFrom.toLowerCase() &&
+                    p.to.toLowerCase() === gradientTo.toLowerCase() &&
+                    p.angle === gradientAngle
+                  return (
+                    <button
+                      key={p.name}
+                      onClick={() => {
+                        setGradientFrom(p.from)
+                        setGradientTo(p.to)
+                        setGradientAngle(p.angle)
+                      }}
+                      title={p.name}
+                      className={cn(
+                        'h-10 w-16 rounded-md border transition-all',
+                        isActive
+                          ? 'border-zinc-300 ring-2 ring-offset-2 ring-offset-zinc-900'
+                          : 'border-zinc-800 hover:border-zinc-600'
+                      )}
+                      style={{
+                        background: `linear-gradient(${p.angle}deg, ${p.from}, ${p.to})`,
+                        ...(isActive ? { borderColor: accent, boxShadow: `0 0 0 2px ${accent}` } : {})
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="w-12 text-xs text-zinc-400">From</label>
+              <input
+                type="color"
+                value={gradientFrom}
+                onChange={(e) => setGradientFrom(e.target.value)}
+                className="h-8 w-12 cursor-pointer rounded border border-zinc-800 bg-zinc-900"
+              />
+              <input
+                type="text"
+                value={gradientFrom}
+                onChange={(e) => setGradientFrom(e.target.value)}
+                className="w-28 rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1 text-xs tabular-nums text-zinc-200 outline-none focus:border-zinc-700"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="w-12 text-xs text-zinc-400">To</label>
+              <input
+                type="color"
+                value={gradientTo}
+                onChange={(e) => setGradientTo(e.target.value)}
+                className="h-8 w-12 cursor-pointer rounded border border-zinc-800 bg-zinc-900"
+              />
+              <input
+                type="text"
+                value={gradientTo}
+                onChange={(e) => setGradientTo(e.target.value)}
+                className="w-28 rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1 text-xs tabular-nums text-zinc-200 outline-none focus:border-zinc-700"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="w-12 text-xs text-zinc-400">Angle</label>
+              <input
+                type="range"
+                min={0}
+                max={360}
+                step={1}
+                value={gradientAngle}
+                onChange={(e) => setGradientAngle(Number(e.target.value))}
+                className="flex-1"
+              />
+              <span className="w-12 text-right text-xs tabular-nums text-zinc-400">{gradientAngle}°</span>
+            </div>
+          </div>
+        )}
+      </div>
     </SectionCard>
   )
 }

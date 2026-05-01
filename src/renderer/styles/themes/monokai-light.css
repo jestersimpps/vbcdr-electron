@@ -3,6 +3,10 @@
   color: #1a1b14;
 }
 
+:root.monokai-light {
+  --screen-gradient: #ffffff;
+}
+
 :root.monokai-light ::-webkit-scrollbar-thumb {
   background: #e0e0e0;
 }

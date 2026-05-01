@@ -84,7 +84,7 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
 
   return (
     <div
-      className="group flex w-full min-w-0 cursor-pointer flex-col gap-2 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-left transition-all hover:bg-zinc-800/50"
+      className="group flex w-full min-w-0 cursor-pointer flex-col gap-2 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-left shadow-lg shadow-black/30 transition-all hover:bg-zinc-800/50 hover:shadow-xl hover:shadow-black/40"
       onClick={onOpenModal}
     >
       <div className="flex items-center justify-between gap-2">

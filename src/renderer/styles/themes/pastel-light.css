@@ -3,6 +3,10 @@
   color: #2e2440;
 }
 
+:root.pastel-light {
+  --screen-gradient: #ffffff;
+}
+
 :root.pastel-light ::-webkit-scrollbar-thumb {
   background: #f0d8c0;
 }

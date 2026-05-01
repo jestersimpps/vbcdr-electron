@@ -3,6 +3,10 @@
   color: #eeffff;
 }
 
+:root.material-dark {
+  --screen-gradient: #1e1e1e;
+}
+
 :root.material-dark ::-webkit-scrollbar-thumb {
   background: #37474f;
 }

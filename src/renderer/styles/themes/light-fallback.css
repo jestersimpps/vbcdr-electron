@@ -3,6 +3,10 @@
   color: #18181b;
 }
 
+:root.light {
+  --screen-gradient: #ffffff;
+}
+
 :root.light ::-webkit-scrollbar-thumb {
   background: #d4d4d8;
 }

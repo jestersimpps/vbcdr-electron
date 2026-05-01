@@ -247,7 +247,7 @@ export function GitTree(): React.ReactElement {
   }
 
   return (
-    <div className="relative flex h-full flex-col bg-zinc-950">
+    <div className="relative flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2 py-1">
         <div className="flex min-w-0 items-center gap-1.5">
           <GitBranchIcon size={13} className="shrink-0 text-zinc-500" />

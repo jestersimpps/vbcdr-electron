@@ -378,7 +378,7 @@ export function AppLayoutGrid(): React.ReactElement {
         )}
         <div
           ref={containerRef}
-          className="absolute inset-0"
+          className={cn('absolute inset-0', !backgroundImage && 'screen-gradient')}
           style={{ visibility: dashboardActive || statisticsActive || usageActive || settingsActive ? 'hidden' : 'visible' }}
         >
           {width > 0 && height > 0 && (
@@ -417,17 +417,17 @@ export function AppLayoutGrid(): React.ReactElement {
           </div>
         )}
         {statisticsActive && (
-          <div className="absolute inset-0 z-10 overflow-auto">
+          <div className={cn('absolute inset-0 z-10 overflow-auto', !backgroundImage && 'screen-gradient')}>
             <Statistics />
           </div>
         )}
         {usageActive && (
-          <div className="absolute inset-0 z-10 overflow-auto">
+          <div className={cn('absolute inset-0 z-10 overflow-auto', !backgroundImage && 'screen-gradient')}>
             <Usage />
           </div>
         )}
         {settingsActive && (
-          <div className="absolute inset-0 z-10 overflow-auto">
+          <div className={cn('absolute inset-0 z-10 overflow-auto', !backgroundImage && 'screen-gradient')}>
             <Settings />
           </div>
         )}

@@ -27,7 +27,7 @@ export function getChartPalette(themeId: string): ChartPalette {
 
   return {
     colors,
-    axis: t.brightBlack ?? '#52525b',
+    axis: t.foreground ?? '#a1a1aa',
     grid: t.brightBlack ?? '#27272a',
     tooltipBg: t.background ?? '#18181b',
     tooltipBorder: t.selectionBackground ?? t.brightBlack ?? '#27272a',

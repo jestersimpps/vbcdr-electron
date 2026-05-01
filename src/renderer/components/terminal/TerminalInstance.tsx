@@ -55,8 +55,7 @@ function ensureGlobalDataDispatcher(): void {
 
 export function applyThemeToAll(themeId: string): void {
   const xtermTheme = getTerminalTheme(themeId)
-  const transparent = !!useLayoutStore.getState().backgroundImage
-  const themeToApply = transparent ? { ...xtermTheme, background: '#00000000' } : xtermTheme
+  const themeToApply = { ...xtermTheme, background: '#00000000' }
   terminalsMap.forEach(({ terminal }) => {
     terminal.options.theme = themeToApply
   })
@@ -120,7 +119,6 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
     }
 
     if (!entry) {
-      const transparent = !!useLayoutStore.getState().backgroundImage
       const baseTheme = getTerminalTheme(useThemeStore.getState().getTerminalThemeId())
       const terminal = new Terminal({
         cursorBlink: true,
@@ -129,8 +127,8 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         cols: 80,
         rows: 24,
         allowProposedApi: true,
-        allowTransparency: transparent,
-        theme: transparent ? { ...baseTheme, background: '#00000000' } : baseTheme
+        allowTransparency: true,
+        theme: { ...baseTheme, background: '#00000000' }
       })
 
       const fitAddon = new FitAddon()

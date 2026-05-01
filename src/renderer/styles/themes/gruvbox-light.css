@@ -3,6 +3,10 @@
   color: #282420;
 }
 
+:root.gruvbox-light {
+  --screen-gradient: #fdf8e0;
+}
+
 :root.gruvbox-light ::-webkit-scrollbar-thumb {
   background: #e8dca8;
 }

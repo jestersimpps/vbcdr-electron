@@ -3,6 +3,10 @@
   color: #282d38;
 }
 
+:root.dracula-light {
+  --screen-gradient: #ffffff;
+}
+
 :root.dracula-light ::-webkit-scrollbar-thumb {
   background: #d0d0c0;
 }

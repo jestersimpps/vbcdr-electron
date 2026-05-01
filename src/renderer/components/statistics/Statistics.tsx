@@ -578,7 +578,7 @@ export function Statistics(): React.ReactElement {
   }
 
   return (
-    <div className="min-h-full bg-zinc-950 p-6 text-zinc-200">
+    <div className="min-h-full p-6 text-zinc-200">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold">Statistics</h1>
@@ -704,7 +704,7 @@ export function Statistics(): React.ReactElement {
         </Section>
 
         <Section title="Projects">
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-lg shadow-black/30">
           <div className="mb-3 flex items-center gap-3">
             <span className="text-xs text-zinc-500">{projectRows.length} projects</span>
           </div>
@@ -752,7 +752,7 @@ export function Statistics(): React.ReactElement {
 
         {archivedProjects.length > 0 && (
           <Section title="Archived projects">
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-lg shadow-black/30">
               <div className="space-y-2">
                 {archivedProjects.map((a) => (
                   <div key={a.id} className="flex items-center justify-between text-xs">
@@ -934,7 +934,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Kpi({ icon, label, value }: { icon?: React.ReactNode; label: string; value: string }): React.ReactElement {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-lg shadow-black/30">
       <div className="flex items-center gap-1.5 text-xs text-zinc-500">
         {icon}
         {label}
@@ -946,7 +946,7 @@ function Kpi({ icon, label, value }: { icon?: React.ReactNode; label: string; va
 
 function Card({ title, children, right }: { title: string; children: React.ReactNode; right?: React.ReactNode }): React.ReactElement {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-lg shadow-black/30">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="text-xs font-medium text-zinc-400">{title}</div>
         {right}
@@ -1022,7 +1022,7 @@ function HistoricalWorkCard({
   const hasCells = calendar.weeks.length > 0 && computeHistoryStats(calendar).possibleDays > 0
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-lg shadow-black/30">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="text-xs font-medium text-zinc-400">Historical work</div>
         <div className="flex flex-wrap items-center gap-2">

@@ -3,6 +3,10 @@
   color: #ebdbb2;
 }
 
+:root.gruvbox-dark {
+  --screen-gradient: #1d2021;
+}
+
 :root.gruvbox-dark ::-webkit-scrollbar-thumb {
   background: #504945;
 }

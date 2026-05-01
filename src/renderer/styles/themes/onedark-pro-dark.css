@@ -3,6 +3,10 @@
   color: #abb2bf;
 }
 
+:root.onedark-pro-dark {
+  --screen-gradient: #21252b;
+}
+
 :root.onedark-pro-dark ::-webkit-scrollbar-thumb {
   background: #4b5263;
 }

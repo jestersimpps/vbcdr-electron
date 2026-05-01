@@ -203,13 +203,12 @@ export function TerminalPanel(): React.ReactElement {
     teardownInFlight.current.delete(tabId)
   }
 
-  const backgroundImage = useLayoutStore((s) => s.backgroundImage)
   const tokenCap = useLayoutStore((s) => s.tokenCap)
 
   useQueueRunner()
 
   return (
-    <div data-terminal-panel className={backgroundImage ? '' : 'bg-zinc-950'} style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+    <div data-terminal-panel style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
       <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex flex-1 items-center gap-0.5 overflow-x-auto px-1">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTabDragEnd}>

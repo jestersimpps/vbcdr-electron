@@ -3,6 +3,10 @@
   color: #1a1a1a;
 }
 
+:root.material-light {
+  --screen-gradient: #ffffff;
+}
+
 :root.material-light ::-webkit-scrollbar-thumb {
   background: #d0d0d0;
 }

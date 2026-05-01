@@ -3,6 +3,10 @@
   color: #ffffff;
 }
 
+:root.afternoon-dark {
+  --screen-gradient: #130f48;
+}
+
 :root.afternoon-dark ::-webkit-scrollbar-thumb {
   background: #8f883860;
 }

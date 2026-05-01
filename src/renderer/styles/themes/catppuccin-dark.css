@@ -3,6 +3,10 @@
   color: #cdd6f4;
 }
 
+:root.catppuccin-dark {
+  --screen-gradient: #1e1e2e;
+}
+
 :root.catppuccin-dark ::-webkit-scrollbar-thumb {
   background: #45475a;
 }

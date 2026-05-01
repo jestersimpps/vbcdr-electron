@@ -3,6 +3,10 @@
   color: #0e0c08;
 }
 
+:root.tropical-light {
+  --screen-gradient: #ffffff;
+}
+
 :root.tropical-light ::-webkit-scrollbar-thumb {
   background: #d4413b80;
 }

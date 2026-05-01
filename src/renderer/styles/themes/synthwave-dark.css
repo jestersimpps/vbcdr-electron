@@ -3,6 +3,10 @@
   color: #e0d0ff;
 }
 
+:root.synthwave-dark {
+  --screen-gradient: #0a0a1a;
+}
+
 :root.synthwave-dark ::-webkit-scrollbar-thumb {
   background: #ff297560;
 }

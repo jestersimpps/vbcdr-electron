@@ -3,6 +3,10 @@
   color: #0e0820;
 }
 
+:root.synthwave-light {
+  --screen-gradient: #f8f0ff;
+}
+
 :root.synthwave-light ::-webkit-scrollbar-thumb {
   background: #c9156d80;
 }

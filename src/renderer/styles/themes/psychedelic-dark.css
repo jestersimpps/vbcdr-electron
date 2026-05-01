@@ -3,6 +3,10 @@
   color: #f0e0ff;
 }
 
+:root.psychedelic-dark {
+  --screen-gradient: #08060e;
+}
+
 :root.psychedelic-dark ::-webkit-scrollbar-thumb {
   background: #ff2d9560;
 }

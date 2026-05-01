@@ -120,7 +120,7 @@ export function DevTerminalsPanel(): React.ReactElement {
                         </span>
                         <button
                           onClick={() => handleClose(tab.id)}
-                          className="rounded p-0.5 text-zinc-600 hover:text-red-400"
+                          className="rounded p-0.5 text-zinc-300 hover:bg-zinc-800 hover:text-red-400 disabled:text-zinc-600"
                           disabled={projectTabs.length <= 1}
                           title="Close terminal"
                         >

@@ -3,6 +3,10 @@
   color: #100818;
 }
 
+:root.rainbow-light {
+  --screen-gradient: #ffffff;
+}
+
 :root.rainbow-light ::-webkit-scrollbar-thumb {
   background: #2060d080;
 }

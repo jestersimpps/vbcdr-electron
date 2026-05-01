@@ -3,6 +3,10 @@
   color: #e6edf3;
 }
 
+:root.github-dark {
+  --screen-gradient: #0d1117;
+}
+
 :root.github-dark ::-webkit-scrollbar-thumb {
   background: #30363d;
 }

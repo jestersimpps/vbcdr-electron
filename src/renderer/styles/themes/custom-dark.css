@@ -3,6 +3,10 @@
   color: var(--ct-text-1);
 }
 
+:root.custom-dark {
+  --screen-gradient: var(--ct-bg-primary);
+}
+
 :root.custom-dark ::-webkit-scrollbar-thumb {
   background: var(--ct-bg-subtle);
 }
