@@ -478,5 +478,9 @@ export function disposeTerminal(tabId: string): void {
     try { entry.terminal.dispose() } catch { /* dispose may throw if already gone */ }
     terminalsMap.delete(tabId)
   }
+  if (terminalsMap.size === 0 && globalDataUnsub) {
+    try { globalDataUnsub() } catch { /* ignore */ }
+    globalDataUnsub = null
+  }
   window.api.tokenUsage.resetTab(tabId)
 }
