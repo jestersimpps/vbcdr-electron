@@ -5,6 +5,7 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { applyBackgroundTransparency } from '@/components/terminal/TerminalInstance'
 import { ThemePicker } from '@/components/theme/ThemePicker'
 import { VariantToggle } from '@/components/theme/VariantToggle'
+import { PermissionsButton } from '@/components/terminal/PermissionsButton'
 
 export function StatusBar(): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
@@ -42,6 +43,12 @@ export function StatusBar(): React.ReactElement {
             <span className="truncate">{project.path}</span>
           </div>
         )}
+      </div>
+
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div className="pointer-events-auto">
+          <PermissionsButton projectPath={project?.path} />
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">

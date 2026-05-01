@@ -148,6 +148,7 @@ export function registerClaudeConfigHandlers(): void {
   ipcMain.handle('claude:write-file', (_event, filePath: string, content: string, projectPath: string): void => {
     const resolved = path.resolve(filePath)
     if (!isAllowedClaudePath(resolved, projectPath)) throw new Error('Path not allowed')
+    fs.mkdirSync(path.dirname(resolved), { recursive: true })
     fs.writeFileSync(resolved, content, 'utf-8')
   })
 
