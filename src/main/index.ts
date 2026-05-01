@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, shell } from 'electron'
+import { app, BrowserWindow, Menu } from 'electron'
 import path from 'path'
 import { registerProjectHandlers } from '@main/ipc/projects'
 import { registerFilesystemHandlers } from '@main/ipc/filesystem'
@@ -34,25 +34,6 @@ function handleBeforeInput(_event: Electron.Event, input: Electron.Input): void 
   if (input.meta && input.alt && /^[1-9]$/.test(input.key)) {
     _event.preventDefault()
     mainWindow?.webContents.send('menu:action', `switch-project-${input.key}`)
-    return
-  }
-
-  if (input.meta && input.shift && input.key === '[') {
-    _event.preventDefault()
-    mainWindow?.webContents.send('menu:action', 'terminal-tab-prev')
-    return
-  }
-
-  if (input.meta && input.shift && input.key === ']') {
-    _event.preventDefault()
-    mainWindow?.webContents.send('menu:action', 'terminal-tab-next')
-    return
-  }
-
-
-  if (input.meta && input.alt && input.key === 'w') {
-    _event.preventDefault()
-    mainWindow?.webContents.send('menu:action', 'close-file-tab')
     return
   }
 }
@@ -121,30 +102,38 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
     ]
   }
 
+  const send = (action: string): void => {
+    mainWindow?.webContents.send('menu:action', action)
+  }
+
   const fileMenu: Electron.MenuItemConstructorOptions = {
     label: 'File',
     submenu: [
       {
         label: 'New Project',
         accelerator: 'CmdOrCtrl+N',
-        click: () => mainWindow?.webContents.send('menu:action', 'new-project')
+        click: () => send('new-project')
       },
       {
         label: 'Close Project',
         accelerator: 'CmdOrCtrl+W',
-        click: () => mainWindow?.webContents.send('menu:action', 'close-project')
+        click: () => send('close-project')
       },
       { type: 'separator' },
+      {
+        label: 'Open File...',
+        accelerator: 'CmdOrCtrl+P',
+        click: () => send('open-palette-files')
+      },
       {
         label: 'Save',
         accelerator: 'CmdOrCtrl+S',
-        click: () => mainWindow?.webContents.send('menu:action', 'save-file')
+        click: () => send('save-file')
       },
-      { type: 'separator' },
       {
-        label: 'Close Window',
-        accelerator: 'CmdOrCtrl+Shift+W',
-        click: () => mainWindow?.close()
+        label: 'Close File',
+        accelerator: 'CmdOrCtrl+Alt+W',
+        click: () => send('close-file-tab')
       }
     ]
   }
@@ -158,7 +147,13 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
       { role: 'cut' },
       { role: 'copy' },
       { role: 'paste' },
-      { role: 'selectAll' }
+      { role: 'selectAll' },
+      { type: 'separator' },
+      {
+        label: 'Command Palette',
+        accelerator: 'CmdOrCtrl+K',
+        click: () => send('open-palette')
+      }
     ]
   }
 
@@ -167,27 +162,55 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
     submenu: [
       {
         label: 'Dashboard',
-        accelerator: 'CmdOrCtrl+D',
-        click: () => mainWindow?.webContents.send('menu:action', 'toggle-dashboard')
+        click: () => send('toggle-dashboard')
+      },
+      {
+        label: 'Statistics',
+        click: () => send('show-statistics')
+      },
+      {
+        label: 'Usage',
+        click: () => send('show-usage')
       },
       { type: 'separator' },
       {
-        label: 'Toggle Editor',
+        label: 'Editor',
         accelerator: 'CmdOrCtrl+1',
-        click: () => mainWindow?.webContents.send('menu:action', 'center-tab-editor')
+        click: () => send('center-tab-editor')
       },
       {
-        label: 'Toggle Claude Config',
+        label: 'Claude Config',
         accelerator: 'CmdOrCtrl+2',
-        click: () => mainWindow?.webContents.send('menu:action', 'center-tab-claude')
+        click: () => send('center-tab-claude')
+      },
+      {
+        label: 'Skills',
+        accelerator: 'CmdOrCtrl+3',
+        click: () => send('center-tab-skills')
+      },
+      {
+        label: 'Terminals',
+        accelerator: 'CmdOrCtrl+4',
+        click: () => send('center-tab-terminals')
       },
       { type: 'separator' },
-      { role: 'toggleDevTools' },
       {
-        label: 'Toggle App Developer Tools',
-        accelerator: 'CmdOrCtrl+Shift+I',
-        click: () => mainWindow?.webContents.toggleDevTools()
+        label: 'Toggle Light/Dark',
+        accelerator: 'CmdOrCtrl+Shift+L',
+        click: () => send('toggle-variant')
       },
+      { type: 'separator' },
+      {
+        label: 'Reload',
+        accelerator: 'CmdOrCtrl+R',
+        click: () => mainWindow?.webContents.reload()
+      },
+      {
+        label: 'Force Reload',
+        accelerator: 'CmdOrCtrl+Shift+R',
+        click: () => mainWindow?.webContents.reloadIgnoringCache()
+      },
+      { role: 'toggleDevTools' },
       { type: 'separator' },
       {
         label: 'Actual Size',
@@ -211,13 +234,56 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
         }
       },
       { type: 'separator' },
+      { role: 'togglefullscreen' }
+    ]
+  }
+
+  const terminalMenu: Electron.MenuItemConstructorOptions = {
+    label: 'Terminal',
+    submenu: [
       {
-        label: 'Toggle Light/Dark',
-        accelerator: 'CmdOrCtrl+Shift+L',
-        click: () => mainWindow?.webContents.send('menu:action', 'toggle-variant')
+        label: 'New Claude Terminal',
+        click: () => send('new-claude-terminal')
+      },
+      {
+        label: 'New Shell Terminal',
+        click: () => send('new-shell-terminal')
       },
       { type: 'separator' },
-      { role: 'togglefullscreen' }
+      {
+        label: 'Next Tab',
+        accelerator: 'CmdOrCtrl+Shift+]',
+        click: () => send('terminal-tab-next')
+      },
+      {
+        label: 'Previous Tab',
+        accelerator: 'CmdOrCtrl+Shift+[',
+        click: () => send('terminal-tab-prev')
+      },
+      { type: 'separator' },
+      {
+        label: 'Restart Claude',
+        click: () => send('restart-claude')
+      },
+      {
+        label: 'Clear Context',
+        click: () => send('clear-context')
+      }
+    ]
+  }
+
+  const gitMenu: Electron.MenuItemConstructorOptions = {
+    label: 'Git',
+    submenu: [
+      {
+        label: 'Pull & Rebase',
+        click: () => send('git-pull-rebase')
+      },
+      { type: 'separator' },
+      {
+        label: 'Commit',
+        click: () => send('git-commit')
+      }
     ]
   }
 
@@ -231,23 +297,14 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
     ]
   }
 
-  const helpMenu: Electron.MenuItemConstructorOptions = {
-    label: 'Help',
-    submenu: [
-      {
-        label: 'Learn More',
-        click: () => shell.openExternal('https://github.com/jestersimpps/Claude-AIDE?tab=readme-ov-file')
-      }
-    ]
-  }
-
   return [
     ...(isMac ? [appMenu] : []),
     fileMenu,
     editMenu,
     viewMenu,
-    windowMenu,
-    helpMenu
+    terminalMenu,
+    gitMenu,
+    windowMenu
   ]
 }
 

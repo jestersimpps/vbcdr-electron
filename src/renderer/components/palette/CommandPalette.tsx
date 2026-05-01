@@ -104,8 +104,21 @@ export function CommandPalette(): React.ReactElement | null {
         })
       }
     }
+    const handleOpenEvent = (e: Event): void => {
+      const detail = (e as CustomEvent<{ mode: PaletteMode }>).detail
+      const nextMode: PaletteMode = detail?.mode === 'files' ? 'files' : 'all'
+      setOpen((prev) => {
+        if (prev && mode === nextMode) return false
+        setMode(nextMode)
+        return true
+      })
+    }
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('palette:open', handleOpenEvent)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('palette:open', handleOpenEvent)
+    }
   }, [mode])
 
   useEffect(() => {

@@ -147,6 +147,18 @@ export function App(): React.ReactElement {
       const terminalStore = useTerminalStore.getState()
       const themeStore = useThemeStore.getState()
 
+      const projectPath = activeId
+        ? projectStore.projects.find((p) => p.id === activeId)?.path
+        : undefined
+      const activeTabId = activeId ? terminalStore.activeTabPerProject[activeId] : undefined
+      const activeTab = activeTabId ? terminalStore.tabs.find((t) => t.id === activeTabId) : undefined
+      const activeLlmTab = activeId
+        ? terminalStore.tabs.find(
+            (t) => t.projectId === activeId && t.id === activeTabId && t.initialCommand
+          ) ??
+          terminalStore.tabs.find((t) => t.projectId === activeId && t.initialCommand)
+        : undefined
+
       switch (action) {
         case 'new-project':
           projectStore.addProject()
@@ -154,11 +166,26 @@ export function App(): React.ReactElement {
         case 'close-project':
           if (activeId) projectStore.removeProject(activeId)
           break
+        case 'settings':
+          projectStore.showSettings()
+          break
+        case 'show-statistics':
+          projectStore.showStatistics()
+          break
+        case 'show-usage':
+          projectStore.showUsage()
+          break
         case 'center-tab-editor':
           if (activeId) editorStore.setCenterTab(activeId, 'editor')
           break
         case 'center-tab-claude':
           if (activeId) editorStore.setCenterTab(activeId, 'claude')
+          break
+        case 'center-tab-skills':
+          if (activeId) editorStore.setCenterTab(activeId, 'skills')
+          break
+        case 'center-tab-terminals':
+          if (activeId) editorStore.setCenterTab(activeId, 'terminals')
           break
         case 'toggle-dashboard':
           if (projectStore.dashboardActive && activeId) {
@@ -170,6 +197,12 @@ export function App(): React.ReactElement {
         case 'toggle-variant':
           themeStore.toggleVariant()
           break
+        case 'open-palette':
+          window.dispatchEvent(new CustomEvent('palette:open', { detail: { mode: 'all' } }))
+          break
+        case 'open-palette-files':
+          window.dispatchEvent(new CustomEvent('palette:open', { detail: { mode: 'files' } }))
+          break
         case 'save-file': {
           if (!activeId) break
           const filePath = editorStore.statePerProject[activeId]?.activeFilePath
@@ -180,6 +213,33 @@ export function App(): React.ReactElement {
           if (!activeId) break
           const fp = editorStore.statePerProject[activeId]?.activeFilePath
           if (fp) editorStore.closeFile(activeId, fp)
+          break
+        }
+        case 'new-claude-terminal':
+          if (activeId && projectPath) terminalStore.createTab(activeId, projectPath, 'claude')
+          break
+        case 'new-shell-terminal':
+          if (activeId && projectPath) terminalStore.createTab(activeId, projectPath)
+          break
+        case 'restart-claude': {
+          if (!activeId || !projectPath || !activeLlmTab?.initialCommand) break
+          window.api.terminal.kill(activeLlmTab.id)
+          terminalStore.replaceTab(activeLlmTab.id, activeId, projectPath, activeLlmTab.initialCommand)
+          break
+        }
+        case 'clear-context': {
+          const tabId = activeLlmTab?.id ?? activeTab?.id
+          if (tabId) window.api.terminal.write(tabId, '/clear\r')
+          break
+        }
+        case 'git-pull-rebase': {
+          if (!activeId || !projectPath) break
+          useGitStore.getState().pull(activeId, projectPath)
+          break
+        }
+        case 'git-commit': {
+          const tabId = activeLlmTab?.id ?? activeTab?.id
+          if (tabId) window.api.terminal.write(tabId, '/commit\r')
           break
         }
         case 'terminal-tab-prev':
