@@ -34,16 +34,39 @@ function useAccent(): string {
 export function Settings(): React.ReactElement {
   return (
     <div className="min-h-full w-full overflow-auto bg-zinc-950 p-6 text-zinc-200">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <h1 className="text-2xl font-semibold text-zinc-100">Settings</h1>
-        <TokenCapSection />
-        <EditorSection />
-        <GitSection />
-        <BackgroundSection />
-        <SoundSection />
-        <ThemeSection />
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-lg font-semibold">Settings</h1>
+        </div>
+
+        <Section title="Limits">
+          <TokenCapSection />
+        </Section>
+
+        <Section title="Editor">
+          <EditorSection />
+          <GitSection />
+        </Section>
+
+        <Section title="Appearance">
+          <BackgroundSection />
+          <ThemeSection />
+        </Section>
+
+        <Section title="Notifications">
+          <SoundSection />
+        </Section>
       </div>
     </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
+      {children}
+    </section>
   )
 }
 
