@@ -30,7 +30,7 @@ import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { useQueueStore } from '@/stores/queue-store'
 import { useThemeStore } from '@/stores/theme-store'
-import { sendToTerminal } from '@/lib/send-to-terminal'
+import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 import type { FileNode } from '@/models/types'
 import { cn } from '@/lib/utils'
@@ -213,7 +213,7 @@ export function CommandPalette(): React.ReactElement | null {
           run: () => {
             if (!activeLlmTabId) return
             useQueueStore.getState().removeItem(activeLlmTabId, q.id)
-            sendToTerminal(activeLlmTabId, q.text)
+            sendToTerminalViaPty(activeLlmTabId, q.text)
           }
         })
       }

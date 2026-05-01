@@ -3,7 +3,7 @@ import { act, cleanup, renderHook } from '@testing-library/react'
 
 const sendToTerminalMock = vi.fn()
 vi.mock('@/lib/send-to-terminal', () => ({
-  sendToTerminal: (...args: unknown[]) => sendToTerminalMock(...args)
+  sendToTerminalViaPty: (...args: unknown[]) => sendToTerminalMock(...args)
 }))
 
 import { useQueueRunner } from './useQueueRunner'

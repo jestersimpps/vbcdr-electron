@@ -5,7 +5,7 @@ import { useGitStore } from '@/stores/git-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
-import { sendToTerminal } from '@/lib/send-to-terminal'
+import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
 import type { GitFileStatus } from '@/models/types'
 
@@ -159,7 +159,7 @@ export function DiffOverlay({ projectId, cwd }: DiffOverlayProps): React.ReactEl
     const message = fileList
       ? `commit the following changes:\n${fileList}`
       : 'commit the current changes'
-    sendToTerminal(llmTab.id, message)
+    sendToTerminalViaPty(llmTab.id, message)
   }
 
   const handleCommit = async (): Promise<void> => {

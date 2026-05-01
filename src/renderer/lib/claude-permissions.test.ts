@@ -3,7 +3,6 @@ import {
   parseSettings,
   toView,
   isCustomized,
-  applyMode,
   applyPreset,
   matchesPreset,
   addRule,
@@ -74,52 +73,6 @@ describe('isCustomized', () => {
     expect(isCustomized({ ...DEFAULT_VIEW, allow: ['Read'] })).toBe(true)
     expect(isCustomized({ ...DEFAULT_VIEW, ask: ['Bash(*)'] })).toBe(true)
     expect(isCustomized({ ...DEFAULT_VIEW, deny: ['Bash(rm:*)'] })).toBe(true)
-  })
-})
-
-describe('applyMode', () => {
-  it('sets defaultMode', () => {
-    expect(applyMode({}, 'acceptEdits')).toEqual({
-      permissions: { defaultMode: 'acceptEdits' }
-    })
-  })
-
-  it('removes defaultMode when reset to default', () => {
-    expect(applyMode({ permissions: { defaultMode: 'plan' } }, 'default')).toEqual({})
-  })
-
-  it('stashes rule lists when leaving default', () => {
-    expect(
-      applyMode({ permissions: { allow: ['Read'], deny: ['Bash(rm:*)'] } }, 'plan')
-    ).toEqual({
-      permissions: { defaultMode: 'plan' },
-      _vbcdrStashedRules: { allow: ['Read'], deny: ['Bash(rm:*)'] }
-    })
-  })
-
-  it('restores stashed rules when returning to default', () => {
-    const stashed = applyMode({ permissions: { allow: ['Read'], ask: ['Bash(*)'] } }, 'plan')
-    expect(applyMode(stashed, 'default')).toEqual({
-      permissions: { allow: ['Read'], ask: ['Bash(*)'] }
-    })
-  })
-
-  it('does not restash when switching between non-default modes', () => {
-    const planned = applyMode({ permissions: { allow: ['Read'] } }, 'plan')
-    const accepted = applyMode(planned, 'acceptEdits')
-    expect(accepted).toEqual({
-      permissions: { defaultMode: 'acceptEdits' },
-      _vbcdrStashedRules: { allow: ['Read'] }
-    })
-  })
-
-  it('preserves unmanaged top-level keys', () => {
-    const result = applyMode({ hooks: { PreToolUse: [] }, env: { FOO: 'bar' } } as ClaudeSettings, 'plan')
-    expect(result).toEqual({
-      hooks: { PreToolUse: [] },
-      env: { FOO: 'bar' },
-      permissions: { defaultMode: 'plan' }
-    })
   })
 })
 
@@ -224,8 +177,10 @@ describe('applyPreset', () => {
   })
 
   it('clears prior stashed rules', () => {
-    const stashed = applyMode({ permissions: { allow: ['X'] } }, 'plan')
-    expect(stashed._vbcdrStashedRules).toBeDefined()
+    const stashed: ClaudeSettings = {
+      permissions: { defaultMode: 'plan' },
+      _vbcdrStashedRules: { allow: ['X'] }
+    }
     const after = applyPreset(stashed, strict)
     expect(after._vbcdrStashedRules).toBeUndefined()
   })

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useQueueStore } from '@/stores/queue-store'
-import { sendToTerminal } from '@/lib/send-to-terminal'
+import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
 
 export function useQueueRunner(): void {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
@@ -32,6 +32,6 @@ export function useQueueRunner(): void {
     lastDispatchAtRef.current = Date.now()
     useTerminalStore.getState().setTabStatus(activeTabId, 'busy')
     useQueueStore.getState().dequeue(activeTabId)
-    sendToTerminal(activeTabId, next.text)
+    sendToTerminalViaPty(activeTabId, next.text)
   }, [activeTabId, activeTab?.initialCommand, status, autoRun, items])
 }

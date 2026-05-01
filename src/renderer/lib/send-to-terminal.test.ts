@@ -20,8 +20,8 @@ describe('send-to-terminal', () => {
     mockGetInstance.mockReturnValue(undefined)
     const writeSpy = window.api.terminal.write as ReturnType<typeof vi.fn>
     writeSpy.mockClear()
-    const { sendToTerminal } = await import('./send-to-terminal')
-    sendToTerminal('missing-tab', 'hello')
+    const { sendToTerminalViaPty } = await import('./send-to-terminal')
+    sendToTerminalViaPty('missing-tab', 'hello')
     vi.advanceTimersByTime(500)
     expect(writeSpy).not.toHaveBeenCalled()
   })
@@ -31,9 +31,9 @@ describe('send-to-terminal', () => {
     mockGetInstance.mockReturnValue({ terminal: { paste } })
     const writeSpy = window.api.terminal.write as ReturnType<typeof vi.fn>
     writeSpy.mockClear()
-    const { sendToTerminal } = await import('./send-to-terminal')
+    const { sendToTerminalViaPty } = await import('./send-to-terminal')
 
-    sendToTerminal('tab-1', 'echo hi')
+    sendToTerminalViaPty('tab-1', 'echo hi')
     expect(paste).toHaveBeenCalledWith('echo hi')
     expect(writeSpy).not.toHaveBeenCalled()
 

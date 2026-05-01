@@ -4,7 +4,7 @@ import { GitCommitHorizontal, Sparkles, X } from 'lucide-react'
 import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { sendToTerminal } from '@/lib/terminal-utils'
+import { sendToTerminalViaKeyboardEvent } from '@/lib/terminal-utils'
 
 export function GitActions(): React.ReactElement | null {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
@@ -23,7 +23,7 @@ export function GitActions(): React.ReactElement | null {
 
   const handleFeatureSubmit = useCallback(() => {
     if (!activeTerminalTabId || !featureDescription.trim()) return
-    sendToTerminal(
+    sendToTerminalViaKeyboardEvent(
       activeTerminalTabId,
       `Create a new git feature branch for: ${featureDescription.trim()}. Create the branch name from the description using kebab-case prefixed with feature/. Switch to the new branch.`
     )
@@ -41,7 +41,7 @@ export function GitActions(): React.ReactElement | null {
     <>
       <button
         disabled={!activeTerminalTabId}
-        onClick={() => activeTerminalTabId && sendToTerminal(activeTerminalTabId, '/commit')}
+        onClick={() => activeTerminalTabId && sendToTerminalViaKeyboardEvent(activeTerminalTabId, '/commit')}
         onMouseDown={(e) => e.preventDefault()}
         className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30 disabled:pointer-events-none"
         title="Commit"

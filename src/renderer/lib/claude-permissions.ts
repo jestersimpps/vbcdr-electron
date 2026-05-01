@@ -55,37 +55,6 @@ export function isCustomized(view: PermissionsView): boolean {
   return view.mode !== 'default' || view.allow.length > 0 || view.ask.length > 0 || view.deny.length > 0
 }
 
-export function applyMode(settings: ClaudeSettings, mode: PermissionMode): ClaudeSettings {
-  const next: ClaudeSettings = { ...settings }
-  const permissions: ClaudePermissionsBlock = { ...(next.permissions ?? {}) }
-  const wasDefault = !permissions.defaultMode
-
-  if (mode === 'default') {
-    delete permissions.defaultMode
-    const stashed = next._vbcdrStashedRules
-    if (stashed) {
-      if (stashed.allow?.length) permissions.allow = [...stashed.allow]
-      if (stashed.ask?.length) permissions.ask = [...stashed.ask]
-      if (stashed.deny?.length) permissions.deny = [...stashed.deny]
-      delete next._vbcdrStashedRules
-    }
-  } else {
-    if (wasDefault) {
-      const stash: StashedRules = {}
-      if (permissions.allow?.length) stash.allow = [...permissions.allow]
-      if (permissions.ask?.length) stash.ask = [...permissions.ask]
-      if (permissions.deny?.length) stash.deny = [...permissions.deny]
-      if (stash.allow || stash.ask || stash.deny) next._vbcdrStashedRules = stash
-    }
-    delete permissions.allow
-    delete permissions.ask
-    delete permissions.deny
-    permissions.defaultMode = mode
-  }
-  next.permissions = permissions
-  return prunePermissions(next)
-}
-
 export function addRule(settings: ClaudeSettings, bucket: RuleBucket, rule: string): ClaudeSettings {
   const trimmed = rule.trim()
   if (!trimmed) return settings

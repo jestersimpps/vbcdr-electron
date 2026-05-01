@@ -6,7 +6,7 @@ vi.mock('@/components/terminal/TerminalInstance', () => ({
   getTerminalInstance: (tabId: string) => mockGetInstance(tabId)
 }))
 
-describe('terminal-utils sendToTerminal', () => {
+describe('terminal-utils sendToTerminalViaKeyboardEvent', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     mockGetInstance.mockReset()
@@ -18,9 +18,9 @@ describe('terminal-utils sendToTerminal', () => {
 
   it('does nothing when the terminal instance is missing', async () => {
     mockGetInstance.mockReturnValue(undefined)
-    const { sendToTerminal } = await import('./terminal-utils')
+    const { sendToTerminalViaKeyboardEvent } = await import('./terminal-utils')
     expect(() => {
-      sendToTerminal('missing-tab', 'hello')
+      sendToTerminalViaKeyboardEvent('missing-tab', 'hello')
       vi.advanceTimersByTime(1000)
     }).not.toThrow()
   })
@@ -32,8 +32,8 @@ describe('terminal-utils sendToTerminal', () => {
     const textarea = { focus, dispatchEvent }
     mockGetInstance.mockReturnValue({ terminal: { paste, textarea } })
 
-    const { sendToTerminal } = await import('./terminal-utils')
-    sendToTerminal('tab-1', 'git status')
+    const { sendToTerminalViaKeyboardEvent } = await import('./terminal-utils')
+    sendToTerminalViaKeyboardEvent('tab-1', 'git status')
     expect(paste).toHaveBeenCalledWith('git status')
     expect(focus).not.toHaveBeenCalled()
 
@@ -54,9 +54,9 @@ describe('terminal-utils sendToTerminal', () => {
     const paste = vi.fn()
     mockGetInstance.mockReturnValue({ terminal: { paste, textarea: null } })
 
-    const { sendToTerminal } = await import('./terminal-utils')
+    const { sendToTerminalViaKeyboardEvent } = await import('./terminal-utils')
     expect(() => {
-      sendToTerminal('tab-1', 'noop')
+      sendToTerminalViaKeyboardEvent('tab-1', 'noop')
       vi.advanceTimersByTime(500)
     }).not.toThrow()
     expect(paste).toHaveBeenCalledWith('noop')
