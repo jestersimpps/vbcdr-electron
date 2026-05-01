@@ -8,7 +8,6 @@ import {
   Settings,
   BarChart3,
   Activity,
-  LayoutGrid,
   ArrowRight,
   Plus,
   X,
@@ -22,7 +21,6 @@ import {
   RefreshCw,
   ListPlus,
   Code,
-  Globe,
   Sparkles
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
@@ -31,7 +29,6 @@ import { useEditorStore } from '@/stores/editor-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { useQueueStore } from '@/stores/queue-store'
-import { useLayoutStore } from '@/stores/layout-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { sendToTerminal } from '@/lib/send-to-terminal'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
@@ -297,13 +294,6 @@ export function CommandPalette(): React.ReactElement | null {
           run: () => useEditorStore.getState().setCenterTab(activeProjectId, 'editor')
         },
         {
-          id: 'action:center-browser',
-          label: 'Show browser',
-          group: 'Editor',
-          icon: <Globe size={14} />,
-          run: () => useEditorStore.getState().setCenterTab(activeProjectId, 'browser')
-        },
-        {
           id: 'action:center-claude',
           label: 'Show Claude config',
           group: 'Editor',
@@ -313,13 +303,6 @@ export function CommandPalette(): React.ReactElement | null {
       )
 
       list.push(
-        {
-          id: 'action:toggle-browserless',
-          label: 'Toggle browserless layout',
-          group: 'Project',
-          icon: <LayoutGrid size={14} />,
-          run: () => useLayoutStore.getState().toggleBrowserless(activeProjectId)
-        },
         {
           id: 'action:reload-tree',
           label: 'Reload file tree',
@@ -347,7 +330,7 @@ export function CommandPalette(): React.ReactElement | null {
         list.push({
           id: 'action:enqueue',
           label: `Send to LLM: "${preview}"`,
-          hint: 'enter to queue · auto-runs if active LLM is idle',
+          hint: 'enter to queue · press play to start auto-run',
           group: 'Prompt',
           icon: <ListPlus size={14} />,
           run: () => {

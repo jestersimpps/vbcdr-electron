@@ -41,8 +41,7 @@ export const useQueueStore = create<QueueStore>()(
           itemsPerTab: {
             ...state.itemsPerTab,
             [tabId]: [...(state.itemsPerTab[tabId] ?? []), item]
-          },
-          autoRunPerTab: { ...state.autoRunPerTab, [tabId]: true }
+          }
         }))
         return item
       },
