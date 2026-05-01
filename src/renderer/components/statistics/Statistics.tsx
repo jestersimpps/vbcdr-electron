@@ -109,8 +109,23 @@ interface ProjectData {
   userEmail: string
 }
 
+interface ArchivedProjectInfo {
+  id: string
+  name: string
+  path: string
+  archivedAt: number
+}
+
+interface StatsProject {
+  id: string
+  name: string
+  path: string
+  archived: boolean
+}
+
 export function Statistics(): React.ReactElement {
   const projects = useProjectStore((s) => s.projects)
+  const loadProjects = useProjectStore((s) => s.loadProjects)
   const range = useStatsStore((s) => s.range)
   const gapMinutes = useStatsStore((s) => s.gapMinutes)
   const leadInMinutes = useStatsStore((s) => s.leadInMinutes)
@@ -129,6 +144,36 @@ export function Statistics(): React.ReactElement {
   const [data, setData] = useState<ProjectData[]>([])
   const [activity, setActivity] = useState<ActivitySessionInput[]>([])
   const [loading, setLoading] = useState(false)
+  const [archivedProjects, setArchivedProjects] = useState<ArchivedProjectInfo[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async (): Promise<void> => {
+      const rows = (await window.api.projects.listArchived()) as ArchivedProjectInfo[]
+      if (!cancelled) setArchivedProjects(rows)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [projects])
+
+  const archivedIds = useMemo(() => new Set(archivedProjects.map((a) => a.id)), [archivedProjects])
+
+  const allStatsProjects = useMemo<StatsProject[]>(() => {
+    const out: StatsProject[] = projects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      path: p.path,
+      archived: false
+    }))
+    const activeIds = new Set(projects.map((p) => p.id))
+    for (const a of archivedProjects) {
+      if (activeIds.has(a.id)) continue
+      out.push({ id: a.id, name: a.name, path: a.path, archived: true })
+    }
+    return out
+  }, [projects, archivedProjects])
 
   const [historyWindow, setHistoryWindow] = useState<HistoryWindow>('year')
   const [historyMetric, setHistoryMetric] = useState<HistoryMetric>('hours')
@@ -160,15 +205,25 @@ export function Statistics(): React.ReactElement {
       const sinceMs = rangeStartMs(range)
       const sinceIso = sinceMs === null ? null : new Date(sinceMs).toISOString()
       const results = await Promise.all(
-        projects.map(async (p) => {
-          const isRepo = await window.api.git.isRepo(p.path)
-          if (!isRepo) return null
-          const [commits, languages, userEmail] = await Promise.all([
-            window.api.git.commitsSince(p.path, sinceIso),
-            window.api.git.languageTally(p.path),
-            window.api.git.userEmail(p.path)
-          ])
-          return { projectId: p.id, projectName: p.name, commits, languages, userEmail }
+        allStatsProjects.map(async (p) => {
+          try {
+            const isRepo = await window.api.git.isRepo(p.path)
+            if (!isRepo) return null
+            const [commits, languages, userEmail] = await Promise.all([
+              window.api.git.commitsSince(p.path, sinceIso),
+              window.api.git.languageTally(p.path),
+              window.api.git.userEmail(p.path)
+            ])
+            return {
+              projectId: p.id,
+              projectName: p.archived ? `${p.name} (archived)` : p.name,
+              commits,
+              languages,
+              userEmail
+            }
+          } catch {
+            return null
+          }
         })
       )
       if (cancelled) return
@@ -179,7 +234,7 @@ export function Statistics(): React.ReactElement {
     return () => {
       cancelled = true
     }
-  }, [projects, range])
+  }, [allStatsProjects, range])
 
   useEffect(() => {
     if (source === 'commits') {
@@ -198,21 +253,30 @@ export function Statistics(): React.ReactElement {
     return () => {
       cancelled = true
     }
-  }, [range, source, idleMinutes, projects])
+  }, [range, source, idleMinutes, allStatsProjects])
 
   useEffect(() => {
     let cancelled = false
     const load = async (): Promise<void> => {
       const sinceIso = new Date(currentHistoryRange.start).toISOString()
       const results = await Promise.all(
-        projects.map(async (p) => {
-          const isRepo = await window.api.git.isRepo(p.path)
-          if (!isRepo) return null
-          const [commits, userEmail] = await Promise.all([
-            window.api.git.commitsSince(p.path, sinceIso) as Promise<StatsCommit[]>,
-            window.api.git.userEmail(p.path) as Promise<string>
-          ])
-          return { projectId: p.id, projectName: p.name, commits, userEmail }
+        allStatsProjects.map(async (p) => {
+          try {
+            const isRepo = await window.api.git.isRepo(p.path)
+            if (!isRepo) return null
+            const [commits, userEmail] = await Promise.all([
+              window.api.git.commitsSince(p.path, sinceIso) as Promise<StatsCommit[]>,
+              window.api.git.userEmail(p.path) as Promise<string>
+            ])
+            return {
+              projectId: p.id,
+              projectName: p.archived ? `${p.name} (archived)` : p.name,
+              commits,
+              userEmail
+            }
+          } catch {
+            return null
+          }
         })
       )
       if (cancelled) return
@@ -229,7 +293,7 @@ export function Statistics(): React.ReactElement {
     return () => {
       cancelled = true
     }
-  }, [projects, currentHistoryRange.start, includeAllAuthors])
+  }, [allStatsProjects, currentHistoryRange.start, includeAllAuthors])
 
   useEffect(() => {
     if (source === 'commits') {
@@ -247,7 +311,7 @@ export function Statistics(): React.ReactElement {
     return () => {
       cancelled = true
     }
-  }, [currentHistoryRange.start, source, idleMinutes, projects])
+  }, [currentHistoryRange.start, source, idleMinutes, allStatsProjects])
 
   const colorForProject = useMemo(() => {
     const map: Record<string, string> = {}
@@ -260,12 +324,12 @@ export function Statistics(): React.ReactElement {
 
   const colorForAnyProject = useMemo(() => {
     const map: Record<string, string> = {}
-    const sorted = projects.map((p) => p.id).sort()
+    const sorted = allStatsProjects.map((p) => p.id).sort()
     sorted.forEach((id, i) => {
       map[id] = palette.colors[i % palette.colors.length]
     })
     return map
-  }, [projects, palette])
+  }, [allStatsProjects, palette])
 
   const filteredCommits = useMemo<ProjectCommits[]>(() => {
     return data.map((d) => ({
@@ -279,9 +343,9 @@ export function Statistics(): React.ReactElement {
 
   const projectNameById = useMemo<Record<string, string>>(() => {
     const map: Record<string, string> = {}
-    for (const p of projects) map[p.id] = p.name
+    for (const p of allStatsProjects) map[p.id] = p.archived ? `${p.name} (archived)` : p.name
     return map
-  }, [projects])
+  }, [allStatsProjects])
 
   const sessions = useMemo<Session[]>(() => {
     const commitSessions = buildSessions(filteredCommits, gapMinutes, leadInMinutes)
@@ -362,10 +426,10 @@ export function Statistics(): React.ReactElement {
   }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, source])
 
   useEffect(() => {
-    if (historyProjectId && !projects.some((p) => p.id === historyProjectId)) {
+    if (historyProjectId && !allStatsProjects.some((p) => p.id === historyProjectId)) {
       setHistoryProjectId(null)
     }
-  }, [projects, historyProjectId])
+  }, [allStatsProjects, historyProjectId])
 
   const historySessions = useMemo<Session[]>(() => {
     const commitSessions = buildSessions(historyCommits, gapMinutes, leadInMinutes)
@@ -647,7 +711,7 @@ export function Statistics(): React.ReactElement {
                 colorForProject={colorForAnyProject}
                 projectId={historyProjectId}
                 setProjectId={setHistoryProjectId}
-                projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+                projects={allStatsProjects.map((p) => ({ id: p.id, name: p.archived ? `${p.name} (archived)` : p.name }))}
                 fromMs={historyFromMs}
                 setFromMs={setHistoryFromMs}
                 toMs={historyToMs}
@@ -750,6 +814,46 @@ export function Statistics(): React.ReactElement {
           )}
         </div>
         </Section>
+
+        {archivedProjects.length > 0 && (
+          <Section title="Archived projects">
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+              <div className="space-y-2">
+                {archivedProjects.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between text-xs">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium text-zinc-300">{a.name}</div>
+                      <div className="truncate text-[10px] text-zinc-500" title={a.path}>{a.path}</div>
+                    </div>
+                    <div className="flex shrink-0 gap-1.5">
+                      <button
+                        onClick={async () => {
+                          await window.api.projects.unarchive(a.id)
+                          await loadProjects()
+                          const rows = (await window.api.projects.listArchived()) as ArchivedProjectInfo[]
+                          setArchivedProjects(rows)
+                        }}
+                        className="rounded border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
+                      >
+                        Unarchive
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await window.api.projects.deleteArchived(a.id)
+                          const rows = (await window.api.projects.listArchived()) as ArchivedProjectInfo[]
+                          setArchivedProjects(rows)
+                        }}
+                        className="rounded border border-zinc-800 px-2 py-0.5 text-[10px] text-zinc-500 hover:border-red-700 hover:text-red-400"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Section>
+        )}
       </div>
     </div>
   )

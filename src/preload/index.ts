@@ -8,6 +8,8 @@ const api = {
     listArchived: () => ipcRenderer.invoke('projects:listArchived'),
     add: () => ipcRenderer.invoke('projects:add'),
     remove: (id: string) => ipcRenderer.invoke('projects:remove', id),
+    unarchive: (id: string) => ipcRenderer.invoke('projects:unarchive', id),
+    deleteArchived: (id: string) => ipcRenderer.invoke('projects:deleteArchived', id),
     reorder: (orderedIds: string[]) => ipcRenderer.invoke('projects:reorder', orderedIds)
   },
 

@@ -75,6 +75,37 @@ export function registerProjectHandlers(): void {
     return store.get('projectArchive')
   })
 
+  ipcMain.handle('projects:unarchive', (_event, id: string): Project | null => {
+    const archive = store.get('projectArchive')
+    const archived = archive.find((a) => a.id === id)
+    if (!archived) return null
+
+    const projects = store.get('projects')
+    if (projects.find((p) => p.id === id || p.path === archived.path)) {
+      store.set('projectArchive', archive.filter((a) => a.id !== id))
+      return projects.find((p) => p.id === id || p.path === archived.path) ?? null
+    }
+
+    const project: Project = {
+      id: archived.id,
+      name: archived.name,
+      path: archived.path,
+      lastOpened: Date.now()
+    }
+    projects.push(project)
+    store.set('projects', projects)
+    store.set('projectArchive', archive.filter((a) => a.id !== id))
+    return project
+  })
+
+  ipcMain.handle('projects:deleteArchived', (_event, id: string): boolean => {
+    const archive = store.get('projectArchive')
+    store.set('projectArchive', archive.filter((a) => a.id !== id))
+    clearProjectTabs(id)
+    clearProjectCredentials(id)
+    return true
+  })
+
   ipcMain.handle('projects:reorder', (_event, orderedIds: string[]): boolean => {
     const projects = store.get('projects')
     const byId = new Map(projects.map((p) => [p.id, p]))
