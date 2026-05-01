@@ -21,17 +21,7 @@ The editor is still there when you need to peek at something, but it's intention
 
 ![Browser preview, devtools, git graph, LLM coding terminal, and dev terminals](docs/screenshot-browser.png)
 
-![Token velocity dashboard with per-project history](docs/screenshot-tokens.png)
-
 ![Sortable projects analytics table with active days and totals](docs/screenshot-projects.png)
-
-![Skills marketplace with per-scope install buttons](docs/screenshot-skills.png)
-
-![Custom commands editor scoped per project or globally](docs/screenshot-commands.png)
-
-![Inline diff overlay after each terminal command](docs/screenshot-diff.png)
-
-![Built-in editor with syntax highlighting and live activity feed](docs/screenshot-analytics.png)
 
 ## Features
 
