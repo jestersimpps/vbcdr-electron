@@ -105,17 +105,14 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
     if (!el) return
 
     let entry = terminalsMap.get(tabId)
-    let isReconnect = false
 
-    if (entry && !document.body.contains(entry.terminal.element)) {
-      entry.onIncomingData = undefined
-      const staleTimer = bufferReadTimers.get(tabId)
-      if (staleTimer) clearTimeout(staleTimer)
-      bufferReadTimers.delete(tabId)
-      try { entry.terminal.dispose() } catch { /* WebGL addon may throw */ }
-      terminalsMap.delete(tabId)
-      entry = undefined
-      isReconnect = true
+    if (entry) {
+      const xtermEl = entry.terminal.element
+      if (xtermEl && xtermEl.parentElement !== el) {
+        try { entry.terminal.open(el) } catch { /* re-open may throw if element was disposed */ }
+        try { entry.fitAddon.fit() } catch { /* container may not be sized yet */ }
+        try { entry.terminal.refresh(0, entry.terminal.rows - 1) } catch { /* disposed */ }
+      }
     }
 
     if (!entry) {
@@ -296,15 +293,11 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         fitAddon.fit()
         terminal.scrollToBottom()
         terminal.focus()
-        if (isReconnect) {
-          window.api.terminal.resize(tabId, terminal.cols, terminal.rows)
-        } else {
-          window.api.terminal.create(tabId, projectId, cwd, terminal.cols, terminal.rows)
-          if (initialCommand) {
-            setTimeout(() => {
-              window.api.terminal.write(tabId, initialCommand + '\n')
-            }, 500)
-          }
+        window.api.terminal.create(tabId, projectId, cwd, terminal.cols, terminal.rows)
+        if (initialCommand) {
+          setTimeout(() => {
+            window.api.terminal.write(tabId, initialCommand + '\n')
+          }, 500)
         }
       }
 
