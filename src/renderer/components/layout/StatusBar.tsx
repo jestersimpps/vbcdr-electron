@@ -5,7 +5,6 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { applyBackgroundTransparency } from '@/components/terminal/TerminalInstance'
 import { ThemePicker } from '@/components/theme/ThemePicker'
 import { VariantToggle } from '@/components/theme/VariantToggle'
-import { BranchSwitcher } from '@/components/git/BranchSwitcher'
 
 export function StatusBar(): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
@@ -44,7 +43,6 @@ export function StatusBar(): React.ReactElement {
           </div>
         )}
       </div>
-      <BranchSwitcher />
 
       <div className="flex shrink-0 items-center gap-1">
         {activeProjectId && (
