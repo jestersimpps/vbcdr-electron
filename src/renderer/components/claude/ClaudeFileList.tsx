@@ -1,8 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useClaudeStore } from '@/stores/claude-store'
 import { useProjectStore } from '@/stores/project-store'
 import { ChevronRight, ChevronDown, File, Globe, Wand2, Terminal, FolderOpen, Webhook, RefreshCw, Trash2 } from 'lucide-react'
 import type { ClaudeSection, ClaudeFileEntry } from '@/models/types'
+import { FileTree } from '@/components/sidebar/FileTree'
+
+type ViewMode = 'curated' | 'tree'
 
 export type ClaudeScope = 'all' | 'project' | 'global'
 
@@ -98,15 +101,17 @@ export function ClaudeFileList({
 }): React.ReactElement {
   const activeProject = useProjectStore((s) => s.projects.find((p) => p.id === projectId))
   const files = useClaudeStore((s) => s.filesPerProject[projectId])
-  const { loadFiles } = useClaudeStore()
+  const activeClaudeFile = useClaudeStore((s) => s.activeFilePerProject[projectId] ?? null)
+  const { loadFiles, selectFile } = useClaudeStore()
+  const [view, setView] = useState<ViewMode>('curated')
 
   const effectivePath = scope === 'global' ? rootPath : activeProject?.path
 
   useEffect(() => {
-    if (effectivePath) {
+    if (effectivePath && view === 'curated') {
       loadFiles(projectId, effectivePath)
     }
-  }, [projectId, effectivePath])
+  }, [projectId, effectivePath, view])
 
   const handleRefresh = (): void => {
     if (effectivePath) loadFiles(projectId, effectivePath)
@@ -120,31 +125,60 @@ export function ClaudeFileList({
     )
   }
 
+  const tabBtn = (mode: ViewMode, label: string): React.ReactElement => (
+    <button
+      onClick={() => setView(mode)}
+      className={`flex-1 px-2 py-1 text-[11px] font-medium uppercase tracking-wide transition-colors ${
+        view === mode
+          ? 'bg-zinc-800 text-zinc-200'
+          : 'text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300'
+      }`}
+    >
+      {label}
+    </button>
+  )
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3 py-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Claude Config</span>
-        <button
-          onClick={handleRefresh}
-          className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-          title="Refresh"
-        >
-          <RefreshCw size={12} />
-        </button>
+      <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
+        {tabBtn('curated', 'Config')}
+        {tabBtn('tree', 'Files')}
       </div>
-      <div className="flex-1 overflow-y-auto p-1">
-        {SECTION_CONFIG.filter(({ key }) => isSectionInScope(key, scope)).map(({ key, label, Icon }) => (
-          <SectionGroup
-            key={key}
-            section={key}
-            label={label}
-            Icon={Icon}
-            files={(files ?? []).filter((f) => f.section === key)}
+      {view === 'curated' ? (
+        <>
+          <div className="flex items-center justify-end border-b border-zinc-800 bg-zinc-900/50 px-3 py-1">
+            <button
+              onClick={handleRefresh}
+              className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+              title="Refresh"
+            >
+              <RefreshCw size={12} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-1">
+            {SECTION_CONFIG.filter(({ key }) => isSectionInScope(key, scope)).map(({ key, label, Icon }) => (
+              <SectionGroup
+                key={key}
+                section={key}
+                label={label}
+                Icon={Icon}
+                files={(files ?? []).filter((f) => f.section === key)}
+                projectId={projectId}
+                projectPath={effectivePath}
+              />
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="flex-1 overflow-hidden">
+          <FileTree
             projectId={projectId}
-            projectPath={effectivePath}
+            rootOverride={scope === 'global' ? effectivePath : `${effectivePath}/.claude`}
+            onFileClick={(path) => selectFile(projectId, path)}
+            externalActiveFilePath={activeClaudeFile}
           />
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

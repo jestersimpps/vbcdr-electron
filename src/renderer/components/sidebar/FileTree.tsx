@@ -223,27 +223,34 @@ function TreeNode({
   node,
   depth,
   projectId,
+  treeStateKey,
   cwd,
   onContextMenu,
   inlineInput,
   renamingPath,
   onRenameSubmit,
-  onRenameCancel
+  onRenameCancel,
+  onFileClick,
+  externalActiveFilePath
 }: {
   node: FileNode
   depth: number
   projectId: string
+  treeStateKey: string
   cwd: string
   onContextMenu: (e: React.MouseEvent, node: FileNode) => void
   inlineInput: InlineInputState | null
   renamingPath: string | null
   onRenameSubmit: (newName: string) => void
   onRenameCancel: () => void
+  onFileClick?: (path: string) => void
+  externalActiveFilePath?: string | null
 }): React.ReactElement {
-  const expandedPaths = useFileTreeStore((s) => s.expandedPerProject[projectId])
+  const expandedPaths = useFileTreeStore((s) => s.expandedPerProject[treeStateKey])
   const { toggleExpanded } = useFileTreeStore()
   const { openFile } = useEditorStore()
-  const activeFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
+  const editorActiveFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
+  const activeFilePath = externalActiveFilePath !== undefined ? externalActiveFilePath : editorActiveFilePath
   const gitStatus = useGitStore((s) => s.statusPerProject[projectId])
   const isExpanded = expandedPaths?.has(node.path) ?? false
   const fileStatus = gitStatus?.[node.path]
@@ -271,7 +278,11 @@ function TreeNode({
           isActive ? 'bg-zinc-800/70' : ''
         } ${statusColor || (isActive ? 'text-zinc-200' : 'text-zinc-400')}`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
-        onClick={() => openFile(projectId, node.path, node.name, cwd, fileStatus)}
+        onClick={() =>
+          onFileClick
+            ? onFileClick(node.path)
+            : openFile(projectId, node.path, node.name, cwd, fileStatus)
+        }
         onContextMenu={(e) => onContextMenu(e, node)}
       >
         <File size={14} className="shrink-0 text-zinc-600" />
@@ -292,7 +303,7 @@ function TreeNode({
       <div
         className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-sm ${ignoredStyle} ${statusColor || 'text-zinc-300'} hover:bg-zinc-800/50`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
-        onClick={() => toggleExpanded(projectId, node.path)}
+        onClick={() => toggleExpanded(treeStateKey, node.path)}
         onContextMenu={(e) => onContextMenu(e, node)}
       >
         {isExpanded ? (
@@ -319,12 +330,15 @@ function TreeNode({
               node={child}
               depth={depth + 1}
               projectId={projectId}
+              treeStateKey={treeStateKey}
               cwd={cwd}
               onContextMenu={onContextMenu}
               inlineInput={inlineInput}
               renamingPath={renamingPath}
               onRenameSubmit={onRenameSubmit}
               onRenameCancel={onRenameCancel}
+              onFileClick={onFileClick}
+              externalActiveFilePath={externalActiveFilePath}
             />
           ))}
         </>
@@ -438,14 +452,27 @@ function FileSearch({ projectId, cwd }: { projectId: string; cwd: string }): Rea
   )
 }
 
-export function FileTree({ projectId }: { projectId: string }): React.ReactElement {
+export function FileTree({
+  projectId,
+  rootOverride,
+  onFileClick,
+  externalActiveFilePath,
+}: {
+  projectId: string
+  rootOverride?: string
+  onFileClick?: (path: string) => void
+  externalActiveFilePath?: string | null
+}): React.ReactElement {
   const activeProject = useProjectStore((s) =>
     s.projects.find((p) => p.id === projectId)
   )
-  const tree = useFileTreeStore((s) => s.treePerProject[projectId])
-  const showIgnored = useFileTreeStore((s) => s.showIgnoredPerProject[projectId] ?? false)
+  const treeKey = rootOverride ?? projectId
+  const tree = useFileTreeStore((s) => s.treePerProject[treeKey])
+  const showIgnored = useFileTreeStore((s) => s.showIgnoredPerProject[treeKey] ?? false)
   const { loadTree, setTree, toggleShowIgnored } = useFileTreeStore()
   const { loadStatus } = useGitStore()
+  const rootPath = rootOverride ?? activeProject?.path
+  const isOverride = Boolean(rootOverride)
   const { openDefaultFile, closeFile } = useEditorStore()
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null)
@@ -456,18 +483,18 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
   const { toggleExpanded } = useFileTreeStore()
 
   useEffect(() => {
-    if (!activeProject) return
+    if (!rootPath) return
     if (!tree) {
-      loadTree(projectId, activeProject.path, showIgnored)
+      loadTree(treeKey, rootPath, showIgnored)
     }
-  }, [projectId])
+  }, [treeKey])
 
   useEffect(() => {
-    if (tree && !defaultFileOpened.current) {
+    if (tree && !defaultFileOpened.current && !isOverride) {
       defaultFileOpened.current = true
       openDefaultFile(projectId, tree)
     }
-  }, [tree, projectId])
+  }, [tree, projectId, isOverride])
 
   const handleContextMenu = (e: React.MouseEvent, node: FileNode): void => {
     e.preventDefault()
@@ -486,9 +513,9 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
   }
 
   const confirmDelete = async (): Promise<void> => {
-    if (!deleteConfirm || !activeProject) return
+    if (!deleteConfirm || !rootPath) return
     try {
-      closeFile(projectId, deleteConfirm.path)
+      if (!isOverride) closeFile(projectId, deleteConfirm.path)
       await window.api.fs.deleteFile(deleteConfirm.path)
     } catch (err) {
       console.error('Failed to delete:', err)
@@ -497,12 +524,12 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
   }
 
   const handleNewFile = (parentPath: string): void => {
-    toggleExpanded(projectId, parentPath)
+    toggleExpanded(treeKey, parentPath)
     setInlineInput({ parentPath, type: 'file' })
   }
 
   const handleNewFolder = (parentPath: string): void => {
-    toggleExpanded(projectId, parentPath)
+    toggleExpanded(treeKey, parentPath)
     setInlineInput({ parentPath, type: 'folder' })
   }
 
@@ -519,7 +546,7 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
   }
 
   const handleInlineSubmit = async (value: string): Promise<void> => {
-    if (!inlineInput || !activeProject) return
+    if (!inlineInput || !rootPath) return
     const fullPath = `${inlineInput.parentPath}/${value}`
     try {
       if (inlineInput.type === 'folder') {
@@ -534,11 +561,11 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
   }
 
   const handleRenameSubmit = async (newName: string): Promise<void> => {
-    if (!renamingPath || !activeProject) return
+    if (!renamingPath || !rootPath) return
     const dir = renamingPath.replace(/\/[^/]+$/, '')
     const newPath = `${dir}/${newName}`
     try {
-      closeFile(projectId, renamingPath)
+      if (!isOverride) closeFile(projectId, renamingPath)
       await window.api.fs.rename(renamingPath, newPath)
     } catch (err) {
       console.error('Failed to rename:', err)
@@ -546,7 +573,7 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
     setRenamingPath(null)
   }
 
-  if (!activeProject) {
+  if (!rootPath) {
     return (
       <div className="p-4 text-center text-xs text-zinc-600">Select a project to browse files</div>
     )
@@ -565,7 +592,7 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
             ×
           </button>
         </div>
-        <FileSearch projectId={projectId} cwd={activeProject.path} />
+        <FileSearch projectId={projectId} cwd={rootPath} />
       </div>
     )
   }
@@ -575,14 +602,16 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
   }
 
   const handleRefresh = (): void => {
-    loadTree(projectId, activeProject.path)
-    loadStatus(projectId, activeProject.path)
+    loadTree(treeKey, rootPath)
+    if (!isOverride) loadStatus(projectId, rootPath)
   }
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3 py-1.5">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Explorer</span>
+        <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+          {isOverride ? 'Claude config' : 'Explorer'}
+        </span>
         <div className="flex items-center gap-0.5">
           <button
             onClick={() => setShowSearch(true)}
@@ -592,21 +621,21 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
             <Search size={12} />
           </button>
           <button
-            onClick={() => handleNewFile(activeProject.path)}
+            onClick={() => handleNewFile(rootPath)}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
             title="New file"
           >
             <FilePlus size={12} />
           </button>
           <button
-            onClick={() => handleNewFolder(activeProject.path)}
+            onClick={() => handleNewFolder(rootPath)}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
             title="New folder"
           >
             <FolderPlus size={12} />
           </button>
           <button
-            onClick={() => toggleShowIgnored(projectId, activeProject.path)}
+            onClick={() => toggleShowIgnored(treeKey, rootPath)}
             className={`rounded p-1 hover:bg-zinc-800 ${showIgnored ? 'text-zinc-300' : 'text-zinc-500 hover:text-zinc-300'}`}
             title={showIgnored ? 'Hide ignored files' : 'Show ignored files'}
           >
@@ -622,7 +651,7 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-1">
-        {inlineInput && inlineInput.parentPath === activeProject.path && (
+        {inlineInput && inlineInput.parentPath === rootPath && (
           <InlineInput
             type={inlineInput.type}
             onSubmit={handleInlineSubmit}
@@ -636,12 +665,15 @@ export function FileTree({ projectId }: { projectId: string }): React.ReactEleme
             node={child}
             depth={0}
             projectId={projectId}
-            cwd={activeProject.path}
+            treeStateKey={treeKey}
+            cwd={rootPath}
             onContextMenu={handleContextMenu}
             inlineInput={inlineInput}
             renamingPath={renamingPath}
             onRenameSubmit={renamingPath ? handleRenameSubmit : handleInlineSubmit}
             onRenameCancel={() => { setRenamingPath(null); setInlineInput(null) }}
+            onFileClick={onFileClick}
+            externalActiveFilePath={externalActiveFilePath}
           />
         ))}
       </div>

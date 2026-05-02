@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
-import { Search, Trash2, RefreshCw, Globe, FolderOpen, Wand2, Loader2, ExternalLink } from 'lucide-react'
+import { Search, Trash2, RefreshCw, Globe, FolderOpen, Loader2, ExternalLink } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { cn } from '@/lib/utils'
 
@@ -51,6 +51,9 @@ export function SkillsPanel({ projectId, scope = 'all' }: SkillsPanelProps): Rea
   const [results, setResults] = useState<SkillSearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [top, setTop] = useState<SkillSearchResult[]>([])
+  const [topLoading, setTopLoading] = useState(false)
+  const [topError, setTopError] = useState<string | null>(null)
 
   const [installed, setInstalled] = useState<InstalledSkill[]>([])
   const [busyKey, setBusyKey] = useState<string | null>(null)
@@ -67,6 +70,26 @@ export function SkillsPanel({ projectId, scope = 'all' }: SkillsPanelProps): Rea
   useEffect(() => {
     refreshInstalled()
   }, [refreshInstalled])
+
+  useEffect(() => {
+    let cancelled = false
+    setTopLoading(true)
+    setTopError(null)
+    window.api.skills
+      .top()
+      .then((list: SkillSearchResult[]) => {
+        if (!cancelled) setTop(list)
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setTopError(err instanceof Error ? err.message : String(err))
+      })
+      .finally(() => {
+        if (!cancelled) setTopLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const off = window.api.skills.onOutput((chunk) => {
@@ -205,114 +228,58 @@ export function SkillsPanel({ projectId, scope = 'all' }: SkillsPanelProps): Rea
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto">
             {query.trim().length < 2 && (
-              <div className="flex h-full flex-col items-center justify-center gap-2 text-zinc-600">
-                <Wand2 size={24} />
-                <p className="text-xs">Type at least 2 characters to search skills.sh</p>
-                <a
-                  href="https://skills.sh"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-300"
-                >
-                  Browse on skills.sh <ExternalLink size={10} />
-                </a>
-              </div>
+              <>
+                <div className="flex items-center justify-between px-3 py-1.5 text-[10px] uppercase tracking-wide text-zinc-500 border-b border-zinc-900">
+                  <span>Top on skills.sh</span>
+                  <a
+                    href="https://skills.sh"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-0.5 hover:text-zinc-300"
+                  >
+                    Browse <ExternalLink size={9} />
+                  </a>
+                </div>
+                {topLoading && top.length === 0 && (
+                  <div className="flex items-center justify-center gap-2 p-6 text-xs text-zinc-600">
+                    <Loader2 size={12} className="animate-spin" /> Loading top skills…
+                  </div>
+                )}
+                {topError && top.length === 0 && (
+                  <div className="p-3 text-xs text-red-400">Error: {topError}</div>
+                )}
+                {top.map((r) => (
+                  <SkillRow
+                    key={r.id}
+                    skill={r}
+                    busyKey={busyKey}
+                    installedNames={installedNames}
+                    showProject={showProject}
+                    showGlobal={showGlobal}
+                    projectPath={projectPath}
+                    onInstall={handleInstall}
+                  />
+                ))}
+              </>
             )}
-            {searchError && (
+            {searchError && query.trim().length >= 2 && (
               <div className="p-3 text-xs text-red-400">Error: {searchError}</div>
             )}
             {!searchError && query.trim().length >= 2 && !searching && results.length === 0 && (
               <div className="p-3 text-xs text-zinc-500">No skills found for &ldquo;{query}&rdquo;</div>
             )}
-            {results.map((r) => {
-              const projectKey = `project:${r.source}:${r.skillId}`
-              const globalKey = `global:${r.source}:${r.skillId}`
-              const projectBusy = busyKey === projectKey
-              const globalBusy = busyKey === globalKey
-              const projectInstalled = installedNames.has(`project:${r.skillId}`)
-              const globalInstalled = installedNames.has(`global:${r.skillId}`)
-              return (
-                <div
-                  key={r.id}
-                  className="flex items-start gap-2 border-b border-zinc-900 px-3 py-2 hover:bg-zinc-900/50"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium text-zinc-200">{r.name}</span>
-                      <span className="shrink-0 text-[10px] text-zinc-600">
-                        {formatInstalls(r.installs)} installs
-                      </span>
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-2 text-[11px] text-zinc-500">
-                      <span className="truncate">{r.source}</span>
-                      <a
-                        href={`https://skills.sh/${r.source}/${r.skillId}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="shrink-0 inline-flex items-center gap-0.5 hover:text-zinc-300"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink size={10} />
-                      </a>
-                    </div>
-                  </div>
-                  <div className="shrink-0 flex items-center gap-1">
-                    {showProject && (
-                      <button
-                        onClick={() => handleInstall(r, 'project')}
-                        disabled={projectBusy || !projectPath}
-                        className={cn(
-                          'inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors',
-                          projectInstalled
-                            ? 'border border-emerald-900 bg-emerald-950 text-emerald-400 hover:bg-emerald-900/50'
-                            : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
-                          (projectBusy || !projectPath) && 'opacity-60 cursor-not-allowed'
-                        )}
-                        title={
-                          !projectPath
-                            ? 'No project selected'
-                            : projectInstalled
-                              ? 'Already installed in project — click to reinstall'
-                              : `Install to ${projectPath}/.claude/skills`
-                        }
-                      >
-                        {projectBusy ? (
-                          <Loader2 size={10} className="animate-spin" />
-                        ) : (
-                          <FolderOpen size={10} />
-                        )}
-                        Project
-                      </button>
-                    )}
-                    {showGlobal && (
-                      <button
-                        onClick={() => handleInstall(r, 'global')}
-                        disabled={globalBusy}
-                        className={cn(
-                          'inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors',
-                          globalInstalled
-                            ? 'border border-emerald-900 bg-emerald-950 text-emerald-400 hover:bg-emerald-900/50'
-                            : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
-                          globalBusy && 'opacity-60 cursor-not-allowed'
-                        )}
-                        title={
-                          globalInstalled
-                            ? 'Already installed globally — click to reinstall'
-                            : 'Install to ~/.claude/skills'
-                        }
-                      >
-                        {globalBusy ? (
-                          <Loader2 size={10} className="animate-spin" />
-                        ) : (
-                          <Globe size={10} />
-                        )}
-                        Global
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+            {query.trim().length >= 2 && results.map((r) => (
+              <SkillRow
+                key={r.id}
+                skill={r}
+                busyKey={busyKey}
+                installedNames={installedNames}
+                showProject={showProject}
+                showGlobal={showGlobal}
+                projectPath={projectPath}
+                onInstall={handleInstall}
+              />
+            ))}
           </div>
           {output && (
             <div className="border-t border-zinc-800 bg-black">
@@ -336,6 +303,103 @@ export function SkillsPanel({ projectId, scope = 'all' }: SkillsPanelProps): Rea
         </div>
       </Panel>
     </PanelGroup>
+  )
+}
+
+interface SkillRowProps {
+  skill: SkillSearchResult
+  busyKey: string | null
+  installedNames: Set<string>
+  showProject: boolean
+  showGlobal: boolean
+  projectPath: string | null
+  onInstall: (skill: SkillSearchResult, scope: InstallTarget) => void
+}
+
+function SkillRow({
+  skill,
+  busyKey,
+  installedNames,
+  showProject,
+  showGlobal,
+  projectPath,
+  onInstall
+}: SkillRowProps): React.ReactElement {
+  const projectKey = `project:${skill.source}:${skill.skillId}`
+  const globalKey = `global:${skill.source}:${skill.skillId}`
+  const projectBusy = busyKey === projectKey
+  const globalBusy = busyKey === globalKey
+  const projectInstalled = installedNames.has(`project:${skill.skillId}`)
+  const globalInstalled = installedNames.has(`global:${skill.skillId}`)
+  return (
+    <div className="flex items-start gap-2 border-b border-zinc-900 px-3 py-2 hover:bg-zinc-900/50">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium text-zinc-200">{skill.name}</span>
+          <span className="shrink-0 text-[10px] text-zinc-600">
+            {formatInstalls(skill.installs)} installs
+          </span>
+        </div>
+        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-zinc-500">
+          <span className="truncate">{skill.source}</span>
+          <a
+            href={`https://skills.sh/${skill.source}/${skill.skillId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="shrink-0 inline-flex items-center gap-0.5 hover:text-zinc-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink size={10} />
+          </a>
+        </div>
+      </div>
+      <div className="shrink-0 flex items-center gap-1">
+        {showProject && (
+          <button
+            onClick={() => onInstall(skill, 'project')}
+            disabled={projectBusy || !projectPath}
+            className={cn(
+              'inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors',
+              projectInstalled
+                ? 'border border-emerald-900 bg-emerald-950 text-emerald-400 hover:bg-emerald-900/50'
+                : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
+              (projectBusy || !projectPath) && 'opacity-60 cursor-not-allowed'
+            )}
+            title={
+              !projectPath
+                ? 'No project selected'
+                : projectInstalled
+                  ? 'Already installed in project — click to reinstall'
+                  : `Install to ${projectPath}/.claude/skills`
+            }
+          >
+            {projectBusy ? <Loader2 size={10} className="animate-spin" /> : <FolderOpen size={10} />}
+            Project
+          </button>
+        )}
+        {showGlobal && (
+          <button
+            onClick={() => onInstall(skill, 'global')}
+            disabled={globalBusy}
+            className={cn(
+              'inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors',
+              globalInstalled
+                ? 'border border-emerald-900 bg-emerald-950 text-emerald-400 hover:bg-emerald-900/50'
+                : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
+              globalBusy && 'opacity-60 cursor-not-allowed'
+            )}
+            title={
+              globalInstalled
+                ? 'Already installed globally — click to reinstall'
+                : 'Install to ~/.claude/skills'
+            }
+          >
+            {globalBusy ? <Loader2 size={10} className="animate-spin" /> : <Globe size={10} />}
+            Global
+          </button>
+        )}
+      </div>
+    </div>
   )
 }
 

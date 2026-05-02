@@ -77,6 +77,57 @@ function readSkillDescription(skillDir: string): string | undefined {
   }
 }
 
+function parseInstallCount(raw: string): number {
+  const m = raw.trim().match(/^([\d.,]+)\s*([KMB]?)/i)
+  if (!m) return 0
+  const n = parseFloat(m[1].replace(/,/g, ''))
+  if (!isFinite(n)) return 0
+  const suffix = m[2].toUpperCase()
+  if (suffix === 'K') return Math.round(n * 1_000)
+  if (suffix === 'M') return Math.round(n * 1_000_000)
+  if (suffix === 'B') return Math.round(n * 1_000_000_000)
+  return Math.round(n)
+}
+
+const RESERVED_PATHS = new Set([
+  'trending', 'hot', 'about', 'docs', 'login', 'logout', 'signup', 'api', 'search',
+  'leaderboard', 'submit', 'dashboard', 'settings', 'privacy', 'terms', 'pricing',
+  'browse', 'new', 'all', 'latest', 'popular'
+])
+
+export function parseTopSkills(html: string, limit = 30): SkillSearchResult[] {
+  const out: SkillSearchResult[] = []
+  const seen = new Set<string>()
+  const anchorRe = /<a[^>]+href="\/([^"#?]+)"[^>]*>([\s\S]*?)<\/a>/gi
+  const installsRe = /([\d.,]+\s*[KMB]?)\s*installs?/i
+  let match: RegExpExecArray | null
+  const anchors: Array<{ path: string; index: number }> = []
+  while ((match = anchorRe.exec(html)) !== null) {
+    anchors.push({ path: match[1], index: match.index + match[0].length })
+  }
+  for (const { path: hrefPath, index } of anchors) {
+    const segments = hrefPath.split('/').filter(Boolean)
+    if (segments.length !== 3) continue
+    const [owner, repo, skillId] = segments
+    if (RESERVED_PATHS.has(owner)) continue
+    const id = `${owner}/${repo}/${skillId}`
+    if (seen.has(id)) continue
+    const window = html.slice(index, index + 600)
+    const installsMatch = window.match(installsRe)
+    if (!installsMatch) continue
+    seen.add(id)
+    out.push({
+      id,
+      skillId,
+      name: skillId,
+      installs: parseInstallCount(installsMatch[1]),
+      source: `${owner}/${repo}`
+    })
+    if (out.length >= limit) break
+  }
+  return out
+}
+
 function listInstalled(skillsDir: string, scope: 'project' | 'global'): InstalledSkill[] {
   const out: InstalledSkill[] = []
   if (!fs.existsSync(skillsDir)) return out
@@ -144,6 +195,13 @@ export function registerSkillsHandlers(): void {
     const r = await fetch(url)
     if (!r.ok) throw new Error(`skills.sh search failed: ${r.status}`)
     return (await r.json()) as SkillSearchResponse
+  })
+
+  ipcMain.handle('skills:top', async (): Promise<SkillSearchResult[]> => {
+    const r = await fetch('https://skills.sh/')
+    if (!r.ok) throw new Error(`skills.sh top failed: ${r.status}`)
+    const html = await r.text()
+    return parseTopSkills(html)
   })
 
   ipcMain.handle(

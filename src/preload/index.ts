@@ -143,6 +143,7 @@ const api = {
 
   skills: {
     search: (query: string) => ipcRenderer.invoke('skills:search', query),
+    top: () => ipcRenderer.invoke('skills:top'),
     list: (projectPath: string | null) => ipcRenderer.invoke('skills:list', projectPath),
     install: (repo: string, skillId: string, scope: 'project' | 'global', projectPath: string | null) =>
       ipcRenderer.invoke('skills:install', repo, skillId, scope, projectPath),
