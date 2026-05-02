@@ -12,6 +12,7 @@ interface ProjectStore {
   settingsActive: boolean
   claudePageActive: boolean
   skillsPageActive: boolean
+  terminalsPageActive: boolean
   loadProjects: () => Promise<void>
   addProject: () => Promise<Project | null>
   removeProject: (id: string) => Promise<void>
@@ -23,6 +24,7 @@ interface ProjectStore {
   showSettings: () => void
   showClaudePage: () => void
   showSkillsPage: () => void
+  showTerminalsPage: () => void
   activeProject: () => Project | undefined
 }
 
@@ -32,7 +34,8 @@ const PAGES_OFF = {
   usageActive: false,
   settingsActive: false,
   claudePageActive: false,
-  skillsPageActive: false
+  skillsPageActive: false,
+  terminalsPageActive: false
 } as const
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -44,6 +47,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   settingsActive: false,
   claudePageActive: false,
   skillsPageActive: false,
+  terminalsPageActive: false,
 
   loadProjects: async () => {
     const projects = await window.api.projects.list()
@@ -112,6 +116,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   showSkillsPage: () => {
     set({ ...PAGES_OFF, skillsPageActive: true })
+  },
+
+  showTerminalsPage: () => {
+    set({ ...PAGES_OFF, terminalsPageActive: true })
   },
 
   activeProject: () => {

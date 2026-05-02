@@ -32,6 +32,7 @@ import { Dashboard } from '@/components/dashboard/Dashboard'
 import { Statistics } from '@/components/statistics/Statistics'
 import { Usage } from '@/components/usage/Usage'
 import { Settings } from '@/components/settings/Settings'
+import { TerminalsPage } from '@/components/terminal/TerminalsPage'
 import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, Settings as SettingsIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
@@ -110,9 +111,9 @@ function SortableProjectTab({
 }
 
 export function AppLayoutGrid(): React.ReactElement {
-  const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, claudePageActive, skillsPageActive, loadProjects, addProject, removeProject, setActiveProject, reorderProjects, showDashboard, showStatistics, showUsage, showSettings, showClaudePage, showSkillsPage } =
+  const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, claudePageActive, skillsPageActive, terminalsPageActive, loadProjects, addProject, removeProject, setActiveProject, reorderProjects, showDashboard, showStatistics, showUsage, showSettings, showClaudePage, showSkillsPage, showTerminalsPage } =
     useProjectStore()
-  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive
+  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || terminalsPageActive
   const centerTab = useEditorStore(
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'terminals' : 'terminals')
   )
@@ -154,7 +155,7 @@ export function AppLayoutGrid(): React.ReactElement {
     const ro = new ResizeObserver(measure)
     ro.observe(containerRef.current)
     return () => ro.disconnect()
-  }, [dashboardActive, statisticsActive, usageActive, settingsActive, claudePageActive, skillsPageActive])
+  }, [dashboardActive, statisticsActive, usageActive, settingsActive, claudePageActive, skillsPageActive, terminalsPageActive])
 
   const handleStop = (newLayout: Layout[]): void => {
     saveLayout(projectId, newLayout)
@@ -378,6 +379,18 @@ export function AppLayoutGrid(): React.ReactElement {
             >
               <Wand2 size={18} />
             </button>
+            <button
+              onClick={showTerminalsPage}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                terminalsPageActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Terminals"
+            >
+              <TerminalSquare size={18} />
+            </button>
           </div>
           <button
             onClick={showSettings}
@@ -466,6 +479,11 @@ export function AppLayoutGrid(): React.ReactElement {
         {skillsPageActive && (
           <div className={cn('absolute inset-0 z-10 overflow-hidden', !backgroundImage && 'screen-gradient')}>
             <SkillsPage />
+          </div>
+        )}
+        {terminalsPageActive && (
+          <div className={cn('absolute inset-0 z-10 overflow-hidden', !backgroundImage && 'screen-gradient')}>
+            <TerminalsPage />
           </div>
         )}
         </div>
