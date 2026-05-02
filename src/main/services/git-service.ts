@@ -26,6 +26,20 @@ async function runGit(cwd: string, args: string[], timeout: number = 5000, maxBu
   return stdout.trim()
 }
 
+async function runGitWithAuth(cwd: string, args: string[], timeout: number = 30000, maxBuffer: number = 10 * 1024 * 1024): Promise<string> {
+  const { stdout } = await execFile('git', args, {
+    cwd,
+    encoding: 'utf-8',
+    timeout,
+    maxBuffer,
+    env: {
+      ...process.env,
+      GIT_TERMINAL_PROMPT: '0'
+    }
+  })
+  return stdout.trim()
+}
+
 export async function isGitRepo(cwd: string): Promise<boolean> {
   try {
     await runGit(cwd, ['rev-parse', '--is-inside-work-tree'])
@@ -254,7 +268,7 @@ export async function getConflicts(cwd: string): Promise<ConflictInfo[]> {
 
 export async function pull(cwd: string): Promise<string> {
   try {
-    return await runGit(cwd, ['pull'], 15000)
+    return await runGitWithAuth(cwd, ['pull'], 30000)
   } catch (err) {
     return (err as Error).message
   }
@@ -262,7 +276,7 @@ export async function pull(cwd: string): Promise<string> {
 
 export async function push(cwd: string): Promise<string> {
   try {
-    return await runGit(cwd, ['push'], 30000)
+    return await runGitWithAuth(cwd, ['push'], 30000)
   } catch (err) {
     return (err as Error).message
   }
@@ -270,7 +284,7 @@ export async function push(cwd: string): Promise<string> {
 
 export async function rebaseRemote(cwd: string): Promise<string> {
   try {
-    return await runGit(cwd, ['pull', '--rebase'], 15000)
+    return await runGitWithAuth(cwd, ['pull', '--rebase'], 30000)
   } catch (err) {
     return (err as Error).message
   }
