@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useDiffOverlayStore } from '@/stores/diff-overlay-store'
-import { GitBranch as GitBranchIcon, ArrowDown, GitMerge, RefreshCw, FileDiff } from 'lucide-react'
+import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, Loader2 } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 import { DiffOverlay } from '@/components/git/DiffOverlay'
 import { BranchSwitcher } from '@/components/git/BranchSwitcher'
@@ -196,32 +196,42 @@ function RefBadge({ label, index }: { label: string; index: number }): React.Rea
   )
 }
 
-export function GitTree(): React.ReactElement {
+interface GitTreeProps {
+  projectId?: string
+  cwd?: string
+}
+
+export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => {
     const id = s.activeProjectId
     return id ? s.projects.find((p) => p.id === id) : undefined
   })
 
-  const isRepo = useGitStore((s) => activeProjectId ? s.isRepoPerProject[activeProjectId] : false)
-  const commits = useGitStore((s) => activeProjectId ? s.commitsPerProject[activeProjectId] : undefined)
-  const drift = useGitStore((s) => activeProjectId ? s.driftPerProject[activeProjectId] : undefined)
+  const effectiveProjectId = projectId ?? activeProjectId
+  const effectivePath = cwd ?? activeProject?.path
+
+  const isRepo = useGitStore((s) => effectiveProjectId ? s.isRepoPerProject[effectiveProjectId] : false)
+  const commits = useGitStore((s) => effectiveProjectId ? s.commitsPerProject[effectiveProjectId] : undefined)
+  const drift = useGitStore((s) => effectiveProjectId ? s.driftPerProject[effectiveProjectId] : undefined)
   const pullAction = useGitStore((s) => s.pull)
+  const pushAction = useGitStore((s) => s.push)
+  const isPushing = useGitStore((s) => effectiveProjectId ? s.pushingPerProject[effectiveProjectId] ?? false : false)
   const rebaseAction = useGitStore((s) => s.rebaseRemote)
   const loadStatus = useGitStore((s) => s.loadStatus)
   const resetDismiss = useDiffOverlayStore((s) => s.resetDismiss)
   const { loadGitData } = useGitStore()
 
   const openDiffOverlayManually = async (): Promise<void> => {
-    if (!activeProject) return
-    resetDismiss(activeProject.id)
-    await loadStatus(activeProject.id, activeProject.path)
+    if (!effectiveProjectId || !effectivePath) return
+    resetDismiss(effectiveProjectId)
+    await loadStatus(effectiveProjectId, effectivePath)
   }
 
   useEffect(() => {
-    if (!activeProject) return
-    loadGitData(activeProject.id, activeProject.path)
-  }, [activeProject?.id])
+    if (!effectiveProjectId || !effectivePath) return
+    loadGitData(effectiveProjectId, effectivePath)
+  }, [effectiveProjectId, effectivePath])
 
   const graphRows = useMemo(() => (commits ? buildGraph(commits) : []), [commits])
   const graphWidth = useMemo(() => {
@@ -230,10 +240,10 @@ export function GitTree(): React.ReactElement {
     return maxCols * COL_WIDTH + 12
   }, [graphRows])
 
-  if (!activeProject) {
+  if (!effectiveProjectId || !effectivePath) {
     return (
       <div className="flex h-full items-center justify-center text-xs text-zinc-600">
-        Select a project
+        {projectId ? 'Loading…' : 'Select a project'}
       </div>
     )
   }
@@ -252,22 +262,38 @@ export function GitTree(): React.ReactElement {
         <div className="flex min-w-0 items-center gap-1.5">
           <GitBranchIcon size={13} className="shrink-0 text-zinc-500" />
           <span className="shrink-0 text-[11px] text-zinc-400">Git</span>
-          <BranchSwitcher />
-          {drift && drift.behind > 0 && !drift.diverged && activeProjectId && activeProject && (
+          <BranchSwitcher projectId={effectiveProjectId} cwd={effectivePath} />
+          {drift && drift.behind > 0 && !drift.diverged && (
             <button
-              onClick={() => pullAction(activeProjectId, activeProject.path)}
+              onClick={() => pullAction(effectiveProjectId, effectivePath)}
               className="flex shrink-0 items-center gap-0.5 rounded bg-blue-500/15 px-1 py-px text-[10px] font-medium text-blue-400 hover:bg-blue-500/25"
-              title={`${drift.behind} commit${drift.behind > 1 ? 's' : ''} behind ${drift.remoteBranch ?? 'remote'} — click to pull`}
+              title={`${drift.behind} commit${drift.behind > 1 ? 's' : ''} behind ${drift.remoteBranch ?? 'remote'}, click to pull`}
             >
               <ArrowDown size={9} />
               <span>{drift.behind}</span>
             </button>
           )}
-          {drift?.diverged && activeProjectId && activeProject && (
+          {drift && drift.ahead > 0 && !drift.diverged && (
             <button
-              onClick={() => rebaseAction(activeProjectId, activeProject.path)}
+              onClick={async () => {
+                const result = await pushAction(effectiveProjectId, effectivePath)
+                if (result && /error|rejected|failed/i.test(result)) {
+                  console.error('git push failed:', result)
+                }
+              }}
+              disabled={isPushing}
+              className="flex shrink-0 items-center gap-0.5 rounded bg-emerald-500/15 px-1 py-px text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/25 disabled:opacity-50"
+              title={`${drift.ahead} commit${drift.ahead > 1 ? 's' : ''} ahead of ${drift.remoteBranch ?? 'remote'}, click to push`}
+            >
+              {isPushing ? <Loader2 size={9} className="animate-spin" /> : <ArrowUp size={9} />}
+              <span>{drift.ahead}</span>
+            </button>
+          )}
+          {drift?.diverged && (
+            <button
+              onClick={() => rebaseAction(effectiveProjectId, effectivePath)}
               className="flex shrink-0 items-center gap-0.5 rounded bg-amber-500/15 px-1 py-px text-[10px] font-medium text-amber-400 hover:bg-amber-500/25"
-              title={`Diverged: ${drift.ahead} ahead, ${drift.behind} behind — click to rebase`}
+              title={`Diverged: ${drift.ahead} ahead, ${drift.behind} behind, click to rebase`}
             >
               <GitMerge size={9} />
               <span>{drift.ahead}/{drift.behind}</span>
@@ -275,6 +301,11 @@ export function GitTree(): React.ReactElement {
           )}
         </div>
         <div className="flex items-center gap-0.5">
+          {isClaudeView && (
+            <span className="mr-1 rounded bg-purple-500/15 px-1 py-px text-[9px] font-medium text-purple-400">
+              ~/.claude
+            </span>
+          )}
           <button
             onClick={openDiffOverlayManually}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
@@ -283,7 +314,7 @@ export function GitTree(): React.ReactElement {
             <FileDiff size={12} />
           </button>
           <button
-            onClick={() => activeProject && loadGitData(activeProject.id, activeProject.path)}
+            onClick={() => loadGitData(effectiveProjectId, effectivePath)}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
             title="Refresh"
           >
@@ -332,7 +363,7 @@ export function GitTree(): React.ReactElement {
         )}
       </div>
 
-      <DiffOverlay projectId={activeProject.id} cwd={activeProject.path} />
+      <DiffOverlay projectId={effectiveProjectId} cwd={effectivePath} />
     </div>
   )
 }

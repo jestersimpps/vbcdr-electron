@@ -10,6 +10,7 @@ import {
   getDiffSummary,
   getConflicts,
   pull,
+  push,
   rebaseRemote,
   commitAll,
   commitPaths,
@@ -80,6 +81,10 @@ export function registerGitHandlers(): void {
 
   ipcMain.handle('git:pull', async (_event, cwd: string): Promise<string> => {
     return pull(cwd)
+  })
+
+  ipcMain.handle('git:push', async (_event, cwd: string): Promise<string> => {
+    return push(cwd)
   })
 
   ipcMain.handle('git:rebase-remote', async (_event, cwd: string): Promise<string> => {

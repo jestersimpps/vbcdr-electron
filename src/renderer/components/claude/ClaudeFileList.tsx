@@ -4,6 +4,8 @@ import { useProjectStore } from '@/stores/project-store'
 import { ChevronRight, ChevronDown, File, Globe, Wand2, Terminal, FolderOpen, Webhook, RefreshCw, Trash2 } from 'lucide-react'
 import type { ClaudeSection, ClaudeFileEntry } from '@/models/types'
 
+export type ClaudeScope = 'all' | 'project' | 'global'
+
 const SECTION_CONFIG: { key: ClaudeSection; label: string; Icon: typeof Globe }[] = [
   { key: 'global', label: 'Global', Icon: Globe },
   { key: 'hooks', label: 'Hooks', Icon: Webhook },
@@ -11,6 +13,12 @@ const SECTION_CONFIG: { key: ClaudeSection; label: string; Icon: typeof Globe }[
   { key: 'commands', label: 'Commands', Icon: Terminal },
   { key: 'project', label: 'Project', Icon: FolderOpen }
 ]
+
+function isSectionInScope(section: ClaudeSection, scope: ClaudeScope): boolean {
+  if (scope === 'all') return true
+  if (scope === 'project') return section === 'project'
+  return section !== 'project'
+}
 
 function SectionGroup({
   section,
@@ -79,23 +87,37 @@ function SectionGroup({
   )
 }
 
-export function ClaudeFileList({ projectId }: { projectId: string }): React.ReactElement {
+export function ClaudeFileList({
+  projectId,
+  scope = 'all',
+  rootPath
+}: {
+  projectId: string
+  scope?: ClaudeScope
+  rootPath?: string
+}): React.ReactElement {
   const activeProject = useProjectStore((s) => s.projects.find((p) => p.id === projectId))
   const files = useClaudeStore((s) => s.filesPerProject[projectId])
   const { loadFiles } = useClaudeStore()
 
+  const effectivePath = scope === 'global' ? rootPath : activeProject?.path
+
   useEffect(() => {
-    if (activeProject) {
-      loadFiles(projectId, activeProject.path)
+    if (effectivePath) {
+      loadFiles(projectId, effectivePath)
     }
-  }, [projectId])
+  }, [projectId, effectivePath])
 
   const handleRefresh = (): void => {
-    if (activeProject) loadFiles(projectId, activeProject.path)
+    if (effectivePath) loadFiles(projectId, effectivePath)
   }
 
-  if (!activeProject) {
-    return <div className="p-4 text-center text-xs text-zinc-600">Select a project</div>
+  if (!effectivePath) {
+    return (
+      <div className="p-4 text-center text-xs text-zinc-600">
+        {scope === 'global' ? 'Loading…' : 'Select a project'}
+      </div>
+    )
   }
 
   return (
@@ -111,7 +133,7 @@ export function ClaudeFileList({ projectId }: { projectId: string }): React.Reac
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-1">
-        {SECTION_CONFIG.map(({ key, label, Icon }) => (
+        {SECTION_CONFIG.filter(({ key }) => isSectionInScope(key, scope)).map(({ key, label, Icon }) => (
           <SectionGroup
             key={key}
             section={key}
@@ -119,7 +141,7 @@ export function ClaudeFileList({ projectId }: { projectId: string }): React.Reac
             Icon={Icon}
             files={(files ?? []).filter((f) => f.section === key)}
             projectId={projectId}
-            projectPath={activeProject.path}
+            projectPath={effectivePath}
           />
         ))}
       </div>

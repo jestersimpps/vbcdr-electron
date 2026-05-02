@@ -38,46 +38,48 @@ describe('git-fetch-service', () => {
   })
 
   describe('registerProject / tick', () => {
-    it('starts the interval on first registration and ticks every 60s', async () => {
+    it('runs an immediate fetch on register and starts the 60s interval', async () => {
       const mod = await importFresh()
       mod.registerProject('p1', '/p')
 
-      vi.advanceTimersByTime(59_999)
-      expect(mockFetchRemote).not.toHaveBeenCalled()
-
-      vi.advanceTimersByTime(1)
       await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalledWith('/p'))
+      expect(mockFetchRemote).toHaveBeenCalledTimes(1)
+
+      vi.advanceTimersByTime(60_000)
+      await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalledTimes(2))
     })
 
     it('skips projects that are not git repos', async () => {
-      mockIsGitRepo.mockResolvedValueOnce(false)
+      mockIsGitRepo.mockResolvedValue(false)
       const mod = await importFresh()
       mod.registerProject('p1', '/p')
 
-      vi.advanceTimersByTime(60_000)
       await vi.waitFor(() => expect(mockIsGitRepo).toHaveBeenCalledWith('/p'))
       expect(mockFetchRemote).not.toHaveBeenCalled()
     })
 
-    it('broadcasts only when behind or diverged', async () => {
+    it('broadcasts when ahead, behind, or diverged', async () => {
       const mod = await importFresh()
       mod.registerProject('p1', '/p')
 
-      vi.advanceTimersByTime(60_000)
       await vi.waitFor(() => expect(mockGetBranchDrift).toHaveBeenCalledTimes(1))
       expect(mockSend).not.toHaveBeenCalled()
 
       mockGetBranchDrift.mockResolvedValueOnce({ ahead: 0, behind: 3, diverged: false, remoteBranch: 'origin/main' })
       vi.advanceTimersByTime(60_000)
       await vi.waitFor(() => expect(mockSend).toHaveBeenCalledWith('git:drift', 'p1', expect.objectContaining({ behind: 3 })))
+
+      mockSend.mockClear()
+      mockGetBranchDrift.mockResolvedValueOnce({ ahead: 5, behind: 0, diverged: false, remoteBranch: 'origin/main' })
+      vi.advanceTimersByTime(60_000)
+      await vi.waitFor(() => expect(mockSend).toHaveBeenCalledWith('git:drift', 'p1', expect.objectContaining({ ahead: 5 })))
     })
 
     it('swallows errors silently', async () => {
-      mockIsGitRepo.mockRejectedValueOnce(new Error('boom'))
+      mockIsGitRepo.mockRejectedValue(new Error('boom'))
       const mod = await importFresh()
       mod.registerProject('p1', '/p')
 
-      vi.advanceTimersByTime(60_000)
       await vi.waitFor(() => expect(mockIsGitRepo).toHaveBeenCalled())
       expect(mockFetchRemote).not.toHaveBeenCalled()
     })
@@ -87,20 +89,25 @@ describe('git-fetch-service', () => {
       mod.registerProject('p1', '/p1')
       mod.registerProject('p2', '/p2')
 
+      await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalledWith('/p1'))
+      await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalledWith('/p2'))
+      expect(mockFetchRemote).toHaveBeenCalledTimes(2)
+
       vi.advanceTimersByTime(60_000)
-      await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalledTimes(2))
-      expect(mockFetchRemote).toHaveBeenCalledWith('/p1')
-      expect(mockFetchRemote).toHaveBeenCalledWith('/p2')
+      await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalledTimes(4))
     })
   })
 
   describe('unregisterProject', () => {
-    it('removes the project so its tick is skipped', async () => {
+    it('removes the project so subsequent ticks skip it', async () => {
       const mod = await importFresh()
       mod.registerProject('p1', '/p1')
       mod.registerProject('p2', '/p2')
-      mod.unregisterProject('p1')
 
+      await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalledWith('/p1'))
+      mockFetchRemote.mockClear()
+
+      mod.unregisterProject('p1')
       vi.advanceTimersByTime(60_000)
       await vi.waitFor(() => expect(mockFetchRemote).toHaveBeenCalledWith('/p2'))
       expect(mockFetchRemote).not.toHaveBeenCalledWith('/p1')

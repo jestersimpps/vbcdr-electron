@@ -135,6 +135,10 @@ function isAllowedClaudePath(filePath: string, projectPath?: string): boolean {
 }
 
 export function registerClaudeConfigHandlers(): void {
+  ipcMain.handle('claude:home-path', (): string => {
+    return path.join(os.homedir(), '.claude')
+  })
+
   ipcMain.handle('claude:scan-files', (_event, projectPath: string): ClaudeFileEntry[] => {
     return scanClaudeFiles(projectPath)
   })

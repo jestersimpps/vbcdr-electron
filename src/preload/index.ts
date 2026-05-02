@@ -14,6 +14,7 @@ const api = {
   },
 
   claude: {
+    homePath: () => ipcRenderer.invoke('claude:home-path') as Promise<string>,
     scanFiles: (projectPath: string) => ipcRenderer.invoke('claude:scan-files', projectPath),
     readFile: (filePath: string, projectPath: string) => ipcRenderer.invoke('claude:read-file', filePath, projectPath),
     writeFile: (filePath: string, content: string, projectPath: string) => ipcRenderer.invoke('claude:write-file', filePath, content, projectPath),
@@ -86,6 +87,7 @@ const api = {
     unregisterFetch: (projectId: string) => ipcRenderer.invoke('git:unregister-fetch', projectId),
     fetchNow: (cwd: string) => ipcRenderer.invoke('git:fetch-now', cwd),
     pull: (cwd: string) => ipcRenderer.invoke('git:pull', cwd),
+    push: (cwd: string) => ipcRenderer.invoke('git:push', cwd),
     rebaseRemote: (cwd: string) => ipcRenderer.invoke('git:rebase-remote', cwd),
     commitAll: (cwd: string, message: string) => ipcRenderer.invoke('git:commit-all', cwd, message),
     commitPaths: (cwd: string, message: string, paths: string[]) => ipcRenderer.invoke('git:commit-paths', cwd, message, paths),

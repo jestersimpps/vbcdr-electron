@@ -10,6 +10,8 @@ interface ProjectStore {
   statisticsActive: boolean
   usageActive: boolean
   settingsActive: boolean
+  claudePageActive: boolean
+  skillsPageActive: boolean
   loadProjects: () => Promise<void>
   addProject: () => Promise<Project | null>
   removeProject: (id: string) => Promise<void>
@@ -19,8 +21,19 @@ interface ProjectStore {
   showStatistics: () => void
   showUsage: () => void
   showSettings: () => void
+  showClaudePage: () => void
+  showSkillsPage: () => void
   activeProject: () => Project | undefined
 }
+
+const PAGES_OFF = {
+  dashboardActive: false,
+  statisticsActive: false,
+  usageActive: false,
+  settingsActive: false,
+  claudePageActive: false,
+  skillsPageActive: false
+} as const
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
   projects: [],
@@ -29,6 +42,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   statisticsActive: false,
   usageActive: false,
   settingsActive: false,
+  claudePageActive: false,
+  skillsPageActive: false,
 
   loadProjects: async () => {
     const projects = await window.api.projects.list()
@@ -39,7 +54,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     const project = await window.api.projects.add()
     if (project) {
       await get().loadProjects()
-      set({ activeProjectId: project.id, dashboardActive: false, statisticsActive: false, usageActive: false, settingsActive: false })
+      set({ activeProjectId: project.id, ...PAGES_OFF })
     }
     return project
   },
@@ -53,7 +68,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     await window.api.projects.remove(id)
     const state = get()
     if (state.activeProjectId === id) {
-      set({ activeProjectId: null, dashboardActive: true, statisticsActive: false, usageActive: false, settingsActive: false })
+      set({ activeProjectId: null, ...PAGES_OFF, dashboardActive: true })
     }
     await state.loadProjects()
   },
@@ -72,23 +87,31 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   setActiveProject: (id: string) => {
-    set({ activeProjectId: id, dashboardActive: false, statisticsActive: false, usageActive: false, settingsActive: false })
+    set({ activeProjectId: id, ...PAGES_OFF })
   },
 
   showDashboard: () => {
-    set({ dashboardActive: true, statisticsActive: false, usageActive: false, settingsActive: false })
+    set({ ...PAGES_OFF, dashboardActive: true })
   },
 
   showStatistics: () => {
-    set({ statisticsActive: true, dashboardActive: false, usageActive: false, settingsActive: false })
+    set({ ...PAGES_OFF, statisticsActive: true })
   },
 
   showUsage: () => {
-    set({ usageActive: true, dashboardActive: false, statisticsActive: false, settingsActive: false })
+    set({ ...PAGES_OFF, usageActive: true })
   },
 
   showSettings: () => {
-    set({ settingsActive: true, dashboardActive: false, statisticsActive: false, usageActive: false })
+    set({ ...PAGES_OFF, settingsActive: true })
+  },
+
+  showClaudePage: () => {
+    set({ ...PAGES_OFF, claudePageActive: true })
+  },
+
+  showSkillsPage: () => {
+    set({ ...PAGES_OFF, skillsPageActive: true })
   },
 
   activeProject: () => {

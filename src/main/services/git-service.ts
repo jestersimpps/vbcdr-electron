@@ -260,6 +260,14 @@ export async function pull(cwd: string): Promise<string> {
   }
 }
 
+export async function push(cwd: string): Promise<string> {
+  try {
+    return await runGit(cwd, ['push'], 30000)
+  } catch (err) {
+    return (err as Error).message
+  }
+}
+
 export async function rebaseRemote(cwd: string): Promise<string> {
   try {
     return await runGit(cwd, ['pull', '--rebase'], 15000)

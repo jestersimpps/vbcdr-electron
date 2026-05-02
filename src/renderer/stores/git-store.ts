@@ -7,6 +7,7 @@ interface GitStore {
   isRepoPerProject: Record<string, boolean>
   statusPerProject: Record<string, Record<string, GitFileStatus>>
   switchingBranch: boolean
+  pushingPerProject: Record<string, boolean>
   driftPerProject: Record<string, BranchDriftInfo>
   driftDismissed: Record<string, boolean>
   conflictsPerProject: Record<string, ConflictInfo[]>
@@ -19,6 +20,7 @@ interface GitStore {
   loadConflicts: (projectId: string, cwd: string) => Promise<void>
   dismissConflicts: () => void
   pull: (projectId: string, cwd: string) => Promise<void>
+  push: (projectId: string, cwd: string) => Promise<string>
   rebaseRemote: (projectId: string, cwd: string) => Promise<void>
   initFetchListener: () => () => void
 }
@@ -29,6 +31,7 @@ export const useGitStore = create<GitStore>((set, get) => ({
   isRepoPerProject: {},
   statusPerProject: {},
   switchingBranch: false,
+  pushingPerProject: {},
   driftPerProject: {},
   driftDismissed: {},
   conflictsPerProject: {},
@@ -114,6 +117,24 @@ export const useGitStore = create<GitStore>((set, get) => ({
     })
     await get().loadGitData(projectId, cwd)
     await get().loadStatus(projectId, cwd)
+  },
+
+  push: async (projectId: string, cwd: string) => {
+    set((s) => ({ pushingPerProject: { ...s.pushingPerProject, [projectId]: true } }))
+    try {
+      const result = await window.api.git.push(cwd)
+      set((s) => {
+        const { [projectId]: _, ...rest } = s.driftPerProject
+        return { driftPerProject: rest }
+      })
+      await get().loadGitData(projectId, cwd)
+      return result
+    } finally {
+      set((s) => {
+        const { [projectId]: _, ...rest } = s.pushingPerProject
+        return { pushingPerProject: rest }
+      })
+    }
   },
 
   rebaseRemote: async (projectId: string, cwd: string) => {

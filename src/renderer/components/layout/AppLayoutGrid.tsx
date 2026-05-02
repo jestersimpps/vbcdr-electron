@@ -25,7 +25,9 @@ import { useLayoutStore, GRID_COLS, GRID_ROWS, panelConfigs } from '@/stores/lay
 import { StatusBar } from '@/components/layout/StatusBar'
 import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
 import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
+import { ClaudePage } from '@/components/claude/ClaudePage'
 import { SkillsPanel } from '@/components/skills/SkillsPanel'
+import { SkillsPage } from '@/components/skills/SkillsPage'
 import { Dashboard } from '@/components/dashboard/Dashboard'
 import { Statistics } from '@/components/statistics/Statistics'
 import { Usage } from '@/components/usage/Usage'
@@ -108,8 +110,9 @@ function SortableProjectTab({
 }
 
 export function AppLayoutGrid(): React.ReactElement {
-  const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, loadProjects, addProject, removeProject, setActiveProject, reorderProjects, showDashboard, showStatistics, showUsage, showSettings } =
+  const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, claudePageActive, skillsPageActive, loadProjects, addProject, removeProject, setActiveProject, reorderProjects, showDashboard, showStatistics, showUsage, showSettings, showClaudePage, showSkillsPage } =
     useProjectStore()
+  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive
   const centerTab = useEditorStore(
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'terminals' : 'terminals')
   )
@@ -151,7 +154,7 @@ export function AppLayoutGrid(): React.ReactElement {
     const ro = new ResizeObserver(measure)
     ro.observe(containerRef.current)
     return () => ro.disconnect()
-  }, [dashboardActive, statisticsActive, settingsActive])
+  }, [dashboardActive, statisticsActive, usageActive, settingsActive, claudePageActive, skillsPageActive])
 
   const handleStop = (newLayout: Layout[]): void => {
     saveLayout(projectId, newLayout)
@@ -246,7 +249,7 @@ export function AppLayoutGrid(): React.ReactElement {
             <PanelGroup direction="horizontal">
               <Panel defaultSize={25} minSize={15} maxSize={40}>
                 <div className="h-full overflow-hidden border-r border-zinc-800 bg-zinc-900">
-                  <ClaudeFileList projectId={activeProjectId} />
+                  <ClaudeFileList projectId={activeProjectId} scope="project" />
                 </div>
               </Panel>
               <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
@@ -257,7 +260,7 @@ export function AppLayoutGrid(): React.ReactElement {
           )}
         </div>
         <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'skills' ? 'z-10' : 'z-0 invisible')}>
-          {activeProjectId && <SkillsPanel projectId={activeProjectId} />}
+          {activeProjectId && <SkillsPanel projectId={activeProjectId} scope="project" />}
         </div>
       </div>
     </div>
@@ -291,7 +294,7 @@ export function AppLayoutGrid(): React.ReactElement {
                   <SortableProjectTab
                     key={project.id}
                     project={project}
-                    isActive={activeProjectId === project.id && !dashboardActive && !statisticsActive && !usageActive && !settingsActive}
+                    isActive={activeProjectId === project.id && !anyPageActive}
                     onSelect={() => {
                       setActiveProject(project.id)
                       useTerminalStore.getState().clearProjectAttention(project.id)
@@ -351,6 +354,30 @@ export function AppLayoutGrid(): React.ReactElement {
             >
               <Gauge size={18} />
             </button>
+            <button
+              onClick={showClaudePage}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                claudePageActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Claude"
+            >
+              <Bot size={18} />
+            </button>
+            <button
+              onClick={showSkillsPage}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                skillsPageActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Skills"
+            >
+              <Wand2 size={18} />
+            </button>
           </div>
           <button
             onClick={showSettings}
@@ -379,7 +406,7 @@ export function AppLayoutGrid(): React.ReactElement {
         <div
           ref={containerRef}
           className={cn('absolute inset-0', !backgroundImage && 'screen-gradient')}
-          style={{ visibility: dashboardActive || statisticsActive || usageActive || settingsActive ? 'hidden' : 'visible' }}
+          style={{ visibility: anyPageActive ? 'hidden' : 'visible' }}
         >
           {width > 0 && height > 0 && (
             <ReactGridLayout
@@ -429,6 +456,16 @@ export function AppLayoutGrid(): React.ReactElement {
         {settingsActive && (
           <div className={cn('absolute inset-0 z-10 overflow-auto', !backgroundImage && 'screen-gradient')}>
             <Settings />
+          </div>
+        )}
+        {claudePageActive && (
+          <div className={cn('absolute inset-0 z-10 overflow-hidden', !backgroundImage && 'screen-gradient')}>
+            <ClaudePage />
+          </div>
+        )}
+        {skillsPageActive && (
+          <div className={cn('absolute inset-0 z-10 overflow-hidden', !backgroundImage && 'screen-gradient')}>
+            <SkillsPage />
           </div>
         )}
         </div>

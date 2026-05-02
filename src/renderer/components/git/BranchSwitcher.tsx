@@ -5,26 +5,32 @@ import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import type { GitBranch } from '@/models/types'
 
-export function BranchSwitcher(): React.ReactElement | null {
+interface BranchSwitcherProps {
+  projectId?: string
+  cwd?: string
+}
+
+export function BranchSwitcher({ projectId, cwd }: BranchSwitcherProps = {}): React.ReactElement | null {
   const [isOpen, setIsOpen] = useState(false)
-  const activeProjectId = useProjectStore((s) => s.activeProjectId)
-  const activeProject = useProjectStore((s) => s.activeProject)
+  const fallbackActiveProjectId = useProjectStore((s) => s.activeProjectId)
+  const fallbackActiveProject = useProjectStore((s) => s.activeProject)
   const branchesPerProject = useGitStore((s) => s.branchesPerProject)
   const switchingBranch = useGitStore((s) => s.switchingBranch)
   const switchBranch = useGitStore((s) => s.switchBranch)
   const loadTree = useFileTreeStore((s) => s.loadTree)
 
-  const project = activeProject()
-  const branches = activeProjectId ? branchesPerProject[activeProjectId] : undefined
+  const effectiveProjectId = projectId ?? fallbackActiveProjectId
+  const effectivePath = cwd ?? fallbackActiveProject()?.path
+  const branches = effectiveProjectId ? branchesPerProject[effectiveProjectId] : undefined
   const currentBranch = branches?.find((b) => b.current)
 
-  if (!currentBranch || !project || !activeProjectId) return null
+  if (!currentBranch || !effectiveProjectId || !effectivePath) return null
 
   const handleSwitch = async (branch: GitBranch): Promise<void> => {
     setIsOpen(false)
-    const success = await switchBranch(activeProjectId, project.path, branch.name)
+    const success = await switchBranch(effectiveProjectId, effectivePath, branch.name)
     if (success) {
-      loadTree(activeProjectId, project.path)
+      loadTree(effectiveProjectId, effectivePath)
     }
   }
 

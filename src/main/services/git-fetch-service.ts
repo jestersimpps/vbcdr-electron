@@ -17,7 +17,7 @@ async function checkProject(projectId: string, cwd: string): Promise<void> {
     if (!await isGitRepo(cwd)) return
     await fetchRemote(cwd)
     const drift = await getBranchDrift(cwd)
-    if (drift.behind > 0 || drift.diverged) {
+    if (drift.ahead > 0 || drift.behind > 0 || drift.diverged) {
       broadcast(projectId, drift)
     }
   } catch {
@@ -40,6 +40,7 @@ export function registerProject(projectId: string, cwd: string): void {
   if (!intervalId) {
     intervalId = setInterval(() => { void tick() }, 60_000)
   }
+  void checkProject(projectId, cwd)
 }
 
 export function unregisterProject(projectId: string): void {

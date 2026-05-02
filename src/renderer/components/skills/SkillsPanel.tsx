@@ -28,6 +28,7 @@ interface InstalledSkill {
 }
 
 type InstallTarget = 'project' | 'global'
+export type SkillsScope = 'all' | 'project' | 'global'
 
 function formatInstalls(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -36,12 +37,15 @@ function formatInstalls(n: number): string {
 }
 
 interface SkillsPanelProps {
-  projectId: string
+  projectId?: string
+  scope?: SkillsScope
 }
 
-export function SkillsPanel({ projectId }: SkillsPanelProps): React.ReactElement {
-  const project = useProjectStore((s) => s.projects.find((p) => p.id === projectId))
+export function SkillsPanel({ projectId, scope = 'all' }: SkillsPanelProps): React.ReactElement {
+  const project = useProjectStore((s) => (projectId ? s.projects.find((p) => p.id === projectId) : undefined))
   const projectPath = project?.path ?? null
+  const showProject = scope !== 'global'
+  const showGlobal = scope !== 'project'
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SkillSearchResult[]>([])
@@ -161,22 +165,26 @@ export function SkillsPanel({ projectId }: SkillsPanelProps): React.ReactElement
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <InstalledGroup
-              label="Project"
-              Icon={FolderOpen}
-              items={projectInstalled}
-              onUninstall={handleUninstall}
-              busyKey={busyKey}
-              emptyHint={projectPath ? 'No project skills installed' : 'No project selected'}
-            />
-            <InstalledGroup
-              label="Global"
-              Icon={Globe}
-              items={globalInstalled}
-              onUninstall={handleUninstall}
-              busyKey={busyKey}
-              emptyHint="No global skills installed"
-            />
+            {showProject && (
+              <InstalledGroup
+                label="Project"
+                Icon={FolderOpen}
+                items={projectInstalled}
+                onUninstall={handleUninstall}
+                busyKey={busyKey}
+                emptyHint={projectPath ? 'No project skills installed' : 'No project selected'}
+              />
+            )}
+            {showGlobal && (
+              <InstalledGroup
+                label="Global"
+                Icon={Globe}
+                items={globalInstalled}
+                onUninstall={handleUninstall}
+                busyKey={busyKey}
+                emptyHint="No global skills installed"
+              />
+            )}
           </div>
         </div>
       </Panel>
@@ -249,54 +257,58 @@ export function SkillsPanel({ projectId }: SkillsPanelProps): React.ReactElement
                     </div>
                   </div>
                   <div className="shrink-0 flex items-center gap-1">
-                    <button
-                      onClick={() => handleInstall(r, 'project')}
-                      disabled={projectBusy || !projectPath}
-                      className={cn(
-                        'inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors',
-                        projectInstalled
-                          ? 'border border-emerald-900 bg-emerald-950 text-emerald-400 hover:bg-emerald-900/50'
-                          : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
-                        (projectBusy || !projectPath) && 'opacity-60 cursor-not-allowed'
-                      )}
-                      title={
-                        !projectPath
-                          ? 'No project selected'
-                          : projectInstalled
-                            ? 'Already installed in project — click to reinstall'
-                            : `Install to ${projectPath}/.claude/skills`
-                      }
-                    >
-                      {projectBusy ? (
-                        <Loader2 size={10} className="animate-spin" />
-                      ) : (
-                        <FolderOpen size={10} />
-                      )}
-                      Project
-                    </button>
-                    <button
-                      onClick={() => handleInstall(r, 'global')}
-                      disabled={globalBusy}
-                      className={cn(
-                        'inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors',
-                        globalInstalled
-                          ? 'border border-emerald-900 bg-emerald-950 text-emerald-400 hover:bg-emerald-900/50'
-                          : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
-                        globalBusy && 'opacity-60 cursor-not-allowed'
-                      )}
-                      title={
-                        globalInstalled
-                          ? 'Already installed globally — click to reinstall'
-                          : 'Install to ~/.claude/skills'
-                      }
-                    >
-                      {globalBusy ? (
-                        <Loader2 size={10} className="animate-spin" />
-                      ) : (
-                        <Globe size={10} />
-                      )}
-                      Global
-                    </button>
+                    {showProject && (
+                      <button
+                        onClick={() => handleInstall(r, 'project')}
+                        disabled={projectBusy || !projectPath}
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors',
+                          projectInstalled
+                            ? 'border border-emerald-900 bg-emerald-950 text-emerald-400 hover:bg-emerald-900/50'
+                            : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
+                          (projectBusy || !projectPath) && 'opacity-60 cursor-not-allowed'
+                        )}
+                        title={
+                          !projectPath
+                            ? 'No project selected'
+                            : projectInstalled
+                              ? 'Already installed in project — click to reinstall'
+                              : `Install to ${projectPath}/.claude/skills`
+                        }
+                      >
+                        {projectBusy ? (
+                          <Loader2 size={10} className="animate-spin" />
+                        ) : (
+                          <FolderOpen size={10} />
+                        )}
+                        Project
+                      </button>
+                    )}
+                    {showGlobal && (
+                      <button
+                        onClick={() => handleInstall(r, 'global')}
+                        disabled={globalBusy}
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors',
+                          globalInstalled
+                            ? 'border border-emerald-900 bg-emerald-950 text-emerald-400 hover:bg-emerald-900/50'
+                            : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
+                          globalBusy && 'opacity-60 cursor-not-allowed'
+                        )}
+                        title={
+                          globalInstalled
+                            ? 'Already installed globally — click to reinstall'
+                            : 'Install to ~/.claude/skills'
+                        }
+                      >
+                        {globalBusy ? (
+                          <Loader2 size={10} className="animate-spin" />
+                        ) : (
+                          <Globe size={10} />
+                        )}
+                        Global
+                      </button>
+                    )}
                   </div>
                 </div>
               )
