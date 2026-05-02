@@ -301,7 +301,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
           )}
         </div>
         <div className="flex items-center gap-0.5">
-          {isClaudeView && (
+          {projectId && (
             <span className="mr-1 rounded bg-purple-500/15 px-1 py-px text-[9px] font-medium text-purple-400">
               ~/.claude
             </span>
