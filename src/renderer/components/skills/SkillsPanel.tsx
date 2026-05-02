@@ -368,9 +368,9 @@ function InstalledGroup({ label, Icon, items, onUninstall, busyKey, emptyHint }:
             className="group flex items-start gap-1.5 px-2 py-1 hover:bg-zinc-800/50"
           >
             <div className="min-w-0 flex-1">
-              <div className="truncate text-xs text-zinc-300">{skill.name}</div>
+              <div className="text-xs text-zinc-300">{skill.name}</div>
               {skill.description && (
-                <div className="truncate text-[10px] text-zinc-600">{skill.description}</div>
+                <div className="text-[10px] text-zinc-600">{skill.description}</div>
               )}
             </div>
             <button
