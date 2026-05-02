@@ -7,17 +7,37 @@ import { ipcMain, BrowserWindow } from 'electron'
 let cachedLoginPath: string | undefined
 
 function resolvedPath(): string | undefined {
-  const current = process.env.PATH
-  if (current && current.includes('/usr/local/bin')) return current
-  if (cachedLoginPath !== undefined) return cachedLoginPath || current
-  try {
-    const loginPath = execSync('/bin/bash -ilc "echo $PATH"', { encoding: 'utf-8' }).trim()
-    cachedLoginPath = loginPath
-    return loginPath || current
-  } catch {
-    cachedLoginPath = ''
-    return current
+  const current = process.env.PATH ?? ''
+  if (cachedLoginPath === undefined) {
+    try {
+      cachedLoginPath = execSync('/bin/bash -ilc "echo $PATH"', { encoding: 'utf-8' }).trim()
+    } catch {
+      cachedLoginPath = ''
+    }
   }
+  if (!cachedLoginPath) return current || undefined
+  const seen = new Set<string>()
+  const merged: string[] = []
+  for (const part of [...cachedLoginPath.split(':'), ...current.split(':')]) {
+    if (!part || seen.has(part)) continue
+    seen.add(part)
+    merged.push(part)
+  }
+  return merged.join(':')
+}
+
+function resolveBinary(name: string, searchPath: string | undefined): string | undefined {
+  if (!searchPath) return undefined
+  for (const dir of searchPath.split(':')) {
+    if (!dir) continue
+    const full = path.join(dir, name)
+    try {
+      if (fs.statSync(full).isFile()) return full
+    } catch {
+      continue
+    }
+  }
+  return undefined
 }
 
 interface SkillSearchResult {
@@ -89,9 +109,11 @@ function runSkillsCli(
   onChunk: (chunk: string) => void
 ): Promise<{ code: number; output: string }> {
   return new Promise((resolve) => {
-    const proc = spawn('npx', ['-y', 'skills', ...args], {
+    const pathEnv = resolvedPath()
+    const npxPath = resolveBinary('npx', pathEnv) ?? 'npx'
+    const proc = spawn(npxPath, ['-y', 'skills', ...args], {
       cwd,
-      env: { ...process.env, PATH: resolvedPath(), CI: '1', FORCE_COLOR: '0' },
+      env: { ...process.env, PATH: pathEnv, CI: '1', FORCE_COLOR: '0' },
       shell: false
     })
     let output = ''
