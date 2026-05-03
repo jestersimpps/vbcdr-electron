@@ -60,12 +60,19 @@ vi.mock('electron', () => ({
 
 let registry: IpcRegistry
 let originalFetch: typeof fetch | undefined
+let originalPath: string | undefined
+let fakeBinDir = ''
 
 beforeEach(async () => {
   homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'home-'))
   projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'proj-'))
+  fakeBinDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bin-'))
+  const npxName = process.platform === 'win32' ? 'npx.cmd' : 'npx'
+  fs.writeFileSync(path.join(fakeBinDir, npxName), '')
   originalHome = process.env.HOME
+  originalPath = process.env.PATH
   process.env.HOME = homeDir
+  process.env.PATH = `${fakeBinDir}${path.delimiter}${process.env.PATH ?? ''}`
   vi.resetModules()
   registry = makeIpcRegistry()
   vi.doMock('electron', () => ({
@@ -82,8 +89,10 @@ beforeEach(async () => {
 
 afterEach(() => {
   process.env.HOME = originalHome
+  process.env.PATH = originalPath
   fs.rmSync(homeDir, { recursive: true, force: true })
   fs.rmSync(projectDir, { recursive: true, force: true })
+  fs.rmSync(fakeBinDir, { recursive: true, force: true })
   if (originalFetch) globalThis.fetch = originalFetch
 })
 

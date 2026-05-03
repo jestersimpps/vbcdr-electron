@@ -18,34 +18,71 @@ function isPosixShell(shell: string): boolean {
 function queryLoginPath(shell: string): string {
   try {
     const cmd = isPosixShell(shell)
-      ? `"${shell}" -ilc 'echo $PATH'`
+      ? `"${shell}" -lc 'echo $PATH'`
       : `"${shell}" -lc 'echo $PATH'`
-    const out = execSync(cmd, { encoding: 'utf-8', timeout: 3000 }).trim()
+    const out = execSync(cmd, { encoding: 'utf-8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }).trim()
     return out.includes(PATH_SEP) ? out : ''
   } catch {
     return ''
   }
 }
 
+function fallbackDirs(): string[] {
+  if (IS_WINDOWS) return []
+  const home = os.homedir()
+  const dirs = [
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+    path.join(home, '.volta/bin'),
+    path.join(home, '.bun/bin'),
+    path.join(home, '.local/bin')
+  ]
+  const nvmRoot = path.join(home, '.nvm/versions/node')
+  try {
+    const versions = fs.readdirSync(nvmRoot)
+    for (const v of versions) dirs.push(path.join(nvmRoot, v, 'bin'))
+  } catch {
+    // no nvm
+  }
+  const fnmRoot = path.join(home, '.local/share/fnm/node-versions')
+  try {
+    const versions = fs.readdirSync(fnmRoot)
+    for (const v of versions) dirs.push(path.join(fnmRoot, v, 'installation/bin'))
+  } catch {
+    // no fnm
+  }
+  return dirs
+}
+
 function resolvedPath(): string | undefined {
   const current = process.env.PATH ?? ''
   if (IS_WINDOWS) return current || undefined
   if (cachedLoginPath === undefined) {
-    const userShell = process.env.SHELL || '/bin/zsh'
-    cachedLoginPath = queryLoginPath(userShell)
-    if (!cachedLoginPath && path.basename(userShell) !== 'bash') {
-      cachedLoginPath = queryLoginPath('/bin/bash')
+    const candidates = [process.env.SHELL, '/bin/zsh', '/bin/bash'].filter(
+      (s, i, arr): s is string => !!s && arr.indexOf(s) === i
+    )
+    let found = ''
+    for (const shell of candidates) {
+      found = queryLoginPath(shell)
+      if (found) break
     }
+    cachedLoginPath = found
   }
-  if (!cachedLoginPath) return current || undefined
   const seen = new Set<string>()
   const merged: string[] = []
-  for (const part of [...cachedLoginPath.split(PATH_SEP), ...current.split(PATH_SEP)]) {
+  const sources = [
+    ...(cachedLoginPath ? cachedLoginPath.split(PATH_SEP) : []),
+    ...current.split(PATH_SEP),
+    ...fallbackDirs()
+  ]
+  for (const part of sources) {
     if (!part || seen.has(part)) continue
     seen.add(part)
     merged.push(part)
   }
-  return merged.join(PATH_SEP)
+  return merged.length > 0 ? merged.join(PATH_SEP) : undefined
 }
 
 function resolveBinary(names: string[], searchPath: string | undefined): string | undefined {
@@ -185,7 +222,16 @@ function runSkillsCli(
 ): Promise<{ code: number; output: string }> {
   return new Promise((resolve) => {
     const pathEnv = resolvedPath()
-    const npxPath = resolveBinary(NPX_NAMES, pathEnv) ?? 'npx'
+    const npxPath = resolveBinary(NPX_NAMES, pathEnv)
+    if (!npxPath) {
+      const msg =
+        `Error: could not locate npx on PATH.\n` +
+        `Searched: ${pathEnv ?? '(empty)'}\n` +
+        `Install Node.js from https://nodejs.org or ensure your shell login PATH is exported.\n`
+      onChunk(msg)
+      resolve({ code: -1, output: msg })
+      return
+    }
     const proc = spawn(npxPath, ['-y', 'skills', ...args], {
       cwd,
       env: { ...process.env, PATH: pathEnv, CI: '1', FORCE_COLOR: '0' },
