@@ -121,7 +121,7 @@ export function App(): React.ReactElement {
     if (!activeProjectId || !activeProjectPath) return
     const projectId = activeProjectId
     const cwd = activeProjectPath
-    const showIgnored = useFileTreeStore.getState().showIgnoredPerProject[projectId] ?? false
+    const showIgnored = useFileTreeStore.getState().showIgnoredPerProject[projectId] ?? true
 
     useFileTreeStore.getState().loadTree(projectId, cwd, showIgnored)
     useGitStore.getState().loadStatus(projectId, cwd)

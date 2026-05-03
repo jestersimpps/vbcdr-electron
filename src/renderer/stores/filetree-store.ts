@@ -22,7 +22,7 @@ export const useFileTreeStore = create<FileTreeStore>((set, get) => ({
   showIgnoredPerProject: {},
 
   loadTree: async (projectId: string, rootPath: string, showIgnored?: boolean) => {
-    const show = showIgnored ?? get().showIgnoredPerProject[projectId] ?? false
+    const show = showIgnored ?? get().showIgnoredPerProject[projectId] ?? true
     const tree = await window.api.fs.readTree(rootPath, show)
     set((state) => ({
       treePerProject: { ...state.treePerProject, [projectId]: tree }
@@ -51,7 +51,7 @@ export const useFileTreeStore = create<FileTreeStore>((set, get) => ({
   },
 
   toggleShowIgnored: (projectId: string, rootPath: string) => {
-    const current = get().showIgnoredPerProject[projectId] ?? false
+    const current = get().showIgnoredPerProject[projectId] ?? true
     const next = !current
     set((state) => ({
       showIgnoredPerProject: { ...state.showIgnoredPerProject, [projectId]: next }
@@ -70,6 +70,6 @@ export const useFileTreeStore = create<FileTreeStore>((set, get) => ({
   },
 
   getShowIgnored: (projectId: string) => {
-    return get().showIgnoredPerProject[projectId] ?? false
+    return get().showIgnoredPerProject[projectId] ?? true
   }
 }))

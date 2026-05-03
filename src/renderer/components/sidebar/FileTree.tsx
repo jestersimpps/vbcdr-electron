@@ -468,7 +468,7 @@ export function FileTree({
   )
   const treeKey = rootOverride ?? projectId
   const tree = useFileTreeStore((s) => s.treePerProject[treeKey])
-  const showIgnored = useFileTreeStore((s) => s.showIgnoredPerProject[treeKey] ?? false)
+  const showIgnored = useFileTreeStore((s) => s.showIgnoredPerProject[treeKey] ?? true)
   const { loadTree, setTree, toggleShowIgnored } = useFileTreeStore()
   const { loadStatus } = useGitStore()
   const rootPath = rootOverride ?? activeProject?.path

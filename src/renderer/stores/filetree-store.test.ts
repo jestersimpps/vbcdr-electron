@@ -42,7 +42,7 @@ describe('filetree-store', () => {
 
       await useFileTreeStore.getState().loadTree('p1', '/p')
 
-      expect(fsApi().readTree).toHaveBeenCalledWith('/p', false)
+      expect(fsApi().readTree).toHaveBeenCalledWith('/p', true)
       expect(useFileTreeStore.getState().treePerProject.p1).toBe(expected)
     })
 
@@ -95,10 +95,10 @@ describe('filetree-store', () => {
     it('flips the flag, restarts the watcher, and reloads the tree', async () => {
       useFileTreeStore.getState().toggleShowIgnored('p1', '/p')
 
-      expect(useFileTreeStore.getState().getShowIgnored('p1')).toBe(true)
+      expect(useFileTreeStore.getState().getShowIgnored('p1')).toBe(false)
       expect(fsApi().unwatch).toHaveBeenCalledTimes(1)
-      expect(fsApi().watch).toHaveBeenCalledWith('/p', true)
-      expect(fsApi().readTree).toHaveBeenCalledWith('/p', true)
+      expect(fsApi().watch).toHaveBeenCalledWith('/p', false)
+      expect(fsApi().readTree).toHaveBeenCalledWith('/p', false)
     })
   })
 
@@ -107,7 +107,7 @@ describe('filetree-store', () => {
       const s = useFileTreeStore.getState()
       expect(s.getTree('nope')).toBeUndefined()
       expect(s.getExpanded('nope').size).toBe(0)
-      expect(s.getShowIgnored('nope')).toBe(false)
+      expect(s.getShowIgnored('nope')).toBe(true)
     })
   })
 })
