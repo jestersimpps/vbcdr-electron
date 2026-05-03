@@ -528,6 +528,8 @@ function EditorSection(): React.ReactElement {
   const setBracketPairColorization = useEditorPrefsStore((s) => s.setBracketPairColorization)
   const formatOnSave = useEditorPrefsStore((s) => s.formatOnSave)
   const setFormatOnSave = useEditorPrefsStore((s) => s.setFormatOnSave)
+  const defaultDiffView = useEditorPrefsStore((s) => s.defaultDiffView)
+  const setDefaultDiffView = useEditorPrefsStore((s) => s.setDefaultDiffView)
   const accent = useAccent()
 
   return (
@@ -554,6 +556,22 @@ function EditorSection(): React.ReactElement {
           onToggle={() => setFormatOnSave(!formatOnSave)}
           accent={accent}
         />
+        <div className="flex items-center justify-between gap-3 border-t border-zinc-800 pt-3">
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-zinc-200">Default diff view</div>
+            <div className="text-[11px] text-zinc-500">
+              How the Diff tab opens. The in-panel toggle still works per session.
+            </div>
+          </div>
+          <select
+            value={defaultDiffView}
+            onChange={(e) => setDefaultDiffView(e.target.value as 'split' | 'inline')}
+            className="cursor-pointer rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1 text-xs text-zinc-200 outline-none"
+          >
+            <option value="split" className="bg-zinc-900">Split</option>
+            <option value="inline" className="bg-zinc-900">Inline</option>
+          </select>
+        </div>
         <PrefToggle
           label="Autosave"
           description={`Save automatically ${autosaveDelayMs}ms after you stop typing.`}

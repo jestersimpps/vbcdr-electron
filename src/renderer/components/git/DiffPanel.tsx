@@ -142,6 +142,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const fontSize = useEditorPrefsStore((s) => s.fontSize)
   const minimapEnabled = useEditorPrefsStore((s) => s.minimapEnabled)
   const bracketPairColorization = useEditorPrefsStore((s) => s.bracketPairColorization)
+  const defaultDiffView = useEditorPrefsStore((s) => s.defaultDiffView)
   const getFullThemeId = useThemeStore((s) => s.getFullThemeId)
   const themeId = getFullThemeId()
   const monacoTheme = MONACO_THEME_NAME[themeId] ?? 'github-dark'
@@ -152,7 +153,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const [loading, setLoading] = useState(false)
   const [isBinary, setIsBinary] = useState(false)
   const [collapsedDirs, setCollapsedDirs] = useState<Set<string>>(new Set())
-  const [sideBySide, setSideBySide] = useState(true)
+  const [sideBySide, setSideBySide] = useState(defaultDiffView === 'split')
   const [commitFiles, setCommitFiles] = useState<ChangedFile[]>([])
   const [numstat, setNumstat] = useState<Record<string, { additions: number; deletions: number }>>({})
 

@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export type DiffViewMode = 'split' | 'inline'
+
 interface EditorPrefsState {
   minimapEnabled: boolean
   autosaveEnabled: boolean
@@ -9,6 +11,7 @@ interface EditorPrefsState {
   tabSize: number
   bracketPairColorization: boolean
   formatOnSave: boolean
+  defaultDiffView: DiffViewMode
   setMinimapEnabled: (enabled: boolean) => void
   setAutosaveEnabled: (enabled: boolean) => void
   setAutosaveDelayMs: (ms: number) => void
@@ -16,6 +19,7 @@ interface EditorPrefsState {
   setTabSize: (n: number) => void
   setBracketPairColorization: (enabled: boolean) => void
   setFormatOnSave: (enabled: boolean) => void
+  setDefaultDiffView: (mode: DiffViewMode) => void
 }
 
 export const DEFAULT_AUTOSAVE_DELAY_MS = 1000
@@ -42,6 +46,7 @@ export const useEditorPrefsStore = create<EditorPrefsState>()(
       tabSize: DEFAULT_TAB_SIZE,
       bracketPairColorization: true,
       formatOnSave: false,
+      defaultDiffView: 'split',
       setMinimapEnabled: (enabled: boolean) => set({ minimapEnabled: enabled }),
       setAutosaveEnabled: (enabled: boolean) => set({ autosaveEnabled: enabled }),
       setAutosaveDelayMs: (ms: number) => {
@@ -51,7 +56,8 @@ export const useEditorPrefsStore = create<EditorPrefsState>()(
       setFontSize: (px: number) => set({ fontSize: clampFontSize(px) }),
       setTabSize: (n: number) => set({ tabSize: clampTabSize(n) }),
       setBracketPairColorization: (enabled: boolean) => set({ bracketPairColorization: enabled }),
-      setFormatOnSave: (enabled: boolean) => set({ formatOnSave: enabled })
+      setFormatOnSave: (enabled: boolean) => set({ formatOnSave: enabled }),
+      setDefaultDiffView: (mode: DiffViewMode) => set({ defaultDiffView: mode })
     }),
     {
       name: 'vbcdr-editor-prefs',
@@ -62,7 +68,8 @@ export const useEditorPrefsStore = create<EditorPrefsState>()(
         fontSize: state.fontSize,
         tabSize: state.tabSize,
         bracketPairColorization: state.bracketPairColorization,
-        formatOnSave: state.formatOnSave
+        formatOnSave: state.formatOnSave,
+        defaultDiffView: state.defaultDiffView
       })
     }
   )
