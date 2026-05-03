@@ -1,12 +1,12 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
-import { useDiffOverlayStore } from '@/stores/diff-overlay-store'
 import { useDiffViewStore } from '@/stores/diff-view-store'
 import { useEditorStore } from '@/stores/editor-store'
-import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, Loader2 } from 'lucide-react'
+import { useTerminalStore } from '@/stores/terminal-store'
+import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
+import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, GitCommit as GitCommitIcon, Loader2 } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
-import { DiffOverlay } from '@/components/git/DiffOverlay'
 import { BranchSwitcher } from '@/components/git/BranchSwitcher'
 
 const LANE_COLORS = [
@@ -221,12 +221,16 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
   const isPushing = useGitStore((s) => effectiveProjectId ? s.pushingPerProject[effectiveProjectId] ?? false : false)
   const rebaseAction = useGitStore((s) => s.rebaseRemote)
   const loadStatus = useGitStore((s) => s.loadStatus)
-  const resetDismiss = useDiffOverlayStore((s) => s.resetDismiss)
   const showCommit = useDiffViewStore((s) => s.showCommit)
   const showWorking = useDiffViewStore((s) => s.showWorking)
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
   const statusMap = useGitStore((s) => effectiveProjectId ? s.statusPerProject[effectiveProjectId] : undefined)
   const { loadGitData } = useGitStore()
+
+  const [commitOpen, setCommitOpen] = useState(false)
+  const [commitMessage, setCommitMessage] = useState('')
+  const [committing, setCommitting] = useState(false)
+  const [commitError, setCommitError] = useState<string | null>(null)
 
   const handleCommitClick = (commit: GitCommit): void => {
     if (!effectiveProjectId) return
@@ -234,14 +238,15 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
     setCenterTab(effectiveProjectId, 'diff')
   }
 
-  const workingCount = useMemo(() => {
-    if (!statusMap || !effectivePath) return 0
+  const workingPaths = useMemo<string[]>(() => {
+    if (!statusMap || !effectivePath) return []
     const allPaths = Object.keys(statusMap).filter((p) => p !== effectivePath)
-    const leafPaths = allPaths.filter(
+    return allPaths.filter(
       (p) => !allPaths.some((other) => other !== p && other.startsWith(p + '/'))
     )
-    return leafPaths.length
   }, [statusMap, effectivePath])
+
+  const workingCount = workingPaths.length
 
   const handleWorkingClick = (): void => {
     if (!effectiveProjectId) return
@@ -249,10 +254,45 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
     setCenterTab(effectiveProjectId, 'diff')
   }
 
-  const openDiffOverlayManually = async (): Promise<void> => {
+  const llmCommit = (): void => {
     if (!effectiveProjectId || !effectivePath) return
-    resetDismiss(effectiveProjectId)
+    const tState = useTerminalStore.getState()
+    const llmTab = tState.tabs.find((t) => t.projectId === effectiveProjectId && !!t.initialCommand)
+    if (!llmTab) {
+      setCommitError('No LLM tab found in this project')
+      return
+    }
+    tState.setActiveTab(effectiveProjectId, llmTab.id)
+    setCenterTab(effectiveProjectId, 'terminals')
+    const fileList = workingPaths
+      .map((p) => `- ${p.startsWith(effectivePath + '/') ? p.slice(effectivePath.length + 1) : p} (${statusMap?.[p] ?? '?'})`)
+      .join('\n')
+    const message = fileList
+      ? `commit the following changes:\n${fileList}`
+      : 'commit the current changes'
+    sendToTerminalViaPty(llmTab.id, message)
+  }
+
+  const handleCommit = async (): Promise<void> => {
+    if (committing || !effectiveProjectId || !effectivePath) return
+    if (workingPaths.length === 0) return
+    const message = commitMessage.trim()
+    if (!message) {
+      llmCommit()
+      return
+    }
+    setCommitting(true)
+    setCommitError(null)
+    const result = await window.api.git.commitAll(effectivePath, message)
+    setCommitting(false)
+    if (!result.success) {
+      setCommitError(result.error ?? 'Commit failed')
+      return
+    }
+    setCommitMessage('')
+    setCommitOpen(false)
     await loadStatus(effectiveProjectId, effectivePath)
+    await loadGitData(effectiveProjectId, effectivePath)
   }
 
   useEffect(() => {
@@ -335,13 +375,6 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
             </span>
           )}
           <button
-            onClick={openDiffOverlayManually}
-            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-            title="Open diff overlay for current changes"
-          >
-            <FileDiff size={12} />
-          </button>
-          <button
             onClick={() => loadGitData(effectiveProjectId, effectivePath)}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
             title="Refresh"
@@ -352,17 +385,75 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
       </div>
 
       {workingCount > 0 && (
-        <button
-          onClick={handleWorkingClick}
-          className="flex items-center gap-1.5 border-b border-zinc-800 bg-emerald-500/5 px-2 py-1.5 text-left hover:bg-emerald-500/10"
-          title="Show diff for uncommitted changes"
-        >
-          <FileDiff size={12} className="shrink-0 text-emerald-400" />
-          <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-200">Working changes</span>
-          <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
-            {workingCount} file{workingCount === 1 ? '' : 's'}
-          </span>
-        </button>
+        <div className="border-b border-zinc-800 bg-emerald-500/5">
+          <div className="flex items-center hover:bg-emerald-500/10">
+            <button
+              onClick={handleWorkingClick}
+              className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left"
+              title="Show diff for uncommitted changes"
+            >
+              <FileDiff size={12} className="shrink-0 text-emerald-400" />
+              <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-200">Working changes</span>
+              <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
+                {workingCount} file{workingCount === 1 ? '' : 's'}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setCommitError(null)
+                setCommitOpen((v) => !v)
+              }}
+              className={`mr-1 shrink-0 rounded p-1 hover:bg-zinc-800 ${
+                commitOpen ? 'text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+              title={commitOpen ? 'Hide commit form' : 'Commit working changes'}
+            >
+              <GitCommitIcon size={12} />
+            </button>
+          </div>
+          {commitOpen && (
+            <div className="border-t border-zinc-800/50 px-2 py-1.5">
+              {commitError && (
+                <div className="mb-1 truncate text-[10px] text-red-400" title={commitError}>
+                  {commitError}
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={commitMessage}
+                  onChange={(e) => setCommitMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleCommit()
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault()
+                      setCommitOpen(false)
+                    }
+                  }}
+                  placeholder="Commit message — empty for LLM commit"
+                  disabled={committing}
+                  autoFocus
+                  className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-[11px] text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-700"
+                />
+                <button
+                  onClick={handleCommit}
+                  disabled={committing || workingCount === 0}
+                  className="flex shrink-0 items-center gap-1 rounded bg-emerald-500/15 px-2 py-1 text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                  title={
+                    commitMessage.trim()
+                      ? `Commit ${workingCount} file${workingCount === 1 ? '' : 's'}`
+                      : 'Have the LLM commit the current changes'
+                  }
+                >
+                  <GitCommitIcon size={11} />
+                  <span>{committing ? 'Committing…' : commitMessage.trim() ? 'Commit' : 'LLM commit'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="flex-1 overflow-auto">
@@ -406,8 +497,6 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
           <div className="p-4 text-center text-xs text-zinc-600">No commits yet</div>
         )}
       </div>
-
-      <DiffOverlay projectId={effectiveProjectId} cwd={effectivePath} />
     </div>
   )
 }

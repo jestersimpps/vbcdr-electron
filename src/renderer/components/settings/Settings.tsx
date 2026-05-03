@@ -104,7 +104,6 @@ export function Settings(): React.ReactElement {
         {tab === 'editor' && (
           <Section title="Editor">
             <EditorSection />
-            <GitSection />
           </Section>
         )}
 
@@ -684,24 +683,6 @@ function PrefToggle({
         {description && <span className="text-[11px] text-zinc-500">{description}</span>}
       </div>
     </div>
-  )
-}
-
-function GitSection(): React.ReactElement {
-  const commitPanelEnabled = useLayoutStore((s) => s.commitPanelEnabled)
-  const setCommitPanelEnabled = useLayoutStore((s) => s.setCommitPanelEnabled)
-  const accent = useAccent()
-
-  return (
-    <SectionCard title="Git" description="Git panel behavior.">
-      <PrefToggle
-        label="Slide-in commit panel"
-        description="Show the commit panel that slides in over the git area when files change."
-        enabled={commitPanelEnabled}
-        onToggle={() => setCommitPanelEnabled(!commitPanelEnabled)}
-        accent={accent}
-      />
-    </SectionCard>
   )
 }
 
