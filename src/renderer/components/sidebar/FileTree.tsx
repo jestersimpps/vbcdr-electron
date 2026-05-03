@@ -4,118 +4,18 @@ import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useGitStore } from '@/stores/git-store'
 import {
-  ChevronRight, ChevronDown, File, Folder, RefreshCw, Copy, ExternalLink,
-  Eye, EyeOff, Trash2, FilePlus, FolderPlus, Pencil, Files, Search, FileText
+  ChevronRight, ChevronDown, File, Folder, RefreshCw,
+  Eye, EyeOff, FilePlus, FolderPlus, Search, FileText
 } from 'lucide-react'
 import type { FileNode, SearchResult } from '@/models/types'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
-
-interface ContextMenuState {
-  x: number
-  y: number
-  path: string
-  name: string
-  isDirectory: boolean
-}
+import { FileContextMenu, DeleteConfirm, type ContextMenuTarget } from '@/components/sidebar/FileContextMenu'
 
 interface InlineInputState {
   parentPath: string
   type: 'file' | 'folder' | 'rename'
   currentName?: string
   currentPath?: string
-}
-
-function ContextMenu({
-  menu,
-  onClose,
-  onDelete,
-  onNewFile,
-  onNewFolder,
-  onRename,
-  onDuplicate
-}: {
-  menu: ContextMenuState
-  onClose: () => void
-  onDelete: (path: string, name: string, isDirectory: boolean) => void
-  onNewFile: (parentPath: string) => void
-  onNewFolder: (parentPath: string) => void
-  onRename: (path: string, name: string) => void
-  onDuplicate: (path: string) => void
-}): React.ReactElement {
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent): void => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
-    }
-    const handleKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('mousedown', handleClick)
-    document.addEventListener('keydown', handleKey)
-    return () => {
-      document.removeEventListener('mousedown', handleClick)
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [onClose])
-
-  const handleCopyPath = (): void => {
-    navigator.clipboard.writeText(menu.path)
-    onClose()
-  }
-
-  const handleShowInFinder = (): void => {
-    window.api.fs.showInFolder(menu.path)
-    onClose()
-  }
-
-  const parentPath = menu.isDirectory ? menu.path : menu.path.replace(/\/[^/]+$/, '')
-
-  const btnClass = 'flex w-full items-center gap-2 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-800'
-
-  return (
-    <div
-      ref={ref}
-      className="fixed z-50 min-w-[180px] rounded-md border border-zinc-700 bg-zinc-900 py-1 shadow-xl"
-      style={{ left: menu.x, top: menu.y }}
-    >
-      <button onClick={() => { onNewFile(parentPath); onClose() }} className={btnClass}>
-        <FilePlus size={12} />
-        New file
-      </button>
-      <button onClick={() => { onNewFolder(parentPath); onClose() }} className={btnClass}>
-        <FolderPlus size={12} />
-        New folder
-      </button>
-      <div className="my-1 border-t border-zinc-800" />
-      <button onClick={() => { onRename(menu.path, menu.name); onClose() }} className={btnClass}>
-        <Pencil size={12} />
-        Rename
-      </button>
-      {!menu.isDirectory && (
-        <button onClick={() => { onDuplicate(menu.path); onClose() }} className={btnClass}>
-          <Files size={12} />
-          Duplicate
-        </button>
-      )}
-      <button onClick={handleCopyPath} className={btnClass}>
-        <Copy size={12} />
-        Copy path
-      </button>
-      <button onClick={handleShowInFinder} className={btnClass}>
-        <ExternalLink size={12} />
-        Show in Finder
-      </button>
-      <div className="my-1 border-t border-zinc-800" />
-      <button
-        onClick={() => { onDelete(menu.path, menu.name, menu.isDirectory); onClose() }}
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-red-400 hover:bg-zinc-800"
-      >
-        <Trash2 size={12} />
-        Delete
-      </button>
-    </div>
-  )
 }
 
 function InlineInput({
@@ -167,54 +67,6 @@ function InlineInput({
         className="flex-1 rounded bg-zinc-800 px-1.5 py-0.5 text-sm text-zinc-200 outline-none ring-1 ring-zinc-600 focus:ring-blue-500"
         spellCheck={false}
       />
-    </div>
-  )
-}
-
-function DeleteConfirm({
-  name,
-  isDirectory,
-  onConfirm,
-  onCancel
-}: {
-  name: string
-  isDirectory: boolean
-  onConfirm: () => void
-  onCancel: () => void
-}): React.ReactElement {
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onCancel()
-      if (e.key === 'Enter') onConfirm()
-    }
-    document.addEventListener('keydown', handleKey)
-    return () => document.removeEventListener('keydown', handleKey)
-  }, [onCancel, onConfirm])
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div ref={ref} className="w-80 rounded-lg border border-zinc-700 bg-zinc-900 p-4 shadow-2xl">
-        <p className="text-sm text-zinc-200">
-          Delete <span className="font-semibold">{name}</span>{isDirectory ? ' and all its contents' : ''}?
-        </p>
-        <p className="mt-1 text-xs text-zinc-500">This action cannot be undone</p>
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="rounded px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="rounded bg-red-600 px-3 py-1.5 text-xs text-white hover:bg-red-500"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
@@ -474,7 +326,7 @@ export function FileTree({
   const rootPath = rootOverride ?? activeProject?.path
   const isOverride = Boolean(rootOverride)
   const { openDefaultFile, closeFile } = useEditorStore()
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+  const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null)
   const [inlineInput, setInlineInput] = useState<InlineInputState | null>(null)
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
@@ -678,7 +530,7 @@ export function FileTree({
         ))}
       </div>
       {contextMenu && (
-        <ContextMenu
+        <FileContextMenu
           menu={contextMenu}
           onClose={() => setContextMenu(null)}
           onDelete={handleDelete}

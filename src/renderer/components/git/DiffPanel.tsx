@@ -6,9 +6,16 @@ import { useGitStore } from '@/stores/git-store'
 import { useDiffViewStore, type DiffView } from '@/stores/diff-view-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
+import { useEditorStore } from '@/stores/editor-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
 import type { GitFileStatus } from '@/models/types'
+import {
+  FileContextMenu,
+  DeleteConfirm,
+  NameDialog,
+  type ContextMenuTarget
+} from '@/components/sidebar/FileContextMenu'
 
 const EXT_LANG: Record<string, string> = {
   ts: 'typescript',
@@ -156,6 +163,14 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const [sideBySide, setSideBySide] = useState(defaultDiffView === 'split')
   const [commitFiles, setCommitFiles] = useState<ChangedFile[]>([])
   const [numstat, setNumstat] = useState<Record<string, { additions: number; deletions: number }>>({})
+  const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null)
+  const [nameDialog, setNameDialog] = useState<
+    | { kind: 'newFile' | 'newFolder'; parentPath: string }
+    | { kind: 'rename'; path: string; name: string }
+    | null
+  >(null)
+  const closeFile = useEditorStore((s) => s.closeFile)
 
   const toggleDir = (path: string): void => {
     setCollapsedDirs((prev) => {
@@ -282,6 +297,63 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     }
   }, [selectedPath, files, cwd, view])
 
+  const handleContextMenu = (e: React.MouseEvent, path: string, name: string, isDirectory: boolean): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ x: e.clientX, y: e.clientY, path, name, isDirectory })
+  }
+
+  const handleDelete = (filePath: string, name: string, isDirectory: boolean): void => {
+    setDeleteConfirm({ path: filePath, name, isDirectory })
+  }
+
+  const confirmDelete = async (): Promise<void> => {
+    if (!deleteConfirm) return
+    try {
+      closeFile(projectId, deleteConfirm.path)
+      await window.api.fs.deleteFile(deleteConfirm.path)
+      await loadStatus(projectId, cwd)
+    } catch (err) {
+      console.error('Failed to delete:', err)
+    }
+    setDeleteConfirm(null)
+  }
+
+  const handleDuplicate = async (filePath: string): Promise<void> => {
+    try {
+      await window.api.fs.duplicate(filePath)
+      await loadStatus(projectId, cwd)
+    } catch (err) {
+      console.error('Failed to duplicate:', err)
+    }
+  }
+
+  const handleNameDialogSubmit = async (value: string): Promise<void> => {
+    const dialog = nameDialog
+    if (!dialog) return
+    try {
+      switch (dialog.kind) {
+        case 'newFile':
+          await window.api.fs.createFile(`${dialog.parentPath}/${value}`)
+          break
+        case 'newFolder':
+          await window.api.fs.createFolder(`${dialog.parentPath}/${value}`)
+          break
+        case 'rename': {
+          const dir = dialog.path.replace(/\/[^/]+$/, '')
+          const newPath = `${dir}/${value}`
+          closeFile(projectId, dialog.path)
+          await window.api.fs.rename(dialog.path, newPath)
+          break
+        }
+      }
+      await loadStatus(projectId, cwd)
+    } catch (err) {
+      console.error('Failed to apply file action:', err)
+    }
+    setNameDialog(null)
+  }
+
   const handleRevert = async (file: ChangedFile): Promise<void> => {
     const headContent = await window.api.git.fileAtHead(cwd, file.absolutePath)
     if (headContent === null) return
@@ -299,12 +371,14 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const renderNode = (node: TreeNode, depth: number): React.ReactNode => {
     if (node.kind === 'dir') {
       const isCollapsed = collapsedDirs.has(node.path)
+      const absoluteDirPath = `${cwd}/${node.path}`
       return (
         <div key={`dir-${node.path}`}>
           <div
             className="flex cursor-pointer items-center gap-1 px-2 py-0.5 text-zinc-400 hover:bg-zinc-800/40"
             style={{ paddingLeft: `${depth * 12 + 8}px` }}
             onClick={() => toggleDir(node.path)}
+            onContextMenu={(e) => handleContextMenu(e, absoluteDirPath, node.name, true)}
           >
             {isCollapsed ? (
               <ChevronRight size={12} className="shrink-0 text-zinc-500" />
@@ -331,6 +405,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
           isSelected ? 'bg-zinc-800/60' : 'hover:bg-zinc-800/40'
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        onContextMenu={(e) => handleContextMenu(e, file.absolutePath, file.name, false)}
       >
         <File size={12} className="shrink-0 text-zinc-600" />
         <button
@@ -377,6 +452,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const emptyMessage = isCommitView ? 'No files in this commit' : 'No changes since last commit'
 
   return (
+    <>
     <PanelGroup direction="horizontal" className="h-full">
       <Panel defaultSize={25} minSize={15} maxSize={50}>
         <div className="flex h-full flex-col overflow-hidden border-r border-zinc-800 bg-zinc-900">
@@ -483,5 +559,40 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
         </div>
       </Panel>
     </PanelGroup>
+    {contextMenu && (
+      <FileContextMenu
+        menu={contextMenu}
+        onClose={() => setContextMenu(null)}
+        onDelete={handleDelete}
+        onNewFile={(parentPath) => setNameDialog({ kind: 'newFile', parentPath })}
+        onNewFolder={(parentPath) => setNameDialog({ kind: 'newFolder', parentPath })}
+        onRename={(path, name) => setNameDialog({ kind: 'rename', path, name })}
+        onDuplicate={handleDuplicate}
+      />
+    )}
+    {deleteConfirm && (
+      <DeleteConfirm
+        name={deleteConfirm.name}
+        isDirectory={deleteConfirm.isDirectory}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm(null)}
+      />
+    )}
+    {nameDialog && (
+      <NameDialog
+        title={
+          nameDialog.kind === 'rename'
+            ? `Rename ${nameDialog.name}`
+            : nameDialog.kind === 'newFolder'
+            ? 'New folder'
+            : 'New file'
+        }
+        initialValue={nameDialog.kind === 'rename' ? nameDialog.name : ''}
+        submitLabel={nameDialog.kind === 'rename' ? 'Rename' : 'Create'}
+        onSubmit={handleNameDialogSubmit}
+        onCancel={() => setNameDialog(null)}
+      />
+    )}
+    </>
   )
 }
