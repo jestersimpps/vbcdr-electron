@@ -154,6 +154,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const [collapsedDirs, setCollapsedDirs] = useState<Set<string>>(new Set())
   const [sideBySide, setSideBySide] = useState(true)
   const [commitFiles, setCommitFiles] = useState<ChangedFile[]>([])
+  const [numstat, setNumstat] = useState<Record<string, { additions: number; deletions: number }>>({})
 
   const toggleDir = (path: string): void => {
     setCollapsedDirs((prev) => {
@@ -192,6 +193,17 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       cancelled = true
     }
   }, [view, cwd])
+
+  useEffect(() => {
+    let cancelled = false
+    const hash = view.kind === 'commit' ? view.hash : undefined
+    window.api.git.diffNumstat(cwd, hash).then((rows) => {
+      if (!cancelled) setNumstat(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [view, cwd, statusMap])
 
   const workingFiles = useMemo<ChangedFile[]>(() => {
     if (!statusMap) return []
@@ -310,6 +322,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     const statusColor = file.status ? GIT_STATUS_COLORS[file.status] : 'text-zinc-400'
     const statusLabel = file.status ? GIT_STATUS_LABELS[file.status] : '?'
     const isSelected = selectedPath === file.absolutePath
+    const stat = numstat[file.absolutePath]
     return (
       <div
         key={file.absolutePath}
@@ -326,6 +339,16 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
         >
           {file.name}
         </button>
+        {stat && (stat.additions > 0 || stat.deletions > 0) && (
+          <span className="shrink-0 flex items-center gap-1 text-[10px] tabular-nums">
+            {stat.additions > 0 && (
+              <span className="text-emerald-400">+{stat.additions}</span>
+            )}
+            {stat.deletions > 0 && (
+              <span className="text-red-400">−{stat.deletions}</span>
+            )}
+          </span>
+        )}
         <span className={`shrink-0 w-3 text-center text-[10px] font-semibold tabular-nums ${statusColor}`}>
           {statusLabel}
         </span>

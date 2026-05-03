@@ -164,6 +164,72 @@ export async function getCommitChangedFiles(cwd: string, hash: string): Promise<
   }
 }
 
+export interface DiffNumstat {
+  additions: number
+  deletions: number
+}
+
+function parseNumstat(raw: string, cwd: string): Record<string, DiffNumstat> {
+  const out: Record<string, DiffNumstat> = {}
+  for (const line of raw.split('\n')) {
+    if (!line.trim()) continue
+    const parts = line.split('\t')
+    if (parts.length < 3) continue
+    const additions = parts[0] === '-' ? 0 : Number.parseInt(parts[0], 10) || 0
+    const deletions = parts[1] === '-' ? 0 : Number.parseInt(parts[1], 10) || 0
+    const filePath = parts[parts.length - 1]
+    out[path.join(cwd, filePath)] = { additions, deletions }
+  }
+  return out
+}
+
+function countFileLines(absolutePath: string): number {
+  try {
+    const stat = fs.statSync(absolutePath)
+    if (!stat.isFile()) return 0
+    if (stat.size > 5 * 1024 * 1024) return 0
+    const buf = fs.readFileSync(absolutePath)
+    if (buf.includes(0)) return 0
+    if (buf.length === 0) return 0
+    let lines = 0
+    for (let i = 0; i < buf.length; i++) if (buf[i] === 10) lines++
+    if (buf[buf.length - 1] !== 10) lines++
+    return lines
+  } catch {
+    return 0
+  }
+}
+
+export async function getDiffNumstat(cwd: string, hash?: string): Promise<Record<string, DiffNumstat>> {
+  try {
+    if (hash) {
+      const parents = await runGit(cwd, ['rev-list', '--parents', '-n', '1', hash])
+      const hasParent = parents.split(' ').length > 1
+      const args = hasParent
+        ? ['diff', '--numstat', '-M', `${hash}^`, hash]
+        : ['diff-tree', '--no-commit-id', '--numstat', '-M', '-r', '--root', hash]
+      const raw = await runGit(cwd, args, 15000, 50 * 1024 * 1024)
+      return parseNumstat(raw, cwd)
+    }
+
+    const trackedRaw = await runGit(cwd, ['diff', '--numstat', 'HEAD'], 15000, 50 * 1024 * 1024)
+    const result = parseNumstat(trackedRaw, cwd)
+
+    const statusRaw = await runGit(cwd, ['status', '--porcelain'])
+    for (const line of statusRaw.split('\n')) {
+      if (line.length < 4) continue
+      if (line[0] !== '?' || line[1] !== '?') continue
+      const filePath = line.slice(3)
+      const absPath = path.join(cwd, filePath)
+      result[absPath] = { additions: countFileLines(absPath), deletions: 0 }
+    }
+
+    return result
+  } catch {
+    return {}
+  }
+}
+
 export async function getStatus(cwd: string): Promise<Record<string, GitFileStatus>> {
   try {
     const raw = await runGit(cwd, ['status', '--porcelain'])

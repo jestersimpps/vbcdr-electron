@@ -7,6 +7,7 @@ import {
   getFileAtHead,
   getFileAtRef,
   getCommitChangedFiles,
+  getDiffNumstat,
   checkoutBranch,
   getDefaultBranch,
   getDiffSummary,
@@ -26,7 +27,7 @@ import {
 } from '@main/services/git-service'
 import { registerProject, unregisterProject, fetchNow } from '@main/services/git-fetch-service'
 import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
-import type { CommitChangedFile } from '@main/services/git-service'
+import type { CommitChangedFile, DiffNumstat } from '@main/services/git-service'
 
 export function registerGitHandlers(): void {
   ipcMain.handle('git:is-repo', async (_event, cwd: string): Promise<boolean> => {
@@ -66,6 +67,13 @@ export function registerGitHandlers(): void {
     'git:commit-files',
     async (_event, cwd: string, hash: string): Promise<CommitChangedFile[]> => {
       return getCommitChangedFiles(cwd, hash)
+    }
+  )
+
+  ipcMain.handle(
+    'git:diff-numstat',
+    async (_event, cwd: string, hash?: string): Promise<Record<string, DiffNumstat>> => {
+      return getDiffNumstat(cwd, hash)
     }
   )
 

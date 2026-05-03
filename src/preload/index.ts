@@ -82,6 +82,7 @@ const api = {
     fileAtHead: (cwd: string, filePath: string) => ipcRenderer.invoke('git:file-at-head', cwd, filePath),
     fileAtRef: (cwd: string, ref: string, filePath: string) => ipcRenderer.invoke('git:file-at-ref', cwd, ref, filePath),
     commitFiles: (cwd: string, hash: string) => ipcRenderer.invoke('git:commit-files', cwd, hash),
+    diffNumstat: (cwd: string, hash?: string) => ipcRenderer.invoke('git:diff-numstat', cwd, hash),
     checkout: (cwd: string, branch: string) => ipcRenderer.invoke('git:checkout', cwd, branch),
     defaultBranch: (cwd: string) => ipcRenderer.invoke('git:default-branch', cwd),
     diffSummary: (cwd: string, baseBranch: string) => ipcRenderer.invoke('git:diff-summary', cwd, baseBranch),
