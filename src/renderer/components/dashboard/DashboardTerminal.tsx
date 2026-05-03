@@ -41,7 +41,9 @@ export function DashboardTerminal({ tabId }: DashboardTerminalProps): React.Reac
       const scaleX = containerWidth / origWidth
       const scaleY = containerHeight / origHeight
       const scale = Math.min(scaleX, scaleY)
-      termEl.style.transform = `scale(${scale})`
+      const offsetX = (containerWidth - origWidth * scale) / 2
+      const offsetY = (containerHeight - origHeight * scale) / 2
+      termEl.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`
       termEl.style.transformOrigin = 'top left'
     }
 

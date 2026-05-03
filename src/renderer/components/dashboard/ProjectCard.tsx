@@ -39,6 +39,7 @@ interface ProjectCardProps {
   project: Project
   onOpenModal: () => void
   isModalOpen: boolean
+  maxColSpan: number
 }
 
 type ClaudeStatus = 'busy' | 'idle' | 'none'
@@ -58,7 +59,7 @@ function useLlmTabs(projectId: string): TerminalTab[] {
   return tabs.filter((t) => t.projectId === projectId && t.initialCommand)
 }
 
-export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardProps): React.ReactElement {
+export function ProjectCard({ project, onOpenModal, isModalOpen, maxColSpan }: ProjectCardProps): React.ReactElement {
   const branches = useGitStore((s) => s.branchesPerProject[project.id] ?? EMPTY_BRANCHES)
   const outputBuffer = useTerminalStore((s) => s.outputBufferPerProject[project.id] ?? EMPTY_OUTPUT)
   const openFilesCount = useEditorStore((s) => s.statePerProject[project.id]?.openFiles.length ?? 0)
@@ -67,6 +68,7 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
   const llmTabs = useLlmTabs(project.id)
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
+  const setActiveTab = useTerminalStore((s) => s.setActiveTab)
   const themeId = useThemeStore((s) => s.getFullThemeId())
   const tokenCap = useLayoutStore((s) => s.tokenCap)
   const setActiveProject = useProjectStore((s) => s.setActiveProject)
@@ -77,12 +79,12 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
     .filter((l) => l.length > 0)
     .slice(-12)
 
-  const fullRow = llmTabs.length > 1
+  const span = Math.max(1, Math.min(llmTabs.length || 1, Math.max(1, maxColSpan)))
 
   return (
     <div
       className="group relative flex h-full min-h-0 w-full min-w-0 cursor-pointer flex-col overflow-hidden border border-zinc-800 bg-zinc-900/30 text-left transition-colors hover:border-zinc-700"
-      style={fullRow ? { gridColumn: '1 / -1' } : undefined}
+      style={span > 1 ? { gridColumn: `span ${span} / span ${span}` } : undefined}
       onClick={onOpenModal}
     >
       <div className="flex h-9 shrink-0 items-center justify-between gap-1 border-b border-zinc-800 bg-zinc-900/50 px-2">
@@ -124,7 +126,10 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
       </div>
 
       {llmTabs.length > 0 ? (
-        <div className="flex flex-1 min-h-0">
+        <div
+          className="grid flex-1 min-h-0 auto-rows-fr"
+          style={{ gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))` }}
+        >
           {llmTabs.map((tab, i) => {
             const status = tabStatuses[tab.id]
             const hasInstance = !!getTerminalInstance(tab.id)
@@ -132,11 +137,23 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
             const theme = getTerminalTheme(themeId)
             const pct = tokens != null ? Math.min(tokens / tokenCap, 1) : 0
             const fill = tokenBarFill(pct, theme)
+            const col = i % span
+            const row = Math.floor(i / span)
             return (
               <div
                 key={tab.id}
-                className={cn('flex min-w-0 flex-1 flex-col', i > 0 && 'border-l border-zinc-800')}
+                className={cn(
+                  'group/pane relative flex min-w-0 min-h-0 flex-col transition-colors hover:bg-zinc-800/30',
+                  col > 0 && 'border-l border-zinc-800',
+                  row > 0 && 'border-t border-zinc-800'
+                )}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setActiveTab(project.id, tab.id)
+                  onOpenModal()
+                }}
               >
+                <div className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity group-hover/pane:opacity-100" style={{ boxShadow: 'inset 0 0 0 1px rgb(96 165 250)' }} />
                 <div className="flex h-7 shrink-0 items-center justify-between gap-1.5 border-b border-zinc-800 bg-zinc-900/30 px-2 text-[11px]">
                   <div className="flex min-w-0 items-center gap-1.5">
                     <span
