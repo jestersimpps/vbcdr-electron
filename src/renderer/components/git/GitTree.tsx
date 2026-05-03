@@ -394,7 +394,15 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
             </span>
           )}
           <button
-            onClick={() => loadGitData(effectiveProjectId, effectivePath)}
+            onClick={async () => {
+              await Promise.all([
+                loadGitData(effectiveProjectId, effectivePath),
+                loadStatus(effectiveProjectId, effectivePath),
+                loadRangeFileCounts(effectiveProjectId, effectivePath)
+              ])
+              const drift = await window.api.git.fetchNow(effectivePath)
+              useGitStore.getState().setDrift(effectiveProjectId, drift)
+            }}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
             title="Refresh"
           >
