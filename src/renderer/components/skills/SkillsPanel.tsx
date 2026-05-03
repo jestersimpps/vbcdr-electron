@@ -177,7 +177,7 @@ export function SkillsPanel({ projectId, scope = 'all' }: SkillsPanelProps): Rea
     <PanelGroup direction="horizontal">
       <Panel defaultSize={30} minSize={20} maxSize={45}>
         <div className="flex h-full flex-col overflow-hidden border-r border-zinc-800 bg-zinc-900">
-          <div className="flex items-center justify-between px-2 py-1.5 border-b border-zinc-800">
+          <div className="flex h-9 shrink-0 items-center justify-between border-b border-zinc-800 px-2">
             <span className="text-xs font-medium text-zinc-300">Installed</span>
             <button
               onClick={refreshInstalled}
@@ -214,7 +214,7 @@ export function SkillsPanel({ projectId, scope = 'all' }: SkillsPanelProps): Rea
       <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
       <Panel defaultSize={70} minSize={40}>
         <div className="flex h-full flex-col bg-zinc-950">
-          <div className="flex items-center gap-2 border-b border-zinc-800 px-2 py-1.5">
+          <div className="flex h-9 shrink-0 items-center gap-2 border-b border-zinc-800 px-2">
             <div className="relative flex-1">
               <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-zinc-500" />
               <input

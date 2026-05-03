@@ -512,7 +512,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     <PanelGroup direction="horizontal" className="h-full">
       <Panel defaultSize={25} minSize={15} maxSize={50}>
         <div className="flex h-full flex-col overflow-hidden border-r border-zinc-800 bg-zinc-900">
-          <div className="flex items-center gap-1.5 border-b border-zinc-800 px-2 py-1.5">
+          <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-zinc-800 px-2">
             {headerIcon}
             <span className="min-w-0 truncate text-[11px] text-zinc-300" title={headerTitle}>
               {headerLabel}
@@ -555,7 +555,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       <PanelResizeHandle className="w-1 bg-zinc-800 transition-colors hover:bg-zinc-700" />
       <Panel defaultSize={75} minSize={30}>
         <div className="flex h-full min-w-0 flex-col bg-zinc-950">
-        <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2 py-1">
+        <div className="flex h-9 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2">
           <span className="min-w-0 truncate text-[11px] text-zinc-400" title={selectedFile?.relativePath}>
             {selectedFile?.relativePath ?? ''}
           </span>

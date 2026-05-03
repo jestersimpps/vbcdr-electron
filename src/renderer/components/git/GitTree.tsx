@@ -371,7 +371,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
 
   return (
     <div className="relative flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2 py-1">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2">
         <div className="flex min-w-0 items-center gap-1.5">
           <GitBranchIcon size={13} className="shrink-0 text-zinc-500" />
           <span className="shrink-0 text-[11px] text-zinc-400">Git</span>
@@ -413,7 +413,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
 
       {incomingCount > 0 && (
         <div className={`border-b border-zinc-800 ${isIncomingSelected ? 'bg-blue-500/15' : 'bg-blue-500/5'}`}>
-          <div className={`flex items-center ${isIncomingSelected ? '' : 'hover:bg-blue-500/10'}`}>
+          <div className={`flex h-8 items-center ${isIncomingSelected ? '' : 'hover:bg-blue-500/10'}`}>
             <button
               onClick={() => {
                 if (!effectiveProjectId || !drift?.remoteBranch) return
@@ -421,7 +421,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
                 setCenterTab(effectiveProjectId, 'diff')
               }}
               disabled={!drift?.remoteBranch}
-              className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left disabled:cursor-not-allowed"
+              className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 text-left disabled:cursor-not-allowed"
               title={`Show diff for ${incomingCount} incoming commit${incomingCount === 1 ? '' : 's'} from ${drift?.remoteBranch ?? 'remote'}`}
             >
               <CloudDownload size={12} className="shrink-0 text-blue-400" />
@@ -452,10 +452,10 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
 
       {workingCount > 0 && (
         <div className={`border-b border-zinc-800 ${isWorkingSelected ? 'bg-yellow-500/15' : 'bg-yellow-500/5'}`}>
-          <div className={`flex items-center ${isWorkingSelected ? '' : 'hover:bg-yellow-500/10'}`}>
+          <div className={`flex h-8 items-center ${isWorkingSelected ? '' : 'hover:bg-yellow-500/10'}`}>
             <button
               onClick={handleWorkingClick}
-              className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left"
+              className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 text-left"
               title="Show diff for uncommitted changes"
             >
               <FileDiff size={12} className="shrink-0 text-yellow-400" />
@@ -525,7 +525,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
 
       {outgoingCount > 0 && (
         <div className={`border-b border-zinc-800 ${isOutgoingSelected ? 'bg-emerald-500/15' : 'bg-emerald-500/5'}`}>
-          <div className={`flex items-center ${isOutgoingSelected ? '' : 'hover:bg-emerald-500/10'}`}>
+          <div className={`flex h-8 items-center ${isOutgoingSelected ? '' : 'hover:bg-emerald-500/10'}`}>
             <button
               onClick={() => {
                 if (!effectiveProjectId || !drift?.remoteBranch) return
@@ -533,7 +533,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
                 setCenterTab(effectiveProjectId, 'diff')
               }}
               disabled={!drift?.remoteBranch}
-              className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left disabled:cursor-not-allowed"
+              className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 text-left disabled:cursor-not-allowed"
               title={`Show diff for ${outgoingCount} unpushed commit${outgoingCount === 1 ? '' : 's'}`}
             >
               <CloudUpload size={12} className="shrink-0 text-emerald-400" />

@@ -128,7 +128,7 @@ export function ClaudeFileList({
   const tabBtn = (mode: ViewMode, label: string): React.ReactElement => (
     <button
       onClick={() => setView(mode)}
-      className={`flex-1 px-2 py-1 text-[11px] font-medium uppercase tracking-wide transition-colors ${
+      className={`flex h-full flex-1 items-center justify-center px-2 text-[11px] font-medium uppercase tracking-wide transition-colors ${
         view === mode
           ? 'bg-zinc-800 text-zinc-200'
           : 'text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300'
@@ -140,13 +140,13 @@ export function ClaudeFileList({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
+      <div className="flex h-9 shrink-0 items-center border-b border-zinc-800 bg-zinc-900/50">
         {tabBtn('curated', 'Config')}
         {tabBtn('tree', 'Files')}
       </div>
       {view === 'curated' ? (
         <>
-          <div className="flex items-center justify-end border-b border-zinc-800 bg-zinc-900/50 px-3 py-1">
+          <div className="flex h-9 shrink-0 items-center justify-end border-b border-zinc-800 bg-zinc-900/50 px-3">
             <button
               onClick={handleRefresh}
               className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"

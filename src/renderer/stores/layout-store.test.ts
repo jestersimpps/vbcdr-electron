@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useLayoutStore, defaultLayout, DEFAULT_TOKEN_CAP } from './layout-store'
+import { useLayoutStore, DEFAULT_SPLIT, DEFAULT_TOKEN_CAP } from './layout-store'
 import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
 
 const resetStore = (): void => {
   useLayoutStore.setState({
-    layoutsPerProject: {},
-    locksPerProject: {},
+    splitsPerProject: {},
     backgroundImage: null,
     backgroundBlur: 0,
     tokenCap: DEFAULT_TOKEN_CAP,
@@ -18,57 +17,38 @@ const resetStore = (): void => {
 describe('layout-store', () => {
   beforeEach(resetStore)
 
-  describe('getLayout', () => {
-    it('returns the default layout for an unknown project', () => {
-      const layout = useLayoutStore.getState().getLayout('p1')
-      expect(layout).toEqual(defaultLayout)
+  describe('getSplit / setSplit', () => {
+    it('returns the default split for an unknown project', () => {
+      expect(useLayoutStore.getState().getSplit('p1')).toBe(DEFAULT_SPLIT)
     })
 
-    it('fills in missing panels using defaults', () => {
-      const partial = [{ i: 'workspace', x: 0, y: 0, w: 6, h: 6 }]
-      useLayoutStore.setState({ layoutsPerProject: { p1: partial } })
-      const layout = useLayoutStore.getState().getLayout('p1')
-      const ids = layout.map((l) => l.i).sort()
-      expect(ids).toEqual(defaultLayout.map((l) => l.i).sort())
+    it('persists supplied split per project', () => {
+      useLayoutStore.getState().setSplit('p1', 60)
+      expect(useLayoutStore.getState().getSplit('p1')).toBe(60)
+      expect(useLayoutStore.getState().getSplit('p2')).toBe(DEFAULT_SPLIT)
     })
 
-    it('strips ids that are not part of the layout', () => {
-      const mixed = [
-        { i: 'workspace', x: 0, y: 0, w: 9, h: 12 },
-        { i: 'unknown', x: 9, y: 0, w: 3, h: 12 }
-      ]
-      useLayoutStore.setState({ layoutsPerProject: { p1: mixed } })
-      const layout = useLayoutStore.getState().getLayout('p1')
-      expect(layout.find((l) => l.i === 'unknown')).toBeUndefined()
-    })
-  })
-
-  describe('saveLayout / togglePanelLock', () => {
-    it('persists supplied layout for the project', () => {
-      const custom = [{ i: 'workspace', x: 0, y: 0, w: 8, h: 8 }]
-      useLayoutStore.getState().saveLayout('p1', custom)
-      expect(useLayoutStore.getState().layoutsPerProject.p1).toBe(custom)
+    it('clamps out-of-range values', () => {
+      useLayoutStore.getState().setSplit('p1', 5)
+      expect(useLayoutStore.getState().getSplit('p1')).toBe(20)
+      useLayoutStore.getState().setSplit('p1', 99)
+      expect(useLayoutStore.getState().getSplit('p1')).toBe(85)
     })
 
-    it('toggles panel lock independently per project', () => {
-      expect(useLayoutStore.getState().isLocked('p1', 'git')).toBe(false)
-      useLayoutStore.getState().togglePanelLock('p1', 'git')
-      expect(useLayoutStore.getState().isLocked('p1', 'git')).toBe(true)
-      expect(useLayoutStore.getState().isLocked('p2', 'git')).toBe(false)
-      useLayoutStore.getState().togglePanelLock('p1', 'git')
-      expect(useLayoutStore.getState().isLocked('p1', 'git')).toBe(false)
+    it('falls back to default when given a non-finite size', () => {
+      useLayoutStore.getState().setSplit('p1', NaN)
+      expect(useLayoutStore.getState().getSplit('p1')).toBe(DEFAULT_SPLIT)
     })
   })
 
   describe('resetLayout', () => {
-    it('clears project-specific layout and lock state', () => {
-      useLayoutStore.getState().saveLayout('p1', [{ i: 'workspace', x: 0, y: 0, w: 1, h: 1 }])
-      useLayoutStore.getState().togglePanelLock('p1', 'git')
+    it('clears project-specific split and bumps resetVersion', () => {
+      useLayoutStore.getState().setSplit('p1', 50)
       const before = useLayoutStore.getState().resetVersion
       useLayoutStore.getState().resetLayout('p1')
       const state = useLayoutStore.getState()
-      expect(state.layoutsPerProject.p1).toBeUndefined()
-      expect(state.locksPerProject.p1).toBeUndefined()
+      expect(state.splitsPerProject.p1).toBeUndefined()
+      expect(state.getSplit('p1')).toBe(DEFAULT_SPLIT)
       expect(state.resetVersion).toBe(before + 1)
     })
   })

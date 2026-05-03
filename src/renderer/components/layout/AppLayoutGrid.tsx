@@ -1,6 +1,4 @@
-import { useEffect, useRef, useCallback, useState, useMemo, memo } from 'react'
-import ReactGridLayout from 'react-grid-layout/legacy'
-import type { Layout } from 'react-grid-layout/legacy'
+import { useEffect, useCallback, memo } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import {
   DndContext,
@@ -12,7 +10,6 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { DraggablePanel } from '@/components/layout/DraggablePanel'
 import { GitTree } from '@/components/git/GitTree'
 import { DiffPanel } from '@/components/git/DiffPanel'
 import { TerminalPanel } from '@/components/terminal/TerminalPanel'
@@ -22,7 +19,7 @@ import { CodeEditor } from '@/components/editor/CodeEditor'
 import { useEditorStore } from '@/stores/editor-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { useLayoutStore, GRID_COLS, GRID_ROWS, panelConfigs } from '@/stores/layout-store'
+import { useLayoutStore } from '@/stores/layout-store'
 import { StatusBar } from '@/components/layout/StatusBar'
 import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
 import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
@@ -37,11 +34,6 @@ import { TerminalsPage } from '@/components/terminal/TerminalsPage'
 import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Settings as SettingsIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
-import 'react-grid-layout/css/styles.css'
-import 'react-resizable/css/styles.css'
-
-const MARGIN = 6
-const CONTAINER_PADDING = 6
 
 const ProjectTabStatus = memo(function ProjectTabStatus({ projectId }: { projectId: string }): React.ReactElement | null {
   const tabs = useTerminalStore((s) => s.tabs)
@@ -129,43 +121,18 @@ export function AppLayoutGrid(): React.ReactElement {
       reorderProjects(fromIndex, toIndex)
     }
   }, [projects, reorderProjects])
-  const { getLayout, isLocked, saveLayout } = useLayoutStore()
+  const getSplit = useLayoutStore((s) => s.getSplit)
+  const setSplit = useLayoutStore((s) => s.setSplit)
   const resetVersion = useLayoutStore((s) => s.resetVersion)
   const backgroundImage = useLayoutStore((s) => s.backgroundImage)
   const backgroundBlur = useLayoutStore((s) => s.backgroundBlur)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(0)
-  const [height, setHeight] = useState(0)
 
   const projectId = activeProjectId ?? '__default__'
-  const layout = getLayout(projectId)
+  const splitSize = getSplit(projectId)
 
   useEffect(() => {
     loadProjects()
   }, [loadProjects])
-
-  useEffect(() => {
-    if (!containerRef.current) return
-    const measure = (): void => {
-      if (containerRef.current) {
-        setWidth(containerRef.current.clientWidth)
-        setHeight(containerRef.current.clientHeight)
-      }
-    }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(containerRef.current)
-    return () => ro.disconnect()
-  }, [dashboardActive, statisticsActive, usageActive, settingsActive, claudePageActive, skillsPageActive, terminalsPageActive])
-
-  const handleStop = (newLayout: Layout[]): void => {
-    saveLayout(projectId, newLayout)
-  }
-
-  const gridLayout = useMemo(
-    () => layout.map((item) => ({ ...item, static: isLocked(projectId, item.i as any) })),
-    [layout, projectId, isLocked]
-  )
 
   const activeProjectPath = activeProjectId
     ? projects.find((p) => p.id === activeProjectId)?.path ?? null
@@ -173,11 +140,11 @@ export function AppLayoutGrid(): React.ReactElement {
 
   const renderWorkspacePanel = (): React.ReactNode => (
     <div className="flex h-full flex-col">
-      <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
+      <div className="flex h-9 shrink-0 items-center border-b border-zinc-800 bg-zinc-900/50">
         <button
           onClick={() => activeProjectId && setCenterTab(activeProjectId, 'terminals')}
           className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
             centerTab === 'terminals'
               ? 'border-b-2 border-zinc-400 text-zinc-200'
               : 'text-zinc-500 hover:text-zinc-300'
@@ -189,7 +156,7 @@ export function AppLayoutGrid(): React.ReactElement {
         <button
           onClick={() => activeProjectId && setCenterTab(activeProjectId, 'editor')}
           className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
             centerTab === 'editor'
               ? 'border-b-2 border-zinc-400 text-zinc-200'
               : 'text-zinc-500 hover:text-zinc-300'
@@ -201,7 +168,7 @@ export function AppLayoutGrid(): React.ReactElement {
         <button
           onClick={() => activeProjectId && setCenterTab(activeProjectId, 'diff')}
           className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
             centerTab === 'diff'
               ? 'border-b-2 border-zinc-400 text-zinc-200'
               : 'text-zinc-500 hover:text-zinc-300'
@@ -213,7 +180,7 @@ export function AppLayoutGrid(): React.ReactElement {
         <button
           onClick={() => activeProjectId && setCenterTab(activeProjectId, 'claude')}
           className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
             centerTab === 'claude'
               ? 'border-b-2 border-zinc-400 text-zinc-200'
               : 'text-zinc-500 hover:text-zinc-300'
@@ -225,7 +192,7 @@ export function AppLayoutGrid(): React.ReactElement {
         <button
           onClick={() => activeProjectId && setCenterTab(activeProjectId, 'skills')}
           className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
             centerTab === 'skills'
               ? 'border-b-2 border-zinc-400 text-zinc-200'
               : 'text-zinc-500 hover:text-zinc-300'
@@ -288,17 +255,6 @@ export function AppLayoutGrid(): React.ReactElement {
       </div>
     </div>
   )
-
-  const renderPanel = (id: string): React.ReactNode => {
-    switch (id) {
-      case 'workspace':
-        return renderWorkspacePanel()
-      case 'git':
-        return <GitTree />
-      default:
-        return null
-    }
-  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-zinc-950 text-zinc-100">
@@ -439,39 +395,28 @@ export function AppLayoutGrid(): React.ReactElement {
           />
         )}
         <div
-          ref={containerRef}
           className={cn('absolute inset-0', !backgroundImage && 'screen-gradient')}
           style={{ visibility: anyPageActive ? 'hidden' : 'visible' }}
         >
-          {width > 0 && height > 0 && (
-            <ReactGridLayout
-              key={resetVersion}
-              layout={gridLayout}
-              cols={GRID_COLS}
-              rowHeight={(height - 2 * CONTAINER_PADDING - (GRID_ROWS - 1) * MARGIN) / GRID_ROWS}
-              width={width}
-              margin={[MARGIN, MARGIN]}
-              containerPadding={[CONTAINER_PADDING, CONTAINER_PADDING]}
-              draggableHandle=".panel-drag-handle"
-              compactType="vertical"
-              resizeHandles={['se', 's', 'e']}
-              onDragStop={handleStop}
-              onResizeStop={handleStop}
-            >
-              {panelConfigs.map((panel) => (
-                <div key={panel.id}>
-                  <DraggablePanel
-                    id={panel.id}
-                    projectId={projectId}
-                    title={panel.title}
-                    locked={isLocked(projectId, panel.id)}
-                  >
-                    {renderPanel(panel.id)}
-                  </DraggablePanel>
-                </div>
-              ))}
-            </ReactGridLayout>
-          )}
+          <PanelGroup
+            key={`${projectId}-${resetVersion}`}
+            direction="horizontal"
+            onLayout={(sizes) => {
+              if (sizes[0] !== undefined) setSplit(projectId, sizes[0])
+            }}
+          >
+            <Panel defaultSize={splitSize} minSize={20}>
+              <div className="h-full overflow-hidden">
+                {renderWorkspacePanel()}
+              </div>
+            </Panel>
+            <PanelResizeHandle className="w-px bg-zinc-800 hover:bg-zinc-600 transition-colors" />
+            <Panel defaultSize={100 - splitSize} minSize={15}>
+              <div className="h-full overflow-hidden">
+                <GitTree />
+              </div>
+            </Panel>
+          </PanelGroup>
         </div>
         {dashboardActive && (
           <div className="absolute inset-0 z-10 overflow-auto">

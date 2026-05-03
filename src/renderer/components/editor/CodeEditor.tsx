@@ -345,7 +345,7 @@ function SortableTab({
       style={style}
       {...attributes}
       {...listeners}
-      className={`group flex shrink-0 cursor-pointer select-none items-center gap-1.5 border-r border-zinc-800 px-3 py-2 text-xs ${
+      className={`group flex h-full shrink-0 cursor-pointer select-none items-center gap-1.5 border-r border-zinc-800 px-3 text-xs ${
         isActive
           ? 'bg-zinc-950 text-zinc-200'
           : 'text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300'
@@ -496,7 +496,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
 
   return (
     <div className="flex h-full flex-col bg-zinc-950">
-      <div className="flex min-h-[36px] items-center gap-0 overflow-x-auto border-b border-zinc-800 bg-zinc-900/50">
+      <div className="flex h-9 shrink-0 items-center gap-0 overflow-x-auto border-b border-zinc-800 bg-zinc-900/50">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTabDragEnd}>
           <SortableContext items={openFiles.map((f) => f.path)} strategy={horizontalListSortingStrategy}>
             {openFiles.map((file) => (

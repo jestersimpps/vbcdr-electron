@@ -19,6 +19,7 @@ export function DevTerminalsPanel(): React.ReactElement {
   const tabs = useDevTerminalStore((s) => s.tabs)
   const { createTab, closeTab, initProject } = useDevTerminalStore()
   const focusedTabId = useTerminalStore((s) => s.focusedTabId)
+  const tabStatuses = useTerminalStore((s) => s.tabStatuses)
 
   const projectTabs = tabs.filter((t) => t.projectId === activeProject?.id)
 
@@ -71,17 +72,6 @@ export function DevTerminalsPanel(): React.ReactElement {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50 px-1">
-        <div className="flex-1" />
-        <button
-          onClick={handleAdd}
-          disabled={projectTabs.length >= 6}
-          className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
-          title="New terminal"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
       <div className="relative flex-1" style={{ minHeight: 0 }}>
         {projectTabs.length === 0 ? (
           <div className="flex h-full items-center justify-center text-xs text-zinc-600">
@@ -93,9 +83,12 @@ export function DevTerminalsPanel(): React.ReactElement {
               <div key={rowIdx} className="flex flex-1" style={{ minHeight: 0 }}>
                 {Array.from({ length: colCount }).map((_, colIdx) => {
                   const tab = projectTabs[tabIndex]
+                  const currentTabIndex = tabIndex
                   tabIndex++
                   if (!tab) return null
                   const isFocused = focusedTabId === tab.id
+                  const status = tabStatuses[tab.id]
+                  const isFirst = currentTabIndex === 0
                   return (
                     <div
                       key={tab.id}
@@ -104,32 +97,65 @@ export function DevTerminalsPanel(): React.ReactElement {
                         minWidth: 0,
                         minHeight: 0,
                         borderRight: colIdx < colCount - 1 ? '1px solid rgb(39 39 42)' : undefined,
-                        borderBottom: rowIdx < layout.rows.length - 1 ? '1px solid rgb(39 39 42)' : undefined,
-                        boxShadow: isFocused ? 'inset 0 0 0 1px rgb(96 165 250)' : undefined,
-                        transition: 'box-shadow 120ms ease'
+                        borderBottom: rowIdx < layout.rows.length - 1 ? '1px solid rgb(39 39 42)' : undefined
                       }}
                       onClick={() => focusTerminal(tab.id)}
                     >
                       <div
-                        className={`flex items-center justify-between border-b px-2 py-0.5 ${
+                        className={`flex h-9 shrink-0 items-center justify-between gap-1 border-b px-2 ${
                           isFocused ? 'border-blue-400/40 bg-blue-400/10' : 'border-zinc-800 bg-zinc-900/50'
                         }`}
                       >
-                        <span className={`text-[10px] ${isFocused ? 'text-blue-300' : 'text-zinc-500'}`}>
-                          {tab.title}
-                        </span>
-                        <button
-                          onClick={() => handleClose(tab.id)}
-                          className="rounded p-0.5 text-zinc-300 hover:bg-zinc-800 hover:text-red-400 disabled:text-zinc-600"
-                          disabled={projectTabs.length <= 1}
-                          title="Close terminal"
-                        >
-                          <X size={10} />
-                        </button>
+                        <div className="flex min-w-0 items-center gap-1.5 text-xs">
+                          {status === 'busy' && (
+                            <span className="inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-400" />
+                          )}
+                          {status === 'idle' && (
+                            <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+                          )}
+                          <span className={`truncate ${isFocused ? 'text-blue-300' : 'text-zinc-400'}`}>
+                            {tab.title}
+                          </span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          {isFirst && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleAdd()
+                              }}
+                              disabled={projectTabs.length >= 6}
+                              className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
+                              title="New terminal"
+                            >
+                              <Plus size={12} />
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleClose(tab.id)
+                            }}
+                            className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-red-400 disabled:opacity-30"
+                            disabled={projectTabs.length <= 1}
+                            title="Close terminal"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
                       </div>
                       <div className="flex-1" style={{ minHeight: 0 }}>
                         <TerminalInstance tabId={tab.id} projectId={tab.projectId} cwd={tab.cwd} />
                       </div>
+                      {isFocused && (
+                        <div
+                          className="pointer-events-none absolute inset-0 z-10"
+                          style={{
+                            boxShadow: 'inset 0 0 0 1px rgb(96 165 250)',
+                            transition: 'box-shadow 120ms ease'
+                          }}
+                        />
+                      )}
                     </div>
                   )
                 })}

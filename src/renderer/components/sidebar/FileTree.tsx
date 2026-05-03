@@ -231,8 +231,8 @@ function FileSearch({ projectId, cwd }: { projectId: string; cwd: string }): Rea
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-zinc-800 bg-zinc-900/50 px-3 py-1.5">
-        <div className="flex items-center gap-2 rounded bg-zinc-800 px-2 py-1">
+      <div className="flex h-9 shrink-0 items-center border-b border-zinc-800 bg-zinc-900/50 px-3">
+        <div className="flex w-full items-center gap-2 rounded bg-zinc-800 px-2 py-1">
           <Search size={12} className="shrink-0 text-zinc-500" />
           <input
             value={query}
@@ -434,7 +434,7 @@ export function FileTree({
   if (showSearch) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3 py-1.5">
+        <div className="flex h-9 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3">
           <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Search</span>
           <button
             onClick={() => setShowSearch(false)}
@@ -460,7 +460,7 @@ export function FileTree({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3 py-1.5">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3">
         <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
           {isOverride ? 'Claude config' : 'Explorer'}
         </span>

@@ -209,8 +209,8 @@ export function TerminalPanel(): React.ReactElement {
 
   return (
     <div data-terminal-panel style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
-      <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
-        <div className="flex flex-1 items-center gap-0.5 overflow-x-auto px-1">
+      <div className="flex h-9 shrink-0 items-center border-b border-zinc-800 bg-zinc-900/50">
+        <div className="flex h-full flex-1 items-center gap-0.5 overflow-x-auto px-1">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTabDragEnd}>
             <SortableContext items={projectTabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
               {projectTabs.map((tab) => (

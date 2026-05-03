@@ -1,43 +1,19 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Layout } from 'react-grid-layout'
 import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
 
-export type PanelId = 'workspace' | 'git'
-
-export const GRID_COLS = 12
-export const GRID_ROWS = 12
-
-export interface PanelConfig {
-  id: PanelId
-  title: string
-}
-
-export const panelConfigs: PanelConfig[] = [
-  { id: 'workspace', title: 'Workspace' },
-  { id: 'git', title: 'Git' }
-]
-
-const validPanelIds = new Set<string>(panelConfigs.map((p) => p.id))
-
-export const defaultLayout: Layout[] = [
-  { i: 'workspace', x: 0, y: 0, w: 9, h: 12, minW: 4, minH: 3 },
-  { i: 'git', x: 9, y: 0, w: 3, h: 12, minW: 2, minH: 3 }
-]
+export const DEFAULT_SPLIT = 75
 
 interface LayoutState {
-  layoutsPerProject: Record<string, Layout[]>
-  locksPerProject: Record<string, Record<string, boolean>>
+  splitsPerProject: Record<string, number>
   backgroundImage: string | null
   backgroundBlur: number
   tokenCap: number
   idleSoundEnabled: boolean
   idleSoundId: string
   resetVersion: number
-  getLayout: (projectId: string) => Layout[]
-  isLocked: (projectId: string, panelId: PanelId) => boolean
-  saveLayout: (projectId: string, newLayout: Layout[]) => void
-  togglePanelLock: (projectId: string, id: PanelId) => void
+  getSplit: (projectId: string) => number
+  setSplit: (projectId: string, size: number) => void
   resetLayout: (projectId: string) => void
   setBackgroundImage: (dataUrl: string | null) => void
   setBackgroundBlur: (blur: number) => void
@@ -48,18 +24,17 @@ interface LayoutState {
 
 export const DEFAULT_TOKEN_CAP = 160_000
 
-function ensureComplete(layout: Layout[]): Layout[] {
-  const filtered = layout.filter((l) => validPanelIds.has(l.i))
-  const present = new Set(filtered.map((l) => l.i))
-  const missing = defaultLayout.filter((d) => !present.has(d.i))
-  return missing.length > 0 ? [...filtered, ...missing] : filtered
+function clampSplit(size: number): number {
+  if (!Number.isFinite(size)) return DEFAULT_SPLIT
+  if (size < 20) return 20
+  if (size > 85) return 85
+  return size
 }
 
 export const useLayoutStore = create<LayoutState>()(
   persist(
     (set, get) => ({
-      layoutsPerProject: {},
-      locksPerProject: {},
+      splitsPerProject: {},
       backgroundImage: null,
       backgroundBlur: 0,
       tokenCap: DEFAULT_TOKEN_CAP,
@@ -67,27 +42,14 @@ export const useLayoutStore = create<LayoutState>()(
       idleSoundId: DEFAULT_IDLE_SOUND_ID,
       resetVersion: 0,
 
-      getLayout: (projectId: string) => {
-        return ensureComplete(get().layoutsPerProject[projectId] ?? defaultLayout)
+      getSplit: (projectId: string) => {
+        return get().splitsPerProject[projectId] ?? DEFAULT_SPLIT
       },
 
-      isLocked: (projectId: string, panelId: PanelId) => {
-        return get().locksPerProject[projectId]?.[panelId] ?? false
-      },
-
-      saveLayout: (projectId: string, newLayout: Layout[]) => {
+      setSplit: (projectId: string, size: number) => {
+        const safe = clampSplit(size)
         set({
-          layoutsPerProject: { ...get().layoutsPerProject, [projectId]: newLayout }
-        })
-      },
-
-      togglePanelLock: (projectId: string, id: PanelId) => {
-        const current = get().locksPerProject[projectId] ?? {}
-        set({
-          locksPerProject: {
-            ...get().locksPerProject,
-            [projectId]: { ...current, [id]: !current[id] }
-          }
+          splitsPerProject: { ...get().splitsPerProject, [projectId]: safe }
         })
       },
 
@@ -113,13 +75,10 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       resetLayout: (projectId: string) => {
-        const lpp = { ...get().layoutsPerProject }
-        const lkp = { ...get().locksPerProject }
-        delete lpp[projectId]
-        delete lkp[projectId]
+        const spp = { ...get().splitsPerProject }
+        delete spp[projectId]
         set({
-          layoutsPerProject: lpp,
-          locksPerProject: lkp,
+          splitsPerProject: spp,
           resetVersion: get().resetVersion + 1
         })
       }
@@ -127,8 +86,7 @@ export const useLayoutStore = create<LayoutState>()(
     {
       name: 'vbcdr-layout',
       partialize: (state) => ({
-        layoutsPerProject: state.layoutsPerProject,
-        locksPerProject: state.locksPerProject,
+        splitsPerProject: state.splitsPerProject,
         backgroundImage: state.backgroundImage,
         backgroundBlur: state.backgroundBlur,
         tokenCap: state.tokenCap,

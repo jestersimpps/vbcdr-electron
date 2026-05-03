@@ -193,25 +193,25 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           return
         }
 
-        if (isLlm) {
-          const entry = terminalsMap.get(tabId)
-          const suppressed = !!(entry && Date.now() < entry.suppressBusyUntil)
-          if (!suppressed) {
-            const now = Date.now()
-            if (now - lastOutputAt > STREAK_GAP_MS) {
-              if (busyPromoteTimer) clearTimeout(busyPromoteTimer)
-              busyPromoteTimer = setTimeout(() => {
-                const s = useTerminalStore.getState().tabStatuses[tabId]
-                if (s !== 'busy') useTerminalStore.getState().setTabStatus(tabId, 'busy')
-              }, BUSY_SUSTAIN_MS)
-            }
-            lastOutputAt = now
+        const entry = terminalsMap.get(tabId)
+        const suppressed = !!(entry && Date.now() < entry.suppressBusyUntil)
+        if (!suppressed) {
+          const now = Date.now()
+          if (now - lastOutputAt > STREAK_GAP_MS) {
+            if (busyPromoteTimer) clearTimeout(busyPromoteTimer)
+            busyPromoteTimer = setTimeout(() => {
+              const s = useTerminalStore.getState().tabStatuses[tabId]
+              if (s !== 'busy') useTerminalStore.getState().setTabStatus(tabId, 'busy')
+            }, BUSY_SUSTAIN_MS)
+          }
+          lastOutputAt = now
 
-            if (idleTimer) clearTimeout(idleTimer)
-            idleTimer = setTimeout(() => {
-              if (busyPromoteTimer) { clearTimeout(busyPromoteTimer); busyPromoteTimer = null }
-              const prev = useTerminalStore.getState().tabStatuses[tabId]
-              useTerminalStore.getState().setTabStatus(tabId, 'idle')
+          if (idleTimer) clearTimeout(idleTimer)
+          idleTimer = setTimeout(() => {
+            if (busyPromoteTimer) { clearTimeout(busyPromoteTimer); busyPromoteTimer = null }
+            const prev = useTerminalStore.getState().tabStatuses[tabId]
+            useTerminalStore.getState().setTabStatus(tabId, 'idle')
+            if (isLlm) {
               const isActiveProject = useProjectStore.getState().activeProjectId === projectId
               if (prev !== 'idle' && !isActiveProject) {
                 useTerminalStore.getState().markProjectAttention(projectId)
@@ -220,8 +220,11 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
                 const { idleSoundEnabled, idleSoundId } = useLayoutStore.getState()
                 if (idleSoundEnabled) playSound(idleSoundId)
               }
-            }, 3000)
-          }
+            }
+          }, 3000)
+        }
+
+        if (isLlm) {
 
           const prevTimer = bufferReadTimers.get(tabId)
           if (prevTimer) clearTimeout(prevTimer)
