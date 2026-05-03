@@ -318,17 +318,32 @@ export async function getDiffNumstat(cwd: string, hash?: string): Promise<Record
 
 export async function getStatus(cwd: string): Promise<Record<string, GitFileStatus>> {
   try {
-    const raw = await runGit(cwd, ['status', '--porcelain'])
+    const { stdout: raw } = await execFile('git', ['status', '--porcelain', '-z'], {
+      cwd,
+      encoding: 'utf-8',
+      timeout: 5000,
+      maxBuffer: 10 * 1024 * 1024,
+      env: {
+        ...process.env,
+        GIT_TERMINAL_PROMPT: '0',
+        GIT_CONFIG_COUNT: '1',
+        GIT_CONFIG_KEY_0: 'credential.helper',
+        GIT_CONFIG_VALUE_0: ''
+      }
+    })
     if (!raw) return {}
 
     const statusMap: Record<string, GitFileStatus> = {}
 
-    for (const line of raw.split('\n')) {
-      if (line.length < 4) continue
-
+    const entries = raw.split('\0').filter((e) => e.length >= 4)
+    for (let i = 0; i < entries.length; i++) {
+      const line = entries[i]
       const x = line[0]
       const y = line[1]
-      const filePath = line.slice(3).split(' -> ').pop()!
+      const filePath = line.slice(3)
+      if (x === 'R' || x === 'C' || y === 'R' || y === 'C') {
+        i++
+      }
       const status = parseFileStatus(x, y)
 
       const absPath = path.join(cwd, filePath)

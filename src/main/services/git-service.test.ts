@@ -130,12 +130,19 @@ describe('getStatus', () => {
       '?? new.ts',
       ' M src/a.ts',
       'AA src/conflict.ts'
-    ].join('\n'))
+    ].join('\0') + '\0')
     const status = await mod.getStatus('/p')
     expect(status['/p/new.ts']).toBe('untracked')
     expect(status['/p/src/a.ts']).toBe('modified')
     expect(status['/p/src/conflict.ts']).toBe('conflict')
     expect(status['/p/src']).toBe('conflict')
+  })
+
+  it('preserves the leading char of root-level files whose status code starts with a space', async () => {
+    setOutputs(' M package-lock.json\0')
+    const status = await mod.getStatus('/p')
+    expect(status['/p/package-lock.json']).toBe('modified')
+    expect(status['/p/ackage-lock.json']).toBeUndefined()
   })
 
   it('returns {} when raw output is empty or git fails', async () => {

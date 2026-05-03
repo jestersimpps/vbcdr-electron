@@ -592,7 +592,6 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             </div>
           ) : (
             <DiffEditor
-              key={`diff-${selectedFile.absolutePath}`}
               original={original}
               modified={modified}
               language={language}
