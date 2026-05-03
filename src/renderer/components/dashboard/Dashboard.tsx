@@ -22,7 +22,7 @@ export function Dashboard(): React.ReactElement {
 
   return (
     <div className="flex h-full flex-col bg-zinc-950">
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-hidden p-2">
         {projects.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-zinc-600">
             <p className="text-sm">No projects yet</p>
@@ -35,7 +35,7 @@ export function Dashboard(): React.ReactElement {
             </button>
           </div>
         ) : (
-          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+          <div className="grid h-full auto-rows-fr grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-2">
             {sorted.map((project) => (
               <ProjectCard
                 key={project.id}

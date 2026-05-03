@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { GitBranch as GitBranchIcon, FileText, Terminal, Zap, ExternalLink } from 'lucide-react'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useGitStore } from '@/stores/git-store'
@@ -71,12 +70,6 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
   const themeId = useThemeStore((s) => s.getFullThemeId())
   const tokenCap = useLayoutStore((s) => s.tokenCap)
   const setActiveProject = useProjectStore((s) => s.setActiveProject)
-  const accentColor = getTerminalTheme(themeId).cursor ?? '#58a6ff'
-  const [activeIndex, setActiveIndex] = useState(0)
-
-  const clampedIndex = Math.min(activeIndex, Math.max(llmTabs.length - 1, 0))
-  const activeTab = llmTabs[clampedIndex] ?? null
-  const hasTerminal = activeTab ? !!getTerminalInstance(activeTab.id) : false
 
   const currentBranch = branches.find((b) => b.current)
   const previewLines = outputBuffer
@@ -84,13 +77,16 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
     .filter((l) => l.length > 0)
     .slice(-12)
 
+  const fullRow = llmTabs.length > 1
+
   return (
     <div
-      className="group flex w-full min-w-0 cursor-pointer flex-col gap-2 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 text-left shadow-lg shadow-black/30 transition-all hover:bg-zinc-800/50 hover:shadow-xl hover:shadow-black/40"
+      className="group relative flex h-full min-h-0 w-full min-w-0 cursor-pointer flex-col overflow-hidden border border-zinc-800 bg-zinc-900/30 text-left transition-colors hover:border-zinc-700"
+      style={fullRow ? { gridColumn: '1 / -1' } : undefined}
       onClick={onOpenModal}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex h-9 shrink-0 items-center justify-between gap-1 border-b border-zinc-800 bg-zinc-900/50 px-2">
+        <div className="flex min-w-0 items-center gap-1.5 text-xs">
           <span
             className={cn(
               'inline-block h-2 w-2 shrink-0 rounded-full',
@@ -100,15 +96,15 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
             )}
             title={claudeStatus === 'busy' ? 'Claude is working' : claudeStatus === 'idle' ? 'Claude idle' : 'No Claude session'}
           />
-          <span className="truncate text-sm font-medium text-zinc-200">{project.name}</span>
+          <span className="truncate font-medium text-zinc-200">{project.name}</span>
           {currentBranch && (
             <>
               <GitBranchIcon size={11} className="shrink-0 text-zinc-600" />
-              <span className="truncate text-[11px] font-mono text-zinc-500">{currentBranch.name}</span>
+              <span className="truncate font-mono text-[11px] text-zinc-500">{currentBranch.name}</span>
             </>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0 text-[11px] text-zinc-600">
+        <div className="flex shrink-0 items-center gap-2 text-[11px] text-zinc-600">
           <span className="flex items-center gap-1">
             <FileText size={10} />
             {openFilesCount}
@@ -127,22 +123,22 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
         </div>
       </div>
 
-      {hasTerminal && activeTab && !isModalOpen ? (
-        <div className="flex w-full min-w-0 flex-col gap-1">
-          {llmTabs.length > 1 && (
-            <div className="flex items-center gap-1">
-              {llmTabs.map((tab, i) => {
-                const status = tabStatuses[tab.id]
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={(e) => { e.stopPropagation(); setActiveIndex(i) }}
-                    className={cn(
-                      'flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] font-mono transition-colors',
-                      i !== clampedIndex && 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-400'
-                    )}
-                    style={i === clampedIndex ? { backgroundColor: `${accentColor}20`, color: accentColor } : undefined}
-                  >
+      {llmTabs.length > 0 ? (
+        <div className="flex flex-1 min-h-0">
+          {llmTabs.map((tab, i) => {
+            const status = tabStatuses[tab.id]
+            const hasInstance = !!getTerminalInstance(tab.id)
+            const tokens = tokenUsagePerTab[tab.id]
+            const theme = getTerminalTheme(themeId)
+            const pct = tokens != null ? Math.min(tokens / tokenCap, 1) : 0
+            const fill = tokenBarFill(pct, theme)
+            return (
+              <div
+                key={tab.id}
+                className={cn('flex min-w-0 flex-1 flex-col', i > 0 && 'border-l border-zinc-800')}
+              >
+                <div className="flex h-7 shrink-0 items-center justify-between gap-1.5 border-b border-zinc-800 bg-zinc-900/30 px-2 text-[11px]">
+                  <div className="flex min-w-0 items-center gap-1.5">
                     <span
                       className={cn(
                         'inline-block h-1.5 w-1.5 shrink-0 rounded-full',
@@ -151,45 +147,49 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
                         (!status || status === 'none') && 'bg-zinc-600'
                       )}
                     />
-                    {tab.title}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-          <div className="w-full min-w-0 h-80 overflow-hidden rounded">
-            <DashboardTerminal tabId={activeTab.id} />
-          </div>
+                    <span className="truncate font-mono text-zinc-400">{tab.title}</span>
+                  </div>
+                  {tokens != null && (
+                    <span className="shrink-0 tabular-nums text-[9px]" style={{ color: `${fill}aa` }}>
+                      {formatTokens(tokens)}
+                    </span>
+                  )}
+                </div>
+                <div className="relative flex-1 min-h-0 bg-zinc-950">
+                  {hasInstance && !isModalOpen ? (
+                    <DashboardTerminal tabId={tab.id} />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-[11px] text-zinc-700">
+                      starting…
+                    </div>
+                  )}
+                </div>
+                {tokens != null && (
+                  <div className="flex shrink-0 items-center gap-2 border-t border-zinc-800 bg-zinc-900/40 px-2 py-1">
+                    <Zap size={9} className="shrink-0" style={{ color: `${fill}80` }} />
+                    <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                        style={{ width: `${pct * 100}%`, backgroundColor: fill }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       ) : previewLines.length > 0 ? (
-        <div className="w-full min-w-0 h-80 rounded bg-zinc-950 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-zinc-500 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden bg-zinc-950 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-zinc-500">
           {previewLines.map((line, i) => (
             <div key={i} className="truncate">{line}</div>
           ))}
         </div>
-      ) : null}
-
-      {activeTab && tokenUsagePerTab[activeTab.id] != null && (() => {
-        const tokens = tokenUsagePerTab[activeTab.id]
-        const pct = Math.min(tokens / tokenCap, 1)
-        const theme = getTerminalTheme(themeId)
-        const fill = tokenBarFill(pct, theme)
-        return (
-          <div className="flex items-center gap-2 px-0.5">
-            <Zap size={9} className="shrink-0" style={{ color: `${fill}80` }} />
-            <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-zinc-800">
-              <div
-                className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-                style={{ width: `${pct * 100}%`, backgroundColor: fill }}
-              />
-            </div>
-            <span className="shrink-0 text-[9px] tabular-nums" style={{ color: `${fill}aa` }}>
-              {formatTokens(tokens)}
-            </span>
-          </div>
-        )
-      })()}
-
+      ) : (
+        <div className="flex flex-1 items-center justify-center bg-zinc-950 text-[11px] text-zinc-700">
+          no session
+        </div>
+      )}
     </div>
   )
 }
