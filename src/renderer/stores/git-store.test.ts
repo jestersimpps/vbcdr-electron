@@ -15,6 +15,7 @@ interface GitApiMock {
   commitsFileCounts: ReturnType<typeof vi.fn>
   rangeFileCount: ReturnType<typeof vi.fn>
   rangeHashes: ReturnType<typeof vi.fn>
+  fetchNow: ReturnType<typeof vi.fn>
 }
 
 let lastDriftCb: ((projectId: string, drift: unknown) => void) | null = null
@@ -39,7 +40,8 @@ beforeEach(() => {
     }),
     commitsFileCounts: vi.fn(async () => ({})),
     rangeFileCount: vi.fn(async () => 0),
-    rangeHashes: vi.fn(async () => [])
+    rangeHashes: vi.fn(async () => []),
+    fetchNow: vi.fn(async () => ({ ahead: 0, behind: 0, diverged: false, remoteBranch: null }))
   }
   ;(window as unknown as { api: { git: GitApiMock } }).api = {
     ...(window as unknown as { api: Record<string, unknown> }).api,
@@ -147,24 +149,36 @@ describe('git-store', () => {
   })
 
   describe('pull / rebaseRemote', () => {
-    it('pull clears drift for the project and reloads data + status', async () => {
+    it('pull reloads data + status and refreshes drift', async () => {
       useGitStore.setState({
         driftPerProject: { p1: { ahead: 0, behind: 2, diverged: false, remoteBranch: 'origin/main' } }
       })
       await useGitStore.getState().pull('p1', '/p')
       expect(gitApi().pull).toHaveBeenCalledWith('/p')
-      expect(useGitStore.getState().driftPerProject.p1).toBeUndefined()
+      expect(gitApi().fetchNow).toHaveBeenCalledWith('/p')
+      expect(useGitStore.getState().driftPerProject.p1).toEqual({
+        ahead: 0,
+        behind: 0,
+        diverged: false,
+        remoteBranch: null
+      })
       expect(gitApi().commits).toHaveBeenCalled()
       expect(gitApi().status).toHaveBeenCalled()
     })
 
-    it('rebaseRemote clears drift and reloads data + status', async () => {
+    it('rebaseRemote reloads data + status and refreshes drift', async () => {
       useGitStore.setState({
         driftPerProject: { p1: { ahead: 1, behind: 1, diverged: true, remoteBranch: 'origin/main' } }
       })
       await useGitStore.getState().rebaseRemote('p1', '/p')
       expect(gitApi().rebaseRemote).toHaveBeenCalledWith('/p')
-      expect(useGitStore.getState().driftPerProject.p1).toBeUndefined()
+      expect(gitApi().fetchNow).toHaveBeenCalledWith('/p')
+      expect(useGitStore.getState().driftPerProject.p1).toEqual({
+        ahead: 0,
+        behind: 0,
+        diverged: false,
+        remoteBranch: null
+      })
     })
   })
 

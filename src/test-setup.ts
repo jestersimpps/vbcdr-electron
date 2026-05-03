@@ -68,7 +68,8 @@ const api = {
     onDrift: fn(() => () => undefined),
     commitsFileCounts: fn(async () => ({})),
     rangeFileCount: fn(async () => 0),
-    rangeHashes: fn(async () => [])
+    rangeHashes: fn(async () => []),
+    fetchNow: fn(async () => ({ ahead: 0, behind: 0, diverged: false, remoteBranch: null }))
   }
 }
 

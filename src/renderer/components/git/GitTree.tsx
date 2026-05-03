@@ -330,6 +330,9 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
     setCommitOpen(false)
     await loadStatus(effectiveProjectId, effectivePath)
     await loadGitData(effectiveProjectId, effectivePath)
+    const drift = await window.api.git.fetchNow(effectivePath)
+    useGitStore.getState().setDrift(effectiveProjectId, drift)
+    await loadRangeFileCounts(effectiveProjectId, effectivePath)
   }
 
   useEffect(() => {

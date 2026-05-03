@@ -163,6 +163,9 @@ export const useGitStore = create<GitStore>((set, get) => ({
     })
     await get().loadGitData(projectId, cwd)
     await get().loadStatus(projectId, cwd)
+    const drift = await window.api.git.fetchNow(cwd)
+    get().setDrift(projectId, drift)
+    await get().loadRangeFileCounts(projectId, cwd)
   },
 
   push: async (projectId: string, cwd: string) => {
@@ -174,6 +177,9 @@ export const useGitStore = create<GitStore>((set, get) => ({
         return { driftPerProject: rest }
       })
       await get().loadGitData(projectId, cwd)
+      const drift = await window.api.git.fetchNow(cwd)
+      get().setDrift(projectId, drift)
+      await get().loadRangeFileCounts(projectId, cwd)
       return result
     } finally {
       set((s) => {
@@ -191,6 +197,9 @@ export const useGitStore = create<GitStore>((set, get) => ({
     })
     await get().loadGitData(projectId, cwd)
     await get().loadStatus(projectId, cwd)
+    const drift = await window.api.git.fetchNow(cwd)
+    get().setDrift(projectId, drift)
+    await get().loadRangeFileCounts(projectId, cwd)
   },
 
   initFetchListener: () => {
