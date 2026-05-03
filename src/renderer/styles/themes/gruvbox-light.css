@@ -4,7 +4,6 @@
 }
 
 :root.gruvbox-light {
-  --screen-gradient: #fdf8e0;
 }
 
 :root.gruvbox-light ::-webkit-scrollbar-thumb {

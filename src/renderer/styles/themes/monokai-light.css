@@ -4,7 +4,6 @@
 }
 
 :root.monokai-light {
-  --screen-gradient: #ffffff;
 }
 
 :root.monokai-light ::-webkit-scrollbar-thumb {

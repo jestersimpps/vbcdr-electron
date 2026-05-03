@@ -4,7 +4,6 @@
 }
 
 :root.psychedelic-dark {
-  --screen-gradient: #08060e;
 }
 
 :root.psychedelic-dark ::-webkit-scrollbar-thumb {

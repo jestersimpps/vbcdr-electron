@@ -55,20 +55,8 @@ function ensureGlobalDataDispatcher(): void {
 
 export function applyThemeToAll(themeId: string): void {
   const xtermTheme = getTerminalTheme(themeId)
-  const themeToApply = { ...xtermTheme, background: '#00000000' }
   terminalsMap.forEach(({ terminal }) => {
-    terminal.options.theme = themeToApply
-  })
-}
-
-export function applyBackgroundTransparency(transparent: boolean): void {
-  terminalsMap.forEach(({ terminal }) => {
-    const current = terminal.options.theme ?? {}
-    const themeId = useThemeStore.getState().getTerminalThemeId()
-    const base = getTerminalTheme(themeId)
-    terminal.options.theme = transparent
-      ? { ...base, ...current, background: '#00000000' }
-      : { ...base, ...current, background: base.background }
+    terminal.options.theme = xtermTheme
   })
 }
 
@@ -127,8 +115,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         cols: 80,
         rows: 24,
         allowProposedApi: true,
-        allowTransparency: true,
-        theme: { ...baseTheme, background: '#00000000' }
+        theme: baseTheme
       })
 
       const fitAddon = new FitAddon()

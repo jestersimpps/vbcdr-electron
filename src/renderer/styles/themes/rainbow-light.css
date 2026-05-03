@@ -4,7 +4,6 @@
 }
 
 :root.rainbow-light {
-  --screen-gradient: #ffffff;
 }
 
 :root.rainbow-light ::-webkit-scrollbar-thumb {

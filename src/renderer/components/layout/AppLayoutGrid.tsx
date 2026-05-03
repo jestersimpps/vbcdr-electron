@@ -124,8 +124,6 @@ export function AppLayoutGrid(): React.ReactElement {
   const getSplit = useLayoutStore((s) => s.getSplit)
   const setSplit = useLayoutStore((s) => s.setSplit)
   const resetVersion = useLayoutStore((s) => s.resetVersion)
-  const backgroundImage = useLayoutStore((s) => s.backgroundImage)
-  const backgroundBlur = useLayoutStore((s) => s.backgroundBlur)
 
   const projectId = activeProjectId ?? '__default__'
   const splitSize = getSplit(projectId)
@@ -384,18 +382,8 @@ export function AppLayoutGrid(): React.ReactElement {
           </button>
         </nav>
         <div className="relative flex-1 min-h-0 overflow-hidden">
-        {backgroundImage && (
-          <div
-            className="absolute inset-0 pointer-events-none bg-cover bg-center"
-            style={{
-              backgroundImage: `url(${backgroundImage})`,
-              filter: backgroundBlur > 0 ? `blur(${backgroundBlur}px)` : undefined,
-              transform: backgroundBlur > 0 ? 'scale(1.05)' : undefined
-            }}
-          />
-        )}
         <div
-          className={cn('absolute inset-0', !backgroundImage && 'screen-gradient')}
+          className="absolute inset-0"
           style={{ visibility: anyPageActive ? 'hidden' : 'visible' }}
         >
           <PanelGroup
@@ -424,32 +412,32 @@ export function AppLayoutGrid(): React.ReactElement {
           </div>
         )}
         {statisticsActive && (
-          <div className={cn('absolute inset-0 z-10 overflow-auto', !backgroundImage && 'screen-gradient')}>
+          <div className="absolute inset-0 z-10 overflow-auto bg-zinc-950">
             <Statistics />
           </div>
         )}
         {usageActive && (
-          <div className={cn('absolute inset-0 z-10 overflow-auto', !backgroundImage && 'screen-gradient')}>
+          <div className="absolute inset-0 z-10 overflow-auto bg-zinc-950">
             <Usage />
           </div>
         )}
         {settingsActive && (
-          <div className={cn('absolute inset-0 z-10 overflow-auto', !backgroundImage && 'screen-gradient')}>
+          <div className="absolute inset-0 z-10 overflow-auto bg-zinc-950">
             <Settings />
           </div>
         )}
         {claudePageActive && (
-          <div className={cn('absolute inset-0 z-10 overflow-hidden', !backgroundImage && 'screen-gradient')}>
+          <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <ClaudePage />
           </div>
         )}
         {skillsPageActive && (
-          <div className={cn('absolute inset-0 z-10 overflow-hidden', !backgroundImage && 'screen-gradient')}>
+          <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <SkillsPage />
           </div>
         )}
         {terminalsPageActive && (
-          <div className={cn('absolute inset-0 z-10 overflow-hidden', !backgroundImage && 'screen-gradient')}>
+          <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <TerminalsPage />
           </div>
         )}

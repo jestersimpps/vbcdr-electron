@@ -6,8 +6,6 @@ export const DEFAULT_SPLIT = 75
 
 interface LayoutState {
   splitsPerProject: Record<string, number>
-  backgroundImage: string | null
-  backgroundBlur: number
   tokenCap: number
   idleSoundEnabled: boolean
   idleSoundId: string
@@ -15,8 +13,6 @@ interface LayoutState {
   getSplit: (projectId: string) => number
   setSplit: (projectId: string, size: number) => void
   resetLayout: (projectId: string) => void
-  setBackgroundImage: (dataUrl: string | null) => void
-  setBackgroundBlur: (blur: number) => void
   setTokenCap: (cap: number) => void
   setIdleSoundEnabled: (enabled: boolean) => void
   setIdleSoundId: (id: string) => void
@@ -35,8 +31,6 @@ export const useLayoutStore = create<LayoutState>()(
   persist(
     (set, get) => ({
       splitsPerProject: {},
-      backgroundImage: null,
-      backgroundBlur: 0,
       tokenCap: DEFAULT_TOKEN_CAP,
       idleSoundEnabled: false,
       idleSoundId: DEFAULT_IDLE_SOUND_ID,
@@ -51,14 +45,6 @@ export const useLayoutStore = create<LayoutState>()(
         set({
           splitsPerProject: { ...get().splitsPerProject, [projectId]: safe }
         })
-      },
-
-      setBackgroundImage: (dataUrl: string | null) => {
-        set({ backgroundImage: dataUrl })
-      },
-
-      setBackgroundBlur: (blur: number) => {
-        set({ backgroundBlur: blur })
       },
 
       setTokenCap: (cap: number) => {
@@ -87,8 +73,6 @@ export const useLayoutStore = create<LayoutState>()(
       name: 'vbcdr-layout',
       partialize: (state) => ({
         splitsPerProject: state.splitsPerProject,
-        backgroundImage: state.backgroundImage,
-        backgroundBlur: state.backgroundBlur,
         tokenCap: state.tokenCap,
         idleSoundEnabled: state.idleSoundEnabled,
         idleSoundId: state.idleSoundId

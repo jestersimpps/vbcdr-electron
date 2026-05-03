@@ -4,7 +4,6 @@
 }
 
 :root.psychedelic-light {
-  --screen-gradient: #ffffff;
 }
 
 :root.psychedelic-light ::-webkit-scrollbar-thumb {

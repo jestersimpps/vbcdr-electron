@@ -4,7 +4,6 @@
 }
 
 :root.monokai-dark {
-  --screen-gradient: #1e1f1c;
 }
 
 :root.monokai-dark ::-webkit-scrollbar-thumb {

@@ -4,7 +4,6 @@
 }
 
 :root.cyberpunk-dark {
-  --screen-gradient: #0c0c14;
 }
 
 :root.cyberpunk-dark ::-webkit-scrollbar-thumb {

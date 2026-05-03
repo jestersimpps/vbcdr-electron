@@ -4,7 +4,6 @@
 }
 
 :root.onedark-pro-light {
-  --screen-gradient: #ffffff;
 }
 
 :root.onedark-pro-light ::-webkit-scrollbar-thumb {

@@ -4,7 +4,6 @@
 }
 
 :root.catppuccin-light {
-  --screen-gradient: #f5f7fc;
 }
 
 :root.catppuccin-light ::-webkit-scrollbar-thumb {

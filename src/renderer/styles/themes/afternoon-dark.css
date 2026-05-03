@@ -4,7 +4,6 @@
 }
 
 :root.afternoon-dark {
-  --screen-gradient: #130f48;
 }
 
 :root.afternoon-dark ::-webkit-scrollbar-thumb {

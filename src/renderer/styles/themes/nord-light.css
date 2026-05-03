@@ -4,7 +4,6 @@
 }
 
 :root.nord-light {
-  --screen-gradient: #f5f7fc;
 }
 
 :root.nord-light ::-webkit-scrollbar-thumb {

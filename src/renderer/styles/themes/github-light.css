@@ -4,7 +4,6 @@
 }
 
 :root.github-light {
-  --screen-gradient: #ffffff;
 }
 
 :root.github-light ::-webkit-scrollbar-thumb {

@@ -4,7 +4,6 @@
 }
 
 :root.light {
-  --screen-gradient: #ffffff;
 }
 
 :root.light ::-webkit-scrollbar-thumb {

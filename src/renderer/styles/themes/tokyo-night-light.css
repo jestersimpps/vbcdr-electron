@@ -4,7 +4,6 @@
 }
 
 :root.tokyo-night-light {
-  --screen-gradient: #f0f1f8;
 }
 
 :root.tokyo-night-light ::-webkit-scrollbar-thumb {

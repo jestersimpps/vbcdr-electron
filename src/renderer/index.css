@@ -46,24 +46,6 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.screen-gradient {
-  isolation: isolate;
-}
-
-.screen-gradient::before {
-  content: '';
-  position: sticky;
-  top: 0;
-  left: 0;
-  display: block;
-  width: 100%;
-  height: 100vh;
-  margin-bottom: -100vh;
-  pointer-events: none;
-  z-index: -1;
-  background: var(--screen-gradient, #09090b);
-}
-
 .xterm {
   position: relative;
   width: 100%;

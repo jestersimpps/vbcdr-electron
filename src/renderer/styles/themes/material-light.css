@@ -4,7 +4,6 @@
 }
 
 :root.material-light {
-  --screen-gradient: #ffffff;
 }
 
 :root.material-light ::-webkit-scrollbar-thumb {

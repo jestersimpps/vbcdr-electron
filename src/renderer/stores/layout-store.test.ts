@@ -5,8 +5,6 @@ import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
 const resetStore = (): void => {
   useLayoutStore.setState({
     splitsPerProject: {},
-    backgroundImage: null,
-    backgroundBlur: 0,
     tokenCap: DEFAULT_TOKEN_CAP,
     idleSoundEnabled: false,
     idleSoundId: DEFAULT_IDLE_SOUND_ID,
@@ -70,14 +68,10 @@ describe('layout-store', () => {
   })
 
   describe('simple setters', () => {
-    it('updates background, blur, idle sound', () => {
-      useLayoutStore.getState().setBackgroundImage('data:image/png;base64,X')
-      useLayoutStore.getState().setBackgroundBlur(8)
+    it('updates idle sound', () => {
       useLayoutStore.getState().setIdleSoundEnabled(true)
       useLayoutStore.getState().setIdleSoundId('chirp')
       const s = useLayoutStore.getState()
-      expect(s.backgroundImage).toBe('data:image/png;base64,X')
-      expect(s.backgroundBlur).toBe(8)
       expect(s.idleSoundEnabled).toBe(true)
       expect(s.idleSoundId).toBe('chirp')
     })
