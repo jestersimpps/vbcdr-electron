@@ -8,6 +8,11 @@ import {
   getFileAtRef,
   getCommitChangedFiles,
   getDiffNumstat,
+  getRangeChangedFiles,
+  getRangeNumstat,
+  getRangeFileCount,
+  getRangeHashes,
+  getCommitsFileCounts,
   checkoutBranch,
   getDefaultBranch,
   getDiffSummary,
@@ -74,6 +79,41 @@ export function registerGitHandlers(): void {
     'git:diff-numstat',
     async (_event, cwd: string, hash?: string): Promise<Record<string, DiffNumstat>> => {
       return getDiffNumstat(cwd, hash)
+    }
+  )
+
+  ipcMain.handle(
+    'git:range-files',
+    async (_event, cwd: string, from: string, to: string): Promise<CommitChangedFile[]> => {
+      return getRangeChangedFiles(cwd, from, to)
+    }
+  )
+
+  ipcMain.handle(
+    'git:range-numstat',
+    async (_event, cwd: string, from: string, to: string): Promise<Record<string, DiffNumstat>> => {
+      return getRangeNumstat(cwd, from, to)
+    }
+  )
+
+  ipcMain.handle(
+    'git:range-file-count',
+    async (_event, cwd: string, from: string, to: string): Promise<number> => {
+      return getRangeFileCount(cwd, from, to)
+    }
+  )
+
+  ipcMain.handle(
+    'git:range-hashes',
+    async (_event, cwd: string, from: string, to: string): Promise<string[]> => {
+      return getRangeHashes(cwd, from, to)
+    }
+  )
+
+  ipcMain.handle(
+    'git:commits-file-counts',
+    async (_event, cwd: string, hashes: string[]): Promise<Record<string, number>> => {
+      return getCommitsFileCounts(cwd, hashes)
     }
   )
 

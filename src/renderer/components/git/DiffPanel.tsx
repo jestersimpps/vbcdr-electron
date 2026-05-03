@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { DiffEditor, type Monaco } from '@monaco-editor/react'
-import { ChevronRight, ChevronDown, Columns2, File, Folder, GitCommit, GitCompareArrows, Rows2, RotateCcw, X } from 'lucide-react'
+import { ChevronRight, ChevronDown, CloudDownload, CloudUpload, Columns2, File, Folder, GitCommit, GitCompareArrows, Rows2, RotateCcw, X } from 'lucide-react'
 import { useGitStore } from '@/stores/git-store'
 import { useDiffViewStore, type DiffView } from '@/stores/diff-view-store'
 import { useThemeStore } from '@/stores/theme-store'
@@ -188,12 +188,16 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   }, [projectId, cwd, loadStatus, view.kind])
 
   useEffect(() => {
-    if (view.kind !== 'commit') {
+    if (view.kind === 'working') {
       setCommitFiles([])
       return
     }
     let cancelled = false
-    window.api.git.commitFiles(cwd, view.hash).then((rows: { path: string; absolutePath: string; status: GitFileStatus }[]) => {
+    const loader =
+      view.kind === 'commit'
+        ? window.api.git.commitFiles(cwd, view.hash)
+        : window.api.git.rangeFiles(cwd, view.from, view.to)
+    loader.then((rows: { path: string; absolutePath: string; status: GitFileStatus }[]) => {
       if (cancelled) return
       setCommitFiles(
         rows.map((r) => ({
@@ -212,8 +216,13 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
 
   useEffect(() => {
     let cancelled = false
-    const hash = view.kind === 'commit' ? view.hash : undefined
-    window.api.git.diffNumstat(cwd, hash).then((rows) => {
+    const loader =
+      view.kind === 'commit'
+        ? window.api.git.diffNumstat(cwd, view.hash)
+        : view.kind === 'incoming' || view.kind === 'outgoing'
+        ? window.api.git.rangeNumstat(cwd, view.from, view.to)
+        : window.api.git.diffNumstat(cwd, undefined)
+    loader.then((rows) => {
       if (!cancelled) setNumstat(rows)
     })
     return () => {
@@ -237,7 +246,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       .sort((a, b) => a.relativePath.localeCompare(b.relativePath))
   }, [cwd, statusMap])
 
-  const files: ChangedFile[] = view.kind === 'commit' ? commitFiles : workingFiles
+  const files: ChangedFile[] = view.kind === 'working' ? workingFiles : commitFiles
 
   const tree = useMemo(() => buildTree(files), [files])
 
@@ -275,6 +284,15 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       loadCurrent = file.status === 'deleted'
         ? Promise.resolve({ content: '', isBinary: false })
         : window.api.git.fileAtRef(cwd, hash, file.absolutePath).then((c) => ({ content: c ?? '', isBinary: false }))
+    } else if (view.kind === 'incoming' || view.kind === 'outgoing') {
+      const fromRef = view.from
+      const toRef = view.to
+      loadHead = file.status === 'added'
+        ? Promise.resolve('')
+        : window.api.git.fileAtRef(cwd, fromRef, file.absolutePath).then((c) => c ?? '')
+      loadCurrent = file.status === 'deleted'
+        ? Promise.resolve({ content: '', isBinary: false })
+        : window.api.git.fileAtRef(cwd, toRef, file.absolutePath).then((c) => ({ content: c ?? '', isBinary: false }))
     } else {
       loadHead = file.status === 'untracked' || file.status === 'added'
         ? Promise.resolve('')
@@ -442,14 +460,39 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   }
 
   const isCommitView = view.kind === 'commit'
+  const isIncomingView = view.kind === 'incoming'
+  const isOutgoingView = view.kind === 'outgoing'
+  const isAlternateView = isCommitView || isIncomingView || isOutgoingView
   const headerIcon = isCommitView ? (
     <GitCommit size={12} className="text-blue-400" />
+  ) : isIncomingView ? (
+    <CloudDownload size={12} className="text-blue-400" />
+  ) : isOutgoingView ? (
+    <CloudUpload size={12} className="text-emerald-400" />
   ) : (
-    <GitCompareArrows size={12} className="text-emerald-400" />
+    <GitCompareArrows size={12} className="text-yellow-400" />
   )
-  const headerLabel = isCommitView ? view.shortHash : 'Changes since HEAD'
-  const headerTitle = isCommitView ? view.message : undefined
-  const emptyMessage = isCommitView ? 'No files in this commit' : 'No changes since last commit'
+  const headerLabel =
+    view.kind === 'commit'
+      ? view.shortHash
+      : view.kind === 'incoming'
+      ? `Incoming from ${view.to}`
+      : view.kind === 'outgoing'
+      ? `Local work to ${view.from}`
+      : 'Changes since HEAD'
+  const headerTitle =
+    view.kind === 'commit'
+      ? view.message
+      : view.kind === 'incoming' || view.kind === 'outgoing'
+      ? `${view.count} commit${view.count === 1 ? '' : 's'}`
+      : undefined
+  const emptyMessage = isIncomingView
+    ? 'No incoming changes'
+    : isOutgoingView
+    ? 'No local-only changes'
+    : isCommitView
+    ? 'No files in this commit'
+    : 'No changes since last commit'
 
   return (
     <>
@@ -463,12 +506,16 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             </span>
             {files.length > 0 && (
               <span className={`ml-auto shrink-0 rounded px-1.5 py-px text-[10px] font-medium ${
-                isCommitView ? 'bg-blue-500/15 text-blue-400' : 'bg-emerald-500/15 text-emerald-400'
+                isCommitView || isIncomingView
+                  ? 'bg-blue-500/15 text-blue-400'
+                  : isOutgoingView
+                  ? 'bg-emerald-500/15 text-emerald-400'
+                  : 'bg-yellow-500/15 text-yellow-400'
               }`}>
                 {files.length}
               </span>
             )}
-            {isCommitView && (
+            {isAlternateView && (
               <button
                 onClick={() => showWorking(projectId)}
                 className="shrink-0 rounded p-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
@@ -478,7 +525,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
               </button>
             )}
           </div>
-          {isCommitView && view.message && (
+          {view.kind === 'commit' && view.message && (
             <div className="border-b border-zinc-800 px-2 py-1 text-[10px] leading-snug text-zinc-400" title={view.message}>
               {view.message}
             </div>

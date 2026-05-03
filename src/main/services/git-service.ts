@@ -200,6 +200,92 @@ function countFileLines(absolutePath: string): number {
   }
 }
 
+export async function getRangeChangedFiles(cwd: string, from: string, to: string): Promise<CommitChangedFile[]> {
+  try {
+    const raw = await runGit(cwd, ['diff', '--name-status', '-M', `${from}...${to}`], 15000, 50 * 1024 * 1024)
+    if (!raw) return []
+
+    const files: CommitChangedFile[] = []
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue
+      const parts = line.split('\t')
+      const code = parts[0][0]
+      const filePath = parts[parts.length - 1]
+      let status: GitFileStatus = 'modified'
+      if (code === 'A') status = 'added'
+      else if (code === 'D') status = 'deleted'
+      else if (code === 'R') status = 'renamed'
+      else if (code === 'M') status = 'modified'
+      files.push({
+        path: filePath,
+        absolutePath: path.join(cwd, filePath),
+        status
+      })
+    }
+    return files.sort((a, b) => a.path.localeCompare(b.path))
+  } catch {
+    return []
+  }
+}
+
+export async function getRangeNumstat(cwd: string, from: string, to: string): Promise<Record<string, DiffNumstat>> {
+  try {
+    const raw = await runGit(cwd, ['diff', '--numstat', '-M', `${from}...${to}`], 15000, 50 * 1024 * 1024)
+    return parseNumstat(raw, cwd)
+  } catch {
+    return {}
+  }
+}
+
+export async function getRangeHashes(cwd: string, from: string, to: string): Promise<string[]> {
+  try {
+    const raw = await runGit(cwd, ['rev-list', `${from}..${to}`])
+    if (!raw) return []
+    return raw.split('\n').filter((l) => l.length > 0)
+  } catch {
+    return []
+  }
+}
+
+export async function getRangeFileCount(cwd: string, from: string, to: string): Promise<number> {
+  try {
+    const raw = await runGit(cwd, ['diff', '--name-only', '-M', `${from}...${to}`], 15000, 50 * 1024 * 1024)
+    if (!raw) return 0
+    return raw.split('\n').filter((l) => l.trim().length > 0).length
+  } catch {
+    return 0
+  }
+}
+
+export async function getCommitsFileCounts(cwd: string, hashes: string[]): Promise<Record<string, number>> {
+  if (hashes.length === 0) return {}
+  try {
+    const raw = await runGit(
+      cwd,
+      ['log', '--no-walk', '--name-only', '--format=__COMMIT__%H', ...hashes],
+      15000,
+      50 * 1024 * 1024
+    )
+    if (!raw) return {}
+    const out: Record<string, number> = {}
+    let currentHash: string | null = null
+    let count = 0
+    for (const line of raw.split('\n')) {
+      if (line.startsWith('__COMMIT__')) {
+        if (currentHash !== null) out[currentHash] = count
+        currentHash = line.slice('__COMMIT__'.length)
+        count = 0
+      } else if (line.trim().length > 0) {
+        count++
+      }
+    }
+    if (currentHash !== null) out[currentHash] = count
+    return out
+  } catch {
+    return {}
+  }
+}
+
 export async function getDiffNumstat(cwd: string, hash?: string): Promise<Record<string, DiffNumstat>> {
   try {
     if (hash) {

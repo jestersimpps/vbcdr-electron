@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { ChevronDown, Loader2 } from 'lucide-react'
+import { ChevronDown, Loader2, Search } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
@@ -67,6 +67,8 @@ interface BranchMenuProps {
 
 function BranchMenu({ branches, currentBranch, onSelect, onClose }: BranchMenuProps): React.ReactElement {
   const menuRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [filter, setFilter] = useState('')
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent): void {
@@ -78,21 +80,65 @@ function BranchMenu({ branches, currentBranch, onSelect, onClose }: BranchMenuPr
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [onClose])
 
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
   const localBranches = useMemo(() => branches.filter((b) => !b.remote), [branches])
   const remoteBranches = useMemo(() => {
     const localNames = new Set(localBranches.map((b) => b.name))
     return branches.filter((b) => b.remote && !localNames.has(b.name.replace(/^[^/]+\//, '')))
   }, [branches, localBranches])
 
+  const needle = filter.trim().toLowerCase()
+  const filteredLocal = useMemo(
+    () => (needle ? localBranches.filter((b) => b.name.toLowerCase().includes(needle)) : localBranches),
+    [localBranches, needle]
+  )
+  const filteredRemote = useMemo(
+    () => (needle ? remoteBranches.filter((b) => b.name.toLowerCase().includes(needle)) : remoteBranches),
+    [remoteBranches, needle]
+  )
+
+  const flatList = useMemo<GitBranch[]>(
+    () => [...filteredLocal, ...filteredRemote],
+    [filteredLocal, filteredRemote]
+  )
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      onClose()
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const first = flatList.find((b) => b.name !== currentBranch)
+      if (first) onSelect(first)
+    }
+  }
+
   return (
     <div
       ref={menuRef}
       className="absolute top-full left-0 mt-1 w-56 rounded border border-zinc-700 bg-zinc-900 shadow-lg max-h-72 overflow-y-auto z-50"
     >
-      {localBranches.length > 0 && (
+      <div className="sticky top-0 z-10 border-b border-zinc-800 bg-zinc-900 p-2">
+        <div className="relative">
+          <Search size={11} className="pointer-events-none absolute left-1.5 top-1/2 -translate-y-1/2 text-zinc-600" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Filter branches…"
+            className="w-full rounded border border-zinc-800 bg-zinc-950 py-1 pl-6 pr-2 text-[11px] text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-700"
+          />
+        </div>
+      </div>
+      {filteredLocal.length > 0 && (
         <div className="p-2 border-b border-zinc-800">
           <div className="text-[10px] font-medium text-zinc-500 mb-1 uppercase tracking-wide">Local</div>
-          {localBranches.map((b) => (
+          {filteredLocal.map((b) => (
             <button
               key={b.name}
               onClick={() => b.name !== currentBranch && onSelect(b)}
@@ -108,10 +154,10 @@ function BranchMenu({ branches, currentBranch, onSelect, onClose }: BranchMenuPr
           ))}
         </div>
       )}
-      {remoteBranches.length > 0 && (
+      {filteredRemote.length > 0 && (
         <div className="p-2">
           <div className="text-[10px] font-medium text-zinc-500 mb-1 uppercase tracking-wide">Remote</div>
-          {remoteBranches.map((b) => (
+          {filteredRemote.map((b) => (
             <button
               key={b.name}
               onClick={() => onSelect(b)}
@@ -123,8 +169,10 @@ function BranchMenu({ branches, currentBranch, onSelect, onClose }: BranchMenuPr
           ))}
         </div>
       )}
-      {localBranches.length === 0 && remoteBranches.length === 0 && (
-        <div className="p-3 text-center text-xs text-zinc-600">No branches</div>
+      {filteredLocal.length === 0 && filteredRemote.length === 0 && (
+        <div className="p-3 text-center text-xs text-zinc-600">
+          {branches.length === 0 ? 'No branches' : 'No matches'}
+        </div>
       )}
     </div>
   )

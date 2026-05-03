@@ -6,6 +6,9 @@ interface GitStore {
   branchesPerProject: Record<string, GitBranch[]>
   isRepoPerProject: Record<string, boolean>
   statusPerProject: Record<string, Record<string, GitFileStatus>>
+  commitFileCountsPerProject: Record<string, Record<string, number>>
+  rangeFileCountsPerProject: Record<string, { incoming: number; outgoing: number }>
+  unpushedHashesPerProject: Record<string, Set<string>>
   switchingBranch: boolean
   pushingPerProject: Record<string, boolean>
   driftPerProject: Record<string, BranchDriftInfo>
@@ -14,6 +17,7 @@ interface GitStore {
   conflictsDismissed: Record<string, boolean>
   loadGitData: (projectId: string, cwd: string) => Promise<void>
   loadStatus: (projectId: string, cwd: string) => Promise<void>
+  loadRangeFileCounts: (projectId: string, cwd: string) => Promise<void>
   switchBranch: (projectId: string, cwd: string, branchName: string) => Promise<boolean>
   setDrift: (projectId: string, drift: BranchDriftInfo) => void
   dismissDrift: (projectId: string) => void
@@ -30,6 +34,9 @@ export const useGitStore = create<GitStore>((set, get) => ({
   branchesPerProject: {},
   isRepoPerProject: {},
   statusPerProject: {},
+  commitFileCountsPerProject: {},
+  rangeFileCountsPerProject: {},
+  unpushedHashesPerProject: {},
   switchingBranch: false,
   pushingPerProject: {},
   driftPerProject: {},
@@ -56,6 +63,17 @@ export const useGitStore = create<GitStore>((set, get) => ({
     }))
 
     window.api.git.registerFetch(projectId, cwd)
+
+    if (commits.length > 0) {
+      const hashes = commits.map((c) => c.hash)
+      window.api.git.commitsFileCounts(cwd, hashes).then((counts) => {
+        set((s) => ({
+          commitFileCountsPerProject: { ...s.commitFileCountsPerProject, [projectId]: counts }
+        }))
+      })
+    }
+
+    void get().loadRangeFileCounts(projectId, cwd)
   },
 
   loadStatus: async (projectId: string, cwd: string) => {
@@ -88,6 +106,34 @@ export const useGitStore = create<GitStore>((set, get) => ({
     set((s) => ({
       driftPerProject: { ...s.driftPerProject, [projectId]: drift },
       driftDismissed: { ...s.driftDismissed, [projectId]: false }
+    }))
+  },
+
+  loadRangeFileCounts: async (projectId: string, cwd: string) => {
+    const drift = get().driftPerProject[projectId]
+    if (!drift || !drift.remoteBranch || drift.diverged) {
+      set((s) => {
+        const { [projectId]: _, ...restCounts } = s.rangeFileCountsPerProject
+        const { [projectId]: __, ...restHashes } = s.unpushedHashesPerProject
+        return { rangeFileCountsPerProject: restCounts, unpushedHashesPerProject: restHashes }
+      })
+      return
+    }
+    const remote = drift.remoteBranch
+    const [incoming, outgoing, unpushedList] = await Promise.all([
+      drift.behind > 0 ? window.api.git.rangeFileCount(cwd, 'HEAD', remote) : Promise.resolve(0),
+      drift.ahead > 0 ? window.api.git.rangeFileCount(cwd, remote, 'HEAD') : Promise.resolve(0),
+      drift.ahead > 0 ? window.api.git.rangeHashes(cwd, remote, 'HEAD') : Promise.resolve([] as string[])
+    ])
+    set((s) => ({
+      rangeFileCountsPerProject: {
+        ...s.rangeFileCountsPerProject,
+        [projectId]: { incoming, outgoing }
+      },
+      unpushedHashesPerProject: {
+        ...s.unpushedHashesPerProject,
+        [projectId]: new Set(unpushedList)
+      }
     }))
   },
 

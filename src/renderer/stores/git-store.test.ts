@@ -12,6 +12,9 @@ interface GitApiMock {
   rebaseRemote: ReturnType<typeof vi.fn>
   registerFetch: ReturnType<typeof vi.fn>
   onDrift: ReturnType<typeof vi.fn>
+  commitsFileCounts: ReturnType<typeof vi.fn>
+  rangeFileCount: ReturnType<typeof vi.fn>
+  rangeHashes: ReturnType<typeof vi.fn>
 }
 
 let lastDriftCb: ((projectId: string, drift: unknown) => void) | null = null
@@ -33,7 +36,10 @@ beforeEach(() => {
     onDrift: vi.fn((cb: (projectId: string, drift: unknown) => void) => {
       lastDriftCb = cb
       return unsubDrift
-    })
+    }),
+    commitsFileCounts: vi.fn(async () => ({})),
+    rangeFileCount: vi.fn(async () => 0),
+    rangeHashes: vi.fn(async () => [])
   }
   ;(window as unknown as { api: { git: GitApiMock } }).api = {
     ...(window as unknown as { api: Record<string, unknown> }).api,
@@ -45,6 +51,9 @@ beforeEach(() => {
     branchesPerProject: {},
     isRepoPerProject: {},
     statusPerProject: {},
+    commitFileCountsPerProject: {},
+    rangeFileCountsPerProject: {},
+    unpushedHashesPerProject: {},
     switchingBranch: false,
     driftPerProject: {},
     driftDismissed: {},

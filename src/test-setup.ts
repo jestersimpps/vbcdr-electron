@@ -65,7 +65,10 @@ const api = {
     pull: fn(async () => undefined),
     rebaseRemote: fn(async () => undefined),
     registerFetch: fn(() => undefined),
-    onDrift: fn(() => () => undefined)
+    onDrift: fn(() => () => undefined),
+    commitsFileCounts: fn(async () => ({})),
+    rangeFileCount: fn(async () => 0),
+    rangeHashes: fn(async () => [])
   }
 }
 

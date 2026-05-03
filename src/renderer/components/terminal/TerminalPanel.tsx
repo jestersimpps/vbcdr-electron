@@ -298,19 +298,6 @@ export function TerminalPanel(): React.ReactElement {
         <button
           onClick={() => {
             if (!activeTabId) return
-            window.api.terminal.write(activeTabId, '/clear\r')
-            focusTerminal(activeTabId)
-          }}
-          disabled={!activeTabId}
-          onMouseDown={(e) => e.preventDefault()}
-          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
-          title="Clear context"
-        >
-          <Trash2 size={16} />
-        </button>
-        <button
-          onClick={() => {
-            if (!activeTabId) return
             window.api.terminal.pasteClipboardImage(activeTabId)
             focusTerminal(activeTabId)
           }}
@@ -320,6 +307,19 @@ export function TerminalPanel(): React.ReactElement {
           title="Paste screenshot from clipboard"
         >
           <ImagePlus size={16} />
+        </button>
+        <button
+          onClick={() => {
+            if (!activeTabId) return
+            window.api.terminal.write(activeTabId, '/clear\r')
+            focusTerminal(activeTabId)
+          }}
+          disabled={!activeTabId}
+          onMouseDown={(e) => e.preventDefault()}
+          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          title="Clear context"
+        >
+          <Trash2 size={16} />
         </button>
         <button
           onClick={() => {

@@ -5,7 +5,7 @@ import { useDiffViewStore } from '@/stores/diff-view-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
-import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, GitCommit as GitCommitIcon, Loader2 } from 'lucide-react'
+import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, GitCommit as GitCommitIcon, Loader2, CloudDownload, CloudUpload, FileText } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 import { BranchSwitcher } from '@/components/git/BranchSwitcher'
 
@@ -216,13 +216,26 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
   const isRepo = useGitStore((s) => effectiveProjectId ? s.isRepoPerProject[effectiveProjectId] : false)
   const commits = useGitStore((s) => effectiveProjectId ? s.commitsPerProject[effectiveProjectId] : undefined)
   const drift = useGitStore((s) => effectiveProjectId ? s.driftPerProject[effectiveProjectId] : undefined)
+  const rangeFileCounts = useGitStore((s) => effectiveProjectId ? s.rangeFileCountsPerProject[effectiveProjectId] : undefined)
+  const commitFileCounts = useGitStore((s) => effectiveProjectId ? s.commitFileCountsPerProject[effectiveProjectId] : undefined)
+  const unpushedHashes = useGitStore((s) => effectiveProjectId ? s.unpushedHashesPerProject[effectiveProjectId] : undefined)
   const pullAction = useGitStore((s) => s.pull)
   const pushAction = useGitStore((s) => s.push)
   const isPushing = useGitStore((s) => effectiveProjectId ? s.pushingPerProject[effectiveProjectId] ?? false : false)
   const rebaseAction = useGitStore((s) => s.rebaseRemote)
   const loadStatus = useGitStore((s) => s.loadStatus)
+  const loadRangeFileCounts = useGitStore((s) => s.loadRangeFileCounts)
   const showCommit = useDiffViewStore((s) => s.showCommit)
   const showWorking = useDiffViewStore((s) => s.showWorking)
+  const showIncoming = useDiffViewStore((s) => s.showIncoming)
+  const showOutgoing = useDiffViewStore((s) => s.showOutgoing)
+  const diffView = useDiffViewStore((s) =>
+    effectiveProjectId ? s.viewPerProject[effectiveProjectId] : undefined
+  )
+  const selectedHash = diffView?.kind === 'commit' ? diffView.hash : null
+  const isWorkingSelected = diffView?.kind === 'working'
+  const isIncomingSelected = diffView?.kind === 'incoming'
+  const isOutgoingSelected = diffView?.kind === 'outgoing'
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
   const statusMap = useGitStore((s) => effectiveProjectId ? s.statusPerProject[effectiveProjectId] : undefined)
   const { loadGitData } = useGitStore()
@@ -231,6 +244,30 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
   const [commitMessage, setCommitMessage] = useState('')
   const [committing, setCommitting] = useState(false)
   const [commitError, setCommitError] = useState<string | null>(null)
+  const [pulling, setPulling] = useState(false)
+
+  const handlePull = async (): Promise<void> => {
+    if (!effectiveProjectId || !effectivePath || pulling) return
+    setPulling(true)
+    try {
+      await pullAction(effectiveProjectId, effectivePath)
+    } finally {
+      setPulling(false)
+    }
+  }
+
+  const incomingCount = drift && !drift.diverged ? drift.behind : 0
+  const outgoingCount = drift && !drift.diverged ? drift.ahead : 0
+  const incomingFileCount = rangeFileCounts?.incoming ?? 0
+  const outgoingFileCount = rangeFileCounts?.outgoing ?? 0
+
+  const handlePush = async (): Promise<void> => {
+    if (!effectiveProjectId || !effectivePath) return
+    const result = await pushAction(effectiveProjectId, effectivePath)
+    if (result && /error|rejected|failed/i.test(result)) {
+      console.error('git push failed:', result)
+    }
+  }
 
   const handleCommitClick = (commit: GitCommit): void => {
     if (!effectiveProjectId) return
@@ -301,6 +338,11 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
     loadStatus(effectiveProjectId, effectivePath)
   }, [effectiveProjectId, effectivePath])
 
+  useEffect(() => {
+    if (!effectiveProjectId || !effectivePath) return
+    void loadRangeFileCounts(effectiveProjectId, effectivePath)
+  }, [effectiveProjectId, effectivePath, drift?.ahead, drift?.behind, drift?.remoteBranch, drift?.diverged])
+
   const graphRows = useMemo(() => (commits ? buildGraph(commits) : []), [commits])
   const graphWidth = useMemo(() => {
     if (graphRows.length === 0) return COL_WIDTH + 8
@@ -331,32 +373,6 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
           <GitBranchIcon size={13} className="shrink-0 text-zinc-500" />
           <span className="shrink-0 text-[11px] text-zinc-400">Git</span>
           <BranchSwitcher projectId={effectiveProjectId} cwd={effectivePath} />
-          {drift && drift.behind > 0 && !drift.diverged && (
-            <button
-              onClick={() => pullAction(effectiveProjectId, effectivePath)}
-              className="flex shrink-0 items-center gap-0.5 rounded bg-blue-500/15 px-1 py-px text-[10px] font-medium text-blue-400 hover:bg-blue-500/25"
-              title={`${drift.behind} commit${drift.behind > 1 ? 's' : ''} behind ${drift.remoteBranch ?? 'remote'}, click to pull`}
-            >
-              <ArrowDown size={9} />
-              <span>{drift.behind}</span>
-            </button>
-          )}
-          {drift && drift.ahead > 0 && !drift.diverged && (
-            <button
-              onClick={async () => {
-                const result = await pushAction(effectiveProjectId, effectivePath)
-                if (result && /error|rejected|failed/i.test(result)) {
-                  console.error('git push failed:', result)
-                }
-              }}
-              disabled={isPushing}
-              className="flex shrink-0 items-center gap-0.5 rounded bg-emerald-500/15 px-1 py-px text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/25 disabled:opacity-50"
-              title={`${drift.ahead} commit${drift.ahead > 1 ? 's' : ''} ahead of ${drift.remoteBranch ?? 'remote'}, click to push`}
-            >
-              {isPushing ? <Loader2 size={9} className="animate-spin" /> : <ArrowUp size={9} />}
-              <span>{drift.ahead}</span>
-            </button>
-          )}
           {drift?.diverged && (
             <button
               onClick={() => rebaseAction(effectiveProjectId, effectivePath)}
@@ -384,17 +400,56 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
         </div>
       </div>
 
+      {incomingCount > 0 && (
+        <div className={`border-b border-zinc-800 ${isIncomingSelected ? 'bg-blue-500/15' : 'bg-blue-500/5'}`}>
+          <div className={`flex items-center ${isIncomingSelected ? '' : 'hover:bg-blue-500/10'}`}>
+            <button
+              onClick={() => {
+                if (!effectiveProjectId || !drift?.remoteBranch) return
+                showIncoming(effectiveProjectId, 'HEAD', drift.remoteBranch, incomingCount)
+                setCenterTab(effectiveProjectId, 'diff')
+              }}
+              disabled={!drift?.remoteBranch}
+              className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left disabled:cursor-not-allowed"
+              title={`Show diff for ${incomingCount} incoming commit${incomingCount === 1 ? '' : 's'} from ${drift?.remoteBranch ?? 'remote'}`}
+            >
+              <CloudDownload size={12} className="shrink-0 text-blue-400" />
+              <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-200">
+                Incoming from {drift?.remoteBranch ?? 'remote'}
+              </span>
+              <span className="shrink-0 rounded bg-blue-500/15 px-1.5 py-px text-[10px] font-medium text-blue-400">
+                {incomingCount} commit{incomingCount === 1 ? '' : 's'}
+              </span>
+              {incomingFileCount > 0 && (
+                <span className="shrink-0 rounded bg-blue-500/15 px-1.5 py-px text-[10px] font-medium text-blue-400">
+                  {incomingFileCount} file{incomingFileCount === 1 ? '' : 's'}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={handlePull}
+              disabled={pulling}
+              className="mr-1 flex shrink-0 items-center gap-1 rounded bg-blue-500/15 px-2 py-1 text-[10px] font-medium text-blue-400 hover:bg-blue-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+              title={`Pull ${incomingCount} commit${incomingCount === 1 ? '' : 's'} from ${drift?.remoteBranch ?? 'remote'}`}
+            >
+              {pulling ? <Loader2 size={11} className="animate-spin" /> : <ArrowDown size={11} />}
+              <span>{pulling ? 'Pulling…' : 'Pull'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {workingCount > 0 && (
-        <div className="border-b border-zinc-800 bg-emerald-500/5">
-          <div className="flex items-center hover:bg-emerald-500/10">
+        <div className={`border-b border-zinc-800 ${isWorkingSelected ? 'bg-yellow-500/15' : 'bg-yellow-500/5'}`}>
+          <div className={`flex items-center ${isWorkingSelected ? '' : 'hover:bg-yellow-500/10'}`}>
             <button
               onClick={handleWorkingClick}
               className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left"
               title="Show diff for uncommitted changes"
             >
-              <FileDiff size={12} className="shrink-0 text-emerald-400" />
+              <FileDiff size={12} className="shrink-0 text-yellow-400" />
               <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-200">Working changes</span>
-              <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
+              <span className="shrink-0 rounded bg-yellow-500/15 px-1.5 py-px text-[10px] font-medium text-yellow-400">
                 {workingCount} file{workingCount === 1 ? '' : 's'}
               </span>
             </button>
@@ -403,12 +458,13 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
                 setCommitError(null)
                 setCommitOpen((v) => !v)
               }}
-              className={`mr-1 shrink-0 rounded p-1 hover:bg-zinc-800 ${
-                commitOpen ? 'text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'
+              className={`mr-1 flex shrink-0 items-center gap-1 rounded bg-yellow-500/15 px-2 py-1 text-[10px] font-medium text-yellow-400 hover:bg-yellow-500/25 disabled:cursor-not-allowed disabled:opacity-40 ${
+                commitOpen ? 'ring-1 ring-yellow-400/40' : ''
               }`}
               title={commitOpen ? 'Hide commit form' : 'Commit working changes'}
             >
-              <GitCommitIcon size={12} />
+              <GitCommitIcon size={11} />
+              <span>Commit</span>
             </button>
           </div>
           {commitOpen && (
@@ -440,7 +496,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
                 <button
                   onClick={handleCommit}
                   disabled={committing || workingCount === 0}
-                  className="flex shrink-0 items-center gap-1 rounded bg-emerald-500/15 px-2 py-1 text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex shrink-0 items-center gap-1 rounded bg-yellow-500/15 px-2 py-1 text-[10px] font-medium text-yellow-400 hover:bg-yellow-500/25 disabled:cursor-not-allowed disabled:opacity-40"
                   title={
                     commitMessage.trim()
                       ? `Commit ${workingCount} file${workingCount === 1 ? '' : 's'}`
@@ -456,6 +512,45 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
         </div>
       )}
 
+      {outgoingCount > 0 && (
+        <div className={`border-b border-zinc-800 ${isOutgoingSelected ? 'bg-emerald-500/15' : 'bg-emerald-500/5'}`}>
+          <div className={`flex items-center ${isOutgoingSelected ? '' : 'hover:bg-emerald-500/10'}`}>
+            <button
+              onClick={() => {
+                if (!effectiveProjectId || !drift?.remoteBranch) return
+                showOutgoing(effectiveProjectId, drift.remoteBranch, 'HEAD', outgoingCount)
+                setCenterTab(effectiveProjectId, 'diff')
+              }}
+              disabled={!drift?.remoteBranch}
+              className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 text-left disabled:cursor-not-allowed"
+              title={`Show diff for ${outgoingCount} unpushed commit${outgoingCount === 1 ? '' : 's'}`}
+            >
+              <CloudUpload size={12} className="shrink-0 text-emerald-400" />
+              <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-200">
+                Local work to {drift?.remoteBranch ?? 'remote'}
+              </span>
+              <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
+                {outgoingCount} commit{outgoingCount === 1 ? '' : 's'}
+              </span>
+              {outgoingFileCount > 0 && (
+                <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
+                  {outgoingFileCount} file{outgoingFileCount === 1 ? '' : 's'}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={handlePush}
+              disabled={isPushing}
+              className="mr-1 flex shrink-0 items-center gap-1 rounded bg-emerald-500/15 px-2 py-1 text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+              title={`Push ${outgoingCount} commit${outgoingCount === 1 ? '' : 's'} to ${drift?.remoteBranch ?? 'remote'}`}
+            >
+              {isPushing ? <Loader2 size={11} className="animate-spin" /> : <ArrowUp size={11} />}
+              <span>{isPushing ? 'Pushing…' : 'Push'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 overflow-auto">
         <div className="relative" style={{ minHeight: graphRows.length * ROW_HEIGHT }}>
           <div className="absolute left-0 top-0">
@@ -463,11 +558,22 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
           </div>
 
           <div className="relative" style={{ marginLeft: graphWidth }}>
-            {graphRows.map((row) => (
+            {graphRows.map((row) => {
+              const isSelected = row.commit.hash === selectedHash
+              const fileCount = commitFileCounts?.[row.commit.hash]
+              const isUnpushed = unpushedHashes?.has(row.commit.hash) ?? false
+              const baseClass = isUnpushed
+                ? `mx-1 my-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 ${
+                    isSelected ? 'ring-1 ring-emerald-400/40 bg-emerald-500/15' : ''
+                  }`
+                : isSelected
+                ? 'bg-zinc-800/60'
+                : 'hover:bg-zinc-800/30'
+              return (
               <div
                 key={row.commit.hash}
-                className="flex cursor-pointer items-center pr-2 hover:bg-zinc-800/30"
-                style={{ height: ROW_HEIGHT }}
+                className={`flex cursor-pointer items-center pr-2 ${baseClass}`}
+                style={{ height: isUnpushed ? ROW_HEIGHT - 4 : ROW_HEIGHT }}
                 onClick={() => handleCommitClick(row.commit)}
                 title="Show diff for this commit"
               >
@@ -488,8 +594,15 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
                     <span className="shrink-0">{row.commit.date}</span>
                   </div>
                 </div>
+                {typeof fileCount === 'number' && fileCount > 0 && (
+                  <span className="ml-2 shrink-0 inline-flex items-center gap-0.5 rounded bg-zinc-800/60 px-1.5 py-px text-[9px] font-medium text-zinc-400">
+                    <FileText size={9} />
+                    {fileCount}
+                  </span>
+                )}
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
