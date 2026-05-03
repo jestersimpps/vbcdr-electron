@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { DiffEditor, type Monaco } from '@monaco-editor/react'
 import { ChevronRight, ChevronDown, CloudDownload, CloudUpload, Columns2, File, Folder, GitCommit, GitCompareArrows, Rows2, RotateCcw, X } from 'lucide-react'
@@ -171,6 +171,8 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     | null
   >(null)
   const closeFile = useEditorStore((s) => s.closeFile)
+
+  const selectedRowRef = useRef<HTMLDivElement | null>(null)
 
   const toggleDir = (path: string): void => {
     setCollapsedDirs((prev) => {
@@ -386,6 +388,10 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const selectedFile = selectedPath ? files.find((f) => f.absolutePath === selectedPath) : null
   const language = selectedFile ? detectLanguage(selectedFile.name) : 'plaintext'
 
+  useEffect(() => {
+    selectedRowRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [selectedPath])
+
   const renderNode = (node: TreeNode, depth: number): React.ReactNode => {
     if (node.kind === 'dir') {
       const isCollapsed = collapsedDirs.has(node.path)
@@ -419,20 +425,21 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     return (
       <div
         key={file.absolutePath}
-        className={`group flex items-center gap-1.5 px-2 py-0.5 ${
-          isSelected ? 'bg-zinc-800/60' : 'hover:bg-zinc-800/40'
+        ref={isSelected ? selectedRowRef : undefined}
+        className={`group flex cursor-pointer items-center gap-1.5 border-l-2 px-2 py-0.5 ${
+          isSelected
+            ? 'border-l-blue-500 bg-zinc-700/80 text-zinc-100'
+            : 'border-l-transparent hover:bg-zinc-800/40'
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        onClick={() => setSelectedPath(file.absolutePath)}
         onContextMenu={(e) => handleContextMenu(e, file.absolutePath, file.name, false)}
+        title={file.relativePath}
       >
         <File size={12} className="shrink-0 text-zinc-600" />
-        <button
-          onClick={() => setSelectedPath(file.absolutePath)}
-          className={`min-w-0 flex-1 truncate text-left text-[11px] ${statusColor}`}
-          title={file.relativePath}
-        >
+        <span className={`min-w-0 flex-1 truncate text-left text-[11px] ${statusColor}`}>
           {file.name}
-        </button>
+        </span>
         {stat && (stat.additions > 0 || stat.deletions > 0) && (
           <span className="shrink-0 flex items-center gap-1 text-[10px] tabular-nums">
             {stat.additions > 0 && (
@@ -448,7 +455,10 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
         </span>
         {view.kind === 'working' && (
           <button
-            onClick={() => handleRevert(file)}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleRevert(file)
+            }}
             className="shrink-0 rounded p-0.5 text-zinc-600 opacity-0 group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
             title="Revert to HEAD"
           >

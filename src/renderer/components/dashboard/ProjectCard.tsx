@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { GitBranch as GitBranchIcon, FileText, Terminal, Zap } from 'lucide-react'
+import { GitBranch as GitBranchIcon, FileText, Terminal, Zap, ExternalLink } from 'lucide-react'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useGitStore } from '@/stores/git-store'
 import { useEditorStore } from '@/stores/editor-store'
+import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
@@ -69,6 +70,7 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
   const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
   const themeId = useThemeStore((s) => s.getFullThemeId())
   const tokenCap = useLayoutStore((s) => s.tokenCap)
+  const setActiveProject = useProjectStore((s) => s.setActiveProject)
   const accentColor = getTerminalTheme(themeId).cursor ?? '#58a6ff'
   const [activeIndex, setActiveIndex] = useState(0)
 
@@ -115,6 +117,13 @@ export function ProjectCard({ project, onOpenModal, isModalOpen }: ProjectCardPr
             <Terminal size={10} />
             {terminalCount}
           </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); setActiveProject(project.id) }}
+            title="Open workspace"
+            className="flex items-center justify-center rounded p-0.5 text-zinc-600 opacity-0 transition-all hover:bg-zinc-800 hover:text-zinc-300 group-hover:opacity-100"
+          >
+            <ExternalLink size={11} />
+          </button>
         </div>
       </div>
 
