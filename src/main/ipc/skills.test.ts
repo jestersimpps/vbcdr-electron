@@ -205,10 +205,10 @@ describe('skills ipc', () => {
       await Promise.resolve()
       expect(spawnCalls).toHaveLength(1)
       const call = spawnCalls[0]
-      expect(call.command).toBe('npx')
+      expect(call.command.endsWith('npx') || call.command.endsWith('npx.cmd') || call.command.endsWith('npx.exe')).toBe(true)
       expect(call.args).toEqual(['-y', 'skills', 'add', 'owner/repo', '-s', 'cool-skill', '-a', 'claude-code', '--copy', '-y', '-g'])
       expect(call.options.cwd).toBe(os.homedir())
-      expect(call.options.shell).toBe(false)
+      expect(call.options.shell).toBe(process.platform === 'win32')
 
       call.emitStdout('progress 50%\n')
       call.emitStderr('warning: foo\n')

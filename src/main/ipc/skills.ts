@@ -6,35 +6,59 @@ import { ipcMain, BrowserWindow } from 'electron'
 
 let cachedLoginPath: string | undefined
 
+const IS_WINDOWS = process.platform === 'win32'
+const PATH_SEP = IS_WINDOWS ? ';' : ':'
+const NPX_NAMES = IS_WINDOWS ? ['npx.cmd', 'npx.exe', 'npx'] : ['npx']
+
+function isPosixShell(shell: string): boolean {
+  const base = path.basename(shell)
+  return base === 'bash' || base === 'zsh' || base === 'sh' || base === 'dash' || base === 'ksh'
+}
+
+function queryLoginPath(shell: string): string {
+  try {
+    const cmd = isPosixShell(shell)
+      ? `"${shell}" -ilc 'echo $PATH'`
+      : `"${shell}" -lc 'echo $PATH'`
+    const out = execSync(cmd, { encoding: 'utf-8', timeout: 3000 }).trim()
+    return out.includes(PATH_SEP) ? out : ''
+  } catch {
+    return ''
+  }
+}
+
 function resolvedPath(): string | undefined {
   const current = process.env.PATH ?? ''
+  if (IS_WINDOWS) return current || undefined
   if (cachedLoginPath === undefined) {
-    try {
-      cachedLoginPath = execSync('/bin/bash -ilc "echo $PATH"', { encoding: 'utf-8' }).trim()
-    } catch {
-      cachedLoginPath = ''
+    const userShell = process.env.SHELL || '/bin/zsh'
+    cachedLoginPath = queryLoginPath(userShell)
+    if (!cachedLoginPath && path.basename(userShell) !== 'bash') {
+      cachedLoginPath = queryLoginPath('/bin/bash')
     }
   }
   if (!cachedLoginPath) return current || undefined
   const seen = new Set<string>()
   const merged: string[] = []
-  for (const part of [...cachedLoginPath.split(':'), ...current.split(':')]) {
+  for (const part of [...cachedLoginPath.split(PATH_SEP), ...current.split(PATH_SEP)]) {
     if (!part || seen.has(part)) continue
     seen.add(part)
     merged.push(part)
   }
-  return merged.join(':')
+  return merged.join(PATH_SEP)
 }
 
-function resolveBinary(name: string, searchPath: string | undefined): string | undefined {
+function resolveBinary(names: string[], searchPath: string | undefined): string | undefined {
   if (!searchPath) return undefined
-  for (const dir of searchPath.split(':')) {
+  for (const dir of searchPath.split(PATH_SEP)) {
     if (!dir) continue
-    const full = path.join(dir, name)
-    try {
-      if (fs.statSync(full).isFile()) return full
-    } catch {
-      continue
+    for (const name of names) {
+      const full = path.join(dir, name)
+      try {
+        if (fs.statSync(full).isFile()) return full
+      } catch {
+        continue
+      }
     }
   }
   return undefined
@@ -161,11 +185,11 @@ function runSkillsCli(
 ): Promise<{ code: number; output: string }> {
   return new Promise((resolve) => {
     const pathEnv = resolvedPath()
-    const npxPath = resolveBinary('npx', pathEnv) ?? 'npx'
+    const npxPath = resolveBinary(NPX_NAMES, pathEnv) ?? 'npx'
     const proc = spawn(npxPath, ['-y', 'skills', ...args], {
       cwd,
       env: { ...process.env, PATH: pathEnv, CI: '1', FORCE_COLOR: '0' },
-      shell: false
+      shell: IS_WINDOWS
     })
     let output = ''
     const push = (data: Buffer): void => {
