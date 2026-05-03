@@ -14,6 +14,7 @@ import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dn
 import { CSS } from '@dnd-kit/utilities'
 import { DraggablePanel } from '@/components/layout/DraggablePanel'
 import { GitTree } from '@/components/git/GitTree'
+import { DiffPanel } from '@/components/git/DiffPanel'
 import { TerminalPanel } from '@/components/terminal/TerminalPanel'
 import { DevTerminalsPanel } from '@/components/terminal/DevTerminalsPanel'
 import { FileTree } from '@/components/sidebar/FileTree'
@@ -33,7 +34,7 @@ import { Statistics } from '@/components/statistics/Statistics'
 import { Usage } from '@/components/usage/Usage'
 import { Settings } from '@/components/settings/Settings'
 import { TerminalsPage } from '@/components/terminal/TerminalsPage'
-import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, Settings as SettingsIcon } from 'lucide-react'
+import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Settings as SettingsIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
 import 'react-grid-layout/css/styles.css'
@@ -166,6 +167,10 @@ export function AppLayoutGrid(): React.ReactElement {
     [layout, projectId, isLocked]
   )
 
+  const activeProjectPath = activeProjectId
+    ? projects.find((p) => p.id === activeProjectId)?.path ?? null
+    : null
+
   const renderWorkspacePanel = (): React.ReactNode => (
     <div className="flex h-full flex-col">
       <div className="flex items-center border-b border-zinc-800 bg-zinc-900/50">
@@ -192,6 +197,18 @@ export function AppLayoutGrid(): React.ReactElement {
         >
           <Code size={12} />
           Editor
+        </button>
+        <button
+          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'diff')}
+          className={cn(
+            'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+            centerTab === 'diff'
+              ? 'border-b-2 border-zinc-400 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          )}
+        >
+          <GitCompareArrows size={12} />
+          Diff
         </button>
         <button
           onClick={() => activeProjectId && setCenterTab(activeProjectId, 'claude')}
@@ -243,6 +260,11 @@ export function AppLayoutGrid(): React.ReactElement {
                 <CodeEditor projectId={activeProjectId} />
               </Panel>
             </PanelGroup>
+          )}
+        </div>
+        <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'diff' ? 'z-10' : 'z-0 invisible')}>
+          {activeProjectId && activeProjectPath && (
+            <DiffPanel projectId={activeProjectId} cwd={activeProjectPath} />
           )}
         </div>
         <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'claude' ? 'z-10' : 'z-0 invisible')}>
