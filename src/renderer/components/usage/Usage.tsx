@@ -43,7 +43,7 @@ function TabRow({ tabId, title, projectName, tokens, cap, isBusy }: TabRowProps)
   const fill = pct < 0.5 ? '#7ee787' : pct < 0.75 ? '#ffa657' : '#ff7b72'
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-lg shadow-black/30">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -250,7 +250,7 @@ export function Usage(): React.ReactElement {
         </Section>
 
         <Section title="History">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-lg shadow-black/30">
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
             <div className="mb-3 flex items-center gap-2">
               <Zap size={13} className="text-zinc-400" />
               <h2 className="text-sm font-medium text-zinc-200">By project · {rangeLabel}</h2>
@@ -350,7 +350,7 @@ function UsageChart({ range, rangeLabel }: UsageChartProps): React.ReactElement 
   const peak = useMemo(() => data.reduce((max, b) => Math.max(max, b.total), 0), [data])
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-lg shadow-black/30">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BarChart3 size={13} className="text-zinc-400" />
@@ -516,7 +516,7 @@ interface KpiProps {
 
 function Kpi({ icon, label, value, sub }: KpiProps): React.ReactElement {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-lg shadow-black/30">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
       <div className="flex items-center gap-1.5 text-xs text-zinc-500">
         {icon}
         {label}

@@ -140,7 +140,7 @@ function SectionCard({
   children: React.ReactNode
 }): React.ReactElement {
   return (
-    <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5 shadow-lg shadow-black/30">
+    <section className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5">
       <div className="mb-4">
         <h2 className="text-sm font-semibold text-zinc-200">{title}</h2>
         {description && <p className="mt-0.5 text-xs text-zinc-500">{description}</p>}
