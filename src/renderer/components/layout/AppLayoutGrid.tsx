@@ -236,7 +236,7 @@ export function AppLayoutGrid(): React.ReactElement {
         </button>
       </div>
       <div className="relative flex-1 min-h-0 overflow-hidden">
-        <div className={cn('absolute inset-0', centerTab === 'terminals' ? 'z-10' : 'z-0 invisible')}>
+        <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'terminals' ? 'z-10' : 'z-0 invisible')}>
           <PanelGroup direction="horizontal">
             <Panel defaultSize={35} minSize={15}>
               <DevTerminalsPanel />

@@ -115,6 +115,55 @@ export async function getFileAtHead(cwd: string, absolutePath: string): Promise<
   }
 }
 
+export async function getFileAtRef(cwd: string, ref: string, absolutePath: string): Promise<string | null> {
+  try {
+    const relativePath = path.relative(cwd, absolutePath)
+    if (relativePath.startsWith('..')) return null
+    return await runGit(cwd, ['show', `${ref}:${relativePath}`], 10000, 50 * 1024 * 1024)
+  } catch {
+    return null
+  }
+}
+
+export interface CommitChangedFile {
+  path: string
+  absolutePath: string
+  status: GitFileStatus
+}
+
+export async function getCommitChangedFiles(cwd: string, hash: string): Promise<CommitChangedFile[]> {
+  try {
+    const parents = await runGit(cwd, ['rev-list', '--parents', '-n', '1', hash])
+    const hasParent = parents.split(' ').length > 1
+    const args = hasParent
+      ? ['diff', '--name-status', '-M', `${hash}^`, hash]
+      : ['diff-tree', '--no-commit-id', '--name-status', '-M', '-r', '--root', hash]
+    const raw = await runGit(cwd, args, 15000, 50 * 1024 * 1024)
+    if (!raw) return []
+
+    const files: CommitChangedFile[] = []
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue
+      const parts = line.split('\t')
+      const code = parts[0][0]
+      const filePath = parts[parts.length - 1]
+      let status: GitFileStatus = 'modified'
+      if (code === 'A') status = 'added'
+      else if (code === 'D') status = 'deleted'
+      else if (code === 'R') status = 'renamed'
+      else if (code === 'M') status = 'modified'
+      files.push({
+        path: filePath,
+        absolutePath: path.join(cwd, filePath),
+        status
+      })
+    }
+    return files.sort((a, b) => a.path.localeCompare(b.path))
+  } catch {
+    return []
+  }
+}
+
 export async function getStatus(cwd: string): Promise<Record<string, GitFileStatus>> {
   try {
     const raw = await runGit(cwd, ['status', '--porcelain'])

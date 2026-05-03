@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { DiffEditor, type Monaco } from '@monaco-editor/react'
-import { ChevronRight, ChevronDown, Columns2, File, Folder, GitCompareArrows, Rows2, RotateCcw } from 'lucide-react'
+import { ChevronRight, ChevronDown, Columns2, File, Folder, GitCommit, GitCompareArrows, Rows2, RotateCcw, X } from 'lucide-react'
 import { useGitStore } from '@/stores/git-store'
+import { useDiffViewStore, type DiffView } from '@/stores/diff-view-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
@@ -129,9 +131,14 @@ function handleBeforeMount(monaco: Monaco): void {
   registerMonacoThemes(monaco)
 }
 
+const WORKING_VIEW: DiffView = { kind: 'working' }
+
 export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElement {
   const statusMap = useGitStore((s) => s.statusPerProject[projectId])
   const loadStatus = useGitStore((s) => s.loadStatus)
+  const storedView = useDiffViewStore((s) => s.viewPerProject[projectId])
+  const view: DiffView = storedView ?? WORKING_VIEW
+  const showWorking = useDiffViewStore((s) => s.showWorking)
   const fontSize = useEditorPrefsStore((s) => s.fontSize)
   const minimapEnabled = useEditorPrefsStore((s) => s.minimapEnabled)
   const bracketPairColorization = useEditorPrefsStore((s) => s.bracketPairColorization)
@@ -146,6 +153,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const [isBinary, setIsBinary] = useState(false)
   const [collapsedDirs, setCollapsedDirs] = useState<Set<string>>(new Set())
   const [sideBySide, setSideBySide] = useState(true)
+  const [commitFiles, setCommitFiles] = useState<ChangedFile[]>([])
 
   const toggleDir = (path: string): void => {
     setCollapsedDirs((prev) => {
@@ -157,10 +165,35 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   }
 
   useEffect(() => {
-    void loadStatus(projectId, cwd)
-  }, [projectId, cwd, loadStatus])
+    if (view.kind === 'working') {
+      void loadStatus(projectId, cwd)
+    }
+  }, [projectId, cwd, loadStatus, view.kind])
 
-  const files = useMemo<ChangedFile[]>(() => {
+  useEffect(() => {
+    if (view.kind !== 'commit') {
+      setCommitFiles([])
+      return
+    }
+    let cancelled = false
+    window.api.git.commitFiles(cwd, view.hash).then((rows: { path: string; absolutePath: string; status: GitFileStatus }[]) => {
+      if (cancelled) return
+      setCommitFiles(
+        rows.map((r) => ({
+          absolutePath: r.absolutePath,
+          name: basename(r.absolutePath),
+          relativePath: r.path,
+          status: r.status
+        }))
+      )
+      setSelectedPath(null)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [view, cwd])
+
+  const workingFiles = useMemo<ChangedFile[]>(() => {
     if (!statusMap) return []
     const allPaths = Object.keys(statusMap).filter((p) => p !== cwd)
     const leafPaths = allPaths.filter(
@@ -175,6 +208,8 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       }))
       .sort((a, b) => a.relativePath.localeCompare(b.relativePath))
   }, [cwd, statusMap])
+
+  const files: ChangedFile[] = view.kind === 'commit' ? commitFiles : workingFiles
 
   const tree = useMemo(() => buildTree(files), [files])
 
@@ -201,13 +236,25 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     let cancelled = false
     setLoading(true)
 
-    const loadHead: Promise<string> = file.status === 'untracked' || file.status === 'added'
-      ? Promise.resolve('')
-      : window.api.git.fileAtHead(cwd, file.absolutePath).then((c) => c ?? '')
+    let loadHead: Promise<string>
+    let loadCurrent: Promise<{ content: string; isBinary: boolean }>
 
-    const loadCurrent: Promise<{ content: string; isBinary: boolean }> = file.status === 'deleted'
-      ? Promise.resolve({ content: '', isBinary: false })
-      : window.api.fs.readFile(file.absolutePath).catch(() => ({ content: '', isBinary: false }))
+    if (view.kind === 'commit') {
+      const hash = view.hash
+      loadHead = file.status === 'added'
+        ? Promise.resolve('')
+        : window.api.git.fileAtRef(cwd, `${hash}^`, file.absolutePath).then((c) => c ?? '')
+      loadCurrent = file.status === 'deleted'
+        ? Promise.resolve({ content: '', isBinary: false })
+        : window.api.git.fileAtRef(cwd, hash, file.absolutePath).then((c) => ({ content: c ?? '', isBinary: false }))
+    } else {
+      loadHead = file.status === 'untracked' || file.status === 'added'
+        ? Promise.resolve('')
+        : window.api.git.fileAtHead(cwd, file.absolutePath).then((c) => c ?? '')
+      loadCurrent = file.status === 'deleted'
+        ? Promise.resolve({ content: '', isBinary: false })
+        : window.api.fs.readFile(file.absolutePath).catch(() => ({ content: '', isBinary: false }))
+    }
 
     Promise.all([loadHead, loadCurrent]).then(([head, current]) => {
       if (cancelled) return
@@ -220,7 +267,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     return () => {
       cancelled = true
     }
-  }, [selectedPath, files, cwd])
+  }, [selectedPath, files, cwd, view])
 
   const handleRevert = async (file: ChangedFile): Promise<void> => {
     const headContent = await window.api.git.fileAtHead(cwd, file.absolutePath)
@@ -282,39 +329,72 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
         <span className={`shrink-0 w-3 text-center text-[10px] font-semibold tabular-nums ${statusColor}`}>
           {statusLabel}
         </span>
-        <button
-          onClick={() => handleRevert(file)}
-          className="shrink-0 rounded p-0.5 text-zinc-600 opacity-0 group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
-          title="Revert to HEAD"
-        >
-          <RotateCcw size={10} />
-        </button>
+        {view.kind === 'working' && (
+          <button
+            onClick={() => handleRevert(file)}
+            className="shrink-0 rounded p-0.5 text-zinc-600 opacity-0 group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
+            title="Revert to HEAD"
+          >
+            <RotateCcw size={10} />
+          </button>
+        )}
       </div>
     )
   }
 
-  return (
-    <div className="flex h-full">
-      <div className="flex w-72 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900">
-        <div className="flex items-center gap-1.5 border-b border-zinc-800 px-2 py-1.5">
-          <GitCompareArrows size={12} className="text-emerald-400" />
-          <span className="text-[11px] text-zinc-300">Changes since HEAD</span>
-          {files.length > 0 && (
-            <span className="ml-auto rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
-              {files.length}
-            </span>
-          )}
-        </div>
-        <div className="min-h-0 flex-1 overflow-auto py-1">
-          {files.length === 0 ? (
-            <div className="p-4 text-center text-xs text-zinc-600">No changes since last commit</div>
-          ) : (
-            tree.map((node) => renderNode(node, 0))
-          )}
-        </div>
-      </div>
+  const isCommitView = view.kind === 'commit'
+  const headerIcon = isCommitView ? (
+    <GitCommit size={12} className="text-blue-400" />
+  ) : (
+    <GitCompareArrows size={12} className="text-emerald-400" />
+  )
+  const headerLabel = isCommitView ? view.shortHash : 'Changes since HEAD'
+  const headerTitle = isCommitView ? view.message : undefined
+  const emptyMessage = isCommitView ? 'No files in this commit' : 'No changes since last commit'
 
-      <div className="flex min-w-0 flex-1 flex-col bg-zinc-950">
+  return (
+    <PanelGroup direction="horizontal" className="h-full">
+      <Panel defaultSize={25} minSize={15} maxSize={50}>
+        <div className="flex h-full flex-col overflow-hidden border-r border-zinc-800 bg-zinc-900">
+          <div className="flex items-center gap-1.5 border-b border-zinc-800 px-2 py-1.5">
+            {headerIcon}
+            <span className="min-w-0 truncate text-[11px] text-zinc-300" title={headerTitle}>
+              {headerLabel}
+            </span>
+            {files.length > 0 && (
+              <span className={`ml-auto shrink-0 rounded px-1.5 py-px text-[10px] font-medium ${
+                isCommitView ? 'bg-blue-500/15 text-blue-400' : 'bg-emerald-500/15 text-emerald-400'
+              }`}>
+                {files.length}
+              </span>
+            )}
+            {isCommitView && (
+              <button
+                onClick={() => showWorking(projectId)}
+                className="shrink-0 rounded p-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                title="Back to working changes"
+              >
+                <X size={11} />
+              </button>
+            )}
+          </div>
+          {isCommitView && view.message && (
+            <div className="border-b border-zinc-800 px-2 py-1 text-[10px] leading-snug text-zinc-400" title={view.message}>
+              {view.message}
+            </div>
+          )}
+          <div className="min-h-0 flex-1 overflow-auto py-1">
+            {files.length === 0 ? (
+              <div className="p-4 text-center text-xs text-zinc-600">{emptyMessage}</div>
+            ) : (
+              tree.map((node) => renderNode(node, 0))
+            )}
+          </div>
+        </div>
+      </Panel>
+      <PanelResizeHandle className="w-1 bg-zinc-800 transition-colors hover:bg-zinc-700" />
+      <Panel defaultSize={75} minSize={30}>
+        <div className="flex h-full min-w-0 flex-col bg-zinc-950">
         <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2 py-1">
           <span className="min-w-0 truncate text-[11px] text-zinc-400" title={selectedFile?.relativePath}>
             {selectedFile?.relativePath ?? ''}
@@ -345,7 +425,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
         <div className="relative min-h-0 flex-1">
           {!selectedFile ? (
             <div className="flex h-full items-center justify-center text-sm text-zinc-600">
-              {files.length === 0 ? 'No changes since last commit' : 'Select a file to see the diff'}
+              {files.length === 0 ? emptyMessage : 'Select a file to see the diff'}
             </div>
           ) : loading ? (
             <div className="flex h-full items-center justify-center text-xs text-zinc-600">Loading diff…</div>
@@ -376,7 +456,8 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             />
           )}
         </div>
-      </div>
-    </div>
+        </div>
+      </Panel>
+    </PanelGroup>
   )
 }

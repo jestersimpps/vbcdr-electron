@@ -2,6 +2,8 @@ import { useEffect, useMemo } from 'react'
 import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useDiffOverlayStore } from '@/stores/diff-overlay-store'
+import { useDiffViewStore } from '@/stores/diff-view-store'
+import { useEditorStore } from '@/stores/editor-store'
 import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, Loader2 } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 import { DiffOverlay } from '@/components/git/DiffOverlay'
@@ -220,7 +222,32 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
   const rebaseAction = useGitStore((s) => s.rebaseRemote)
   const loadStatus = useGitStore((s) => s.loadStatus)
   const resetDismiss = useDiffOverlayStore((s) => s.resetDismiss)
+  const showCommit = useDiffViewStore((s) => s.showCommit)
+  const showWorking = useDiffViewStore((s) => s.showWorking)
+  const setCenterTab = useEditorStore((s) => s.setCenterTab)
+  const statusMap = useGitStore((s) => effectiveProjectId ? s.statusPerProject[effectiveProjectId] : undefined)
   const { loadGitData } = useGitStore()
+
+  const handleCommitClick = (commit: GitCommit): void => {
+    if (!effectiveProjectId) return
+    showCommit(effectiveProjectId, commit.hash, commit.shortHash, commit.message)
+    setCenterTab(effectiveProjectId, 'diff')
+  }
+
+  const workingCount = useMemo(() => {
+    if (!statusMap || !effectivePath) return 0
+    const allPaths = Object.keys(statusMap).filter((p) => p !== effectivePath)
+    const leafPaths = allPaths.filter(
+      (p) => !allPaths.some((other) => other !== p && other.startsWith(p + '/'))
+    )
+    return leafPaths.length
+  }, [statusMap, effectivePath])
+
+  const handleWorkingClick = (): void => {
+    if (!effectiveProjectId) return
+    showWorking(effectiveProjectId)
+    setCenterTab(effectiveProjectId, 'diff')
+  }
 
   const openDiffOverlayManually = async (): Promise<void> => {
     if (!effectiveProjectId || !effectivePath) return
@@ -231,6 +258,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
   useEffect(() => {
     if (!effectiveProjectId || !effectivePath) return
     loadGitData(effectiveProjectId, effectivePath)
+    loadStatus(effectiveProjectId, effectivePath)
   }, [effectiveProjectId, effectivePath])
 
   const graphRows = useMemo(() => (commits ? buildGraph(commits) : []), [commits])
@@ -323,6 +351,20 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
         </div>
       </div>
 
+      {workingCount > 0 && (
+        <button
+          onClick={handleWorkingClick}
+          className="flex items-center gap-1.5 border-b border-zinc-800 bg-emerald-500/5 px-2 py-1.5 text-left hover:bg-emerald-500/10"
+          title="Show diff for uncommitted changes"
+        >
+          <FileDiff size={12} className="shrink-0 text-emerald-400" />
+          <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-200">Working changes</span>
+          <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
+            {workingCount} file{workingCount === 1 ? '' : 's'}
+          </span>
+        </button>
+      )}
+
       <div className="flex-1 overflow-auto">
         <div className="relative" style={{ minHeight: graphRows.length * ROW_HEIGHT }}>
           <div className="absolute left-0 top-0">
@@ -333,8 +375,10 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
             {graphRows.map((row) => (
               <div
                 key={row.commit.hash}
-                className="flex items-center pr-2 hover:bg-zinc-800/30"
+                className="flex cursor-pointer items-center pr-2 hover:bg-zinc-800/30"
                 style={{ height: ROW_HEIGHT }}
+                onClick={() => handleCommitClick(row.commit)}
+                title="Show diff for this commit"
               >
                 <div className="min-w-0 flex-1 overflow-hidden">
                   <div className="flex items-center gap-1 overflow-hidden">
