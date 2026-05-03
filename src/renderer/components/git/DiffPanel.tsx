@@ -155,6 +155,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const monacoTheme = MONACO_THEME_NAME[themeId] ?? 'github-dark'
 
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
+  const [loadedPath, setLoadedPath] = useState<string | null>(null)
   const [original, setOriginal] = useState<string>('')
   const [modified, setModified] = useState<string>('')
   const [loading, setLoading] = useState(false)
@@ -267,6 +268,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       setOriginal('')
       setModified('')
       setIsBinary(false)
+      setLoadedPath(null)
       return
     }
     const file = files.find((f) => f.absolutePath === selectedPath)
@@ -309,6 +311,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       setIsBinary(current.isBinary)
       setOriginal(head)
       setModified(current.content)
+      setLoadedPath(file.absolutePath)
       setLoading(false)
     })
 
@@ -584,14 +587,17 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             <div className="flex h-full items-center justify-center text-sm text-zinc-600">
               {files.length === 0 ? emptyMessage : 'Select a file to see the diff'}
             </div>
-          ) : loading ? (
-            <div className="flex h-full items-center justify-center text-xs text-zinc-600">Loading diff…</div>
-          ) : isBinary ? (
+          ) : isBinary && loadedPath === selectedPath ? (
             <div className="flex h-full items-center justify-center text-xs text-zinc-600">
               Binary file, diff not shown
             </div>
+          ) : loadedPath !== selectedPath ? (
+            <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+              {loading ? 'Loading diff…' : ''}
+            </div>
           ) : (
             <DiffEditor
+              key={`diff-${loadedPath}`}
               original={original}
               modified={modified}
               language={language}
