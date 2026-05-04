@@ -9,6 +9,7 @@ interface LayoutState {
   tokenCap: number
   idleSoundEnabled: boolean
   idleSoundId: string
+  llmStartupCommand: string
   resetVersion: number
   getSplit: (projectId: string) => number
   setSplit: (projectId: string, size: number) => void
@@ -16,9 +17,11 @@ interface LayoutState {
   setTokenCap: (cap: number) => void
   setIdleSoundEnabled: (enabled: boolean) => void
   setIdleSoundId: (id: string) => void
+  setLlmStartupCommand: (cmd: string) => void
 }
 
 export const DEFAULT_TOKEN_CAP = 160_000
+export const DEFAULT_LLM_STARTUP_COMMAND = 'claude'
 
 function clampSplit(size: number): number {
   if (!Number.isFinite(size)) return DEFAULT_SPLIT
@@ -34,6 +37,7 @@ export const useLayoutStore = create<LayoutState>()(
       tokenCap: DEFAULT_TOKEN_CAP,
       idleSoundEnabled: false,
       idleSoundId: DEFAULT_IDLE_SOUND_ID,
+      llmStartupCommand: DEFAULT_LLM_STARTUP_COMMAND,
       resetVersion: 0,
 
       getSplit: (projectId: string) => {
@@ -60,6 +64,11 @@ export const useLayoutStore = create<LayoutState>()(
         set({ idleSoundId: id })
       },
 
+      setLlmStartupCommand: (cmd: string) => {
+        const trimmed = cmd.trim()
+        set({ llmStartupCommand: trimmed.length > 0 ? trimmed : DEFAULT_LLM_STARTUP_COMMAND })
+      },
+
       resetLayout: (projectId: string) => {
         const spp = { ...get().splitsPerProject }
         delete spp[projectId]
@@ -75,7 +84,8 @@ export const useLayoutStore = create<LayoutState>()(
         splitsPerProject: state.splitsPerProject,
         tokenCap: state.tokenCap,
         idleSoundEnabled: state.idleSoundEnabled,
-        idleSoundId: state.idleSoundId
+        idleSoundId: state.idleSoundId,
+        llmStartupCommand: state.llmStartupCommand
       })
     }
   )

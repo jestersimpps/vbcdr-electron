@@ -8,6 +8,7 @@ import { useThemeStore } from '@/stores/theme-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useTerminalStore } from '@/stores/terminal-store'
+import { useLayoutStore } from '@/stores/layout-store'
 import { useUpdaterStore } from '@/stores/updater-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
@@ -197,7 +198,10 @@ export function App(): React.ReactElement {
           break
         }
         case 'new-claude-terminal':
-          if (activeId && projectPath) terminalStore.createTab(activeId, projectPath, 'claude')
+          if (activeId && projectPath) {
+            const cmd = useLayoutStore.getState().llmStartupCommand
+            terminalStore.createTab(activeId, projectPath, cmd)
+          }
           break
         case 'new-shell-terminal':
           if (activeId && projectPath) terminalStore.createTab(activeId, projectPath)

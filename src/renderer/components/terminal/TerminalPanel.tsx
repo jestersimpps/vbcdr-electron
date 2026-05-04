@@ -180,7 +180,8 @@ export function TerminalPanel(): React.ReactElement {
 
   const handleNewTab = (): void => {
     if (!activeProject) return
-    createTab(activeProject.id, activeProject.path, 'claude')
+    const cmd = useLayoutStore.getState().llmStartupCommand
+    createTab(activeProject.id, activeProject.path, cmd)
   }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
