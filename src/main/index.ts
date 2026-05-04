@@ -5,6 +5,7 @@ import { registerFilesystemHandlers } from '@main/ipc/filesystem'
 import { registerTerminalHandlers } from '@main/ipc/terminal'
 import { registerGitHandlers } from '@main/ipc/git'
 import { registerClaudeConfigHandlers } from '@main/ipc/claude-config'
+import { registerClaudeExplainHandlers } from '@main/ipc/claude-explain'
 import { registerSkillsHandlers } from '@main/ipc/skills'
 import { registerActivityHandlers } from '@main/ipc/activity'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
@@ -73,6 +74,7 @@ registerFilesystemHandlers()
 registerTerminalHandlers()
 registerGitHandlers()
 registerClaudeConfigHandlers()
+registerClaudeExplainHandlers()
 registerSkillsHandlers()
 registerUpdaterHandlers()
 registerActivityHandlers()

@@ -19,7 +19,17 @@ const api = {
     scanFiles: (projectPath: string) => ipcRenderer.invoke('claude:scan-files', projectPath),
     readFile: (filePath: string, projectPath: string) => ipcRenderer.invoke('claude:read-file', filePath, projectPath),
     writeFile: (filePath: string, content: string, projectPath: string) => ipcRenderer.invoke('claude:write-file', filePath, content, projectPath),
-    deleteFile: (filePath: string, projectPath: string) => ipcRenderer.invoke('claude:delete-file', filePath, projectPath)
+    deleteFile: (filePath: string, projectPath: string) => ipcRenderer.invoke('claude:delete-file', filePath, projectPath),
+    explainDiff: (projectRoot: string, diffText?: string) =>
+      ipcRenderer.invoke('claude:explain-diff', { projectRoot, diffText }) as Promise<{
+        generatedAt: string
+        diffSha: string
+        files: Array<{
+          path: string
+          summary?: string
+          comments: Array<{ line: number; side: 'old' | 'new'; text: string }>
+        }>
+      }>
   },
 
   fs: {
