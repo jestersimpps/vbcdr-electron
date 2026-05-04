@@ -97,8 +97,9 @@ export async function createWorktree(
 ): Promise<WorktreeInfo> {
   const baseBranch = await currentBranch(projectRoot)
   const safeLabel = sanitizeLabel(label)
-  const branch = `${BRANCH_PREFIX}/${safeLabel}-${shortId()}`
-  const wtPath = path.join(projectRoot, WORKTREE_DIR, `${safeLabel}-${shortId()}`)
+  const suffix = shortId()
+  const branch = `${BRANCH_PREFIX}/${safeLabel}-${suffix}`
+  const wtPath = path.join(projectRoot, WORKTREE_DIR, `${safeLabel}-${suffix}`)
 
   await runGit(projectRoot, ['worktree', 'add', '-b', branch, wtPath, baseBranch])
 
@@ -120,8 +121,7 @@ export async function createWorktree(
     state: 'idle',
     ahead: 0,
     changedFiles: 0,
-    readyToMerge: false,
-    autoMerge: false
+    readyToMerge: false
   }
 }
 
@@ -173,8 +173,7 @@ export async function computeInfo(tabId: string, projectRoot: string): Promise<W
     state: deriveState(changed, ahead, conflicted),
     ahead,
     changedFiles: changed,
-    readyToMerge: entry.readyToMerge,
-    autoMerge: entry.autoMerge
+    readyToMerge: entry.readyToMerge
   }
 }
 
@@ -184,12 +183,6 @@ export function listWorktrees(projectRoot: string): StoredEntry[] {
 
 export function getEntry(projectRoot: string, tabId: string): StoredEntry | null {
   return readMapping(projectRoot).entries.find((e) => e.tabId === tabId) ?? null
-}
-
-export function setAutoMerge(projectRoot: string, tabId: string, autoMerge: boolean): void {
-  const entry = getEntry(projectRoot, tabId)
-  if (!entry) return
-  upsertEntry(projectRoot, { ...entry, autoMerge })
 }
 
 export function setReadyToMerge(projectRoot: string, tabId: string, ready: boolean): void {

@@ -142,24 +142,17 @@ describe('computeInfo', () => {
   })
 })
 
-describe('setAutoMerge / setReadyToMerge', () => {
-  it('updates autoMerge in mapping', () => {
-    seedEntry({ tabId: 't1', pathRel: '.worktrees/x', branch: 'vbcdr/x-1', baseBranch: 'main' })
-    mod.setAutoMerge(tmpRoot, 't1', true)
-    const stored = JSON.parse(fs.readFileSync(mappingFile(), 'utf-8'))
-    expect(stored.entries[0].autoMerge).toBe(true)
-  })
-
-  it('is a no-op for unknown tabs', () => {
-    mod.setAutoMerge(tmpRoot, 'nope', true)
-    expect(fs.existsSync(mappingFile())).toBe(false)
-  })
-
+describe('setReadyToMerge', () => {
   it('flips readyToMerge', () => {
     seedEntry({ tabId: 't1', pathRel: '.worktrees/x', branch: 'vbcdr/x-1', baseBranch: 'main' })
     mod.setReadyToMerge(tmpRoot, 't1', true)
     const stored = JSON.parse(fs.readFileSync(mappingFile(), 'utf-8'))
     expect(stored.entries[0].readyToMerge).toBe(true)
+  })
+
+  it('is a no-op for unknown tabs', () => {
+    mod.setReadyToMerge(tmpRoot, 'nope', true)
+    expect(fs.existsSync(mappingFile())).toBe(false)
   })
 })
 

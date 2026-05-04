@@ -22,6 +22,26 @@ export interface TerminalTab {
   pendingWorktree?: boolean
 }
 
+export type WorktreeState = 'idle' | 'dirty' | 'ahead' | 'conflicted'
+
+export interface WorktreeInfo {
+  tabId: string
+  projectRoot: string
+  path: string
+  branch: string
+  baseBranch: string
+  state: WorktreeState
+  ahead: number
+  changedFiles: number
+  readyToMerge: boolean
+}
+
+export interface WorktreeMergeResult {
+  ok: boolean
+  reason?: string
+  output?: string
+}
+
 export interface GitCommit {
   hash: string
   shortHash: string

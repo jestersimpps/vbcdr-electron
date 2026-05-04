@@ -4,7 +4,6 @@ import {
   computeInfo,
   removeWorktree,
   attemptMerge,
-  setAutoMerge,
   setReadyToMerge,
   pruneStaleWorktrees,
   getEntry,
@@ -57,13 +56,6 @@ export function registerWorktreeHandlers(): void {
       options?: { preMergeCommand?: string; preMergeTimeoutMs?: number }
     ): Promise<WorktreeMergeResult> => {
       return await attemptMerge(projectRoot, tabId, options ?? {})
-    }
-  )
-
-  ipcMain.handle(
-    'worktree:set-auto-merge',
-    (_event, projectRoot: string, tabId: string, autoMerge: boolean): void => {
-      setAutoMerge(projectRoot, tabId, autoMerge)
     }
   )
 

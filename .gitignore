@@ -5,3 +5,5 @@ dist/
 *.log
 ackage-lock.json
 docs/changelog-2026-04.md
+.vbcdr/
+.worktrees/

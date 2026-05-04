@@ -159,8 +159,6 @@ const api = {
       ipcRenderer.invoke('worktree:remove', tabId, projectRoot, options) as Promise<void>,
     merge: (tabId: string, projectRoot: string, options?: { preMergeCommand?: string; preMergeTimeoutMs?: number }) =>
       ipcRenderer.invoke('worktree:merge', tabId, projectRoot, options) as Promise<WorktreeMergeResult>,
-    setAutoMerge: (projectRoot: string, tabId: string, autoMerge: boolean) =>
-      ipcRenderer.invoke('worktree:set-auto-merge', projectRoot, tabId, autoMerge) as Promise<void>,
     setReady: (projectRoot: string, tabId: string, ready: boolean) =>
       ipcRenderer.invoke('worktree:set-ready', projectRoot, tabId, ready) as Promise<void>,
     prune: (projectRoot: string) =>

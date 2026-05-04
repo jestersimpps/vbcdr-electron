@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { WorktreeInfo, WorktreeMergeResult } from '../../main/models/types'
+import type { WorktreeInfo, WorktreeMergeResult } from '@/models/types'
 
 interface WorktreeState {
   enabledPerProject: Record<string, boolean>
@@ -22,7 +22,6 @@ interface WorktreeState {
   refresh: (tabId: string, projectRoot: string) => Promise<void>
   removeForTab: (tabId: string, options?: { force?: boolean; deleteBranch?: boolean }) => Promise<void>
   merge: (tabId: string, projectId: string) => Promise<WorktreeMergeResult>
-  setAutoMerge: (tabId: string, autoMerge: boolean) => Promise<void>
   setReady: (tabId: string, ready: boolean) => Promise<void>
 }
 
@@ -144,18 +143,6 @@ export const useWorktreeStore = create<WorktreeState>()(
           await get().refresh(tabId, info.projectRoot)
         }
         return result
-      },
-
-      setAutoMerge: async (tabId: string, autoMerge: boolean): Promise<void> => {
-        const info = get().worktreesPerTab[tabId]
-        if (!info) return
-        await window.api.worktree.setAutoMerge(info.projectRoot, tabId, autoMerge)
-        set((state) => ({
-          worktreesPerTab: {
-            ...state.worktreesPerTab,
-            [tabId]: { ...info, autoMerge }
-          }
-        }))
       },
 
       setReady: async (tabId: string, ready: boolean): Promise<void> => {

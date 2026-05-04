@@ -126,7 +126,6 @@ export interface WorktreeInfo {
   ahead: number
   changedFiles: number
   readyToMerge: boolean
-  autoMerge: boolean
 }
 
 export interface WorktreeMergeResult {
