@@ -42,6 +42,9 @@
       "gatekeeperAssess": false,
       "entitlements": "resources/entitlements.mac.plist",
       "entitlementsInherit": "resources/entitlements.mac.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "vbcdr needs microphone access for voice input."
+      },
       "target": [
         "dmg",
         "zip"
