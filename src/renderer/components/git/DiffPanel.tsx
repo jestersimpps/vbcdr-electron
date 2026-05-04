@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { DiffEditor, type Monaco } from '@monaco-editor/react'
 import type { editor as MonacoEditorNS } from 'monaco-editor'
-import { ChevronLeft, ChevronRight, ChevronDown, CloudDownload, CloudUpload, Columns2, File, Folder, GitCommit, GitCompareArrows, Loader2, MessageSquareText, Rows2, RotateCcw, Sparkles, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, CloudDownload, CloudUpload, Columns2, File, Folder, GitCommit, GitCompareArrows, Loader2, MessageSquareText, Play, Rows2, RotateCcw, Sparkles, Square, X } from 'lucide-react'
 import { useGitStore } from '@/stores/git-store'
 import { useDiffViewStore, type DiffView } from '@/stores/diff-view-store'
 import { useThemeStore } from '@/stores/theme-store'
@@ -155,7 +155,10 @@ interface FlatComment extends DiffComment {
   filePath: string
   fileSummary?: string
   indexInFile: number
+  isSummary?: boolean
 }
+
+type ExplainLevel = 'functional' | 'technical' | 'deep'
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => {
@@ -205,10 +208,15 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const selectedRowRef = useRef<HTMLDivElement | null>(null)
 
   const [annotations, setAnnotations] = useState<Record<string, FileAnnotation>>({})
-  const [explainLoading, setExplainLoading] = useState(false)
+  const [explainLevel, setExplainLevel] = useState<ExplainLevel | null>(null)
+  const [loadingLevel, setLoadingLevel] = useState<ExplainLevel | null>(null)
   const [explainError, setExplainError] = useState<string | null>(null)
   const [currentCommentIndex, setCurrentCommentIndex] = useState(0)
   const [highlightedCommentKey, setHighlightedCommentKey] = useState<string | null>(null)
+  const [tourPlaying, setTourPlaying] = useState(false)
+  const [tourIndex, setTourIndex] = useState(-1)
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const tourCancelledRef = useRef(false)
   const diffEditorRef = useRef<MonacoEditorNS.IStandaloneDiffEditor | null>(null)
   const viewZoneIdsRef = useRef<{ original: string[]; modified: string[] }>({ original: [], modified: [] })
   const decorationsRef = useRef<{ original: string[]; modified: string[] }>({ original: [], modified: [] })
@@ -378,13 +386,28 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     }
   }, [flatComments.length, currentCommentIndex])
 
+  useEffect(() => {
+    setAnnotations({})
+    setExplainLevel(null)
+    setExplainError(null)
+    setCurrentCommentIndex(0)
+    tourCancelledRef.current = true
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+    }
+    setTourPlaying(false)
+    setTourIndex(-1)
+  }, [view])
+
   const goToComment = useCallback(
     (index: number): void => {
       if (index < 0 || index >= flatComments.length) return
       const c = flatComments[index]
       setCurrentCommentIndex(index)
       const target = files.find((f) => f.relativePath === c.filePath)
-      const key = `${c.filePath}:${c.indexInFile}:${c.side}:${c.line}`
+      const key = c.isSummary
+        ? `${c.filePath}:summary`
+        : `${c.filePath}:${c.indexInFile}:${c.side}:${c.line}`
       setHighlightedCommentKey(key)
       pendingRevealRef.current = { line: c.line, side: c.side }
       if (target && target.absolutePath !== selectedPath) {
@@ -401,38 +424,112 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     [flatComments, files, selectedPath]
   )
 
-  const handleExplain = useCallback(async (): Promise<void> => {
+  const speak = useCallback((text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined' || !window.speechSynthesis) {
+        resolve()
+        return
+      }
+      window.speechSynthesis.cancel()
+      const u = new SpeechSynthesisUtterance(text)
+      u.rate = 1.05
+      u.pitch = 1
+      utteranceRef.current = u
+      const onEnd = (): void => {
+        utteranceRef.current = null
+        resolve()
+      }
+      u.onend = onEnd
+      u.onerror = onEnd
+      window.speechSynthesis.speak(u)
+    })
+  }, [])
+
+  const stopTour = useCallback((): void => {
+    tourCancelledRef.current = true
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+    }
+    utteranceRef.current = null
+    setTourPlaying(false)
+    setTourIndex(-1)
+  }, [])
+
+  const startTour = useCallback(async (startAt: number = 0): Promise<void> => {
+    if (flatComments.length === 0) return
+    tourCancelledRef.current = false
+    setTourPlaying(true)
+    for (let i = startAt; i < flatComments.length; i++) {
+      if (tourCancelledRef.current) break
+      setTourIndex(i)
+      goToComment(i)
+      // Tiny delay so the line scroll/highlight visibly precedes the audio.
+      await new Promise((r) => setTimeout(r, 350))
+      if (tourCancelledRef.current) break
+      await speak(flatComments[i].text)
+      if (tourCancelledRef.current) break
+      await new Promise((r) => setTimeout(r, 200))
+    }
+    if (!tourCancelledRef.current) {
+      setTourPlaying(false)
+      setTourIndex(-1)
+    }
+  }, [flatComments, goToComment, speak])
+
+  useEffect(() => {
+    return () => {
+      // On unmount, cancel any in-flight speech to avoid the synth talking after the panel closes.
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
+
+  const handleExplain = useCallback(async (level: ExplainLevel): Promise<void> => {
     setExplainError(null)
-    setExplainLoading(true)
+    setLoadingLevel(level)
     try {
-      const result = await window.api.claude.explainDiff(cwd)
+      const source =
+        view.kind === 'commit'
+          ? { kind: 'commit' as const, hash: view.hash }
+          : view.kind === 'incoming' || view.kind === 'outgoing'
+          ? { kind: 'range' as const, from: view.from, to: view.to }
+          : { kind: 'working' as const }
+      const result = await window.api.claude.explainDiff(cwd, source, level)
       const map: Record<string, FileAnnotation> = {}
       for (const f of result.files) {
         map[f.path] = f
       }
       setAnnotations(map)
+      setExplainLevel(result.level ?? level)
       setCurrentCommentIndex(0)
     } catch (err) {
       setExplainError(err instanceof Error ? err.message : 'Failed to explain changes')
     } finally {
-      setExplainLoading(false)
+      setLoadingLevel(null)
     }
-  }, [cwd])
+  }, [cwd, view])
 
   const clearViewZonesAndDecorations = useCallback((): void => {
     const editor = diffEditorRef.current
     if (!editor) return
-    const original = editor.getOriginalEditor()
-    const modified = editor.getModifiedEditor()
-    original.changeViewZones((accessor) => {
-      for (const id of viewZoneIdsRef.current.original) accessor.removeZone(id)
-    })
-    modified.changeViewZones((accessor) => {
-      for (const id of viewZoneIdsRef.current.modified) accessor.removeZone(id)
-    })
-    viewZoneIdsRef.current = { original: [], modified: [] }
-    decorationsRef.current.original = original.deltaDecorations(decorationsRef.current.original, [])
-    decorationsRef.current.modified = modified.deltaDecorations(decorationsRef.current.modified, [])
+    try {
+      const original = editor.getOriginalEditor()
+      const modified = editor.getModifiedEditor()
+      if (!original.getModel() || !modified.getModel()) return
+      original.changeViewZones((accessor) => {
+        for (const id of viewZoneIdsRef.current.original) accessor.removeZone(id)
+      })
+      modified.changeViewZones((accessor) => {
+        for (const id of viewZoneIdsRef.current.modified) accessor.removeZone(id)
+      })
+      viewZoneIdsRef.current = { original: [], modified: [] }
+      decorationsRef.current.original = original.deltaDecorations(decorationsRef.current.original, [])
+      decorationsRef.current.modified = modified.deltaDecorations(decorationsRef.current.modified, [])
+    } catch {
+      viewZoneIdsRef.current = { original: [], modified: [] }
+      decorationsRef.current = { original: [], modified: [] }
+    }
   }, [])
 
   useEffect(() => {
@@ -441,6 +538,10 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       return
     }
 
+    const original = editor.getOriginalEditor()
+    const modified = editor.getModifiedEditor()
+    if (!original.getModel() || !modified.getModel()) return
+
     clearViewZonesAndDecorations()
 
     const file = files.find((f) => f.absolutePath === selectedPath)
@@ -448,21 +549,27 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     const ann = annotations[file.relativePath]
     if (!ann || ann.comments.length === 0) return
 
-    const original = editor.getOriginalEditor()
-    const modified = editor.getModifiedEditor()
     const newDecos: { original: MonacoEditorNS.IModelDeltaDecoration[]; modified: MonacoEditorNS.IModelDeltaDecoration[] } = {
       original: [],
       modified: []
     }
 
+    const globalIndexByKey: Record<string, number> = {}
+    flatComments.forEach((fc, gi) => {
+      const k = `${fc.filePath}:${fc.indexInFile}:${fc.side}:${fc.line}`
+      globalIndexByKey[k] = gi
+    })
+
     ann.comments.forEach((c, i) => {
       const sub = c.side === 'old' ? original : modified
       const target = c.side === 'old' ? 'original' : 'modified'
       const key = `${file.relativePath}:${i}:${c.side}:${c.line}`
+      const globalIndex = globalIndexByKey[key] ?? -1
+      const badgeNumber = globalIndex >= 0 ? globalIndex + 1 : i + 1
       const node = document.createElement('div')
       const isHighlighted = highlightedCommentKey === key
       node.className = `vbcdr-explain-bubble${isHighlighted ? ' vbcdr-explain-bubble--active' : ''}`
-      node.innerHTML = `<div class="vbcdr-explain-bubble__inner"><span class="vbcdr-explain-bubble__icon">▍</span><span class="vbcdr-explain-bubble__text">${escapeHtml(c.text)}</span></div>`
+      node.innerHTML = `<div class="vbcdr-explain-bubble__inner"><span class="vbcdr-explain-bubble__badge">${badgeNumber}</span><span class="vbcdr-explain-bubble__text">${escapeHtml(c.text)}</span></div>`
 
       sub.changeViewZones((accessor) => {
         const id = accessor.addZone({
@@ -477,8 +584,8 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
         range: { startLineNumber: c.line, startColumn: 1, endLineNumber: c.line, endColumn: 1 },
         options: {
           isWholeLine: true,
-          linesDecorationsClassName: `vbcdr-explain-glyph${isHighlighted ? ' vbcdr-explain-glyph--active' : ''}`,
-          glyphMarginClassName: 'vbcdr-explain-glyph-margin'
+          linesDecorationsClassName: `vbcdr-explain-pin vbcdr-explain-pin-${badgeNumber}${isHighlighted ? ' vbcdr-explain-pin--active' : ''}${tourPlaying && tourIndex === globalIndex ? ' vbcdr-explain-pin--tour' : ''}`,
+          className: tourPlaying && tourIndex === globalIndex ? 'vbcdr-explain-line-tour' : undefined
         }
       })
     })
@@ -496,7 +603,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     return () => {
       // Cleanup runs when deps change; clearViewZonesAndDecorations at top of next run handles it.
     }
-  }, [annotations, selectedPath, loadedPath, files, highlightedCommentKey, clearViewZonesAndDecorations])
+  }, [annotations, selectedPath, loadedPath, files, highlightedCommentKey, clearViewZonesAndDecorations, flatComments, tourPlaying, tourIndex])
 
   function selectedFileRef(): ChangedFile | null {
     return selectedPath ? (files.find((f) => f.absolutePath === selectedPath) ?? null) : null
@@ -530,11 +637,17 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
 
   const handleEditorMount = useCallback((editor: MonacoEditorNS.IStandaloneDiffEditor): void => {
     diffEditorRef.current = editor
+    editor.onDidDispose(() => {
+      if (diffEditorRef.current === editor) {
+        diffEditorRef.current = null
+        viewZoneIdsRef.current = { original: [], modified: [] }
+        decorationsRef.current = { original: [], modified: [] }
+      }
+    })
     const pending = pendingRevealRef.current
     if (pending) {
       const sub = pending.side === 'old' ? editor.getOriginalEditor() : editor.getModifiedEditor()
       sub.revealLineInCenter(pending.line)
-      // Don't clear pending here — the annotations effect may also need it; it clears after using.
     }
   }, [])
 
@@ -778,50 +891,79 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             {selectedFile?.relativePath ?? ''}
           </span>
           <div className="flex shrink-0 items-center gap-2">
-            {view.kind === 'working' && (
-              flatComments.length > 0 ? (
-                <div className="flex items-center gap-0.5 rounded border border-zinc-800 bg-zinc-950 p-0.5">
+            {flatComments.length > 0 ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={tourPlaying ? stopTour : () => startTour(Math.max(0, currentCommentIndex))}
+                    className={`flex items-center gap-1 rounded border px-2 py-1 text-[10px] ${
+                      tourPlaying
+                        ? 'border-blue-500/60 bg-blue-500/15 text-blue-200 hover:bg-blue-500/25'
+                        : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100'
+                    }`}
+                    title={tourPlaying ? 'Stop tour' : 'Play tour: walks through each comment with audio'}
+                  >
+                    {tourPlaying ? <Square size={10} className="fill-current" /> : <Play size={10} className="fill-current" />}
+                    {tourPlaying ? 'Stop' : 'Play tour'}
+                  </button>
                   <button
                     onClick={() => goToComment(currentCommentIndex - 1)}
-                    disabled={currentCommentIndex <= 0}
-                    className="flex items-center rounded p-0.5 text-zinc-500 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={currentCommentIndex <= 0 || tourPlaying}
+                    className="flex items-center gap-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
                     title="Previous comment ([)"
                   >
-                    <ChevronLeft size={12} />
+                    <ChevronLeft size={11} />
+                    Prev
                   </button>
-                  <span className="px-1 text-[10px] tabular-nums text-zinc-400">
+                  <span className="rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-[10px] tabular-nums text-zinc-400">
                     <MessageSquareText size={10} className="mr-1 inline -mt-px text-blue-400" />
                     {currentCommentIndex + 1}/{flatComments.length}
                   </span>
                   <button
                     onClick={() => goToComment(currentCommentIndex + 1)}
-                    disabled={currentCommentIndex >= flatComments.length - 1}
-                    className="flex items-center rounded p-0.5 text-zinc-500 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={currentCommentIndex >= flatComments.length - 1 || tourPlaying}
+                    className="flex items-center gap-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
                     title="Next comment (])"
                   >
-                    <ChevronRight size={12} />
+                    Next
+                    <ChevronRight size={11} />
                   </button>
                   <button
-                    onClick={() => { setAnnotations({}); setExplainError(null) }}
-                    className="ml-0.5 flex items-center rounded p-0.5 text-zinc-500 hover:text-zinc-200"
+                    onClick={() => { stopTour(); setAnnotations({}); setExplainLevel(null); setExplainError(null) }}
+                    className="flex items-center rounded border border-zinc-800 bg-zinc-950 p-1 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
                     title="Clear comments"
                   >
                     <X size={11} />
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={handleExplain}
-                  disabled={explainLoading || files.length === 0}
-                  className="flex items-center gap-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  title={explainError ?? 'Ask Claude to explain the changes'}
-                >
-                  {explainLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} className="text-blue-400" />}
-                  {explainLoading ? 'Explaining…' : 'Explain changes'}
-                </button>
-              )
-            )}
-            {explainError && !explainLoading && (
+                <div className="flex items-center gap-0.5 rounded border border-zinc-800 bg-zinc-950 p-0.5">
+                  {(['functional', 'technical', 'deep'] as const).map((lvl) => {
+                    const label = lvl === 'functional' ? 'Functional' : lvl === 'technical' ? 'Technical' : 'Deep'
+                    const tooltip =
+                      lvl === 'functional'
+                        ? 'Plain-language summary for non-developers'
+                        : lvl === 'technical'
+                        ? 'Architectural summary: design choices and trade-offs'
+                        : 'Line-by-line explanation'
+                    const isLoading = loadingLevel === lvl
+                    return (
+                      <button
+                        key={lvl}
+                        onClick={() => handleExplain(lvl)}
+                        disabled={loadingLevel !== null || files.length === 0}
+                        className="flex items-center gap-1 rounded px-2 py-0.5 text-[10px] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        title={tooltip}
+                      >
+                        {isLoading
+                          ? <Loader2 size={11} className="animate-spin" />
+                          : <Sparkles size={11} className="text-blue-400" />}
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            {explainError && loadingLevel === null && (
               <span className="max-w-[240px] truncate text-[10px] text-red-400" title={explainError}>
                 {explainError}
               </span>
@@ -859,32 +1001,34 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             <div className="flex h-full items-center justify-center text-xs text-zinc-600">
               Binary file, diff not shown
             </div>
-          ) : loadedPath !== selectedPath ? (
-            <div className="flex h-full items-center justify-center text-xs text-zinc-600">
-              {loading ? 'Loading diff…' : ''}
-            </div>
           ) : (
-            <DiffEditor
-              key={`diff-${loadedPath}`}
-              original={original}
-              modified={modified}
-              language={language}
-              theme={monacoTheme}
-              beforeMount={handleBeforeMount}
-              onMount={handleEditorMount}
-              options={{
-                readOnly: true,
-                originalEditable: false,
-                renderSideBySide: sideBySide,
-                minimap: { enabled: minimapEnabled },
-                fontSize,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-                padding: { top: 8 },
-                bracketPairColorization: { enabled: bracketPairColorization }
-              }}
-            />
+            <>
+              <DiffEditor
+                original={original}
+                modified={modified}
+                language={language}
+                theme={monacoTheme}
+                beforeMount={handleBeforeMount}
+                onMount={handleEditorMount}
+                options={{
+                  readOnly: true,
+                  originalEditable: false,
+                  renderSideBySide: sideBySide,
+                  minimap: { enabled: minimapEnabled },
+                  fontSize,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  padding: { top: 8 },
+                  bracketPairColorization: { enabled: bracketPairColorization }
+                }}
+              />
+              {loadedPath !== selectedPath && (
+                <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/60 text-xs text-zinc-500">
+                  {loading ? 'Loading diff…' : ''}
+                </div>
+              )}
+            </>
           )}
         </div>
         </div>

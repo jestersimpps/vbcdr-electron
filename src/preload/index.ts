@@ -20,10 +20,18 @@ const api = {
     readFile: (filePath: string, projectPath: string) => ipcRenderer.invoke('claude:read-file', filePath, projectPath),
     writeFile: (filePath: string, content: string, projectPath: string) => ipcRenderer.invoke('claude:write-file', filePath, content, projectPath),
     deleteFile: (filePath: string, projectPath: string) => ipcRenderer.invoke('claude:delete-file', filePath, projectPath),
-    explainDiff: (projectRoot: string, diffText?: string) =>
-      ipcRenderer.invoke('claude:explain-diff', { projectRoot, diffText }) as Promise<{
+    explainDiff: (
+      projectRoot: string,
+      source?:
+        | { kind: 'working' }
+        | { kind: 'commit'; hash: string }
+        | { kind: 'range'; from: string; to: string },
+      level?: 'functional' | 'technical' | 'deep'
+    ) =>
+      ipcRenderer.invoke('claude:explain-diff', { projectRoot, source, level }) as Promise<{
         generatedAt: string
         diffSha: string
+        level: 'functional' | 'technical' | 'deep'
         files: Array<{
           path: string
           summary?: string

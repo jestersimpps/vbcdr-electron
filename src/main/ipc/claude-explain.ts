@@ -4,9 +4,24 @@ import crypto from 'crypto'
 import { spawn } from 'child_process'
 import { ipcMain } from 'electron'
 
-function runGitDiff(cwd: string): Promise<string> {
+export type DiffSource =
+  | { kind: 'working' }
+  | { kind: 'commit'; hash: string }
+  | { kind: 'range'; from: string; to: string }
+
+function diffArgs(source: DiffSource): string[] {
+  if (source.kind === 'commit') {
+    return ['show', '--no-color', '--format=', source.hash]
+  }
+  if (source.kind === 'range') {
+    return ['diff', '--no-color', `${source.from}..${source.to}`]
+  }
+  return ['diff', '--no-color', 'HEAD']
+}
+
+function runGit(cwd: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawn('git', ['diff', '--no-color', 'HEAD'], { cwd })
+    const proc = spawn('git', args, { cwd })
     let stdout = ''
     let stderr = ''
     proc.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf-8') })
@@ -14,13 +29,15 @@ function runGitDiff(cwd: string): Promise<string> {
     proc.on('error', (err) => reject(err))
     proc.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(`git diff exited with code ${code}: ${stderr.trim()}`))
+        reject(new Error(`git ${args[0]} exited with code ${code}: ${stderr.trim()}`))
         return
       }
       resolve(stdout)
     })
   })
 }
+
+export type ExplainLevel = 'functional' | 'technical' | 'deep'
 
 export interface DiffComment {
   line: number
@@ -37,12 +54,15 @@ export interface FileAnnotation {
 export interface ExplainResult {
   generatedAt: string
   diffSha: string
+  level: ExplainLevel
   files: FileAnnotation[]
 }
 
 export interface ExplainArgs {
   projectRoot: string
   diffText?: string
+  source?: DiffSource
+  level?: ExplainLevel
 }
 
 const SCHEMA = {
@@ -75,7 +95,7 @@ const SCHEMA = {
   }
 }
 
-const SYSTEM_PROMPT = [
+const DEEP_PROMPT = [
   'You are explaining a unified git diff for a code reviewer.',
   'For each non-trivial change, attach a comment to the most relevant line with the *why*, not the *what*.',
   'The line number must be the line in the *new* (post-change) file when side is "new", or the *old* file when side is "old".',
@@ -85,6 +105,35 @@ const SYSTEM_PROMPT = [
   'Use the file path exactly as it appears in the diff header (e.g., "src/foo/bar.ts"), no leading "a/" or "b/".',
   'Output strictly the JSON schema. No markdown, no prose outside the schema.'
 ].join(' ')
+
+const FUNCTIONAL_PROMPT = [
+  'You are explaining a unified git diff to a NON-DEVELOPER (a product manager, designer, or support person).',
+  'Pin each comment to the SINGLE LINE that best represents what changed for the user.',
+  'Comment text MUST be plain language: describe what the user gets — new capability, fixed bug, faster behaviour, safer flow.',
+  'Do NOT use code terms, identifiers, function names, file paths, types, or technical jargon. No backticks, no camelCase, no API names. Talk about *behaviour*, not *code*.',
+  'Pick the most representative changed line per concept; do not annotate every line. 1-3 comments per file is the target. Skip files whose change has no user-visible effect.',
+  'The line number must be the line in the *new* (post-change) file when side is "new", or the *old* file when side is "old". Prefer "new".',
+  'Use the file path exactly as it appears in the diff header (e.g., "src/foo/bar.ts"), no leading "a/" or "b/".',
+  'Leave `summary` empty. All content goes in `comments`.',
+  'Output strictly the JSON schema. No markdown, no prose outside the schema.'
+].join(' ')
+
+const TECHNICAL_PROMPT = [
+  'You are explaining a unified git diff to ANOTHER DEVELOPER reviewing the PR.',
+  'Pin each comment to the line that best demonstrates a design decision.',
+  'Comment text MUST focus on the *why this choice*: which pattern or approach was used, which library or API was reached for, what trade-off was accepted, what alternative was rejected and why.',
+  'Skip mechanical details (renames, imports, formatting) — that is a different mode. Aim for 1-4 comments per file, only on lines that show a real decision.',
+  'The line number must be the line in the *new* (post-change) file when side is "new", or the *old* file when side is "old". Prefer "new".',
+  'Use the file path exactly as it appears in the diff header (e.g., "src/foo/bar.ts"), no leading "a/" or "b/".',
+  'Leave `summary` empty. All content goes in `comments`.',
+  'Output strictly the JSON schema. No markdown, no prose outside the schema.'
+].join(' ')
+
+function promptForLevel(level: ExplainLevel): string {
+  if (level === 'functional') return FUNCTIONAL_PROMPT
+  if (level === 'technical') return TECHNICAL_PROMPT
+  return DEEP_PROMPT
+}
 
 function shaOf(text: string): string {
   return crypto.createHash('sha1').update(text).digest('hex').slice(0, 12)
@@ -146,13 +195,13 @@ export function parseClaudeJsonEnvelope(stdout: string): ExplainResult {
   throw new Error('claude -p result event had no structured output')
 }
 
-function runClaude(projectRoot: string, diffText: string): Promise<string> {
+function runClaude(projectRoot: string, diffText: string, level: ExplainLevel): Promise<string> {
   return new Promise((resolve, reject) => {
     const args = [
       '-p',
       '--output-format', 'json',
       '--json-schema', JSON.stringify(SCHEMA),
-      '--append-system-prompt', SYSTEM_PROMPT,
+      '--append-system-prompt', promptForLevel(level),
       '--add-dir', projectRoot,
       '--input-format', 'text',
       'Here is the diff to explain. Return JSON matching the schema exactly:\n\n' + diffText
@@ -189,23 +238,28 @@ function runClaude(projectRoot: string, diffText: string): Promise<string> {
   })
 }
 
-export async function explainDiff({ projectRoot, diffText }: ExplainArgs): Promise<ExplainResult> {
-  const diff = (diffText && diffText.trim()) ? diffText : await runGitDiff(projectRoot)
+export async function explainDiff({ projectRoot, diffText, source, level }: ExplainArgs): Promise<ExplainResult> {
+  const resolvedLevel: ExplainLevel = level ?? 'deep'
+  const diff = (diffText && diffText.trim())
+    ? diffText
+    : await runGit(projectRoot, diffArgs(source ?? { kind: 'working' }))
 
   if (!diff.trim()) {
     return {
       generatedAt: new Date().toISOString(),
       diffSha: shaOf(''),
+      level: resolvedLevel,
       files: []
     }
   }
 
-  const stdout = await runClaude(projectRoot, diff)
+  const stdout = await runClaude(projectRoot, diff, resolvedLevel)
   const parsed = parseClaudeJsonEnvelope(stdout)
 
   const result: ExplainResult = {
     generatedAt: new Date().toISOString(),
     diffSha: shaOf(diff),
+    level: resolvedLevel,
     files: Array.isArray(parsed.files) ? parsed.files : []
   }
 

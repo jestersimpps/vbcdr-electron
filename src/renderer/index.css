@@ -111,12 +111,22 @@ body {
   max-width: calc(100% - 80px);
 }
 
-.vbcdr-explain-bubble__icon {
-  color: rgba(96, 165, 250, 0.85);
-  font-size: 11px;
+.vbcdr-explain-bubble__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(96, 165, 250, 0.85);
+  color: #0b1220;
+  font-size: 10px;
+  font-weight: 700;
   line-height: 1;
-  margin-top: 1px;
   flex-shrink: 0;
+  margin-top: 1px;
+  font-feature-settings: 'tnum';
 }
 
 .vbcdr-explain-bubble__text {
@@ -131,17 +141,99 @@ body {
   box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.4);
 }
 
-.vbcdr-explain-glyph {
-  background: rgba(96, 165, 250, 0.85);
-  width: 2px !important;
-  margin-left: 3px;
-}
-
-.vbcdr-explain-glyph--active {
+.vbcdr-explain-bubble--active .vbcdr-explain-bubble__badge {
   background: rgb(191, 219, 254);
-  box-shadow: 0 0 4px rgba(147, 197, 253, 0.8);
+  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.4);
 }
 
-.vbcdr-explain-glyph-margin {
-  background: rgba(59, 130, 246, 0.15);
+/* Pin: a numbered circular badge in Monaco's lineDecorationsClassName slot.
+   The number itself is rendered via ::before content from the per-number class. */
+.vbcdr-explain-pin {
+  position: relative;
+  width: 18px !important;
+  margin-left: 2px;
+  cursor: pointer;
+}
+
+.vbcdr-explain-pin::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(96, 165, 250, 0.92);
+  color: #0b1220;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'tnum';
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+.vbcdr-explain-pin--active::before {
+  background: rgb(191, 219, 254);
+  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.55), 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.vbcdr-explain-pin--tour::before {
+  background: rgb(253, 224, 71);
+  color: #1a1a05;
+  animation: vbcdr-pin-pulse 1.2s ease-out infinite;
+}
+
+@keyframes vbcdr-pin-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(253, 224, 71, 0.7), 0 1px 2px rgba(0, 0, 0, 0.25); }
+  70%  { box-shadow: 0 0 0 6px rgba(253, 224, 71, 0),  0 1px 2px rgba(0, 0, 0, 0.25); }
+  100% { box-shadow: 0 0 0 0 rgba(253, 224, 71, 0),    0 1px 2px rgba(0, 0, 0, 0.25); }
+}
+
+/* Numeric content per pin index. We support up to 99 comments; rare but cheap. */
+.vbcdr-explain-pin-1::before  { content: '1'; }
+.vbcdr-explain-pin-2::before  { content: '2'; }
+.vbcdr-explain-pin-3::before  { content: '3'; }
+.vbcdr-explain-pin-4::before  { content: '4'; }
+.vbcdr-explain-pin-5::before  { content: '5'; }
+.vbcdr-explain-pin-6::before  { content: '6'; }
+.vbcdr-explain-pin-7::before  { content: '7'; }
+.vbcdr-explain-pin-8::before  { content: '8'; }
+.vbcdr-explain-pin-9::before  { content: '9'; }
+.vbcdr-explain-pin-10::before { content: '10'; }
+.vbcdr-explain-pin-11::before { content: '11'; }
+.vbcdr-explain-pin-12::before { content: '12'; }
+.vbcdr-explain-pin-13::before { content: '13'; }
+.vbcdr-explain-pin-14::before { content: '14'; }
+.vbcdr-explain-pin-15::before { content: '15'; }
+.vbcdr-explain-pin-16::before { content: '16'; }
+.vbcdr-explain-pin-17::before { content: '17'; }
+.vbcdr-explain-pin-18::before { content: '18'; }
+.vbcdr-explain-pin-19::before { content: '19'; }
+.vbcdr-explain-pin-20::before { content: '20'; }
+.vbcdr-explain-pin-21::before { content: '21'; }
+.vbcdr-explain-pin-22::before { content: '22'; }
+.vbcdr-explain-pin-23::before { content: '23'; }
+.vbcdr-explain-pin-24::before { content: '24'; }
+.vbcdr-explain-pin-25::before { content: '25'; }
+.vbcdr-explain-pin-26::before { content: '26'; }
+.vbcdr-explain-pin-27::before { content: '27'; }
+.vbcdr-explain-pin-28::before { content: '28'; }
+.vbcdr-explain-pin-29::before { content: '29'; }
+.vbcdr-explain-pin-30::before { content: '30'; }
+
+/* Line highlight while the tour is speaking that line. */
+.vbcdr-explain-line-tour {
+  background: linear-gradient(90deg, rgba(253, 224, 71, 0.18) 0%, rgba(253, 224, 71, 0.04) 60%, transparent 100%);
+  animation: vbcdr-line-tour 1.6s ease-out infinite;
+}
+
+@keyframes vbcdr-line-tour {
+  0%   { background-color: rgba(253, 224, 71, 0.10); }
+  50%  { background-color: rgba(253, 224, 71, 0.22); }
+  100% { background-color: rgba(253, 224, 71, 0.10); }
 }
