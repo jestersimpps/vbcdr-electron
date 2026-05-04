@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   DndContext,
@@ -44,7 +44,7 @@ function tokenBarFill(pct: number, theme: ITheme): string {
   return theme.red ?? '#ff7b72'
 }
 
-function SortableTerminalTab({
+const SortableTerminalTab = memo(function SortableTerminalTab({
   tab,
   isActive,
   status,
@@ -54,8 +54,8 @@ function SortableTerminalTab({
   tab: TerminalTab
   isActive: boolean
   status: 'idle' | 'busy' | undefined
-  onSelect: () => void
-  onClose: (e: React.MouseEvent) => void
+  onSelect: (tabId: string) => void
+  onClose: (tabId: string) => void
 }): React.ReactElement {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tab.id })
   const style: React.CSSProperties = {
@@ -63,6 +63,11 @@ function SortableTerminalTab({
     transition,
     opacity: isDragging ? 0.5 : undefined
   }
+  const handleSelect = useCallback(() => onSelect(tab.id), [onSelect, tab.id])
+  const handleClose = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    onClose(tab.id)
+  }, [onClose, tab.id])
   return (
     <div
       ref={setNodeRef}
@@ -73,7 +78,7 @@ function SortableTerminalTab({
         'group flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-t-md px-3 py-1.5 text-xs',
         isActive ? 'bg-zinc-950 text-zinc-200' : 'text-zinc-500 hover:text-zinc-400'
       )}
-      onClick={onSelect}
+      onClick={handleSelect}
     >
       {tab.initialCommand && status === 'busy' && (
         <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" />
@@ -83,7 +88,7 @@ function SortableTerminalTab({
       )}
       <span>{tab.title}</span>
       <button
-        onClick={onClose}
+        onClick={handleClose}
         onPointerDown={(e) => e.stopPropagation()}
         className="hidden rounded p-0.5 hover:text-red-400 group-hover:block"
         title="Close tab"
@@ -92,7 +97,7 @@ function SortableTerminalTab({
       </button>
     </div>
   )
-}
+})
 
 export function TerminalPanel(): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
@@ -116,9 +121,16 @@ export function TerminalPanel(): React.ReactElement {
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
 
-  const projectTabs = tabs.filter((t) => t.projectId === activeProjectId)
+  const projectTabs = useMemo(
+    () => tabs.filter((t) => t.projectId === activeProjectId),
+    [tabs, activeProjectId]
+  )
   const activeTabId = activeProjectId ? (activeTabPerProject[activeProjectId] || null) : null
-  const activeTab = projectTabs.find((t) => t.id === activeTabId)
+  const activeTab = useMemo(
+    () => projectTabs.find((t) => t.id === activeTabId),
+    [projectTabs, activeTabId]
+  )
+  const projectTabIds = useMemo(() => projectTabs.map((t) => t.id), [projectTabs])
 
   const tokenVelocityTabId = activeTab?.initialCommand ? activeTabId : null
   const { velocityPerSample, tokensPerMinute } = useTokenVelocity(tokenVelocityTabId)
@@ -189,21 +201,26 @@ export function TerminalPanel(): React.ReactElement {
   const handleTabDragEnd = useCallback((event: DragEndEvent): void => {
     const { active, over } = event
     if (!over || active.id === over.id || !activeProjectId) return
-    const fromIndex = projectTabs.findIndex((t) => t.id === active.id)
-    const toIndex = projectTabs.findIndex((t) => t.id === over.id)
+    const currentTabs = useTerminalStore.getState().tabs.filter((t) => t.projectId === activeProjectId)
+    const fromIndex = currentTabs.findIndex((t) => t.id === active.id)
+    const toIndex = currentTabs.findIndex((t) => t.id === over.id)
     if (fromIndex !== -1 && toIndex !== -1) {
       reorderTabs(activeProjectId, fromIndex, toIndex)
     }
-  }, [activeProjectId, projectTabs, reorderTabs])
+  }, [activeProjectId, reorderTabs])
 
-  const handleCloseTab = (tabId: string): void => {
+  const handleCloseTab = useCallback((tabId: string): void => {
     if (teardownInFlight.current.has(tabId)) return
     teardownInFlight.current.add(tabId)
     window.api.terminal.kill(tabId)
     disposeTerminal(tabId)
     closeTab(tabId)
     teardownInFlight.current.delete(tabId)
-  }
+  }, [closeTab])
+
+  const handleSelectTab = useCallback((tabId: string): void => {
+    if (activeProjectId) setActiveTab(activeProjectId, tabId)
+  }, [activeProjectId, setActiveTab])
 
   const tokenCap = useLayoutStore((s) => s.tokenCap)
 
@@ -214,18 +231,15 @@ export function TerminalPanel(): React.ReactElement {
       <div className="flex h-9 shrink-0 items-center border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex h-full flex-1 items-center gap-0.5 overflow-x-auto px-1">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTabDragEnd}>
-            <SortableContext items={projectTabs.map((t) => t.id)} strategy={horizontalListSortingStrategy}>
+            <SortableContext items={projectTabIds} strategy={horizontalListSortingStrategy}>
               {projectTabs.map((tab) => (
                 <SortableTerminalTab
                   key={tab.id}
                   tab={tab}
                   isActive={activeTabId === tab.id}
                   status={tabStatuses[tab.id]}
-                  onSelect={() => activeProjectId && setActiveTab(activeProjectId, tab.id)}
-                  onClose={(e) => {
-                    e.stopPropagation()
-                    handleCloseTab(tab.id)
-                  }}
+                  onSelect={handleSelectTab}
+                  onClose={handleCloseTab}
                 />
               ))}
             </SortableContext>

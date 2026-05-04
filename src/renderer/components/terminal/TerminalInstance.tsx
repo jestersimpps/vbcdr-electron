@@ -24,6 +24,7 @@ interface TerminalEntry {
   searchAddon: SearchAddon
   onIncomingData?: (data: string) => void
   suppressBusyUntil: number
+  projectId: string
   textareaListeners?: { textarea: HTMLTextAreaElement; onFocus: () => void; onBlur: () => void }
 }
 
@@ -130,7 +131,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
       terminal.unicode.activeVersion = '11'
 
-      entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0 }
+      entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0, projectId }
       terminalsMap.set(tabId, entry)
 
       terminal.attachCustomKeyEventHandler((e) => {
@@ -320,7 +321,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           if (e) e.suppressBusyUntil = Date.now() + 1000
           if (atBottom) terminal.scrollToBottom()
         } catch { /* element may be unmounted during resize */ }
-      }, 80)
+      }, 150)
     })
     observer.observe(el)
 
@@ -487,6 +488,15 @@ export function disposeTerminal(tabId: string): void {
     }
     try { entry.terminal.dispose() } catch { /* dispose may throw if already gone */ }
     terminalsMap.delete(tabId)
+
+    let projectStillHasTabs = false
+    terminalsMap.forEach((e) => {
+      if (e.projectId === entry.projectId) projectStillHasTabs = true
+    })
+    if (!projectStillHasTabs) {
+      activityLastSent.delete(`${entry.projectId}:i`)
+      activityLastSent.delete(`${entry.projectId}:o`)
+    }
   }
   if (terminalsMap.size === 0 && globalDataUnsub) {
     try { globalDataUnsub() } catch { /* ignore */ }
