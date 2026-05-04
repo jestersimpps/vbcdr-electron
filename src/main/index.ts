@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from 'electron'
+import { app, BrowserWindow, Menu, session, systemPreferences } from 'electron'
 import path from 'path'
 import { registerProjectHandlers } from '@main/ipc/projects'
 import { registerFilesystemHandlers } from '@main/ipc/filesystem'
@@ -318,6 +318,19 @@ app.whenReady().then(() => {
   killOrphanedPtys()
   compactActivity()
   compactTokenUsage()
+
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    if (permission === 'media') {
+      callback(true)
+      return
+    }
+    callback(false)
+  })
+
+  if (process.platform === 'darwin') {
+    systemPreferences.askForMediaAccess('microphone').catch(() => {})
+  }
+
   createWindow()
   Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenu()))
 
