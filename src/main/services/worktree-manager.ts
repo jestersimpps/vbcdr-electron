@@ -230,6 +230,43 @@ export async function removeWorktree(
   removeEntry(projectRoot, tabId)
 }
 
+export async function reconcileWorktrees(projectRoot: string): Promise<WorktreeInfo[]> {
+  try {
+    await runGit(projectRoot, ['worktree', 'prune'])
+  } catch {
+    // ignore
+  }
+  const mapping = readMapping(projectRoot)
+  const surviving = mapping.entries.filter((e) => fs.existsSync(e.path))
+  if (surviving.length !== mapping.entries.length) {
+    writeMapping(projectRoot, { version: 1, entries: surviving })
+  }
+  const infos = await Promise.all(
+    surviving.map(async (entry) => {
+      try {
+        const [{ changed, conflicted }, ahead] = await Promise.all([
+          statusCounts(entry.path),
+          aheadCount(entry.path, entry.baseBranch, entry.branch)
+        ])
+        return {
+          tabId: entry.tabId,
+          projectRoot,
+          path: entry.path,
+          branch: entry.branch,
+          baseBranch: entry.baseBranch,
+          state: deriveState(changed, ahead, conflicted),
+          ahead,
+          changedFiles: changed,
+          readyToMerge: entry.readyToMerge
+        } satisfies WorktreeInfo
+      } catch {
+        return null
+      }
+    })
+  )
+  return infos.filter((i): i is WorktreeInfo => i !== null)
+}
+
 export async function pruneStaleWorktrees(projectRoot: string): Promise<void> {
   try {
     await runGit(projectRoot, ['worktree', 'prune'])

@@ -167,6 +167,8 @@ const api = {
       ipcRenderer.invoke('worktree:has', tabId, projectRoot) as Promise<boolean>,
     list: (projectRoot: string) =>
       ipcRenderer.invoke('worktree:list', projectRoot),
+    reconcile: (projectRoot: string) =>
+      ipcRenderer.invoke('worktree:reconcile', projectRoot) as Promise<WorktreeInfo[]>,
     rebind: (projectRoot: string, oldTabId: string, newTabId: string) =>
       ipcRenderer.invoke('worktree:rebind', projectRoot, oldTabId, newTabId) as Promise<WorktreeInfo | null>
   },

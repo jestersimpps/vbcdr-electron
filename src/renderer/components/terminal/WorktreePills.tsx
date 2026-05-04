@@ -310,6 +310,9 @@ function WorktreeIntroModal({
           <div className="flex items-center gap-2">
             <FlaskConical size={14} className="text-emerald-400" />
             <span className="text-sm font-medium text-zinc-200">{title}</span>
+            <span className="rounded bg-amber-500/15 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-amber-400">
+              Beta
+            </span>
           </div>
           <button
             onClick={onCancel}
@@ -318,6 +321,10 @@ function WorktreeIntroModal({
           >
             <X size={16} />
           </button>
+        </div>
+
+        <div className="mb-3 rounded border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] leading-relaxed text-amber-300/90">
+          This feature is experimental. Expect rough edges, and keep important work committed before relying on it.
         </div>
 
         <p className="mb-3 text-xs leading-relaxed text-zinc-400">

@@ -6,6 +6,7 @@ import {
   attemptMerge,
   setReadyToMerge,
   pruneStaleWorktrees,
+  reconcileWorktrees,
   getEntry,
   listWorktrees,
   rebindToTab
@@ -80,6 +81,17 @@ export function registerWorktreeHandlers(): void {
   ipcMain.handle('worktree:list', (_event, projectRoot: string) => {
     return listWorktrees(projectRoot)
   })
+
+  ipcMain.handle(
+    'worktree:reconcile',
+    async (_event, projectRoot: string): Promise<WorktreeInfo[]> => {
+      try {
+        return await reconcileWorktrees(projectRoot)
+      } catch {
+        return []
+      }
+    }
+  )
 
   ipcMain.handle(
     'worktree:rebind',

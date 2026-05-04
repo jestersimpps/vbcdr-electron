@@ -23,6 +23,7 @@ interface WorktreeState {
   removeForTab: (tabId: string, options?: { force?: boolean; deleteBranch?: boolean }) => Promise<void>
   merge: (tabId: string, projectId: string) => Promise<WorktreeMergeResult>
   setReady: (tabId: string, ready: boolean) => Promise<void>
+  reconcile: (projectId: string, projectRoot: string) => Promise<void>
 }
 
 export const useWorktreeStore = create<WorktreeState>()(
@@ -155,6 +156,22 @@ export const useWorktreeStore = create<WorktreeState>()(
             [tabId]: { ...info, readyToMerge: ready }
           }
         }))
+      },
+
+      reconcile: async (projectId: string, projectRoot: string): Promise<void> => {
+        const infos = await window.api.worktree.reconcile(projectRoot)
+        set((state) => {
+          const next = { ...state.worktreesPerTab }
+          for (const [tabId, info] of Object.entries(next)) {
+            if (info.projectRoot === projectRoot) delete next[tabId]
+          }
+          for (const info of infos) next[info.tabId] = info
+          const enabled =
+            infos.length > 0
+              ? { ...state.enabledPerProject, [projectId]: true }
+              : state.enabledPerProject
+          return { worktreesPerTab: next, enabledPerProject: enabled }
+        })
       }
     }),
     {
