@@ -31,7 +31,8 @@ import { Statistics } from '@/components/statistics/Statistics'
 import { Usage } from '@/components/usage/Usage'
 import { Settings } from '@/components/settings/Settings'
 import { TerminalsPage } from '@/components/terminal/TerminalsPage'
-import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Settings as SettingsIcon } from 'lucide-react'
+import { DevServersPage } from '@/components/dev-servers/DevServersPage'
+import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Server, Settings as SettingsIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
 
@@ -104,9 +105,9 @@ function SortableProjectTab({
 }
 
 export function AppLayoutGrid(): React.ReactElement {
-  const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, claudePageActive, skillsPageActive, terminalsPageActive, loadProjects, addProject, removeProject, setActiveProject, reorderProjects, showDashboard, showStatistics, showUsage, showSettings, showClaudePage, showSkillsPage, showTerminalsPage } =
+  const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, claudePageActive, skillsPageActive, terminalsPageActive, devServersPageActive, loadProjects, addProject, removeProject, setActiveProject, reorderProjects, showDashboard, showStatistics, showUsage, showSettings, showClaudePage, showSkillsPage, showTerminalsPage, showDevServersPage } =
     useProjectStore()
-  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || terminalsPageActive
+  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || terminalsPageActive || devServersPageActive
   const centerTab = useEditorStore(
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'terminals' : 'terminals')
   )
@@ -367,6 +368,18 @@ export function AppLayoutGrid(): React.ReactElement {
             >
               <TerminalSquare size={18} />
             </button>
+            <button
+              onClick={showDevServersPage}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                devServersPageActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Dev Servers"
+            >
+              <Server size={18} />
+            </button>
           </div>
           <button
             onClick={showSettings}
@@ -439,6 +452,11 @@ export function AppLayoutGrid(): React.ReactElement {
         {terminalsPageActive && (
           <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <TerminalsPage />
+          </div>
+        )}
+        {devServersPageActive && (
+          <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
+            <DevServersPage />
           </div>
         )}
         </div>

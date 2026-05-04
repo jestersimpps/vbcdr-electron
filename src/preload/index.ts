@@ -173,6 +173,22 @@ const api = {
       ipcRenderer.invoke('worktree:rebind', projectRoot, oldTabId, newTabId) as Promise<WorktreeInfo | null>
   },
 
+  devServers: {
+    list: () => ipcRenderer.invoke('dev-servers:list') as Promise<Array<{
+      pid: number
+      port: number
+      command: string
+      process: string
+      cwd: string | null
+      user: string
+      startedAt: number | null
+    }>>,
+    kill: (pid: number, force?: boolean) =>
+      ipcRenderer.invoke('dev-servers:kill', pid, force ?? false) as Promise<boolean>,
+    open: (port: number) =>
+      ipcRenderer.invoke('dev-servers:open', port) as Promise<void>
+  },
+
   skills: {
     search: (query: string) => ipcRenderer.invoke('skills:search', query),
     top: () => ipcRenderer.invoke('skills:top'),
