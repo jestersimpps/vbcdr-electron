@@ -36,15 +36,28 @@ import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard,
 import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
 
+const TITLEBAR_DRAG_STYLE: React.CSSProperties = { WebkitAppRegion: 'drag' } as React.CSSProperties
+const TITLEBAR_NO_DRAG_STYLE: React.CSSProperties = { WebkitAppRegion: 'no-drag' } as React.CSSProperties
+
 const ProjectTabStatus = memo(function ProjectTabStatus({ projectId }: { projectId: string }): React.ReactElement | null {
-  const tabs = useTerminalStore((s) => s.tabs)
-  const tabStatuses = useTerminalStore((s) => s.tabStatuses)
-  const llmTabs = tabs.filter((t) => t.projectId === projectId && t.initialCommand)
-  if (llmTabs.length === 0) return null
-  const anyBusy = llmTabs.some((t) => tabStatuses[t.id] === 'busy')
-  if (anyBusy) return <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400 shrink-0" />
-  const allIdle = llmTabs.every((t) => tabStatuses[t.id] === 'idle')
-  if (allIdle) return <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
+  const status = useTerminalStore((s) => {
+    let hasLlm = false
+    let anyBusy = false
+    let allIdle = true
+    for (const t of s.tabs) {
+      if (t.projectId !== projectId || !t.initialCommand) continue
+      hasLlm = true
+      const st = s.tabStatuses[t.id]
+      if (st === 'busy') anyBusy = true
+      if (st !== 'idle') allIdle = false
+    }
+    if (!hasLlm) return null
+    if (anyBusy) return 'busy'
+    if (allIdle) return 'idle'
+    return null
+  })
+  if (status === 'busy') return <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400 shrink-0" />
+  if (status === 'idle') return <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
   return null
 })
 
@@ -64,13 +77,13 @@ function SortableProjectTab({
   useEffect(() => {
     if (isActive) useTerminalStore.getState().clearProjectAttention(project.id)
   }, [isActive, project.id])
-  const style = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     maxWidth: '160px',
     opacity: isDragging ? 0.5 : undefined,
-    WebkitAppRegion: 'no-drag'
-  } as React.CSSProperties
+    ...TITLEBAR_NO_DRAG_STYLE
+  }
   return (
     <div
       ref={setNodeRef}
@@ -116,12 +129,13 @@ export function AppLayoutGrid(): React.ReactElement {
   const handleProjectDragEnd = useCallback((event: DragEndEvent): void => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const fromIndex = projects.findIndex((p) => p.id === active.id)
-    const toIndex = projects.findIndex((p) => p.id === over.id)
+    const currentProjects = useProjectStore.getState().projects
+    const fromIndex = currentProjects.findIndex((p) => p.id === active.id)
+    const toIndex = currentProjects.findIndex((p) => p.id === over.id)
     if (fromIndex !== -1 && toIndex !== -1) {
       reorderProjects(fromIndex, toIndex)
     }
-  }, [projects, reorderProjects])
+  }, [reorderProjects])
   const getSplit = useLayoutStore((s) => s.getSplit)
   const setSplit = useLayoutStore((s) => s.setSplit)
   const resetVersion = useLayoutStore((s) => s.resetVersion)
@@ -259,11 +273,11 @@ export function AppLayoutGrid(): React.ReactElement {
     <div className="flex min-h-0 flex-1 flex-col bg-zinc-950 text-zinc-100">
       <div
         className="flex h-10 items-center border-b border-zinc-800 bg-zinc-900/80 pl-20"
-        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        style={TITLEBAR_DRAG_STYLE}
       >
         <div
           className="flex items-center gap-0.5 h-full flex-1 min-w-0"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          style={TITLEBAR_NO_DRAG_STYLE}
         >
           <div className="flex items-center h-full min-w-0 flex-1">
             <DndContext sensors={projectTabSensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
