@@ -272,11 +272,27 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         fitAddon.fit()
         terminal.scrollToBottom()
         terminal.focus()
-        window.api.terminal.create(tabId, projectId, cwd, terminal.cols, terminal.rows)
-        if (initialCommand) {
-          setTimeout(() => {
-            window.api.terminal.write(tabId, initialCommand + '\n')
-          }, 500)
+
+        const startPty = (resolvedCwd: string): void => {
+          window.api.terminal.create(tabId, projectId, resolvedCwd, terminal.cols, terminal.rows)
+          if (initialCommand) {
+            setTimeout(() => {
+              window.api.terminal.write(tabId, initialCommand + '\n')
+            }, 500)
+          }
+        }
+
+        const tabFromStore = useTerminalStore.getState().tabs.find((t) => t.id === tabId)
+        if (tabFromStore?.pendingWorktree) {
+          const unsub = useTerminalStore.subscribe((state) => {
+            const t = state.tabs.find((tab) => tab.id === tabId)
+            if (!t || !t.pendingWorktree) {
+              unsub()
+              startPty(t?.cwd ?? cwd)
+            }
+          })
+        } else {
+          startPty(tabFromStore?.cwd ?? cwd)
         }
       }
 

@@ -8,6 +8,7 @@ import { registerClaudeConfigHandlers } from '@main/ipc/claude-config'
 import { registerSkillsHandlers } from '@main/ipc/skills'
 import { registerActivityHandlers } from '@main/ipc/activity'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
+import { registerWorktreeHandlers } from '@main/ipc/worktree'
 import { killAll, killOrphanedPtys } from '@main/services/pty-manager'
 import { compactActivity, flushActivity } from '@main/services/activity-service'
 import { compactTokenUsage, flushTokenUsage } from '@main/services/token-usage-service'
@@ -75,6 +76,7 @@ registerSkillsHandlers()
 registerUpdaterHandlers()
 registerActivityHandlers()
 registerTokenUsageHandlers()
+registerWorktreeHandlers()
 
 function buildMenu(): Electron.MenuItemConstructorOptions[] {
   const isMac = process.platform === 'darwin'

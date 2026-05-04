@@ -114,6 +114,27 @@ export interface ConflictInfo {
 
 export type GitFileStatus = 'modified' | 'added' | 'untracked' | 'deleted' | 'renamed' | 'conflict'
 
+export type WorktreeState = 'idle' | 'dirty' | 'ahead' | 'conflicted'
+
+export interface WorktreeInfo {
+  tabId: string
+  projectRoot: string
+  path: string
+  branch: string
+  baseBranch: string
+  state: WorktreeState
+  ahead: number
+  changedFiles: number
+  readyToMerge: boolean
+  autoMerge: boolean
+}
+
+export interface WorktreeMergeResult {
+  ok: boolean
+  reason?: string
+  output?: string
+}
+
 export interface EncryptedCredential {
   id: string
   domain: string

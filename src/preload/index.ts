@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import type { WorktreeInfo, WorktreeMergeResult } from '../main/models/types'
 
 const api = {
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
@@ -147,6 +148,29 @@ const api = {
     resetTab: (tabId: string) => ipcRenderer.invoke('token-usage:reset-tab', tabId),
     daily: (sinceIso: string | null) => ipcRenderer.invoke('token-usage:daily', sinceIso),
     events: (sinceIso: string | null) => ipcRenderer.invoke('token-usage:events', sinceIso)
+  },
+
+  worktree: {
+    create: (tabId: string, projectRoot: string, label: string) =>
+      ipcRenderer.invoke('worktree:create', tabId, projectRoot, label) as Promise<WorktreeInfo | null>,
+    info: (tabId: string, projectRoot: string) =>
+      ipcRenderer.invoke('worktree:info', tabId, projectRoot) as Promise<WorktreeInfo | null>,
+    remove: (tabId: string, projectRoot: string, options?: { force?: boolean; deleteBranch?: boolean }) =>
+      ipcRenderer.invoke('worktree:remove', tabId, projectRoot, options) as Promise<void>,
+    merge: (tabId: string, projectRoot: string, options?: { preMergeCommand?: string; preMergeTimeoutMs?: number }) =>
+      ipcRenderer.invoke('worktree:merge', tabId, projectRoot, options) as Promise<WorktreeMergeResult>,
+    setAutoMerge: (projectRoot: string, tabId: string, autoMerge: boolean) =>
+      ipcRenderer.invoke('worktree:set-auto-merge', projectRoot, tabId, autoMerge) as Promise<void>,
+    setReady: (projectRoot: string, tabId: string, ready: boolean) =>
+      ipcRenderer.invoke('worktree:set-ready', projectRoot, tabId, ready) as Promise<void>,
+    prune: (projectRoot: string) =>
+      ipcRenderer.invoke('worktree:prune', projectRoot) as Promise<void>,
+    has: (tabId: string, projectRoot: string) =>
+      ipcRenderer.invoke('worktree:has', tabId, projectRoot) as Promise<boolean>,
+    list: (projectRoot: string) =>
+      ipcRenderer.invoke('worktree:list', projectRoot),
+    rebind: (projectRoot: string, oldTabId: string, newTabId: string) =>
+      ipcRenderer.invoke('worktree:rebind', projectRoot, oldTabId, newTabId) as Promise<WorktreeInfo | null>
   },
 
   skills: {

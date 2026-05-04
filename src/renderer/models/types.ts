@@ -19,6 +19,7 @@ export interface TerminalTab {
   projectId: string
   cwd: string
   initialCommand?: string
+  pendingWorktree?: boolean
 }
 
 export interface GitCommit {

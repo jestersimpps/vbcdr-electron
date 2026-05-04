@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import type { TerminalTab } from '@/models/types'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
 import { GitActions } from '@/components/git/GitActions'
+import { WorktreePills } from './WorktreePills'
 import { TaskQueuePanel } from './TaskQueuePanel'
 import { Sparkline } from './Sparkline'
 import { useQueueRunner } from '@/hooks/useQueueRunner'
@@ -337,6 +338,9 @@ export function TerminalPanel(): React.ReactElement {
         </button>
         <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
         <GitActions />
+        {activeTab?.initialCommand && activeProjectId && (
+          <WorktreePills tabId={activeTab.id} projectId={activeProjectId} />
+        )}
         <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
         <button
           onClick={() => setTerminalThemeOpen(true)}
