@@ -6,6 +6,8 @@ import {
   getStatus,
   getFileAtHead,
   getFileAtRef,
+  getFileBytesAtHead,
+  getFileBytesAtRef,
   getCommitChangedFiles,
   getDiffNumstat,
   getRangeChangedFiles,
@@ -32,7 +34,7 @@ import {
 } from '@main/services/git-service'
 import { registerProject, unregisterProject, fetchNow } from '@main/services/git-fetch-service'
 import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
-import type { CommitChangedFile, DiffNumstat } from '@main/services/git-service'
+import type { CommitChangedFile, DiffNumstat, GitFileBytes } from '@main/services/git-service'
 
 export function registerGitHandlers(): void {
   safeHandle('git:is-repo', async (_event, cwd: string): Promise<boolean> => {
@@ -65,6 +67,20 @@ export function registerGitHandlers(): void {
     'git:file-at-ref',
     async (_event, cwd: string, ref: string, filePath: string): Promise<string | null> => {
       return getFileAtRef(cwd, ref, filePath)
+    }
+  )
+
+  safeHandle(
+    'git:file-bytes-at-head',
+    async (_event, cwd: string, filePath: string): Promise<GitFileBytes | null> => {
+      return getFileBytesAtHead(cwd, filePath)
+    }
+  )
+
+  safeHandle(
+    'git:file-bytes-at-ref',
+    async (_event, cwd: string, ref: string, filePath: string): Promise<GitFileBytes | null> => {
+      return getFileBytesAtRef(cwd, ref, filePath)
     }
   )
 

@@ -26,6 +26,23 @@ async function runGit(cwd: string, args: string[], timeout: number = 5000, maxBu
   return stdout.trim()
 }
 
+async function runGitBuffer(cwd: string, args: string[], timeout: number = 10000, maxBuffer: number = 50 * 1024 * 1024): Promise<Buffer> {
+  const { stdout } = await execFile('git', args, {
+    cwd,
+    encoding: 'buffer',
+    timeout,
+    maxBuffer,
+    env: {
+      ...process.env,
+      GIT_TERMINAL_PROMPT: '0',
+      GIT_CONFIG_COUNT: '1',
+      GIT_CONFIG_KEY_0: 'credential.helper',
+      GIT_CONFIG_VALUE_0: ''
+    }
+  })
+  return stdout as Buffer
+}
+
 async function runGitWithAuth(cwd: string, args: string[], timeout: number = 30000, maxBuffer: number = 10 * 1024 * 1024): Promise<string> {
   const { stdout } = await execFile('git', args, {
     cwd,
@@ -120,6 +137,55 @@ export async function getFileAtRef(cwd: string, ref: string, absolutePath: strin
     const relativePath = path.relative(cwd, absolutePath)
     if (relativePath.startsWith('..')) return null
     return await runGit(cwd, ['show', `${ref}:${relativePath}`], 10000, 50 * 1024 * 1024)
+  } catch {
+    return null
+  }
+}
+
+const GIT_IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'bmp', 'avif'])
+const GIT_AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma', 'opus', 'webm', 'aiff', 'aif'])
+const GIT_OFFICE_EXTS = new Set(['pdf', 'docx', 'xlsx', 'xls'])
+const GIT_BASE64_EXTS = new Set([...GIT_IMAGE_EXTS, ...GIT_AUDIO_EXTS, ...GIT_OFFICE_EXTS])
+const GIT_BINARY_EXTS = new Set([
+  ...GIT_IMAGE_EXTS, 'svg',
+  'woff', 'woff2', 'ttf', 'eot', 'otf',
+  ...GIT_OFFICE_EXTS, 'pptx',
+  ...GIT_AUDIO_EXTS,
+  'zip', 'tar', 'gz',
+  'mp4', 'mov', 'avi'
+])
+
+export interface GitFileBytes {
+  content: string
+  isBinary: boolean
+}
+
+function readBytesFromGit(buf: Buffer, ext: string): GitFileBytes {
+  if (GIT_BASE64_EXTS.has(ext)) return { content: buf.toString('base64'), isBinary: true }
+  if (ext === 'svg') return { content: buf.toString('utf-8'), isBinary: true }
+  if (GIT_BINARY_EXTS.has(ext)) return { content: '', isBinary: true }
+  return { content: buf.toString('utf-8'), isBinary: false }
+}
+
+export async function getFileBytesAtHead(cwd: string, absolutePath: string): Promise<GitFileBytes | null> {
+  try {
+    const relativePath = path.relative(cwd, absolutePath)
+    if (relativePath.startsWith('..')) return null
+    const ext = path.extname(absolutePath).slice(1).toLowerCase()
+    const buf = await runGitBuffer(cwd, ['show', `HEAD:${relativePath}`])
+    return readBytesFromGit(buf, ext)
+  } catch {
+    return null
+  }
+}
+
+export async function getFileBytesAtRef(cwd: string, ref: string, absolutePath: string): Promise<GitFileBytes | null> {
+  try {
+    const relativePath = path.relative(cwd, absolutePath)
+    if (relativePath.startsWith('..')) return null
+    const ext = path.extname(absolutePath).slice(1).toLowerCase()
+    const buf = await runGitBuffer(cwd, ['show', `${ref}:${relativePath}`])
+    return readBytesFromGit(buf, ext)
   } catch {
     return null
   }
