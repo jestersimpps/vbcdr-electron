@@ -1,16 +1,16 @@
-import { ipcMain } from 'electron'
+import { safeHandle } from '@main/ipc/safe-handle'
 import { checkForUpdates, quitAndInstall, getUpdateStatus } from '@main/services/auto-updater'
 
 export function registerUpdaterHandlers(): void {
-  ipcMain.handle('updater:check', () => {
+  safeHandle('updater:check', () => {
     checkForUpdates()
   })
 
-  ipcMain.handle('updater:install', () => {
+  safeHandle('updater:install', () => {
     quitAndInstall()
   })
 
-  ipcMain.handle('updater:status', () => {
+  safeHandle('updater:status', () => {
     return getUpdateStatus()
   })
 }
