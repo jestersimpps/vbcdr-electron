@@ -61,12 +61,17 @@ app.on('child-process-gone', (_event, details) => {
   console.error('[main] child-process-gone:', details.type, details.reason)
 })
 
+function activeWebContents(): Electron.WebContents | null {
+  if (!mainWindow || mainWindow.isDestroyed()) return null
+  return mainWindow.webContents
+}
+
 function handleBeforeInput(_event: Electron.Event, input: Electron.Input): void {
   if (input.type !== 'keyDown') return
 
   if (input.meta && input.alt && /^[1-9]$/.test(input.key)) {
     _event.preventDefault()
-    mainWindow?.webContents.send('menu:action', `switch-project-${input.key}`)
+    activeWebContents()?.send('menu:action', `switch-project-${input.key}`)
     return
   }
 }
@@ -122,7 +127,7 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
       {
         label: 'Settings...',
         accelerator: 'CmdOrCtrl+,',
-        click: () => mainWindow?.webContents.send('menu:action', 'settings')
+        click: () => activeWebContents()?.send('menu:action', 'settings')
       },
       {
         label: 'Check for Updates...',
@@ -138,7 +143,9 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
   }
 
   const send = (action: string): void => {
-    mainWindow?.webContents.send('menu:action', action)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('menu:action', action)
+    }
   }
 
   const fileMenu: Electron.MenuItemConstructorOptions = {
@@ -238,25 +245,25 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
       {
         label: 'Reload',
         accelerator: 'CmdOrCtrl+R',
-        click: () => mainWindow?.webContents.reload()
+        click: () => activeWebContents()?.reload()
       },
       {
         label: 'Force Reload',
         accelerator: 'CmdOrCtrl+Shift+R',
-        click: () => mainWindow?.webContents.reloadIgnoringCache()
+        click: () => activeWebContents()?.reloadIgnoringCache()
       },
       { role: 'toggleDevTools' },
       { type: 'separator' },
       {
         label: 'Actual Size',
         accelerator: 'CmdOrCtrl+0',
-        click: () => mainWindow?.webContents.setZoomLevel(0)
+        click: () => activeWebContents()?.setZoomLevel(0)
       },
       {
         label: 'Zoom In',
         accelerator: 'CmdOrCtrl+=',
         click: () => {
-          const wc = mainWindow?.webContents
+          const wc = activeWebContents()
           if (wc) wc.setZoomLevel(wc.getZoomLevel() + 0.5)
         }
       },
@@ -264,7 +271,7 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
         label: 'Zoom Out',
         accelerator: 'CmdOrCtrl+-',
         click: () => {
-          const wc = mainWindow?.webContents
+          const wc = activeWebContents()
           if (wc) wc.setZoomLevel(wc.getZoomLevel() - 0.5)
         }
       },
