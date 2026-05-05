@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { safeHandle } from '@main/ipc/safe-handle'
 import {
   recordActivity,
   getSessions,
@@ -8,21 +8,21 @@ import {
 } from '@main/services/activity-service'
 
 export function registerActivityHandlers(): void {
-  ipcMain.handle(
+  safeHandle(
     'activity:record',
     (_event, projectId: string, kind: ActivityKind): void => {
       recordActivity(projectId, kind)
     }
   )
 
-  ipcMain.handle(
+  safeHandle(
     'activity:sessions',
     (_event, projectId: string, sinceIso: string | null, idleMinutes?: number): ActivitySession[] => {
       return getSessions(projectId, sinceIso, idleMinutes)
     }
   )
 
-  ipcMain.handle(
+  safeHandle(
     'activity:all-sessions',
     (_event, sinceIso: string | null, idleMinutes?: number): ActivitySession[] => {
       return getAllSessions(sinceIso, idleMinutes)
