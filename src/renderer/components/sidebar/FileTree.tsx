@@ -99,13 +99,12 @@ function TreeNode({
   externalActiveFilePath?: string | null
 }): React.ReactElement {
   const expandedPaths = useFileTreeStore((s) => s.expandedPerProject[treeStateKey])
-  const { toggleExpanded } = useFileTreeStore()
-  const { openFile } = useEditorStore()
+  const toggleExpanded = useFileTreeStore((s) => s.toggleExpanded)
+  const openFile = useEditorStore((s) => s.openFile)
   const editorActiveFilePath = useEditorStore((s) => s.statePerProject[projectId]?.activeFilePath ?? null)
   const activeFilePath = externalActiveFilePath !== undefined ? externalActiveFilePath : editorActiveFilePath
-  const gitStatus = useGitStore((s) => s.statusPerProject[projectId])
+  const fileStatus = useGitStore((s) => s.statusPerProject[projectId]?.[node.path])
   const isExpanded = expandedPaths?.has(node.path) ?? false
-  const fileStatus = gitStatus?.[node.path]
   const statusColor = fileStatus ? GIT_STATUS_COLORS[fileStatus] : ''
   const isRenaming = renamingPath === node.path
   const ignoredStyle = node.isGitignored ? 'opacity-40' : ''
@@ -203,7 +202,7 @@ function FileSearch({ projectId, cwd }: { projectId: string; cwd: string }): Rea
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
-  const { openFile } = useEditorStore()
+  const openFile = useEditorStore((s) => s.openFile)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleSearch = useCallback((value: string) => {
@@ -321,18 +320,20 @@ export function FileTree({
   const treeKey = rootOverride ?? projectId
   const tree = useFileTreeStore((s) => s.treePerProject[treeKey])
   const showIgnored = useFileTreeStore((s) => s.showIgnoredPerProject[treeKey] ?? true)
-  const { loadTree, setTree, toggleShowIgnored } = useFileTreeStore()
-  const { loadStatus } = useGitStore()
+  const loadTree = useFileTreeStore((s) => s.loadTree)
+  const toggleShowIgnored = useFileTreeStore((s) => s.toggleShowIgnored)
+  const toggleExpanded = useFileTreeStore((s) => s.toggleExpanded)
+  const loadStatus = useGitStore((s) => s.loadStatus)
   const rootPath = rootOverride ?? activeProject?.path
   const isOverride = Boolean(rootOverride)
-  const { openDefaultFile, closeFile } = useEditorStore()
+  const openDefaultFile = useEditorStore((s) => s.openDefaultFile)
+  const closeFile = useEditorStore((s) => s.closeFile)
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null)
   const [inlineInput, setInlineInput] = useState<InlineInputState | null>(null)
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
   const [showSearch, setShowSearch] = useState(false)
   const defaultFileOpened = useRef(false)
-  const { toggleExpanded } = useFileTreeStore()
 
   useEffect(() => {
     if (!rootPath) return

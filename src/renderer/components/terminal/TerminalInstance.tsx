@@ -26,10 +26,13 @@ interface TerminalEntry {
   suppressBusyUntil: number
   projectId: string
   textareaListeners?: { textarea: HTMLTextAreaElement; onFocus: () => void; onBlur: () => void }
+  idleTimer?: ReturnType<typeof setTimeout> | null
+  busyPromoteTimer?: ReturnType<typeof setTimeout> | null
+  bufferReadTimer?: ReturnType<typeof setTimeout> | null
+  lastBufferSig?: string
 }
 
 const terminalsMap = new Map<string, TerminalEntry>()
-const bufferReadTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 const ACTIVITY_DEBOUNCE_MS = 1000
 const activityLastSent = new Map<string, number>()
@@ -145,11 +148,10 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       })
 
       const isLlm = !!initialCommand
-      let idleTimer: ReturnType<typeof setTimeout> | null = null
-      let busyPromoteTimer: ReturnType<typeof setTimeout> | null = null
       let lastOutputAt = 0
       const BUSY_SUSTAIN_MS = 3000
       const STREAK_GAP_MS = 500
+      const BUFFER_SCAN_DEBOUNCE_MS = 400
 
       terminal.onData((data) => {
         window.api.terminal.write(tabId, data)
@@ -182,21 +184,23 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         }
 
         const entry = terminalsMap.get(tabId)
-        const suppressed = !!(entry && Date.now() < entry.suppressBusyUntil)
+        if (!entry) return
+        const suppressed = Date.now() < entry.suppressBusyUntil
         if (!suppressed) {
           const now = Date.now()
           if (now - lastOutputAt > STREAK_GAP_MS) {
-            if (busyPromoteTimer) clearTimeout(busyPromoteTimer)
-            busyPromoteTimer = setTimeout(() => {
+            if (entry.busyPromoteTimer) clearTimeout(entry.busyPromoteTimer)
+            entry.busyPromoteTimer = setTimeout(() => {
               const s = useTerminalStore.getState().tabStatuses[tabId]
               if (s !== 'busy') useTerminalStore.getState().setTabStatus(tabId, 'busy')
             }, BUSY_SUSTAIN_MS)
           }
           lastOutputAt = now
 
-          if (idleTimer) clearTimeout(idleTimer)
-          idleTimer = setTimeout(() => {
-            if (busyPromoteTimer) { clearTimeout(busyPromoteTimer); busyPromoteTimer = null }
+          if (entry.idleTimer) clearTimeout(entry.idleTimer)
+          entry.idleTimer = setTimeout(() => {
+            const e = terminalsMap.get(tabId)
+            if (e?.busyPromoteTimer) { clearTimeout(e.busyPromoteTimer); e.busyPromoteTimer = null }
             const prev = useTerminalStore.getState().tabStatuses[tabId]
             useTerminalStore.getState().setTabStatus(tabId, 'idle')
             if (isLlm) {
@@ -213,24 +217,25 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         }
 
         if (isLlm) {
-
-          const prevTimer = bufferReadTimers.get(tabId)
-          if (prevTimer) clearTimeout(prevTimer)
-          bufferReadTimers.set(tabId, setTimeout(() => {
-            bufferReadTimers.delete(tabId)
+          if (entry.bufferReadTimer) clearTimeout(entry.bufferReadTimer)
+          entry.bufferReadTimer = setTimeout(() => {
             const te = terminalsMap.get(tabId)
             if (!te) return
+            te.bufferReadTimer = null
             const buf = te.terminal.buffer.active
+            const sig = `${buf.baseY}:${buf.cursorY}:${buf.cursorX}`
+            if (sig === te.lastBufferSig) return
+            te.lastBufferSig = sig
             const extracted: string[] = []
             let latestTokens: number | null = null
-            for (let y = 0; y < te.terminal.rows; y++) {
+            const rows = te.terminal.rows
+            for (let y = 0; y < rows; y++) {
               const row = buf.getLine(buf.baseY + y)
-              if (row) {
-                const text = row.translateToString(true)
-                if (text.trim()) extracted.push(text)
-                const tokens = parseTokenCount(stripAnsi(text))
-                if (tokens !== null) latestTokens = tokens
-              }
+              if (!row) continue
+              const text = row.translateToString(true)
+              if (text.trim()) extracted.push(text)
+              const tokens = parseTokenCount(stripAnsi(text))
+              if (tokens !== null) latestTokens = tokens
             }
             if (extracted.length > 0) {
               useTerminalStore.getState().setOutput(projectId, extracted)
@@ -239,7 +244,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
               useTerminalStore.getState().setTokenUsage(tabId, latestTokens)
               window.api.tokenUsage.record(tabId, projectId, latestTokens)
             }
-          }, 200))
+          }, BUFFER_SCAN_DEBOUNCE_MS)
         }
       }
       terminalsMap.get(tabId)!.onIncomingData = onIncomingData
@@ -477,9 +482,9 @@ export function disposeTerminal(tabId: string): void {
   const entry = terminalsMap.get(tabId)
   if (entry) {
     entry.onIncomingData = undefined
-    const timer = bufferReadTimers.get(tabId)
-    if (timer) clearTimeout(timer)
-    bufferReadTimers.delete(tabId)
+    if (entry.bufferReadTimer) { clearTimeout(entry.bufferReadTimer); entry.bufferReadTimer = null }
+    if (entry.idleTimer) { clearTimeout(entry.idleTimer); entry.idleTimer = null }
+    if (entry.busyPromoteTimer) { clearTimeout(entry.busyPromoteTimer); entry.busyPromoteTimer = null }
     if (entry.textareaListeners) {
       const { textarea, onFocus, onBlur } = entry.textareaListeners
       try { textarea.removeEventListener('focus', onFocus) } catch { /* textarea may already be gone */ }
