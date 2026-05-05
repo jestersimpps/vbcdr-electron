@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, session, systemPreferences } from 'electron'
+import { app, BrowserWindow, Menu, session, systemPreferences, dialog } from 'electron'
 import path from 'path'
 import { registerProjectHandlers } from '@main/ipc/projects'
 import { registerFilesystemHandlers } from '@main/ipc/filesystem'
@@ -29,6 +29,37 @@ app.setAboutPanelOptions({
 })
 
 let mainWindow: BrowserWindow | null = null
+
+process.on('uncaughtException', (err) => {
+  console.error('[main] uncaughtException:', err)
+})
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[main] unhandledRejection:', reason)
+})
+
+app.on('render-process-gone', (_event, webContents, details) => {
+  console.error('[main] render-process-gone:', details.reason, details.exitCode)
+  if (details.reason === 'crashed' || details.reason === 'oom') {
+    if (mainWindow && !mainWindow.isDestroyed() && webContents === mainWindow.webContents) {
+      const choice = dialog.showMessageBoxSync(mainWindow, {
+        type: 'error',
+        title: 'vbcdr',
+        message: 'The window crashed.',
+        detail: `Reason: ${details.reason}. Reload to recover?`,
+        buttons: ['Reload', 'Quit'],
+        defaultId: 0,
+        cancelId: 1
+      })
+      if (choice === 0) mainWindow.reload()
+      else app.quit()
+    }
+  }
+})
+
+app.on('child-process-gone', (_event, details) => {
+  console.error('[main] child-process-gone:', details.type, details.reason)
+})
 
 function handleBeforeInput(_event: Electron.Event, input: Electron.Input): void {
   if (input.type !== 'keyDown') return
