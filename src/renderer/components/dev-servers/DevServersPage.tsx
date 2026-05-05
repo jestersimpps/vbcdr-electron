@@ -11,6 +11,8 @@ interface DevServer {
   cwd: string | null
   user: string
   startedAt: number | null
+  cpu: number | null
+  memoryMB: number | null
 }
 
 const REFRESH_MS = 3000
@@ -27,18 +29,64 @@ function formatUptime(startedAt: number | null): string {
   return `${days}d ${hours % 24}h`
 }
 
+function formatMemory(mb: number | null): string {
+  if (mb === null) return '—'
+  if (mb < 1024) return `${mb} MB`
+  return `${(mb / 1024).toFixed(1)} GB`
+}
+
+function formatCpu(cpu: number | null): string {
+  if (cpu === null) return '—'
+  if (cpu < 10) return `${cpu.toFixed(1)}%`
+  return `${Math.round(cpu)}%`
+}
+
+function MetricBar({
+  value,
+  max,
+  color
+}: {
+  value: number | null
+  max: number
+  color: string
+}): React.ReactElement {
+  const pct = value === null ? 0 : Math.min(100, (value / max) * 100)
+  return (
+    <div className="relative h-1.5 w-12 overflow-hidden rounded-full bg-zinc-800">
+      <div
+        className={cn('absolute inset-y-0 left-0 rounded-full transition-all', color)}
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  )
+}
+
 function shortenCwd(cwd: string | null): string {
   if (!cwd) return '—'
-  const home = cwd.match(/^\/Users\/[^/]+/)?.[0]
-  if (home) return cwd.replace(home, '~')
+  const posixHome = cwd.match(/^\/Users\/[^/]+/)?.[0] ?? cwd.match(/^\/home\/[^/]+/)?.[0]
+  if (posixHome) return cwd.replace(posixHome, '~')
+  const winHome = cwd.match(/^[A-Za-z]:\\Users\\[^\\]+/)?.[0]
+  if (winHome) return cwd.replace(winHome, '~')
   return cwd
 }
 
 function isProjectLike(server: DevServer): boolean {
   if (!server.cwd) return false
-  if (server.cwd === '/' || server.cwd.startsWith('/Users/') === false) return false
-  if (server.cwd.includes('/Library/Containers')) return false
-  if (server.cwd.includes('/Library/Application Support')) return false
+  const cwd = server.cwd
+  // Windows
+  if (/^[A-Za-z]:\\/.test(cwd)) {
+    const lower = cwd.toLowerCase()
+    if (!lower.includes('\\users\\')) return false
+    if (lower.includes('\\appdata\\')) return false
+    if (lower.includes('\\windows\\')) return false
+    if (lower.includes('\\program files')) return false
+    return true
+  }
+  // POSIX
+  if (cwd === '/') return false
+  if (!cwd.startsWith('/Users/') && !cwd.startsWith('/home/')) return false
+  if (cwd.includes('/Library/Containers')) return false
+  if (cwd.includes('/Library/Application Support')) return false
   return true
 }
 
@@ -105,9 +153,12 @@ export function DevServersPage(): React.ReactElement {
     if (!visible) return new Map<string, DevServer[]>()
     const map = new Map<string, DevServer[]>()
     for (const server of visible) {
-      const projectMatch = projects.find(
-        (p) => server.cwd && (server.cwd === p.path || server.cwd.startsWith(p.path + '/'))
-      )
+      const projectMatch = projects.find((p) => {
+        if (!server.cwd) return false
+        if (server.cwd === p.path) return true
+        const sep = /^[A-Za-z]:\\/.test(p.path) ? '\\' : '/'
+        return server.cwd.startsWith(p.path + sep)
+      })
       const key = projectMatch ? projectMatch.name : shortenCwd(server.cwd)
       const existing = map.get(key) ?? []
       existing.push(server)
@@ -185,12 +236,24 @@ export function DevServersPage(): React.ReactElement {
                   {groupName}
                 </div>
                 <div className="overflow-hidden rounded-lg border border-zinc-800">
-                  <table className="w-full text-xs">
+                  <table className="w-full table-fixed text-xs">
+                    <colgroup>
+                      <col className="w-[80px]" />
+                      <col className="w-[100px]" />
+                      <col />
+                      <col className="w-[140px]" />
+                      <col className="w-[160px]" />
+                      <col className="w-[80px]" />
+                      <col className="w-[90px]" />
+                      <col className="w-[200px]" />
+                    </colgroup>
                     <thead className="bg-zinc-900/60 text-micro uppercase tracking-wide text-zinc-500">
                       <tr>
                         <th className="px-3 py-2 text-left font-medium">Port</th>
                         <th className="px-3 py-2 text-left font-medium">Process</th>
                         <th className="px-3 py-2 text-left font-medium">Command</th>
+                        <th className="px-3 py-2 text-left font-medium">CPU</th>
+                        <th className="px-3 py-2 text-left font-medium">Memory</th>
                         <th className="px-3 py-2 text-left font-medium">PID</th>
                         <th className="px-3 py-2 text-left font-medium">Uptime</th>
                         <th className="px-3 py-2 text-right font-medium">Actions</th>
@@ -218,10 +281,33 @@ export function DevServersPage(): React.ReactElement {
                             <td className="px-3 py-2">
                               <div
                                 className="truncate font-mono text-zinc-400"
-                                style={{ maxWidth: 360 }}
                                 title={server.command}
                               >
                                 {server.command}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <MetricBar
+                                  value={server.cpu}
+                                  max={100}
+                                  color="bg-amber-500/70"
+                                />
+                                <span className="font-mono text-meta tabular-nums text-zinc-400">
+                                  {formatCpu(server.cpu)}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <MetricBar
+                                  value={server.memoryMB}
+                                  max={2048}
+                                  color="bg-sky-500/70"
+                                />
+                                <span className="font-mono text-meta tabular-nums text-zinc-400">
+                                  {formatMemory(server.memoryMB)}
+                                </span>
                               </div>
                             </td>
                             <td className="px-3 py-2 font-mono text-zinc-500">{server.pid}</td>
