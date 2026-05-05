@@ -50,6 +50,7 @@ const api = {
     duplicate: (filePath: string) => ipcRenderer.invoke('fs:duplicate', filePath) as Promise<string>,
     search: (rootPath: string, query: string) => ipcRenderer.invoke('fs:search', rootPath, query),
     showInFolder: (filePath: string) => ipcRenderer.invoke('fs:show-in-folder', filePath),
+    copyPath: (filePath: string) => ipcRenderer.invoke('fs:copy-path', filePath),
     watch: (rootPath: string, showIgnored?: boolean) => ipcRenderer.invoke('fs:watch', rootPath, showIgnored ?? false),
     unwatch: () => ipcRenderer.invoke('fs:unwatch'),
     onTreeChanged: (callback: (tree: unknown) => void) => {

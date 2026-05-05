@@ -1,7 +1,7 @@
 import fs from 'fs'
 import fsp from 'fs/promises'
 import path from 'path'
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow, clipboard, shell } from 'electron'
 import Store from 'electron-store'
 import { readTree, readFileContents, startWatching, stopWatching } from '@main/services/file-watcher'
 import type { FileReadResult } from '@main/services/file-watcher'
@@ -167,5 +167,9 @@ export function registerFilesystemHandlers(): void {
 
   safeHandle('fs:show-in-folder', (_event, filePath: string): void => {
     shell.showItemInFolder(path.resolve(filePath))
+  })
+
+  safeHandle('fs:copy-path', (_event, filePath: string): void => {
+    clipboard.writeText(filePath)
   })
 }

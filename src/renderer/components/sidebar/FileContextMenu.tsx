@@ -44,7 +44,7 @@ export function FileContextMenu({
   }, [onClose])
 
   const handleCopyPath = (): void => {
-    navigator.clipboard.writeText(menu.path)
+    window.api.fs.copyPath(menu.path)
     onClose()
   }
 
