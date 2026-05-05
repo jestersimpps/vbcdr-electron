@@ -3,6 +3,7 @@ import type { FileNode } from '@/models/types'
 
 interface FileTreeStore {
   treePerProject: Record<string, FileNode>
+  cwdPerProject: Record<string, string>
   expandedPerProject: Record<string, Set<string>>
   showIgnoredPerProject: Record<string, boolean>
   loadTree: (projectId: string, rootPath: string, showIgnored?: boolean) => Promise<void>
@@ -18,6 +19,7 @@ const EMPTY_SET = new Set<string>()
 
 export const useFileTreeStore = create<FileTreeStore>((set, get) => ({
   treePerProject: {},
+  cwdPerProject: {},
   expandedPerProject: {},
   showIgnoredPerProject: {},
 
@@ -25,7 +27,8 @@ export const useFileTreeStore = create<FileTreeStore>((set, get) => ({
     const show = showIgnored ?? get().showIgnoredPerProject[projectId] ?? true
     const tree = await window.api.fs.readTree(rootPath, show)
     set((state) => ({
-      treePerProject: { ...state.treePerProject, [projectId]: tree }
+      treePerProject: { ...state.treePerProject, [projectId]: tree },
+      cwdPerProject: { ...state.cwdPerProject, [projectId]: rootPath }
     }))
   },
 

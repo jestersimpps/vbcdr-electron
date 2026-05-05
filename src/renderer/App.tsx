@@ -102,9 +102,14 @@ export function App(): React.ReactElement {
     if (!activeProjectId || !activeProjectPath) return
     const projectId = activeProjectId
     const cwd = activeProjectPath
-    const showIgnored = useFileTreeStore.getState().showIgnoredPerProject[projectId] ?? true
+    const fileTreeStore = useFileTreeStore.getState()
+    const showIgnored = fileTreeStore.showIgnoredPerProject[projectId] ?? true
+    const cachedTree = fileTreeStore.treePerProject[projectId]
+    const cachedPath = fileTreeStore.cwdPerProject[projectId]
 
-    useFileTreeStore.getState().loadTree(projectId, cwd, showIgnored)
+    if (!cachedTree || cachedPath !== cwd) {
+      fileTreeStore.loadTree(projectId, cwd, showIgnored)
+    }
     useGitStore.getState().loadStatus(projectId, cwd)
     window.api.fs.watch(cwd, showIgnored)
 

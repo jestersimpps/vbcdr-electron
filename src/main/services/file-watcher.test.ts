@@ -65,7 +65,7 @@ describe('readTree', () => {
     writeFile('src/main.ts', '')
 
     const { readTree } = await import('./file-watcher')
-    const tree = readTree(root)
+    const tree = await readTree(root)
 
     expect(tree.isDirectory).toBe(true)
     expect(tree.name).toBe(path.basename(root))
@@ -82,7 +82,7 @@ describe('readTree', () => {
     writeFile('keep.ts', '')
 
     const { readTree } = await import('./file-watcher')
-    const tree = readTree(root)
+    const tree = await readTree(root)
     const names = tree.children?.map((c) => c.name) ?? []
     expect(names).toEqual(['keep.ts'])
   })
@@ -93,7 +93,7 @@ describe('readTree', () => {
     writeFile('readme.md', '')
 
     const { readTree } = await import('./file-watcher')
-    const tree = readTree(root)
+    const tree = await readTree(root)
     const names = tree.children?.map((c) => c.name).sort() ?? []
     expect(names).toEqual(['.gitignore', 'readme.md'])
   })
@@ -104,7 +104,7 @@ describe('readTree', () => {
     writeFile('app.ts', '')
 
     const { readTree } = await import('./file-watcher')
-    const tree = readTree(root, true)
+    const tree = await readTree(root, true)
     const secret = tree.children?.find((c) => c.name === 'secret.env')
     expect(secret).toBeDefined()
     expect(secret?.isGitignored).toBe(true)
@@ -119,7 +119,7 @@ describe('readTree', () => {
     writeDir('zeta')
 
     const { readTree } = await import('./file-watcher')
-    const tree = readTree(root)
+    const tree = await readTree(root)
     expect(tree.children?.map((c) => c.name)).toEqual(['alpha', 'zeta', 'beta.md', 'zfile.ts'])
   })
 
@@ -131,7 +131,7 @@ describe('readTree', () => {
     writeFile('a/b/lvl2.ts', '')
 
     const { readTree } = await import('./file-watcher')
-    const tree = readTree(root, false, 1)
+    const tree = await readTree(root, false, 1)
     const a = tree.children?.find((c) => c.name === 'a')
     const b = a?.children?.find((c) => c.name === 'b')
     expect(b).toBeDefined()
@@ -140,7 +140,7 @@ describe('readTree', () => {
 
   it('returns an empty children array when readdir throws (e.g., permission denied)', async () => {
     const { readTree } = await import('./file-watcher')
-    const tree = readTree(path.join(root, 'does-not-exist'))
+    const tree = await readTree(path.join(root, 'does-not-exist'))
     expect(tree.children).toEqual([])
   })
 })
@@ -222,7 +222,10 @@ describe('startWatching', () => {
     watcher.emit('add', path.join(root, 'a.ts'))
     expect(send).not.toHaveBeenCalled()
 
-    vi.advanceTimersByTime(200)
+    await vi.advanceTimersByTimeAsync(200)
+    await vi.waitFor(() => {
+      expect(send.mock.calls.some((c) => c[0] === 'fs:tree-changed')).toBe(true)
+    })
     const treeCalls = send.mock.calls.filter((c) => c[0] === 'fs:tree-changed')
     expect(treeCalls).toHaveLength(1)
     expect(treeCalls[0][1]).toMatchObject({ path: root, isDirectory: true })
@@ -280,7 +283,8 @@ describe('startWatching', () => {
 
     destroyed = true
     watchers[0].emit('add', path.join(root, 'a.ts'))
-    vi.advanceTimersByTime(200)
+    await vi.advanceTimersByTimeAsync(200)
+    await Promise.resolve()
     expect(send).not.toHaveBeenCalled()
   })
 

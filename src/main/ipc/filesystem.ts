@@ -87,7 +87,7 @@ function searchFiles(rootPath: string, query: string, maxResults: number = 100):
 }
 
 export function registerFilesystemHandlers(): void {
-  safeHandle('fs:read-tree', (_event, rootPath: string, showIgnored: boolean = false): FileNode => {
+  safeHandle('fs:read-tree', (_event, rootPath: string, showIgnored: boolean = false): Promise<FileNode> => {
     return readTree(rootPath, showIgnored)
   })
 

@@ -1,6 +1,7 @@
 import { watch, type FSWatcher } from 'chokidar'
 import { BrowserWindow } from 'electron'
 import fs from 'fs'
+import fsp from 'fs/promises'
 import path from 'path'
 import ignore, { type Ignore } from 'ignore'
 import type { FileNode } from '@main/models/types'
@@ -47,21 +48,21 @@ function loadGitignorePatterns(rootPath: string): Ignore {
   return ig
 }
 
-export function readTree(rootPath: string, showIgnored: boolean = false, maxDepth: number = 10): FileNode {
+export async function readTree(rootPath: string, showIgnored: boolean = false, maxDepth: number = 10): Promise<FileNode> {
   const alwaysIg = ignore().add(ALWAYS_IGNORE)
   const gitIg = loadGitignorePatterns(rootPath)
 
-  function walk(dirPath: string, depth: number): FileNode[] {
+  async function walk(dirPath: string, depth: number): Promise<FileNode[]> {
     if (depth > maxDepth) return []
 
     let entries: fs.Dirent[]
     try {
-      entries = fs.readdirSync(dirPath, { withFileTypes: true })
+      entries = await fsp.readdir(dirPath, { withFileTypes: true })
     } catch {
       return []
     }
 
-    const nodes: FileNode[] = []
+    const childPromises: Array<Promise<FileNode | null>> = []
     for (const entry of entries) {
       const rel = path.relative(rootPath, path.join(dirPath, entry.name))
       if (alwaysIg.ignores(rel)) continue
@@ -72,15 +73,29 @@ export function readTree(rootPath: string, showIgnored: boolean = false, maxDept
       const fullPath = path.join(dirPath, entry.name)
       const isDir = entry.isDirectory()
 
-      nodes.push({
-        name: entry.name,
-        path: fullPath,
-        isDirectory: isDir,
-        isGitignored: isIgnored || undefined,
-        children: isDir ? walk(fullPath, depth + 1) : undefined
-      })
+      if (isDir) {
+        childPromises.push(
+          walk(fullPath, depth + 1).then((children) => ({
+            name: entry.name,
+            path: fullPath,
+            isDirectory: true,
+            isGitignored: isIgnored || undefined,
+            children
+          }))
+        )
+      } else {
+        childPromises.push(
+          Promise.resolve({
+            name: entry.name,
+            path: fullPath,
+            isDirectory: false,
+            isGitignored: isIgnored || undefined
+          })
+        )
+      }
     }
 
+    const nodes = (await Promise.all(childPromises)).filter((n): n is FileNode => n !== null)
     return nodes.sort((a, b) => {
       if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
       return a.name.localeCompare(b.name)
@@ -91,7 +106,7 @@ export function readTree(rootPath: string, showIgnored: boolean = false, maxDept
     name: path.basename(rootPath),
     path: rootPath,
     isDirectory: true,
-    children: walk(rootPath, 0)
+    children: await walk(rootPath, 0)
   }
 }
 
@@ -123,8 +138,12 @@ export function startWatching(rootPath: string, win: BrowserWindow, showIgnored:
     treeDebounce = setTimeout(() => {
       treeDebounce = null
       if (win.isDestroyed() || !currentRoot) return
-      const tree = readTree(currentRoot, currentShowIgnored)
-      win.webContents.send('fs:tree-changed', tree)
+      const root = currentRoot
+      const showIgnoredAtFire = currentShowIgnored
+      readTree(root, showIgnoredAtFire).then((tree) => {
+        if (win.isDestroyed() || currentRoot !== root) return
+        win.webContents.send('fs:tree-changed', tree)
+      }).catch(() => {})
     }, 200)
 
     if (event === 'change') {
@@ -149,6 +168,14 @@ export function startWatching(rootPath: string, win: BrowserWindow, showIgnored:
 }
 
 export function readFileContents(filePath: string): FileReadResult {
+  let stat: fs.Stats
+  try {
+    stat = fs.statSync(filePath)
+  } catch {
+    return { content: '', isBinary: false }
+  }
+  if (stat.isDirectory()) return { content: '', isBinary: false }
+
   const ext = getExt(filePath)
   if (IMAGE_EXTS.has(ext)) {
     return { content: fs.readFileSync(filePath).toString('base64'), isBinary: true }
