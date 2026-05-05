@@ -31,7 +31,7 @@ export function ClaudeEditor({ projectId }: { projectId: string }): React.ReactE
   const { saveFile } = useClaudeStore()
   const getFullThemeId = useThemeStore((s) => s.getFullThemeId)
   const [showSaved, setShowSaved] = useState(false)
-  const savedTimer = useRef<ReturnType<typeof setTimeout>>(null)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const themeId = getFullThemeId()
   const monacoTheme = MONACO_THEME_NAME[themeId] ?? 'github-dark'

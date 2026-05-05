@@ -39,7 +39,7 @@ describe('lib/sound', () => {
     vi.resetModules()
     audioInstances.length = 0
     lastAudio = null
-    ;(globalThis as { Audio: typeof FakeAudio }).Audio = FakeAudio
+    ;(globalThis as unknown as { Audio: typeof FakeAudio }).Audio = FakeAudio
   })
 
   afterEach(() => {
@@ -101,7 +101,7 @@ describe('lib/sound', () => {
         this.play = vi.fn(() => Promise.reject(new Error('blocked')))
       }
     }
-    ;(globalThis as { Audio: typeof RejectingAudio }).Audio = RejectingAudio
+    ;(globalThis as unknown as { Audio: typeof RejectingAudio }).Audio = RejectingAudio
     const { playSound } = await import('./sound')
     playSound('reject')
     await new Promise((r) => setTimeout(r, 0))

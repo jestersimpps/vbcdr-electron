@@ -315,7 +315,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       if (resizeTimer) clearTimeout(resizeTimer)
       resizeTimer = setTimeout(() => {
         try {
-          if (!el.contains(terminal.element)) return
+          if (!el.contains(terminal.element ?? null)) return
           const buf = terminal.buffer.active
           const atBottom = buf.baseY - buf.viewportY <= 1
           fitAddon.fit()

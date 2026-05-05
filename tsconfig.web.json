@@ -17,6 +17,8 @@
     }
   },
   "include": [
-    "src/renderer/**/*"
+    "src/renderer/**/*",
+    "src/preload/**/*",
+    "src/main/models/**/*"
   ]
 }

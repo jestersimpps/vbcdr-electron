@@ -161,7 +161,7 @@ export function ProjectCard({ project, onOpenModal, isModalOpen, maxColSpan }: P
                         'inline-block h-1.5 w-1.5 shrink-0 rounded-full',
                         status === 'busy' && 'animate-pulse bg-amber-400',
                         status === 'idle' && 'bg-emerald-400',
-                        (!status || status === 'none') && 'bg-zinc-600'
+                        !status && 'bg-zinc-600'
                       )}
                     />
                     <span className="truncate font-mono text-zinc-400">{tab.title}</span>

@@ -14,7 +14,7 @@ interface GitStore {
   driftPerProject: Record<string, BranchDriftInfo>
   driftDismissed: Record<string, boolean>
   conflictsPerProject: Record<string, ConflictInfo[]>
-  conflictsDismissed: Record<string, boolean>
+  conflictsDismissed: boolean
   loadGitData: (projectId: string, cwd: string) => Promise<void>
   loadStatus: (projectId: string, cwd: string) => Promise<void>
   loadRangeFileCounts: (projectId: string, cwd: string) => Promise<void>
@@ -65,7 +65,7 @@ export const useGitStore = create<GitStore>((set, get) => ({
     window.api.git.registerFetch(projectId, cwd)
 
     if (commits.length > 0) {
-      const hashes = commits.map((c) => c.hash)
+      const hashes = commits.map((c: GitCommit) => c.hash)
       window.api.git.commitsFileCounts(cwd, hashes).then((counts) => {
         set((s) => ({
           commitFileCountsPerProject: { ...s.commitFileCountsPerProject, [projectId]: counts }
