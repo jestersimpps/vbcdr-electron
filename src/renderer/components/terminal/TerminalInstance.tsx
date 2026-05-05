@@ -180,8 +180,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           const buf = terminal.buffer.active
           const atBottom = buf.baseY - buf.viewportY <= 1
           const hidden = el.offsetParent === null
+          const autoScroll = useTerminalStore.getState().isAutoScroll(tabId)
           terminal.write(data, () => {
-            if (atBottom || hidden) terminal.scrollToBottom()
+            if (autoScroll && (atBottom || hidden)) terminal.scrollToBottom()
           })
         } catch {
           return
@@ -312,7 +313,8 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           prevRows = terminal.rows
           const e = terminalsMap.get(tabId)
           if (e) e.suppressBusyUntil = Date.now() + 1000
-          if (atBottom) terminal.scrollToBottom()
+          const autoScroll = useTerminalStore.getState().isAutoScroll(tabId)
+          if (autoScroll && atBottom) terminal.scrollToBottom()
         } catch { /* element may be unmounted during resize */ }
       }, 150)
     })
@@ -461,7 +463,7 @@ export function focusTerminal(tabId: string): void {
       }
       window.api.terminal.resize(tabId, entry.terminal.cols, entry.terminal.rows)
       entry.terminal.refresh(0, entry.terminal.rows - 1)
-      entry.terminal.scrollToBottom()
+      if (useTerminalStore.getState().isAutoScroll(tabId)) entry.terminal.scrollToBottom()
       entry.terminal.focus()
     } catch { /* terminal may be disposed or not yet open */ }
   }

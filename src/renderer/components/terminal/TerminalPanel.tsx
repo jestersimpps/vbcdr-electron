@@ -16,7 +16,7 @@ import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
-import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles } from 'lucide-react'
+import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TerminalTab } from '@/models/types'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
@@ -123,6 +123,8 @@ export function TerminalPanel({ global = false }: TerminalPanelProps = {}): Reac
   const setActiveTab = useTerminalStore((s) => s.setActiveTab)
   const initProject = useTerminalStore((s) => s.initProject)
   const reorderTabs = useTerminalStore((s) => s.reorderTabs)
+  const autoScrollPerTab = useTerminalStore((s) => s.autoScrollPerTab)
+  const setAutoScroll = useTerminalStore((s) => s.setAutoScroll)
 
   const fullThemeId = useThemeStore((s) => s.getFullThemeId())
   const terminalThemeId = useThemeStore((s) => s.terminalThemeId)
@@ -320,15 +322,30 @@ export function TerminalPanel({ global = false }: TerminalPanelProps = {}): Reac
           <ChevronDown size={16} />
         </button>
         <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
-        <button
-          onClick={scrollToBottom}
-          disabled={!activeTabId}
-          onMouseDown={(e) => e.preventDefault()}
-          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
-          title="Scroll to bottom"
-        >
-          <ArrowDownToLine size={16} />
-        </button>
+        {(() => {
+          const autoScroll = activeTabId ? (autoScrollPerTab[activeTabId] ?? true) : true
+          return (
+            <button
+              onClick={() => {
+                if (!activeTabId) return
+                const next = !autoScroll
+                setAutoScroll(activeTabId, next)
+                if (next) scrollToBottom()
+              }}
+              disabled={!activeTabId}
+              onMouseDown={(e) => e.preventDefault()}
+              className={cn(
+                'rounded p-1.5 transition-colors disabled:opacity-30',
+                autoScroll
+                  ? 'text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                  : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'
+              )}
+              title={autoScroll ? 'Auto-scroll on (click to pin position)' : 'Auto-scroll off (click to follow output)'}
+            >
+              {autoScroll ? <ArrowDownToLine size={16} /> : <ArrowDownFromLine size={16} />}
+            </button>
+          )
+        })()}
         <button
           onClick={() => {
             if (!activeTabId) return

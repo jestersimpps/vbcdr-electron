@@ -33,6 +33,7 @@ import {
 } from '@/lib/sessions'
 import type { StatsCommit, LanguageTally } from '@/models/types'
 import { cn } from '@/lib/utils'
+import { ToolbarButton, SegmentedToggle, SegmentedToggleItem } from '@/components/ui/ToolbarButton'
 
 const SOURCE_OPTIONS: { key: SessionSource; label: string }[] = [
   { key: 'commits', label: 'Commits' },
@@ -841,16 +842,14 @@ function SessionSettingsPopover({
 
   return (
     <div ref={rootRef} className="relative">
-      <button
+      <ToolbarButton
         onClick={() => setOpen((v) => !v)}
-        className={cn(
-          'flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs font-medium transition-colors',
-          open ? 'text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-        )}
+        variant={open ? 'active' : 'default'}
+        className="border border-zinc-800 bg-zinc-900 gap-1.5"
       >
         <SlidersHorizontal size={12} />
         Session settings
-      </button>
+      </ToolbarButton>
       {open && (
         <div className="absolute left-0 top-full z-20 mt-1.5 w-64 rounded-md border border-zinc-800 bg-zinc-900 p-3 shadow-lg">
           <div className="space-y-3">
@@ -1026,75 +1025,45 @@ function HistoricalWorkCard({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="text-xs font-medium text-zinc-400">Historical work</div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+          <SegmentedToggle>
             {SOURCE_OPTIONS.map((o) => (
-              <button
+              <SegmentedToggleItem
                 key={o.key}
                 onClick={() => setSource(o.key)}
-                className={cn(
-                  'rounded px-2 py-0.5 text-meta font-medium transition-colors',
-                  source === o.key ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-                )}
+                active={source === o.key}
               >
                 {o.label}
-              </button>
+              </SegmentedToggleItem>
             ))}
-          </div>
-          <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+          </SegmentedToggle>
+          <SegmentedToggle>
             {HISTORY_WINDOWS.map((w) => (
-              <button
+              <SegmentedToggleItem
                 key={w.key}
                 onClick={() => setWindow(w.key)}
-                className={cn(
-                  'rounded px-2 py-0.5 text-meta font-medium transition-colors',
-                  historyWindow === w.key ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-                )}
+                active={historyWindow === w.key}
               >
                 {w.label}
-              </button>
+              </SegmentedToggleItem>
             ))}
-          </div>
-          <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
-            <button
-              onClick={() => setView('timeline')}
-              className={cn(
-                'rounded px-2 py-0.5 text-meta font-medium transition-colors',
-                view === 'timeline' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-              )}
-            >
+          </SegmentedToggle>
+          <SegmentedToggle>
+            <SegmentedToggleItem onClick={() => setView('timeline')} active={view === 'timeline'}>
               Timeline
-            </button>
-            <button
-              onClick={() => setView('heatmap')}
-              className={cn(
-                'rounded px-2 py-0.5 text-meta font-medium transition-colors',
-                view === 'heatmap' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-              )}
-            >
+            </SegmentedToggleItem>
+            <SegmentedToggleItem onClick={() => setView('heatmap')} active={view === 'heatmap'}>
               Heatmap
-            </button>
-          </div>
+            </SegmentedToggleItem>
+          </SegmentedToggle>
           {view === 'heatmap' && (
-            <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
-              <button
-                onClick={() => setMetric('hours')}
-                className={cn(
-                  'rounded px-2 py-0.5 text-meta font-medium transition-colors',
-                  metric === 'hours' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-                )}
-              >
+            <SegmentedToggle>
+              <SegmentedToggleItem onClick={() => setMetric('hours')} active={metric === 'hours'}>
                 Hours
-              </button>
-              <button
-                onClick={() => setMetric('commits')}
-                className={cn(
-                  'rounded px-2 py-0.5 text-meta font-medium transition-colors',
-                  metric === 'commits' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-                )}
-              >
+              </SegmentedToggleItem>
+              <SegmentedToggleItem onClick={() => setMetric('commits')} active={metric === 'commits'}>
                 Commits
-              </button>
-            </div>
+              </SegmentedToggleItem>
+            </SegmentedToggle>
           )}
           <select
             value={projectId ?? ''}

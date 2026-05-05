@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { GitCommit, ListTodo, Pause, Play, X } from 'lucide-react'
 import { useQueueStore, type QueueItem } from '@/stores/queue-store'
 import { cn } from '@/lib/utils'
+import { ToolbarButton } from '@/components/ui/ToolbarButton'
 
 interface TaskQueuePanelProps {
   tabId: string | null
@@ -102,32 +103,24 @@ export function TaskQueuePanel({ tabId }: TaskQueuePanelProps): React.ReactEleme
       )}
 
       <div className="flex h-7 items-center gap-2">
-        <button
-          type="button"
+        <ToolbarButton
+          variant={autoRun ? 'accent' : 'default'}
           onClick={() => setAutoRun(tabId, !autoRun)}
-          className={cn(
-            'flex h-7 shrink-0 items-center gap-1 rounded px-2 text-meta font-medium transition-colors',
-            autoRun
-              ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-              : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-          )}
           title={autoRun ? 'Pause auto-run' : 'Start auto-run'}
         >
-          {autoRun ? <Pause size={11} /> : <Play size={11} />}
+          {autoRun ? <Pause size={10} /> : <Play size={10} />}
           Auto
-        </button>
-        <button
-          type="button"
+        </ToolbarButton>
+        <ToolbarButton
           onClick={() => {
             addItem(tabId, '/commit')
             addItem(tabId, '/clear')
           }}
-          className="flex h-7 shrink-0 items-center gap-1 rounded bg-zinc-800 px-2 text-meta font-medium text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
           title="Queue /commit then /clear"
         >
           <GitCommit size={11} />
           Commit & Clear
-        </button>
+        </ToolbarButton>
         <div className="relative flex-1">
           <ListTodo
             size={12}
@@ -140,23 +133,16 @@ export function TaskQueuePanel({ tabId }: TaskQueuePanelProps): React.ReactEleme
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={editingId ? 'Editing task — ↵ to save, Esc to cancel' : 'Queue a task (↵ to add)'}
-            className="h-7 w-full rounded border border-zinc-800 bg-zinc-900 py-0 pl-7 pr-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
+            className="h-7 w-full rounded border border-zinc-800 bg-zinc-900 py-0 pl-7 pr-2 text-[11px] leading-[1.4] text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
           />
         </div>
-        <button
-          type="button"
+        <ToolbarButton
+          variant={editingId ? 'accentActive' : 'default'}
           onClick={commitDraft}
           disabled={!draft.trim()}
-          className={cn(
-            'h-7 shrink-0 rounded px-3 text-meta font-medium transition-colors',
-            editingId
-              ? 'bg-emerald-600 text-white hover:bg-emerald-500'
-              : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
-            'disabled:cursor-not-allowed disabled:bg-zinc-900 disabled:text-zinc-600'
-          )}
         >
           {editingId ? 'Save' : 'Add'}
-        </button>
+        </ToolbarButton>
       </div>
     </div>
   )

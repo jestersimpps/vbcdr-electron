@@ -8,6 +8,7 @@ import { useSecondsTick, useTokenVelocity } from '@/hooks/useTokenVelocity'
 import { Sparkline } from '@/components/terminal/Sparkline'
 import { TIME_RANGES, rangeStartMs, type TimeRange } from '@/lib/sessions'
 import { cn } from '@/lib/utils'
+import { SegmentedToggle, SegmentedToggleItem } from '@/components/ui/ToolbarButton'
 
 interface DailyUsageRow {
   date: string
@@ -195,20 +196,17 @@ export function Usage(): React.ReactElement {
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold">Usage</h1>
-          <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
+          <SegmentedToggle>
             {TIME_RANGES.map((r) => (
-              <button
+              <SegmentedToggleItem
                 key={r.key}
                 onClick={() => setRange(r.key)}
-                className={cn(
-                  'rounded px-3 py-1 text-xs font-medium transition-colors',
-                  range === r.key ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-                )}
+                active={range === r.key}
               >
                 {r.label}
-              </button>
+              </SegmentedToggleItem>
             ))}
-          </div>
+          </SegmentedToggle>
         </div>
 
         <Section title="Live">

@@ -16,6 +16,7 @@ interface TerminalStore {
   tokenUsagePerTab: Record<string, number>
   lastActivityPerProject: Record<string, number>
   attentionProjectIds: Record<string, boolean>
+  autoScrollPerTab: Record<string, boolean>
   focusedTabId: string | null
   createTab: (projectId: string, cwd: string, initialCommand?: string) => string
   closeTab: (tabId: string) => void
@@ -29,6 +30,8 @@ interface TerminalStore {
   setFocusedTabId: (tabId: string | null) => void
   markProjectAttention: (projectId: string) => void
   clearProjectAttention: (projectId: string) => void
+  setAutoScroll: (tabId: string, value: boolean) => void
+  isAutoScroll: (tabId: string) => boolean
   initProject: (projectId: string, cwd: string) => Promise<void>
 }
 
@@ -40,6 +43,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   tokenUsagePerTab: {},
   lastActivityPerProject: {},
   attentionProjectIds: {},
+  autoScrollPerTab: {},
   focusedTabId: null,
 
   createTab: (projectId: string, cwd: string, initialCommand?: string) => {
@@ -76,11 +80,22 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       const tokenUsagePerTab = { ...state.tokenUsagePerTab }
       delete tokenUsagePerTab[tabId]
 
+      const autoScrollPerTab = { ...state.autoScrollPerTab }
+      delete autoScrollPerTab[tabId]
+
       const focusedTabId = state.focusedTabId === tabId ? null : state.focusedTabId
 
-      return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab, focusedTabId }
+      return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab, autoScrollPerTab, focusedTabId }
     })
   },
+
+  setAutoScroll: (tabId: string, value: boolean) => {
+    set((state) => ({
+      autoScrollPerTab: { ...state.autoScrollPerTab, [tabId]: value }
+    }))
+  },
+
+  isAutoScroll: (tabId: string) => get().autoScrollPerTab[tabId] ?? true,
 
   replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => {
     const newTabId = uuid()
