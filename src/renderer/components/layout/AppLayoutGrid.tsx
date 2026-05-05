@@ -357,30 +357,6 @@ export function AppLayoutGrid(): React.ReactElement {
               <LayoutDashboard size={18} />
             </button>
             <button
-              onClick={showStatistics}
-              className={cn(
-                'flex h-10 w-10 items-center justify-center rounded transition-colors',
-                statisticsActive
-                  ? 'text-zinc-200 bg-zinc-800'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
-              )}
-              title="Statistics"
-            >
-              <PieChart size={18} />
-            </button>
-            <button
-              onClick={showUsage}
-              className={cn(
-                'flex h-10 w-10 items-center justify-center rounded transition-colors',
-                usageActive
-                  ? 'text-zinc-200 bg-zinc-800'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
-              )}
-              title="Usage"
-            >
-              <Gauge size={18} />
-            </button>
-            <button
               onClick={showClaudePage}
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded transition-colors',
@@ -429,18 +405,44 @@ export function AppLayoutGrid(): React.ReactElement {
               <Server size={18} />
             </button>
           </div>
-          <button
-            onClick={showSettings}
-            className={cn(
-              'flex h-10 w-10 items-center justify-center rounded transition-colors',
-              settingsActive
-                ? 'text-zinc-200 bg-zinc-800'
-                : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
-            )}
-            title="Settings"
-          >
-            <SettingsIcon size={18} />
-          </button>
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={showStatistics}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                statisticsActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Statistics"
+            >
+              <PieChart size={18} />
+            </button>
+            <button
+              onClick={showUsage}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                usageActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Usage"
+            >
+              <Gauge size={18} />
+            </button>
+            <button
+              onClick={showSettings}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                settingsActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Settings"
+            >
+              <SettingsIcon size={18} />
+            </button>
+          </div>
         </nav>
         <div className="relative flex-1 min-h-0 overflow-hidden">
         <div
