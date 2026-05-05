@@ -17,6 +17,7 @@ import {
   NameDialog,
   type ContextMenuTarget
 } from '@/components/sidebar/FileContextMenu'
+import { MonacoErrorBoundary } from '@/components/editor/MonacoErrorBoundary'
 
 const EXT_LANG: Record<string, string> = {
   ts: 'typescript',
@@ -1001,9 +1002,20 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             <div className="flex h-full items-center justify-center text-xs text-zinc-600">
               Binary file, diff not shown
             </div>
+          ) : loadedPath !== selectedPath ? (
+            <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+              {loading ? 'Loading diff…' : ''}
+            </div>
           ) : (
-            <>
+            <MonacoErrorBoundary
+              onRecover={() => {
+                diffEditorRef.current = null
+                viewZoneIdsRef.current = { original: [], modified: [] }
+                decorationsRef.current = { original: [], modified: [] }
+              }}
+            >
               <DiffEditor
+                key={`diff-${loadedPath}`}
                 original={original}
                 modified={modified}
                 language={language}
@@ -1023,12 +1035,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
                   bracketPairColorization: { enabled: bracketPairColorization }
                 }}
               />
-              {loadedPath !== selectedPath && (
-                <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/60 text-xs text-zinc-500">
-                  {loading ? 'Loading diff…' : ''}
-                </div>
-              )}
-            </>
+            </MonacoErrorBoundary>
           )}
         </div>
         </div>
