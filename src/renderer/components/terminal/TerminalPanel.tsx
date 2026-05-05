@@ -486,8 +486,8 @@ export function TerminalPanel({ global = false }: TerminalPanelProps = {}): Reac
             )}
           </div>
         )}
-        {tabs.map((tab) => {
-          const isVisible = tab.projectId === ownerId && activeTabId === tab.id
+        {projectTabs.map((tab) => {
+          const isVisible = activeTabId === tab.id
           return (
             <div
               key={tab.id}
