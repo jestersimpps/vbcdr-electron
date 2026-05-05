@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { App } from './App'
+import { PanelErrorBoundary } from './components/layout/PanelErrorBoundary'
 import './index.css'
 
 document.addEventListener('dragover', (e) => e.preventDefault())
@@ -26,8 +27,19 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 })
 
+window.addEventListener('error', (e) => {
+  if (matchesBenign(e.message) || matchesBenign(e.error?.message)) return
+  console.error('[renderer] window error:', e.error ?? e.message)
+})
+window.addEventListener('unhandledrejection', (e) => {
+  if (matchesBenign(e.reason?.message) || matchesBenign(String(e.reason ?? ''))) return
+  console.error('[renderer] unhandledrejection:', e.reason)
+})
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <PanelErrorBoundary label="App">
+      <App />
+    </PanelErrorBoundary>
   </React.StrictMode>
 )
