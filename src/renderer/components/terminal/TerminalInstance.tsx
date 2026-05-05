@@ -101,7 +101,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       const xtermEl = entry.terminal.element
       if (xtermEl && xtermEl.parentElement !== el) {
         try { el.appendChild(xtermEl) } catch { /* element may have been removed */ }
-        try { entry.fitAddon.fit() } catch { /* container may not be sized yet */ }
+        if (el.offsetParent !== null) {
+          try { entry.fitAddon.fit() } catch { /* container may not be sized yet */ }
+        }
         try { entry.terminal.refresh(0, entry.terminal.rows - 1) } catch { /* disposed */ }
       } else if (!xtermEl) {
         try { entry.terminal.dispose() } catch { /* not yet open */ }
@@ -447,11 +449,13 @@ export function focusTerminal(tabId: string): void {
   const entry = terminalsMap.get(tabId)
   if (!entry) return
   entry.suppressBusyUntil = Date.now() + 500
+  let attempts = 0
+  const MAX_ATTEMPTS = 30
   const applyFit = (): void => {
     try {
       entry.fitAddon.fit()
       if (entry.terminal.cols < 2 || entry.terminal.rows < 2) {
-        requestAnimationFrame(applyFit)
+        if (attempts++ < MAX_ATTEMPTS) requestAnimationFrame(applyFit)
         return
       }
       window.api.terminal.resize(tabId, entry.terminal.cols, entry.terminal.rows)
