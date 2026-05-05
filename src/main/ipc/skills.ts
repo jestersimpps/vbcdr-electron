@@ -2,7 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { spawn, execSync } from 'child_process'
-import { ipcMain, BrowserWindow } from 'electron'
+import { BrowserWindow } from 'electron'
+import { safeHandle } from '@main/ipc/safe-handle'
 
 let cachedLoginPath: string | undefined
 
@@ -256,7 +257,7 @@ function runSkillsCli(
 }
 
 export function registerSkillsHandlers(): void {
-  ipcMain.handle('skills:search', async (_event, query: string): Promise<SkillSearchResponse> => {
+  safeHandle('skills:search', async (_event, query: string): Promise<SkillSearchResponse> => {
     const trimmed = query.trim()
     if (trimmed.length < 2) {
       return { query: trimmed, searchType: 'fuzzy', skills: [], count: 0, duration_ms: 0 }
@@ -267,14 +268,14 @@ export function registerSkillsHandlers(): void {
     return (await r.json()) as SkillSearchResponse
   })
 
-  ipcMain.handle('skills:top', async (): Promise<SkillSearchResult[]> => {
+  safeHandle('skills:top', async (): Promise<SkillSearchResult[]> => {
     const r = await fetch('https://skills.sh/')
     if (!r.ok) throw new Error(`skills.sh top failed: ${r.status}`)
     const html = await r.text()
     return parseTopSkills(html)
   })
 
-  ipcMain.handle(
+  safeHandle(
     'skills:list',
     (_event, projectPath: string | null): InstalledSkill[] => {
       const global = listInstalled(path.join(os.homedir(), '.claude', 'skills'), 'global')
@@ -284,7 +285,7 @@ export function registerSkillsHandlers(): void {
     }
   )
 
-  ipcMain.handle(
+  safeHandle(
     'skills:install',
     async (
       event,
@@ -304,7 +305,7 @@ export function registerSkillsHandlers(): void {
     }
   )
 
-  ipcMain.handle(
+  safeHandle(
     'skills:uninstall',
     async (
       event,
