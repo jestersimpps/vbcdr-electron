@@ -1,4 +1,5 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { dialog, BrowserWindow } from 'electron'
+import { safeHandle } from '@main/ipc/safe-handle'
 import Store from 'electron-store'
 import { v4 as uuid } from 'uuid'
 import path from 'path'
@@ -18,11 +19,11 @@ const store = new Store<{ projects: Project[]; projectArchive: ArchivedProject[]
 })
 
 export function registerProjectHandlers(): void {
-  ipcMain.handle('projects:list', (): Project[] => {
+  safeHandle('projects:list', (): Project[] => {
     return store.get('projects')
   })
 
-  ipcMain.handle('projects:add', async (event): Promise<Project | null> => {
+  safeHandle('projects:add', async (event): Promise<Project | null> => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return null
 
@@ -56,7 +57,7 @@ export function registerProjectHandlers(): void {
     return project
   })
 
-  ipcMain.handle('projects:remove', (_event, id: string): boolean => {
+  safeHandle('projects:remove', (_event, id: string): boolean => {
     const projects = store.get('projects')
     const removed = projects.find((p) => p.id === id)
     const filtered = projects.filter((p) => p.id !== id)
@@ -69,11 +70,11 @@ export function registerProjectHandlers(): void {
     return true
   })
 
-  ipcMain.handle('projects:listArchived', (): ArchivedProject[] => {
+  safeHandle('projects:listArchived', (): ArchivedProject[] => {
     return store.get('projectArchive')
   })
 
-  ipcMain.handle('projects:unarchive', (_event, id: string): Project | null => {
+  safeHandle('projects:unarchive', (_event, id: string): Project | null => {
     const archive = store.get('projectArchive')
     const archived = archive.find((a) => a.id === id)
     if (!archived) return null
@@ -96,7 +97,7 @@ export function registerProjectHandlers(): void {
     return project
   })
 
-  ipcMain.handle('projects:deleteArchived', (_event, id: string): boolean => {
+  safeHandle('projects:deleteArchived', (_event, id: string): boolean => {
     const archive = store.get('projectArchive')
     store.set('projectArchive', archive.filter((a) => a.id !== id))
     purgeProjectActivity(id)
@@ -104,7 +105,7 @@ export function registerProjectHandlers(): void {
     return true
   })
 
-  ipcMain.handle('projects:reorder', (_event, orderedIds: string[]): boolean => {
+  safeHandle('projects:reorder', (_event, orderedIds: string[]): boolean => {
     const projects = store.get('projects')
     const byId = new Map(projects.map((p) => [p.id, p]))
     const reordered: Project[] = []
