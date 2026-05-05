@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useTerminalStore } from '@/stores/terminal-store'
+import { useTerminalStore, GLOBAL_TERMINAL_OWNER } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
@@ -98,12 +98,20 @@ const SortableTerminalTab = memo(function SortableTerminalTab({
   )
 })
 
-export function TerminalPanel(): React.ReactElement {
+interface TerminalPanelProps {
+  global?: boolean
+}
+
+export function TerminalPanel({ global = false }: TerminalPanelProps = {}): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => {
     const id = s.activeProjectId
     return id ? s.projects.find((p) => p.id === id) : undefined
   })
+
+  const ownerId = global ? GLOBAL_TERMINAL_OWNER : activeProjectId
+  const ownerCwd = global ? (activeProject?.path ?? '') : (activeProject?.path ?? '')
+  const hasOwner = global || !!activeProject
 
   const tabs = useTerminalStore((s) => s.tabs)
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
@@ -126,10 +134,10 @@ export function TerminalPanel(): React.ReactElement {
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const projectTabs = useMemo(
-    () => tabs.filter((t) => t.projectId === activeProjectId),
-    [tabs, activeProjectId]
+    () => tabs.filter((t) => t.projectId === ownerId),
+    [tabs, ownerId]
   )
-  const activeTabId = activeProjectId ? (activeTabPerProject[activeProjectId] || null) : null
+  const activeTabId = ownerId ? (activeTabPerProject[ownerId] || null) : null
   const activeTab = useMemo(
     () => projectTabs.find((t) => t.id === activeTabId),
     [projectTabs, activeTabId]
@@ -173,10 +181,16 @@ export function TerminalPanel(): React.ReactElement {
   }, [activeTabId, centerTab])
 
   useEffect(() => {
+    if (global) {
+      if (projectTabs.length === 0) {
+        void initProject(GLOBAL_TERMINAL_OWNER, ownerCwd)
+      }
+      return
+    }
     if (activeProject && projectTabs.length === 0) {
       void initProject(activeProject.id, activeProject.path)
     }
-  }, [activeProject?.id, projectTabs.length])
+  }, [global, activeProject?.id, projectTabs.length, ownerCwd])
 
   const teardownInFlight = useRef<Set<string>>(new Set())
 
@@ -195,23 +209,23 @@ export function TerminalPanel(): React.ReactElement {
   }, [])
 
   const handleNewTab = (): void => {
-    if (!activeProject) return
+    if (!hasOwner) return
     const cmd = useLayoutStore.getState().llmStartupCommand
-    createTab(activeProject.id, activeProject.path, cmd)
+    createTab(ownerId!, ownerCwd, cmd)
   }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   const handleTabDragEnd = useCallback((event: DragEndEvent): void => {
     const { active, over } = event
-    if (!over || active.id === over.id || !activeProjectId) return
-    const currentTabs = useTerminalStore.getState().tabs.filter((t) => t.projectId === activeProjectId)
+    if (!over || active.id === over.id || !ownerId) return
+    const currentTabs = useTerminalStore.getState().tabs.filter((t) => t.projectId === ownerId)
     const fromIndex = currentTabs.findIndex((t) => t.id === active.id)
     const toIndex = currentTabs.findIndex((t) => t.id === over.id)
     if (fromIndex !== -1 && toIndex !== -1) {
-      reorderTabs(activeProjectId, fromIndex, toIndex)
+      reorderTabs(ownerId, fromIndex, toIndex)
     }
-  }, [activeProjectId, reorderTabs])
+  }, [ownerId, reorderTabs])
 
   const handleCloseTab = useCallback((tabId: string): void => {
     if (teardownInFlight.current.has(tabId)) return
@@ -223,8 +237,8 @@ export function TerminalPanel(): React.ReactElement {
   }, [closeTab])
 
   const handleSelectTab = useCallback((tabId: string): void => {
-    if (activeProjectId) setActiveTab(activeProjectId, tabId)
-  }, [activeProjectId, setActiveTab])
+    if (ownerId) setActiveTab(ownerId, tabId)
+  }, [ownerId, setActiveTab])
 
   const tokenCap = useLayoutStore((s) => s.tokenCap)
 
@@ -251,7 +265,7 @@ export function TerminalPanel(): React.ReactElement {
         </div>
         <button
           onClick={handleNewTab}
-          disabled={!activeProject}
+          disabled={!hasOwner}
           className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
           title="New tab"
         >
@@ -343,10 +357,11 @@ export function TerminalPanel(): React.ReactElement {
         </button>
         <button
           onClick={() => {
-            if (!activeTabId || !activeProject) return
+            if (!activeTabId || !ownerId) return
+            const tabCwd = activeTab?.cwd ?? ownerCwd
             window.api.terminal.kill(activeTabId)
             disposeTerminal(activeTabId)
-            replaceTab(activeTabId, activeProject.id, activeProject.path, 'claude')
+            replaceTab(activeTabId, ownerId, tabCwd, 'claude')
           }}
           disabled={!activeTabId}
           onMouseDown={(e) => e.preventDefault()}
@@ -356,8 +371,12 @@ export function TerminalPanel(): React.ReactElement {
           <RotateCw size={16} />
         </button>
         <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
-        <GitActions />
-        <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
+        {!global && (
+          <>
+            <GitActions />
+            <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
+          </>
+        )}
         <button
           onClick={() => setTerminalThemeOpen(true)}
           onMouseDown={(e) => e.preventDefault()}
@@ -433,7 +452,7 @@ export function TerminalPanel(): React.ReactElement {
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         {projectTabs.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-zinc-500">
-            {activeProject ? (
+            {hasOwner ? (
               <>
                 <Sparkles size={28} className="text-zinc-600" />
                 <button
@@ -451,7 +470,7 @@ export function TerminalPanel(): React.ReactElement {
           </div>
         )}
         {tabs.map((tab) => {
-          const isVisible = tab.projectId === activeProjectId && activeTabId === tab.id
+          const isVisible = tab.projectId === ownerId && activeTabId === tab.id
           return (
             <div
               key={tab.id}

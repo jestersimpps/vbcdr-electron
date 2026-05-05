@@ -6,6 +6,8 @@ type TabStatus = 'idle' | 'busy'
 
 const OUTPUT_BUFFER_SIZE = 10
 
+export const GLOBAL_TERMINAL_OWNER = '__global__'
+
 interface TerminalStore {
   tabs: TerminalTab[]
   activeTabPerProject: Record<string, string>
