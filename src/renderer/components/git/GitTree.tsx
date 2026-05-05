@@ -201,9 +201,10 @@ function RefBadge({ label, index }: { label: string; index: number }): React.Rea
 interface GitTreeProps {
   projectId?: string
   cwd?: string
+  llmTabProjectId?: string
 }
 
-export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactElement {
+export function GitTree({ projectId, cwd, llmTabProjectId }: GitTreeProps = {}): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => {
     const id = s.activeProjectId
@@ -294,12 +295,13 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
   const llmCommit = (): void => {
     if (!effectiveProjectId || !effectivePath) return
     const tState = useTerminalStore.getState()
-    const llmTab = tState.tabs.find((t) => t.projectId === effectiveProjectId && !!t.initialCommand)
+    const tabProjectId = llmTabProjectId ?? effectiveProjectId
+    const llmTab = tState.tabs.find((t) => t.projectId === tabProjectId && !!t.initialCommand)
     if (!llmTab) {
       setCommitError('No LLM tab found in this project')
       return
     }
-    tState.setActiveTab(effectiveProjectId, llmTab.id)
+    tState.setActiveTab(tabProjectId, llmTab.id)
     setCenterTab(effectiveProjectId, 'terminals')
     const fileList = workingPaths
       .map((p) => `- ${p.startsWith(effectivePath + '/') ? p.slice(effectivePath.length + 1) : p} (${statusMap?.[p] ?? '?'})`)

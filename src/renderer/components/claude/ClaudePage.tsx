@@ -71,7 +71,7 @@ export function ClaudePage(): React.ReactElement {
         <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
         <Panel defaultSize={25} minSize={15} maxSize={45}>
           <div className="h-full overflow-hidden border-l border-zinc-800 bg-zinc-900">
-            <GitTree projectId={GLOBAL_GIT_PID} cwd={homeDir ?? undefined} />
+            <GitTree projectId={GLOBAL_GIT_PID} cwd={homeDir ?? undefined} llmTabProjectId={GLOBAL_PID} />
           </div>
         </Panel>
       </PanelGroup>
