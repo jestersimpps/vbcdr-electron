@@ -1,14 +1,11 @@
-import { FolderOpen, LayoutGrid } from 'lucide-react'
+import { FolderOpen } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
-import { useLayoutStore } from '@/stores/layout-store'
 import { ThemePicker } from '@/components/theme/ThemePicker'
 import { VariantToggle } from '@/components/theme/VariantToggle'
 import { PermissionsButton } from '@/components/terminal/PermissionsButton'
 
 export function StatusBar(): React.ReactElement {
-  const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => s.activeProject)
-  const resetLayout = useLayoutStore((s) => s.resetLayout)
 
   const project = activeProject()
 
@@ -30,16 +27,6 @@ export function StatusBar(): React.ReactElement {
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        {activeProjectId && (
-          <button
-            onClick={() => resetLayout(activeProjectId)}
-            className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
-            title="Reset layout"
-          >
-            <LayoutGrid size={13} />
-            <span>Reset</span>
-          </button>
-        )}
         <ThemePicker />
         <VariantToggle />
       </div>
