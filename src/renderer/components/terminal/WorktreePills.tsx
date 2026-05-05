@@ -100,7 +100,7 @@ export function WorktreePills({ tabId, projectId }: Props): React.ReactElement |
         <button
           onClick={() => setIntroOpen(true)}
           onMouseDown={(e) => e.preventDefault()}
-          className="flex items-center gap-1 rounded bg-zinc-700/40 px-2 py-1 text-[10px] font-medium text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200"
+          className="flex items-center gap-1 rounded bg-zinc-700/40 px-2 py-1 text-micro font-medium text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200"
           title="Run new LLM tabs in their own git worktree"
         >
           <FlaskConical size={11} />
@@ -138,7 +138,7 @@ export function WorktreePills({ tabId, projectId }: Props): React.ReactElement |
             })
           }}
           onMouseDown={(e) => e.preventDefault()}
-          className="flex items-center gap-1 rounded bg-zinc-700/40 px-2 py-1 text-[10px] font-medium text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200"
+          className="flex items-center gap-1 rounded bg-zinc-700/40 px-2 py-1 text-micro font-medium text-zinc-400 hover:bg-zinc-700/60 hover:text-zinc-200"
           title="Spawn a worktree for this tab"
         >
           <GitBranch size={11} />
@@ -147,7 +147,7 @@ export function WorktreePills({ tabId, projectId }: Props): React.ReactElement |
         <button
           onClick={() => setIntroOpen(true)}
           onMouseDown={(e) => e.preventDefault()}
-          className="flex items-center gap-1 rounded bg-zinc-700/40 px-2 py-1 text-[10px] font-medium text-zinc-500 hover:bg-zinc-700/60 hover:text-zinc-300"
+          className="flex items-center gap-1 rounded bg-zinc-700/40 px-2 py-1 text-micro font-medium text-zinc-500 hover:bg-zinc-700/60 hover:text-zinc-300"
           title="Worktrees info"
         >
           <FlaskConical size={11} />
@@ -175,7 +175,7 @@ export function WorktreePills({ tabId, projectId }: Props): React.ReactElement |
     return (
       <>
         <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
-        <span className="flex items-center gap-1 rounded bg-zinc-700/40 px-2 py-1 text-[10px] font-medium text-zinc-400">
+        <span className="flex items-center gap-1 rounded bg-zinc-700/40 px-2 py-1 text-micro font-medium text-zinc-400">
           <Loader2 size={11} className="animate-spin" />
           <span>Creating worktree…</span>
         </span>
@@ -202,19 +202,19 @@ export function WorktreePills({ tabId, projectId }: Props): React.ReactElement |
       <button
         onClick={() => setIntroOpen(true)}
         onMouseDown={(e) => e.preventDefault()}
-        className="flex items-center gap-1 rounded bg-zinc-700/40 px-2 py-1 text-[10px] font-medium text-zinc-300 hover:bg-zinc-700/60"
+        className="flex items-center gap-1 rounded bg-zinc-700/40 px-2 py-1 text-micro font-medium text-zinc-300 hover:bg-zinc-700/60"
         title={`${info.path}\nClick for info or to disable worktrees`}
       >
         <GitBranch size={11} className={stateColor} />
         <span>{branchShort}</span>
       </button>
       {info.changedFiles > 0 && (
-        <span className="rounded bg-zinc-700/40 px-1.5 py-px text-[10px] font-medium text-zinc-400" title="Uncommitted changes">
+        <span className="rounded bg-zinc-700/40 px-1.5 py-px text-micro font-medium text-zinc-400" title="Uncommitted changes">
           {info.changedFiles} file{info.changedFiles === 1 ? '' : 's'}
         </span>
       )}
       {info.ahead > 0 && (
-        <span className="rounded bg-blue-500/15 px-1.5 py-px text-[10px] font-medium text-blue-400" title="Commits ahead of base branch">
+        <span className="rounded bg-blue-500/15 px-1.5 py-px text-micro font-medium text-blue-400" title="Commits ahead of base branch">
           {info.ahead} ahead
         </span>
       )}
@@ -223,7 +223,7 @@ export function WorktreePills({ tabId, projectId }: Props): React.ReactElement |
         disabled={!canMerge}
         onMouseDown={(e) => e.preventDefault()}
         className={cn(
-          'flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium',
+          'flex items-center gap-1 rounded px-2 py-1 text-micro font-medium',
           canMerge
             ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25'
             : 'bg-zinc-700/30 text-zinc-500',
@@ -246,7 +246,7 @@ export function WorktreePills({ tabId, projectId }: Props): React.ReactElement |
         onClick={handleDiscard}
         onMouseDown={(e) => e.preventDefault()}
         className={cn(
-          'flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium',
+          'flex items-center gap-1 rounded px-2 py-1 text-micro font-medium',
           confirmDiscard
             ? 'bg-red-500/30 text-red-300 ring-1 ring-red-400/40'
             : 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
@@ -257,7 +257,7 @@ export function WorktreePills({ tabId, projectId }: Props): React.ReactElement |
         <span>{confirmDiscard ? 'Sure?' : 'Discard'}</span>
       </button>
       {mergeError && (
-        <span className="rounded bg-red-500/15 px-1.5 py-px text-[10px] font-medium text-red-400" title={mergeError}>
+        <span className="rounded bg-red-500/15 px-1.5 py-px text-micro font-medium text-red-400" title={mergeError}>
           {mergeError.length > 32 ? mergeError.slice(0, 32) + '…' : mergeError}
         </span>
       )}
@@ -310,7 +310,7 @@ function WorktreeIntroModal({
           <div className="flex items-center gap-2">
             <FlaskConical size={14} className="text-emerald-400" />
             <span className="text-sm font-medium text-zinc-200">{title}</span>
-            <span className="rounded bg-amber-500/15 px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-amber-400">
+            <span className="rounded bg-amber-500/15 px-1.5 py-px text-micro font-medium uppercase tracking-wide text-amber-400">
               Beta
             </span>
           </div>
@@ -323,7 +323,7 @@ function WorktreeIntroModal({
           </button>
         </div>
 
-        <div className="mb-3 rounded border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] leading-relaxed text-amber-300/90">
+        <div className="mb-3 rounded border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-meta leading-relaxed text-amber-300/90">
           This feature is experimental. Expect rough edges, and keep important work committed before relying on it.
         </div>
 
@@ -349,7 +349,7 @@ function WorktreeIntroModal({
 
         {mode === 'manage' && liveWorktrees.length > 0 && (
           <div className="mb-3">
-            <div className="mb-1.5 text-[11px] font-medium text-zinc-400">
+            <div className="mb-1.5 text-meta font-medium text-zinc-400">
               Active worktrees ({liveWorktrees.length})
             </div>
             <div className="overflow-hidden rounded border border-zinc-800">
@@ -382,8 +382,8 @@ function WorktreeIntroModal({
                       title="Switch to this LLM tab"
                     >
                       <GitBranch size={11} className={cn('shrink-0', stateColor)} />
-                      <span className="truncate text-[11px] text-zinc-200">{branchShort}</span>
-                      <span className={cn('shrink-0 text-[10px]', stateColor)}>{stateLabel}</span>
+                      <span className="truncate text-meta text-zinc-200">{branchShort}</span>
+                      <span className={cn('shrink-0 text-micro', stateColor)}>{stateLabel}</span>
                     </button>
                     <button
                       onClick={() => onDiscardOne?.(wt.tabId)}
@@ -399,7 +399,7 @@ function WorktreeIntroModal({
           </div>
         )}
 
-        <p className="mb-4 text-[11px] leading-relaxed text-zinc-500">
+        <p className="mb-4 text-meta leading-relaxed text-zinc-500">
           Heads up: each worktree is a fresh checkout, so <span className="text-zinc-300">node_modules</span> and other build artifacts aren&apos;t shared.
           The LLM may need to install or rebuild on first run.
         </p>

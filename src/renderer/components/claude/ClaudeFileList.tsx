@@ -57,7 +57,7 @@ function SectionGroup({
         )}
         <Icon size={14} className="shrink-0 text-zinc-500" />
         <span className="truncate font-medium">{label}</span>
-        <span className="ml-auto text-[10px] text-zinc-600">{files.length}</span>
+        <span className="ml-auto text-micro text-zinc-600">{files.length}</span>
       </div>
       {expanded &&
         files.map((file) => {
@@ -128,7 +128,7 @@ export function ClaudeFileList({
   const tabBtn = (mode: ViewMode, label: string): React.ReactElement => (
     <button
       onClick={() => setView(mode)}
-      className={`flex h-full flex-1 items-center justify-center px-2 text-[11px] font-medium uppercase tracking-wide transition-colors ${
+      className={`flex h-full flex-1 items-center justify-center px-2 text-meta font-medium uppercase tracking-wide transition-colors ${
         view === mode
           ? 'bg-zinc-800 text-zinc-200'
           : 'text-zinc-500 hover:bg-zinc-800/50 hover:text-zinc-300'

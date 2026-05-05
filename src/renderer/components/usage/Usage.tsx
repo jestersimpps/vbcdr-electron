@@ -67,7 +67,7 @@ function TabRow({ tabId, title, projectName, tokens, cap, isBusy }: TabRowProps)
         <div>
           <div className="text-zinc-500">Tokens</div>
           <div className="mt-0.5 font-medium text-zinc-200">{formatTokens(tokens)}</div>
-          <div className="text-[10px] text-zinc-500">of {formatTokens(cap)}</div>
+          <div className="text-micro text-zinc-500">of {formatTokens(cap)}</div>
         </div>
         <div>
           <div className="text-zinc-500">Velocity</div>
@@ -90,7 +90,7 @@ function TabRow({ tabId, title, projectName, tokens, cap, isBusy }: TabRowProps)
         </div>
         {velocityPerSample.length >= 2 && (
           <div className="mt-2 flex items-end justify-between">
-            <div className="text-[10px] text-zinc-500">Last 60s velocity</div>
+            <div className="text-micro text-zinc-500">Last 60s velocity</div>
             <Sparkline values={velocityPerSample} width={140} height={28} color={fill} fillColor={`${fill}25`} />
           </div>
         )}
@@ -290,7 +290,7 @@ export function Usage(): React.ReactElement {
 function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return (
     <section className="space-y-3">
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
+      <h2 className="text-meta font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
       {children}
     </section>
   )
@@ -522,7 +522,7 @@ function Kpi({ icon, label, value, sub }: KpiProps): React.ReactElement {
         {label}
       </div>
       <div className="mt-1 text-xl font-semibold text-zinc-100">{value}</div>
-      {sub && <div className="mt-0.5 text-[10px] text-zinc-500">{sub}</div>}
+      {sub && <div className="mt-0.5 text-micro text-zinc-500">{sub}</div>}
     </div>
   )
 }

@@ -273,7 +273,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
                   style={{ width: `${pct * 100}%`, backgroundColor: fill }}
                 />
               </div>
-              <span className="shrink-0 text-[10px] tabular-nums" style={{ color: `${fill}aa` }}>
+              <span className="shrink-0 text-micro tabular-nums" style={{ color: `${fill}aa` }}>
                 {formatTokens(tokens)} / {formatTokens(tokenCap)}
               </span>
             </div>

@@ -123,7 +123,7 @@ export function DevServersPage(): React.ReactElement {
           <Server size={16} className="text-zinc-400" />
           <h1 className="text-sm font-semibold">Dev Servers</h1>
           {visible && (
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400">
+            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-micro text-zinc-400">
               {visible.length}
             </span>
           )}
@@ -180,13 +180,13 @@ export function DevServersPage(): React.ReactElement {
           <div className="space-y-4">
             {Array.from(groupedByProject.entries()).map(([groupName, groupServers]) => (
               <div key={groupName}>
-                <div className="mb-1.5 flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-zinc-500">
+                <div className="mb-1.5 flex items-center gap-1.5 text-meta uppercase tracking-wide text-zinc-500">
                   <FolderOpen size={11} />
                   {groupName}
                 </div>
                 <div className="overflow-hidden rounded-lg border border-zinc-800">
                   <table className="w-full text-xs">
-                    <thead className="bg-zinc-900/60 text-[10px] uppercase tracking-wide text-zinc-500">
+                    <thead className="bg-zinc-900/60 text-micro uppercase tracking-wide text-zinc-500">
                       <tr>
                         <th className="px-3 py-2 text-left font-medium">Port</th>
                         <th className="px-3 py-2 text-left font-medium">Process</th>
@@ -239,7 +239,7 @@ export function DevServersPage(): React.ReactElement {
                                     }
                                     open(server.port).catch((e) => setError(`Open failed: ${e}`))
                                   }}
-                                  className="flex items-center gap-1 rounded px-2 py-1 text-[11px] text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                                  className="flex items-center gap-1 rounded px-2 py-1 text-meta text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
                                   title={`Open http://localhost:${server.port}`}
                                 >
                                   <ExternalLink size={11} />
@@ -248,7 +248,7 @@ export function DevServersPage(): React.ReactElement {
                                 <button
                                   onClick={() => void handleKill(server.pid, false)}
                                   disabled={isKilling}
-                                  className="flex items-center gap-1 rounded px-2 py-1 text-[11px] text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="flex items-center gap-1 rounded px-2 py-1 text-meta text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
                                   title="SIGTERM (graceful)"
                                 >
                                   <X size={11} />
@@ -257,7 +257,7 @@ export function DevServersPage(): React.ReactElement {
                                 <button
                                   onClick={() => void handleKill(server.pid, true)}
                                   disabled={isKilling}
-                                  className="flex items-center gap-1 rounded px-2 py-1 text-[11px] text-red-400 hover:bg-red-950/60 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="flex items-center gap-1 rounded px-2 py-1 text-meta text-red-400 hover:bg-red-950/60 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
                                   title="SIGKILL (force)"
                                 >
                                   <Skull size={11} />

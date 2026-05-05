@@ -422,12 +422,12 @@ export function TerminalPanel(): React.ReactElement {
                 title={`${tokensPerMinute.toLocaleString()} tokens/min (last 60s)`}
               >
                 <Sparkline values={velocityPerSample} color={fill} fillColor={`${fill}20`} />
-                <span className="shrink-0 text-[10px] tabular-nums" style={{ color: `${fill}aa` }}>
+                <span className="shrink-0 text-micro tabular-nums" style={{ color: `${fill}aa` }}>
                   {formatTokens(tokensPerMinute)}/min
                 </span>
               </div>
             )}
-            <span className="shrink-0 text-[10px] tabular-nums" style={{ color: `${fill}aa` }}>
+            <span className="shrink-0 text-micro tabular-nums" style={{ color: `${fill}aa` }}>
               {formatTokens(tokens)} / {formatTokens(tokenCap)}
             </span>
           </div>
@@ -447,7 +447,7 @@ export function TerminalPanel(): React.ReactElement {
                   <Sparkles size={14} />
                   Start Claude Code here
                 </button>
-                <div className="text-[10px] text-zinc-600">or click + above for an empty shell</div>
+                <div className="text-micro text-zinc-600">or click + above for an empty shell</div>
               </>
             ) : (
               <div className="text-xs text-zinc-600">Select a project first</div>

@@ -64,7 +64,7 @@ function InlineInput({
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={() => { if (value.trim()) onSubmit(value.trim()); else onCancel() }}
-        className="flex-1 rounded bg-zinc-800 px-1.5 py-0.5 text-sm text-zinc-200 outline-none ring-1 ring-zinc-600 focus:ring-blue-500"
+        className="flex-1 rounded bg-zinc-800 px-1.5 py-0.5 text-body text-zinc-200 outline-none ring-1 ring-zinc-600 focus:ring-blue-500"
         spellCheck={false}
       />
     </div>
@@ -125,7 +125,7 @@ function TreeNode({
     const isActive = node.path === activeFilePath
     return (
       <div
-        className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-sm hover:bg-zinc-800/50 ${ignoredStyle} ${
+        className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-body hover:bg-zinc-800/50 ${ignoredStyle} ${
           isActive ? 'bg-zinc-800/70' : ''
         } ${statusColor || (isActive ? 'text-zinc-200' : 'text-zinc-400')}`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
@@ -139,7 +139,7 @@ function TreeNode({
         <File size={14} className="shrink-0 text-zinc-600" />
         <span className="flex-1 truncate">{node.name}</span>
         {fileStatus && (
-          <span className={`shrink-0 text-[10px] font-semibold ${statusColor}`}>
+          <span className={`shrink-0 text-micro font-semibold ${statusColor}`}>
             {GIT_STATUS_LABELS[fileStatus]}
           </span>
         )}
@@ -152,7 +152,7 @@ function TreeNode({
   return (
     <div>
       <div
-        className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-sm ${ignoredStyle} ${statusColor || 'text-zinc-300'} hover:bg-zinc-800/50`}
+        className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-body ${ignoredStyle} ${statusColor || 'text-zinc-300'} hover:bg-zinc-800/50`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
         onClick={() => toggleExpanded(treeStateKey, node.path)}
         onContextMenu={(e) => onContextMenu(e, node)}
@@ -257,7 +257,7 @@ function FileSearch({ projectId, cwd }: { projectId: string; cwd: string }): Rea
         )}
         {nameResults.length > 0 && (
           <div>
-            <div className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+            <div className="px-3 py-1.5 text-micro font-medium uppercase tracking-wide text-zinc-600">
               Files ({nameResults.length})
             </div>
             {nameResults.map((r) => (
@@ -269,7 +269,7 @@ function FileSearch({ projectId, cwd }: { projectId: string; cwd: string }): Rea
                 <File size={12} className="shrink-0 text-zinc-600" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-xs text-zinc-300">{r.name}</div>
-                  <div className="truncate text-[10px] text-zinc-600">{r.relativePath}</div>
+                  <div className="truncate text-micro text-zinc-600">{r.relativePath}</div>
                 </div>
               </button>
             ))}
@@ -277,7 +277,7 @@ function FileSearch({ projectId, cwd }: { projectId: string; cwd: string }): Rea
         )}
         {contentResults.length > 0 && (
           <div>
-            <div className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+            <div className="px-3 py-1.5 text-micro font-medium uppercase tracking-wide text-zinc-600">
               Content ({contentResults.length})
             </div>
             {contentResults.map((r, i) => (
@@ -290,9 +290,9 @@ function FileSearch({ projectId, cwd }: { projectId: string; cwd: string }): Rea
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     <span className="truncate text-xs text-zinc-300">{r.name}</span>
-                    <span className="shrink-0 text-[10px] text-zinc-600">:{r.line}</span>
+                    <span className="shrink-0 text-micro text-zinc-600">:{r.line}</span>
                   </div>
-                  <div className="truncate text-[10px] text-zinc-500">{r.lineContent}</div>
+                  <div className="truncate text-micro text-zinc-500">{r.lineContent}</div>
                 </div>
               </button>
             ))}
@@ -436,7 +436,7 @@ export function FileTree({
     return (
       <div className="flex h-full flex-col">
         <div className="flex h-9 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Search</span>
+          <span className="text-meta font-medium uppercase tracking-wide text-zinc-500">Search</span>
           <button
             onClick={() => setShowSearch(false)}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
@@ -462,7 +462,7 @@ export function FileTree({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-3">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+        <span className="text-meta font-medium uppercase tracking-wide text-zinc-500">
           {isOverride ? 'Claude config' : 'Explorer'}
         </span>
         <div className="flex items-center gap-0.5">

@@ -39,7 +39,7 @@ function LeafView({
           isFocused ? 'border-blue-400/40 bg-blue-400/10' : 'border-zinc-800 bg-zinc-900/50'
         }`}
       >
-        <span className={`truncate text-[10px] ${isFocused ? 'text-blue-300' : 'text-zinc-500'}`}>
+        <span className={`truncate text-micro ${isFocused ? 'text-blue-300' : 'text-zinc-500'}`}>
           {tab?.title ?? 'Terminal'}
         </span>
         <div className="flex items-center gap-0.5">

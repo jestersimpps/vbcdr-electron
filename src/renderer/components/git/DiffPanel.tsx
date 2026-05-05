@@ -734,18 +734,18 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       return (
         <div key={`dir-${node.path}`}>
           <div
-            className="flex cursor-pointer items-center gap-1 px-2 py-0.5 text-zinc-400 hover:bg-zinc-800/40"
-            style={{ paddingLeft: `${depth * 12 + 8}px` }}
+            className="flex cursor-pointer items-center gap-1.5 px-1 py-0.5 text-zinc-400 hover:bg-zinc-800/40"
+            style={{ paddingLeft: `${depth * 12 + 4}px` }}
             onClick={() => toggleDir(node.path)}
             onContextMenu={(e) => handleContextMenu(e, absoluteDirPath, node.name, true)}
           >
             {isCollapsed ? (
-              <ChevronRight size={12} className="shrink-0 text-zinc-500" />
+              <ChevronRight size={14} className="shrink-0 text-zinc-500" />
             ) : (
-              <ChevronDown size={12} className="shrink-0 text-zinc-500" />
+              <ChevronDown size={14} className="shrink-0 text-zinc-500" />
             )}
-            <Folder size={12} className="shrink-0 text-zinc-500" />
-            <span className="truncate text-[11px]">{node.name}</span>
+            <Folder size={14} className="shrink-0 text-zinc-500" />
+            <span className="truncate text-body">{node.name}</span>
           </div>
           {!isCollapsed && node.children.map((child) => renderNode(child, depth + 1))}
         </div>
@@ -761,22 +761,22 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       <div
         key={file.absolutePath}
         ref={isSelected ? selectedRowRef : undefined}
-        className={`group flex cursor-pointer items-center gap-1.5 border-l-2 px-2 py-0.5 ${
+        className={`group flex cursor-pointer items-center gap-1.5 border-l-2 px-1 py-0.5 ${
           isSelected
             ? 'border-l-blue-500 bg-zinc-700/80 text-zinc-100'
             : 'border-l-transparent hover:bg-zinc-800/40'
         }`}
-        style={{ paddingLeft: `${depth * 12 + 8}px` }}
+        style={{ paddingLeft: `${depth * 12 + 4}px` }}
         onClick={() => setSelectedPath(file.absolutePath)}
         onContextMenu={(e) => handleContextMenu(e, file.absolutePath, file.name, false)}
         title={file.relativePath}
       >
-        <File size={12} className="shrink-0 text-zinc-600" />
-        <span className={`min-w-0 flex-1 truncate text-left text-[11px] ${statusColor}`}>
+        <File size={14} className="shrink-0 text-zinc-600" />
+        <span className={`min-w-0 flex-1 truncate text-left text-body ${statusColor}`}>
           {file.name}
         </span>
         {stat && (stat.additions > 0 || stat.deletions > 0) && (
-          <span className="shrink-0 flex items-center gap-1 text-[10px] tabular-nums">
+          <span className="shrink-0 flex items-center gap-1 text-micro tabular-nums">
             {stat.additions > 0 && (
               <span className="text-emerald-400">+{stat.additions}</span>
             )}
@@ -785,7 +785,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             )}
           </span>
         )}
-        <span className={`shrink-0 w-3 text-center text-[10px] font-semibold tabular-nums ${statusColor}`}>
+        <span className={`shrink-0 w-3 text-center text-micro font-semibold tabular-nums ${statusColor}`}>
           {statusLabel}
         </span>
         {view.kind === 'working' && (
@@ -846,11 +846,11 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
         <div className="flex h-full flex-col overflow-hidden border-r border-zinc-800 bg-zinc-900">
           <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-zinc-800 px-2">
             {headerIcon}
-            <span className="min-w-0 truncate text-[11px] text-zinc-300" title={headerTitle}>
+            <span className="min-w-0 truncate text-meta text-zinc-300" title={headerTitle}>
               {headerLabel}
             </span>
             {files.length > 0 && (
-              <span className={`ml-auto shrink-0 rounded px-1.5 py-px text-[10px] font-medium ${
+              <span className={`ml-auto shrink-0 rounded px-1.5 py-px text-micro font-medium ${
                 isCommitView || isIncomingView
                   ? 'bg-blue-500/15 text-blue-400'
                   : isOutgoingView
@@ -871,7 +871,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             )}
           </div>
           {view.kind === 'commit' && view.message && (
-            <div className="border-b border-zinc-800 px-2 py-1 text-[10px] leading-snug text-zinc-400" title={view.message}>
+            <div className="border-b border-zinc-800 px-2 py-1 text-micro leading-snug text-zinc-400" title={view.message}>
               {view.message}
             </div>
           )}
@@ -888,7 +888,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       <Panel defaultSize={75} minSize={30}>
         <div className="flex h-full min-w-0 flex-col bg-zinc-950" ref={panelRootRef} tabIndex={-1}>
         <div className="flex h-9 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2">
-          <span className="min-w-0 truncate text-[11px] text-zinc-400" title={selectedFile?.relativePath}>
+          <span className="min-w-0 truncate text-meta text-zinc-400" title={selectedFile?.relativePath}>
             {selectedFile?.relativePath ?? ''}
           </span>
           <div className="flex shrink-0 items-center gap-2">
@@ -896,7 +896,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
                 <div className="flex items-center gap-1">
                   <button
                     onClick={tourPlaying ? stopTour : () => startTour(Math.max(0, currentCommentIndex))}
-                    className={`flex items-center gap-1 rounded border px-2 py-1 text-[10px] ${
+                    className={`flex items-center gap-1 rounded border px-2 py-1 text-micro ${
                       tourPlaying
                         ? 'border-blue-500/60 bg-blue-500/15 text-blue-200 hover:bg-blue-500/25'
                         : 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100'
@@ -909,20 +909,20 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
                   <button
                     onClick={() => goToComment(currentCommentIndex - 1)}
                     disabled={currentCommentIndex <= 0 || tourPlaying}
-                    className="flex items-center gap-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex items-center gap-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-micro text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
                     title="Previous comment ([)"
                   >
                     <ChevronLeft size={11} />
                     Prev
                   </button>
-                  <span className="rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-[10px] tabular-nums text-zinc-400">
+                  <span className="rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-micro tabular-nums text-zinc-400">
                     <MessageSquareText size={10} className="mr-1 inline -mt-px text-blue-400" />
                     {currentCommentIndex + 1}/{flatComments.length}
                   </span>
                   <button
                     onClick={() => goToComment(currentCommentIndex + 1)}
                     disabled={currentCommentIndex >= flatComments.length - 1 || tourPlaying}
-                    className="flex items-center gap-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-[10px] text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex items-center gap-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-micro text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
                     title="Next comment (])"
                   >
                     Next
@@ -952,7 +952,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
                         key={lvl}
                         onClick={() => handleExplain(lvl)}
                         disabled={loadingLevel !== null || files.length === 0}
-                        className="flex items-center gap-1 rounded px-2 py-0.5 text-[10px] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex items-center gap-1 rounded px-2 py-0.5 text-micro text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
                         title={tooltip}
                       >
                         {isLoading
@@ -965,14 +965,14 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
                 </div>
               )}
             {explainError && loadingLevel === null && (
-              <span className="max-w-[240px] truncate text-[10px] text-red-400" title={explainError}>
+              <span className="max-w-[240px] truncate text-micro text-red-400" title={explainError}>
                 {explainError}
               </span>
             )}
             <div className="flex shrink-0 items-center gap-0.5 rounded border border-zinc-800 bg-zinc-950 p-0.5">
               <button
                 onClick={() => setSideBySide(true)}
-                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] ${
+                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-micro ${
                   sideBySide ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-500 hover:text-zinc-300'
                 }`}
                 title="Side-by-side diff"
@@ -982,7 +982,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
               </button>
               <button
                 onClick={() => setSideBySide(false)}
-                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] ${
+                className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-micro ${
                   !sideBySide ? 'bg-zinc-800 text-zinc-200' : 'text-zinc-500 hover:text-zinc-300'
                 }`}
                 title="Inline diff"

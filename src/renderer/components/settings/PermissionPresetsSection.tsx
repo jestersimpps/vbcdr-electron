@@ -66,7 +66,7 @@ export function PermissionPresetsSection(): React.ReactElement {
                   />
                   <span className="flex-1">
                     <span className="block text-zinc-200">{profile.name}</span>
-                    <span className="block text-[10px] text-zinc-500">{profile.description}</span>
+                    <span className="block text-micro text-zinc-500">{profile.description}</span>
                   </span>
                 </button>
               ))}
@@ -170,10 +170,10 @@ function PresetCard({ preset }: { preset: PermissionPreset }): React.ReactElemen
             </option>
           ))}
         </select>
-        <span className="text-[10px] uppercase tracking-wide text-zinc-500" title="Mode">
+        <span className="text-micro uppercase tracking-wide text-zinc-500" title="Mode">
           {preset.mode}
         </span>
-        <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+        <div className="flex items-center gap-1 text-micro text-zinc-500">
           <span title="Allow">{preset.allow.length}</span>
           <span className="text-zinc-700">·</span>
           <span title="Ask">{preset.ask.length}</span>
@@ -202,7 +202,7 @@ function PresetCard({ preset }: { preset: PermissionPreset }): React.ReactElemen
             const list = preset[b.key]
             return (
               <div key={b.key}>
-                <div className="mb-1 text-[10px] uppercase tracking-wide text-zinc-500">
+                <div className="mb-1 text-micro uppercase tracking-wide text-zinc-500">
                   {b.label} <span className="text-zinc-600">({list.length})</span>
                 </div>
                 {list.length > 0 && (
@@ -212,7 +212,7 @@ function PresetCard({ preset }: { preset: PermissionPreset }): React.ReactElemen
                         key={rule}
                         className="flex items-center justify-between gap-2 rounded bg-zinc-800/60 px-2 py-1"
                       >
-                        <code className="truncate font-mono text-[11px] text-zinc-200">{rule}</code>
+                        <code className="truncate font-mono text-meta text-zinc-200">{rule}</code>
                         <button
                           onClick={() => removeRule(b.key, rule)}
                           className="rounded p-0.5 text-zinc-500 hover:bg-zinc-700 hover:text-zinc-200"
@@ -233,7 +233,7 @@ function PresetCard({ preset }: { preset: PermissionPreset }): React.ReactElemen
                       if (e.key === 'Enter') addRule(b.key)
                     }}
                     placeholder={b.placeholder}
-                    className="h-6 flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 font-mono text-[11px] text-zinc-200 outline-none focus:border-zinc-500"
+                    className="h-6 flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 font-mono text-meta text-zinc-200 outline-none focus:border-zinc-500"
                   />
                   <button
                     onClick={() => addRule(b.key)}

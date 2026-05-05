@@ -560,7 +560,7 @@ export function CommandPalette(): React.ReactElement | null {
             return (
               <div key={item.id}>
                 {showGroup && (
-                  <div className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                  <div className="px-4 pb-1 pt-2 text-micro font-semibold uppercase tracking-wider text-zinc-500">
                     {item.group}
                   </div>
                 )}
@@ -580,14 +580,14 @@ export function CommandPalette(): React.ReactElement | null {
                   <span className="text-zinc-500">{item.icon}</span>
                   <span className="truncate">{item.label}</span>
                   {item.hint && (
-                    <span className="ml-auto truncate text-[10px] text-zinc-500">{item.hint}</span>
+                    <span className="ml-auto truncate text-micro text-zinc-500">{item.hint}</span>
                   )}
                 </div>
               </div>
             )
           })}
         </div>
-        <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-1.5 text-[10px] text-zinc-500">
+        <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-1.5 text-micro text-zinc-500">
           <span>↑↓ navigate · ↵ run · esc close</span>
           <span>{filtered.length} results</span>
         </div>

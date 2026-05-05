@@ -355,7 +355,7 @@ function SortableTab({
     >
       <span className={`truncate max-w-[120px] ${statusColor}`}>{file.name}</span>
       {statusLabel && (
-        <span className={`shrink-0 text-[10px] font-semibold tabular-nums ${statusColor}`}>
+        <span className={`shrink-0 text-micro font-semibold tabular-nums ${statusColor}`}>
           {statusLabel}
         </span>
       )}
@@ -516,7 +516,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
           </SortableContext>
         </DndContext>
         <span
-          className={`ml-2 text-[10px] text-emerald-400 transition-opacity duration-300 ${showSaved ? 'opacity-100' : 'opacity-0'}`}
+          className={`ml-2 text-micro text-emerald-400 transition-opacity duration-300 ${showSaved ? 'opacity-100' : 'opacity-0'}`}
         >
           Saved
         </span>

@@ -39,7 +39,7 @@ export function BranchSwitcher({ projectId, cwd }: BranchSwitcherProps = {}): Re
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={switchingBranch}
-        className="flex shrink-0 items-center gap-1 rounded bg-green-400/15 px-1.5 py-px text-[10px] font-medium text-green-400 transition-colors hover:bg-green-400/25 disabled:opacity-50"
+        className="flex shrink-0 items-center gap-1 rounded bg-green-400/15 px-1.5 py-px text-micro font-medium text-green-400 transition-colors hover:bg-green-400/25 disabled:opacity-50"
       >
         {switchingBranch && <Loader2 size={10} className="animate-spin" />}
         <span className="max-w-[140px] truncate">{currentBranch.name}</span>
@@ -131,13 +131,13 @@ function BranchMenu({ branches, currentBranch, onSelect, onClose }: BranchMenuPr
             onChange={(e) => setFilter(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Filter branches…"
-            className="w-full rounded border border-zinc-800 bg-zinc-950 py-1 pl-6 pr-2 text-[11px] text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-700"
+            className="w-full rounded border border-zinc-800 bg-zinc-950 py-1 pl-6 pr-2 text-meta text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-700"
           />
         </div>
       </div>
       {filteredLocal.length > 0 && (
         <div className="p-2 border-b border-zinc-800">
-          <div className="text-[10px] font-medium text-zinc-500 mb-1 uppercase tracking-wide">Local</div>
+          <div className="text-micro font-medium text-zinc-500 mb-1 uppercase tracking-wide">Local</div>
           {filteredLocal.map((b) => (
             <button
               key={b.name}
@@ -156,7 +156,7 @@ function BranchMenu({ branches, currentBranch, onSelect, onClose }: BranchMenuPr
       )}
       {filteredRemote.length > 0 && (
         <div className="p-2">
-          <div className="text-[10px] font-medium text-zinc-500 mb-1 uppercase tracking-wide">Remote</div>
+          <div className="text-micro font-medium text-zinc-500 mb-1 uppercase tracking-wide">Remote</div>
           {filteredRemote.map((b) => (
             <button
               key={b.name}
