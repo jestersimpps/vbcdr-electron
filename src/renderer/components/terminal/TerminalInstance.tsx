@@ -120,6 +120,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         fontFamily: 'Menlo, Monaco, Courier New, monospace',
         cols: 80,
         rows: 24,
+        scrollback: 5000,
         allowProposedApi: true,
         theme: baseTheme
       })
