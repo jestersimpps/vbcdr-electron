@@ -11,6 +11,10 @@ const EXT_LANG: Record<string, string> = {
   json: 'json',
   ts: 'typescript',
   js: 'javascript',
+  jsx: 'javascript',
+  mjs: 'javascript',
+  cjs: 'javascript',
+  tsx: 'typescript',
   yaml: 'yaml',
   yml: 'yaml',
   toml: 'ini'

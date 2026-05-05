@@ -32,6 +32,8 @@ const EXT_LANG: Record<string, string> = {
   tsx: 'typescript',
   js: 'javascript',
   jsx: 'javascript',
+  mjs: 'javascript',
+  cjs: 'javascript',
   json: 'json',
   css: 'css',
   scss: 'scss',
