@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { safeHandle } from '@main/ipc/safe-handle'
 import {
   recordTokenSnapshot,
   resetTabTokenTracking,
@@ -9,25 +9,25 @@ import {
 } from '@main/services/token-usage-service'
 
 export function registerTokenUsageHandlers(): void {
-  ipcMain.handle(
+  safeHandle(
     'token-usage:record',
     (_event, tabId: string, projectId: string, tokens: number): void => {
       recordTokenSnapshot(tabId, projectId, tokens)
     }
   )
 
-  ipcMain.handle('token-usage:reset-tab', (_event, tabId: string): void => {
+  safeHandle('token-usage:reset-tab', (_event, tabId: string): void => {
     resetTabTokenTracking(tabId)
   })
 
-  ipcMain.handle(
+  safeHandle(
     'token-usage:daily',
     (_event, sinceIso: string | null): DailyTokenUsage[] => {
       return getDailyUsage(sinceIso)
     }
   )
 
-  ipcMain.handle(
+  safeHandle(
     'token-usage:events',
     (_event, sinceIso: string | null): TokenEvent[] => {
       return getEvents(sinceIso)
