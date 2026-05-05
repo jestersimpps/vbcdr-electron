@@ -1,4 +1,5 @@
 import fs from 'fs'
+import fsp from 'fs/promises'
 import path from 'path'
 import { BrowserWindow, shell } from 'electron'
 import Store from 'electron-store'
@@ -105,44 +106,44 @@ export function registerFilesystemHandlers(): void {
     stopWatching()
   })
 
-  safeHandle('fs:write-file', (_event, filePath: string, content: string): void => {
+  safeHandle('fs:write-file', async (_event, filePath: string, content: string): Promise<void> => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
-    fs.writeFileSync(resolved, content, 'utf-8')
+    await fsp.writeFile(resolved, content, 'utf-8')
   })
 
-  safeHandle('fs:delete-file', (_event, filePath: string): void => {
+  safeHandle('fs:delete-file', async (_event, filePath: string): Promise<void> => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
-    const stat = fs.statSync(resolved)
+    const stat = await fsp.stat(resolved)
     if (stat.isDirectory()) {
-      fs.rmSync(resolved, { recursive: true })
+      await fsp.rm(resolved, { recursive: true })
     } else {
-      fs.unlinkSync(resolved)
+      await fsp.unlink(resolved)
     }
   })
 
-  safeHandle('fs:create-file', (_event, filePath: string): void => {
+  safeHandle('fs:create-file', async (_event, filePath: string): Promise<void> => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
-    fs.writeFileSync(resolved, '', 'utf-8')
+    await fsp.writeFile(resolved, '', 'utf-8')
   })
 
-  safeHandle('fs:create-folder', (_event, folderPath: string): void => {
+  safeHandle('fs:create-folder', async (_event, folderPath: string): Promise<void> => {
     const resolved = path.resolve(folderPath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
-    fs.mkdirSync(resolved, { recursive: true })
+    await fsp.mkdir(resolved, { recursive: true })
   })
 
-  safeHandle('fs:rename', (_event, oldPath: string, newPath: string): void => {
+  safeHandle('fs:rename', async (_event, oldPath: string, newPath: string): Promise<void> => {
     const resolvedOld = path.resolve(oldPath)
     const resolvedNew = path.resolve(newPath)
     if (!isWithinProjectRoot(resolvedOld)) throw new Error('Path outside project root')
     if (!isWithinProjectRoot(resolvedNew)) throw new Error('Path outside project root')
-    fs.renameSync(resolvedOld, resolvedNew)
+    await fsp.rename(resolvedOld, resolvedNew)
   })
 
-  safeHandle('fs:duplicate', (_event, filePath: string): string => {
+  safeHandle('fs:duplicate', async (_event, filePath: string): Promise<string> => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
     const dir = path.dirname(resolved)
@@ -154,7 +155,7 @@ export function registerFilesystemHandlers(): void {
       newPath = path.join(dir, `${base} (copy ${i})${ext}`)
       i++
     }
-    fs.copyFileSync(resolved, newPath)
+    await fsp.copyFile(resolved, newPath)
     return newPath
   })
 
