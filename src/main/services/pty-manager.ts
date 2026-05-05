@@ -96,13 +96,27 @@ export function createPty(
     )
   }
 
-  const proc = pty.spawn(shell, ['-l'], {
-    name: 'xterm-256color',
-    cols,
-    rows,
-    cwd: safeCwd,
-    env
-  })
+  let proc: pty.IPty
+  try {
+    proc = pty.spawn(shell, ['-l'], {
+      name: 'xterm-256color',
+      cols,
+      rows,
+      cwd: safeCwd,
+      env
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (!win.isDestroyed()) {
+      win.webContents.send(
+        'terminal:data',
+        tabId,
+        `\r\n\x1b[31mFailed to start terminal: ${message}\x1b[0m\r\n`
+      )
+      win.webContents.send('terminal:exit', tabId, 1)
+    }
+    return
+  }
 
   instances.set(tabId, { process: proc, projectId, pendingChunks: [], flushTimer: null })
 
