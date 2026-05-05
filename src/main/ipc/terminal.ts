@@ -1,8 +1,9 @@
-import { ipcMain, BrowserWindow, nativeImage, clipboard } from 'electron'
+import { BrowserWindow, nativeImage, clipboard } from 'electron'
 import { createPty, writePty, resizePty, killPty, hasPty } from '@main/services/pty-manager'
+import { safeHandle } from '@main/ipc/safe-handle'
 
 export function registerTerminalHandlers(): void {
-  ipcMain.handle(
+  safeHandle(
     'terminal:create',
     (event, tabId: string, projectId: string, cwd: string, cols: number, rows: number): void => {
       const win = BrowserWindow.fromWebContents(event.sender)
@@ -10,23 +11,23 @@ export function registerTerminalHandlers(): void {
     }
   )
 
-  ipcMain.handle('terminal:write', (_event, tabId: string, data: string): void => {
+  safeHandle('terminal:write', (_event, tabId: string, data: string): void => {
     writePty(tabId, data)
   })
 
-  ipcMain.handle('terminal:resize', (_event, tabId: string, cols: number, rows: number): void => {
+  safeHandle('terminal:resize', (_event, tabId: string, cols: number, rows: number): void => {
     resizePty(tabId, cols, rows)
   })
 
-  ipcMain.handle('terminal:kill', (_event, tabId: string): void => {
+  safeHandle('terminal:kill', (_event, tabId: string): void => {
     killPty(tabId)
   })
 
-  ipcMain.handle('terminal:has', (_event, tabId: string): boolean => {
+  safeHandle('terminal:has', (_event, tabId: string): boolean => {
     return hasPty(tabId)
   })
 
-  ipcMain.handle('terminal:paste-image', (_event, tabId: string, filePath: string): void => {
+  safeHandle('terminal:paste-image', (_event, tabId: string, filePath: string): void => {
     const image = nativeImage.createFromPath(filePath)
     if (!image.isEmpty()) {
       clipboard.writeImage(image)
@@ -34,7 +35,7 @@ export function registerTerminalHandlers(): void {
     }
   })
 
-  ipcMain.handle('terminal:paste-clipboard-image', (_event, tabId: string): boolean => {
+  safeHandle('terminal:paste-clipboard-image', (_event, tabId: string): boolean => {
     const image = clipboard.readImage()
     if (!image.isEmpty()) {
       writePty(tabId, '\x16')
