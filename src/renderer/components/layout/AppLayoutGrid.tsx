@@ -118,8 +118,29 @@ function SortableProjectTab({
 }
 
 export function AppLayoutGrid(): React.ReactElement {
-  const { projects, activeProjectId, dashboardActive, statisticsActive, usageActive, settingsActive, claudePageActive, skillsPageActive, terminalsPageActive, devServersPageActive, loadProjects, addProject, removeProject, setActiveProject, reorderProjects, showDashboard, showStatistics, showUsage, showSettings, showClaudePage, showSkillsPage, showTerminalsPage, showDevServersPage } =
-    useProjectStore()
+  const projects = useProjectStore((s) => s.projects)
+  const activeProjectId = useProjectStore((s) => s.activeProjectId)
+  const dashboardActive = useProjectStore((s) => s.dashboardActive)
+  const statisticsActive = useProjectStore((s) => s.statisticsActive)
+  const usageActive = useProjectStore((s) => s.usageActive)
+  const settingsActive = useProjectStore((s) => s.settingsActive)
+  const claudePageActive = useProjectStore((s) => s.claudePageActive)
+  const skillsPageActive = useProjectStore((s) => s.skillsPageActive)
+  const terminalsPageActive = useProjectStore((s) => s.terminalsPageActive)
+  const devServersPageActive = useProjectStore((s) => s.devServersPageActive)
+  const loadProjects = useProjectStore((s) => s.loadProjects)
+  const addProject = useProjectStore((s) => s.addProject)
+  const removeProject = useProjectStore((s) => s.removeProject)
+  const setActiveProject = useProjectStore((s) => s.setActiveProject)
+  const reorderProjects = useProjectStore((s) => s.reorderProjects)
+  const showDashboard = useProjectStore((s) => s.showDashboard)
+  const showStatistics = useProjectStore((s) => s.showStatistics)
+  const showUsage = useProjectStore((s) => s.showUsage)
+  const showSettings = useProjectStore((s) => s.showSettings)
+  const showClaudePage = useProjectStore((s) => s.showClaudePage)
+  const showSkillsPage = useProjectStore((s) => s.showSkillsPage)
+  const showTerminalsPage = useProjectStore((s) => s.showTerminalsPage)
+  const showDevServersPage = useProjectStore((s) => s.showDevServersPage)
   const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || terminalsPageActive || devServersPageActive
   const centerTab = useEditorStore(
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'terminals' : 'terminals')

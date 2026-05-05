@@ -110,7 +110,12 @@ export function TerminalPanel(): React.ReactElement {
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
-  const { createTab, closeTab, replaceTab, setActiveTab, initProject, reorderTabs } = useTerminalStore()
+  const createTab = useTerminalStore((s) => s.createTab)
+  const closeTab = useTerminalStore((s) => s.closeTab)
+  const replaceTab = useTerminalStore((s) => s.replaceTab)
+  const setActiveTab = useTerminalStore((s) => s.setActiveTab)
+  const initProject = useTerminalStore((s) => s.initProject)
+  const reorderTabs = useTerminalStore((s) => s.reorderTabs)
 
   const fullThemeId = useThemeStore((s) => s.getFullThemeId())
   const terminalThemeId = useThemeStore((s) => s.terminalThemeId)
