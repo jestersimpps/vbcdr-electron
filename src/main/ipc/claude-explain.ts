@@ -1,5 +1,3 @@
-import fs from 'fs'
-import path from 'path'
 import crypto from 'crypto'
 import { spawn } from 'child_process'
 import { ipcMain } from 'electron'
@@ -139,15 +137,6 @@ function shaOf(text: string): string {
   return crypto.createHash('sha1').update(text).digest('hex').slice(0, 12)
 }
 
-function annotationsDir(projectRoot: string): string {
-  return path.join(projectRoot, '.vbcdr', 'annotations')
-}
-
-function timestampFilename(): string {
-  const iso = new Date().toISOString().replace(/[:.]/g, '-')
-  return `${iso}.json`
-}
-
 interface ClaudeResultEvent {
   type: 'result'
   subtype?: string
@@ -256,22 +245,12 @@ export async function explainDiff({ projectRoot, diffText, source, level }: Expl
   const stdout = await runClaude(projectRoot, diff, resolvedLevel)
   const parsed = parseClaudeJsonEnvelope(stdout)
 
-  const result: ExplainResult = {
+  return {
     generatedAt: new Date().toISOString(),
     diffSha: shaOf(diff),
     level: resolvedLevel,
     files: Array.isArray(parsed.files) ? parsed.files : []
   }
-
-  try {
-    const dir = annotationsDir(projectRoot)
-    fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(path.join(dir, timestampFilename()), JSON.stringify(result, null, 2), 'utf-8')
-  } catch {
-    // Persisting the audit JSON is best-effort; don't fail the request.
-  }
-
-  return result
 }
 
 export function registerClaudeExplainHandlers(): void {

@@ -8,6 +8,14 @@ import { useDiffViewStore, type DiffView } from '@/stores/diff-view-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useEditorStore } from '@/stores/editor-store'
+import {
+  useAnnotationStore,
+  annotationViewKey,
+  type ExplainLevel,
+  type DiffComment
+} from '@/stores/annotation-store'
+import { annotationRunner } from '@/services/annotation-runner'
+import { tourRunner } from '@/services/tour-runner'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
 import type { GitFileStatus } from '@/models/types'
@@ -140,26 +148,12 @@ function handleBeforeMount(monaco: Monaco): void {
   registerMonacoThemes(monaco)
 }
 
-interface DiffComment {
-  line: number
-  side: 'old' | 'new'
-  text: string
-}
-
-interface FileAnnotation {
-  path: string
-  summary?: string
-  comments: DiffComment[]
-}
-
 interface FlatComment extends DiffComment {
   filePath: string
   fileSummary?: string
   indexInFile: number
   isSummary?: boolean
 }
-
-type ExplainLevel = 'functional' | 'technical' | 'deep'
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => {
@@ -208,16 +202,19 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
 
   const selectedRowRef = useRef<HTMLDivElement | null>(null)
 
-  const [annotations, setAnnotations] = useState<Record<string, FileAnnotation>>({})
-  const [explainLevel, setExplainLevel] = useState<ExplainLevel | null>(null)
-  const [loadingLevel, setLoadingLevel] = useState<ExplainLevel | null>(null)
-  const [explainError, setExplainError] = useState<string | null>(null)
+  const entryKey = annotationViewKey(projectId, view)
+  const annotationEntry = useAnnotationStore((s) => s.entries[entryKey])
+  const annotations = annotationEntry?.annotations ?? {}
+  const generation = annotationEntry?.generation ?? { status: 'idle' as const }
+  const tourState = annotationEntry?.tour ?? { status: 'idle' as const, index: 0 }
+  const loadingLevel: ExplainLevel | null = generation.status === 'running' ? generation.level : null
+  const explainError = generation.status === 'error' ? generation.error : null
+  const tourPlaying = tourState.status === 'playing'
+  const tourIndex = tourPlaying ? tourState.index : -1
+  const clearAnnotationResult = useAnnotationStore((s) => s.clearResult)
+
   const [currentCommentIndex, setCurrentCommentIndex] = useState(0)
   const [highlightedCommentKey, setHighlightedCommentKey] = useState<string | null>(null)
-  const [tourPlaying, setTourPlaying] = useState(false)
-  const [tourIndex, setTourIndex] = useState(-1)
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
-  const tourCancelledRef = useRef(false)
   const diffEditorRef = useRef<MonacoEditorNS.IStandaloneDiffEditor | null>(null)
   const viewZoneIdsRef = useRef<{ original: string[]; modified: string[] }>({ original: [], modified: [] })
   const decorationsRef = useRef<{ original: string[]; modified: string[] }>({ original: [], modified: [] })
@@ -388,17 +385,9 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   }, [flatComments.length, currentCommentIndex])
 
   useEffect(() => {
-    setAnnotations({})
-    setExplainLevel(null)
-    setExplainError(null)
     setCurrentCommentIndex(0)
-    tourCancelledRef.current = true
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel()
-    }
-    setTourPlaying(false)
-    setTourIndex(-1)
-  }, [view])
+    setHighlightedCommentKey(null)
+  }, [entryKey])
 
   const goToComment = useCallback(
     (index: number): void => {
@@ -425,91 +414,34 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     [flatComments, files, selectedPath]
   )
 
-  const speak = useCallback((text: string): Promise<void> => {
-    return new Promise((resolve) => {
-      if (typeof window === 'undefined' || !window.speechSynthesis) {
-        resolve()
-        return
-      }
-      window.speechSynthesis.cancel()
-      const u = new SpeechSynthesisUtterance(text)
-      u.rate = 1.05
-      u.pitch = 1
-      utteranceRef.current = u
-      const onEnd = (): void => {
-        utteranceRef.current = null
-        resolve()
-      }
-      u.onend = onEnd
-      u.onerror = onEnd
-      window.speechSynthesis.speak(u)
-    })
-  }, [])
-
   const stopTour = useCallback((): void => {
-    tourCancelledRef.current = true
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel()
-    }
-    utteranceRef.current = null
-    setTourPlaying(false)
-    setTourIndex(-1)
+    tourRunner.stop()
   }, [])
 
-  const startTour = useCallback(async (startAt: number = 0): Promise<void> => {
+  const startTour = useCallback((startAt: number = 0): void => {
     if (flatComments.length === 0) return
-    tourCancelledRef.current = false
-    setTourPlaying(true)
-    for (let i = startAt; i < flatComments.length; i++) {
-      if (tourCancelledRef.current) break
-      setTourIndex(i)
-      goToComment(i)
-      // Tiny delay so the line scroll/highlight visibly precedes the audio.
-      await new Promise((r) => setTimeout(r, 350))
-      if (tourCancelledRef.current) break
-      await speak(flatComments[i].text)
-      if (tourCancelledRef.current) break
-      await new Promise((r) => setTimeout(r, 200))
-    }
-    if (!tourCancelledRef.current) {
-      setTourPlaying(false)
-      setTourIndex(-1)
-    }
-  }, [flatComments, goToComment, speak])
+    tourRunner.start(
+      projectId,
+      view,
+      flatComments.map((c) => ({ text: c.text })),
+      startAt
+    )
+  }, [flatComments, projectId, view])
+
+  const handleExplain = useCallback((level: ExplainLevel): void => {
+    void annotationRunner.start(projectId, view, cwd, level)
+  }, [projectId, view, cwd])
+
+  const clearAnnotations = useCallback((): void => {
+    tourRunner.stop()
+    clearAnnotationResult(projectId, view)
+  }, [clearAnnotationResult, projectId, view])
 
   useEffect(() => {
-    return () => {
-      // On unmount, cancel any in-flight speech to avoid the synth talking after the panel closes.
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel()
-      }
-    }
-  }, [])
-
-  const handleExplain = useCallback(async (level: ExplainLevel): Promise<void> => {
-    setExplainError(null)
-    setLoadingLevel(level)
-    try {
-      const source =
-        view.kind === 'commit'
-          ? { kind: 'commit' as const, hash: view.hash }
-          : view.kind === 'incoming' || view.kind === 'outgoing'
-          ? { kind: 'range' as const, from: view.from, to: view.to }
-          : { kind: 'working' as const }
-      const result = await window.api.claude.explainDiff(cwd, source, level)
-      const map: Record<string, FileAnnotation> = {}
-      for (const f of result.files) {
-        map[f.path] = f
-      }
-      setAnnotations(map)
-      setExplainLevel(result.level ?? level)
-      setCurrentCommentIndex(0)
-    } catch (err) {
-      setExplainError(err instanceof Error ? err.message : 'Failed to explain changes')
-    } finally {
-      setLoadingLevel(null)
-    }
-  }, [cwd, view])
+    if (!tourPlaying) return
+    if (tourIndex < 0 || tourIndex >= flatComments.length) return
+    goToComment(tourIndex)
+  }, [tourPlaying, tourIndex, flatComments, goToComment])
 
   const clearViewZonesAndDecorations = useCallback((): void => {
     const editor = diffEditorRef.current
@@ -929,7 +861,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
                     <ChevronRight size={11} />
                   </button>
                   <button
-                    onClick={() => { stopTour(); setAnnotations({}); setExplainLevel(null); setExplainError(null) }}
+                    onClick={clearAnnotations}
                     className="flex items-center rounded border border-zinc-800 bg-zinc-950 p-1 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
                     title="Clear comments"
                   >
@@ -937,7 +869,9 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-0.5 rounded border border-zinc-800 bg-zinc-950 p-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] uppercase tracking-wide text-zinc-500">Review</span>
+                  <div className="flex items-center gap-0.5 rounded border border-zinc-800 bg-zinc-950 p-0.5">
                   {(['functional', 'technical', 'deep'] as const).map((lvl) => {
                     const label = lvl === 'functional' ? 'Functional' : lvl === 'technical' ? 'Technical' : 'Deep'
                     const tooltip =
@@ -962,6 +896,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
                       </button>
                     )
                   })}
+                  </div>
                 </div>
               )}
             {explainError && loadingLevel === null && (
