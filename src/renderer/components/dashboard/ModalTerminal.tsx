@@ -39,7 +39,7 @@ export function ModalTerminal({ tabId }: ModalTerminalProps): React.ReactElement
       if (resizeTimer) clearTimeout(resizeTimer)
       resizeTimer = setTimeout(() => {
         try {
-          if (!container.contains(entry.terminal.element)) return
+          if (!container.contains(entry.terminal.element ?? null)) return
           const atBottom = entry.terminal.buffer.active.viewportY === entry.terminal.buffer.active.baseY
           entry.fitAddon.fit()
           if (atBottom) entry.terminal.scrollToBottom()

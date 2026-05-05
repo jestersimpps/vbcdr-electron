@@ -389,8 +389,8 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   const gitStatusMap = useGitStore((s) => s.statusPerProject[projectId])
   const { setActiveFile, closeFile, editFileContent, reorderFiles } = useEditorStore()
   const [showSaved, setShowSaved] = useState(false)
-  const savedTimer = useRef<ReturnType<typeof setTimeout>>(null)
-  const autosaveTimer = useRef<ReturnType<typeof setTimeout>>(null)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath)
   const themeId = getFullThemeId()
@@ -535,8 +535,13 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
                 language={detectLanguage(activeFile.name)}
                 theme={monacoTheme}
                 beforeMount={handleBeforeMount}
-                onMount={(diffEditor) => handleEditorMount(diffEditor.getModifiedEditor())}
-                onChange={handleChange}
+                onMount={(diffEditor) => {
+                  const modified = diffEditor.getModifiedEditor()
+                  handleEditorMount(modified)
+                  modified.onDidChangeModelContent(() => {
+                    handleChange(modified.getValue())
+                  })
+                }}
                 options={{
                   readOnly: false,
                   originalEditable: false,

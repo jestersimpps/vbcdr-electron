@@ -56,13 +56,17 @@ const api = {
     onTreeChanged: (callback: (tree: unknown) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, tree: unknown) => callback(tree)
       ipcRenderer.on('fs:tree-changed', handler)
-      return () => ipcRenderer.removeListener('fs:tree-changed', handler)
+      return (): void => {
+        ipcRenderer.removeListener('fs:tree-changed', handler)
+      }
     },
     onFileChanged: (callback: (path: string, content: string) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, path: string, content: string) =>
         callback(path, content)
       ipcRenderer.on('fs:file-changed', handler)
-      return () => ipcRenderer.removeListener('fs:file-changed', handler)
+      return (): void => {
+        ipcRenderer.removeListener('fs:file-changed', handler)
+      }
     }
   },
 
@@ -83,13 +87,17 @@ const api = {
       const handler = (_event: Electron.IpcRendererEvent, tabId: string, data: string) =>
         callback(tabId, data)
       ipcRenderer.on('terminal:data', handler)
-      return () => ipcRenderer.removeListener('terminal:data', handler)
+      return (): void => {
+        ipcRenderer.removeListener('terminal:data', handler)
+      }
     },
     onExit: (callback: (tabId: string, exitCode: number) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, tabId: string, exitCode: number) =>
         callback(tabId, exitCode)
       ipcRenderer.on('terminal:exit', handler)
-      return () => ipcRenderer.removeListener('terminal:exit', handler)
+      return (): void => {
+        ipcRenderer.removeListener('terminal:exit', handler)
+      }
     }
   },
 
@@ -130,14 +138,18 @@ const api = {
       const handler = (_event: Electron.IpcRendererEvent, projectId: string, drift: unknown) =>
         callback(projectId, drift)
       ipcRenderer.on('git:drift', handler)
-      return () => ipcRenderer.removeListener('git:drift', handler)
+      return (): void => {
+        ipcRenderer.removeListener('git:drift', handler)
+      }
     }
   },
 
   onMenuAction: (callback: (action: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, action: string) => callback(action)
     ipcRenderer.on('menu:action', handler)
-    return () => ipcRenderer.removeListener('menu:action', handler)
+    return (): void => {
+      ipcRenderer.removeListener('menu:action', handler)
+    }
   },
 
   updater: {
@@ -147,7 +159,9 @@ const api = {
     onStatus: (callback: (status: unknown) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, status: unknown) => callback(status)
       ipcRenderer.on('updater:status', handler)
-      return () => ipcRenderer.removeListener('updater:status', handler)
+      return (): void => {
+        ipcRenderer.removeListener('updater:status', handler)
+      }
     }
   },
 
@@ -218,7 +232,9 @@ const api = {
     onOutput: (callback: (chunk: string) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, chunk: string) => callback(chunk)
       ipcRenderer.on('skills:output', handler)
-      return () => ipcRenderer.removeListener('skills:output', handler)
+      return (): void => {
+        ipcRenderer.removeListener('skills:output', handler)
+      }
     }
   }
 }

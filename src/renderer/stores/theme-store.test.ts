@@ -164,15 +164,17 @@ describe('theme-store', () => {
     it('persists colors and notifies the terminal-theme registry', async () => {
       const { useThemeStore } = await importFresh()
       const { setCustomTerminalTheme } = await import('@/config/terminal-theme-registry')
-      const colors = { ui: { bg: '#222' }, terminal: { background: '#222' } } as never
+      const colors = { ui: { bg: '#222' }, terminal: { background: '#222' } }
+      type SetCustomTheme = ReturnType<typeof useThemeStore.getState>['setCustomTheme']
+      const colorsArg = colors as unknown as Parameters<SetCustomTheme>[1]
 
-      useThemeStore.getState().setCustomTheme('dark', colors)
-      expect(useThemeStore.getState().customDark).toBe(colors)
+      useThemeStore.getState().setCustomTheme('dark', colorsArg)
+      expect(useThemeStore.getState().customDark).toBe(colorsArg)
       expect(localStorage.getItem('customDark')).toBe(JSON.stringify(colors))
       expect(setCustomTerminalTheme).toHaveBeenCalledWith('dark', colors.terminal)
 
-      useThemeStore.getState().setCustomTheme('light', colors)
-      expect(useThemeStore.getState().customLight).toBe(colors)
+      useThemeStore.getState().setCustomTheme('light', colorsArg)
+      expect(useThemeStore.getState().customLight).toBe(colorsArg)
       expect(localStorage.getItem('customLight')).toBe(JSON.stringify(colors))
     })
   })

@@ -26,8 +26,8 @@ describe('stats-store', () => {
   })
 
   it('updates the time range', () => {
-    useStatsStore.getState().setRange('day')
-    expect(useStatsStore.getState().range).toBe('day')
+    useStatsStore.getState().setRange('today')
+    expect(useStatsStore.getState().range).toBe('today')
     useStatsStore.getState().setRange('month')
     expect(useStatsStore.getState().range).toBe('month')
   })
@@ -48,14 +48,14 @@ describe('stats-store', () => {
     useStatsStore.getState().setIncludeAllAuthors(false)
     expect(useStatsStore.getState().includeAllAuthors).toBe(false)
 
-    useStatsStore.getState().setSource('git')
-    expect(useStatsStore.getState().source).toBe('git')
+    useStatsStore.getState().setSource('commits')
+    expect(useStatsStore.getState().source).toBe('commits')
     useStatsStore.getState().setSource('terminal')
     expect(useStatsStore.getState().source).toBe('terminal')
   })
 
   it('leaves unrelated fields untouched on a single setter call', () => {
-    useStatsStore.getState().setRange('day')
+    useStatsStore.getState().setRange('today')
     const s = useStatsStore.getState()
     expect(s.gapMinutes).toBe(30)
     expect(s.leadInMinutes).toBe(15)

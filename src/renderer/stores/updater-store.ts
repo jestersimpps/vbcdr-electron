@@ -30,8 +30,9 @@ export const useUpdaterStore = create<UpdaterStore>((set) => ({
     window.api.updater.getStatus().then((status: UpdateStatus) => {
       set({ state: status.state, version: status.version, percent: status.percent })
     })
-    const unsub = window.api.updater.onStatus((status: UpdateStatus) => {
-      set({ state: status.state, version: status.version, percent: status.percent, dismissed: false })
+    const unsub = window.api.updater.onStatus((status) => {
+      const s = status as UpdateStatus
+      set({ state: s.state, version: s.version, percent: s.percent, dismissed: false })
     })
     return unsub
   },
