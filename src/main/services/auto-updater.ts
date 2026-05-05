@@ -15,7 +15,9 @@ let currentStatus: UpdateStatus = { state: 'idle' }
 function broadcast(status: UpdateStatus): void {
   currentStatus = status
   for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send('updater:status', status)
+    if (!win.isDestroyed()) {
+      win.webContents.send('updater:status', status)
+    }
   }
 }
 

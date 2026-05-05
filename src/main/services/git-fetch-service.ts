@@ -8,7 +8,9 @@ let ticking = false
 
 function broadcast(projectId: string, drift: BranchDriftInfo): void {
   for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send('git:drift', projectId, drift)
+    if (!win.isDestroyed()) {
+      win.webContents.send('git:drift', projectId, drift)
+    }
   }
 }
 
