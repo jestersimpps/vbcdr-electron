@@ -176,8 +176,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         try {
           const buf = terminal.buffer.active
           const atBottom = buf.baseY - buf.viewportY <= 1
+          const hidden = el.offsetParent === null
           terminal.write(data, () => {
-            if (atBottom) terminal.scrollToBottom()
+            if (atBottom || hidden) terminal.scrollToBottom()
           })
         } catch {
           return
