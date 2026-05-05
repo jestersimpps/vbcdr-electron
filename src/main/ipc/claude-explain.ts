@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import { spawn } from 'child_process'
-import { ipcMain } from 'electron'
+import { safeHandle } from '@main/ipc/safe-handle'
 
 export type DiffSource =
   | { kind: 'working' }
@@ -254,7 +254,7 @@ export async function explainDiff({ projectRoot, diffText, source, level }: Expl
 }
 
 export function registerClaudeExplainHandlers(): void {
-  ipcMain.handle('claude:explain-diff', async (_event, args: ExplainArgs): Promise<ExplainResult> => {
+  safeHandle('claude:explain-diff', async (_event, args: ExplainArgs): Promise<ExplainResult> => {
     return explainDiff(args)
   })
 }
