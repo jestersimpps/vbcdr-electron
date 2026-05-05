@@ -23,6 +23,7 @@ const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000
 const FLUSH_DEBOUNCE_MS = 1500
 const DEFAULT_IDLE_MINUTES = 5
 const SESSION_TAIL_MS = 60_000
+const PENDING_LINES_CAP = 10000
 
 const pendingLines = new Map<string, string[]>()
 let flushTimer: ReturnType<typeof setTimeout> | null = null
@@ -58,6 +59,9 @@ export function recordActivity(projectId: string, kind: ActivityKind): void {
     pendingLines.set(projectId, arr)
   }
   arr.push(line)
+  if (arr.length > PENDING_LINES_CAP) {
+    arr.splice(0, arr.length - PENDING_LINES_CAP)
+  }
   dirtyProjects.add(projectId)
   scheduleFlush()
 }

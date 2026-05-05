@@ -20,6 +20,7 @@ const FLUSH_DEBOUNCE_MS = 1500
 const COMPACT_INTERVAL_MS = 24 * 60 * 60 * 1000
 const CACHE_MAX_EVENTS = 5000
 const CACHE_TRIM_TARGET = 4000
+const PENDING_LINES_CAP = 10000
 
 const pendingLines: string[] = []
 let flushTimer: ReturnType<typeof setTimeout> | null = null
@@ -50,6 +51,9 @@ export function recordTokenSnapshot(tabId: string, projectId: string, tokens: nu
   if (delta <= 0) return
   const ev: TokenEvent = { t: Date.now(), p: projectId, d: delta }
   pendingLines.push(JSON.stringify(ev) + '\n')
+  if (pendingLines.length > PENDING_LINES_CAP) {
+    pendingLines.splice(0, pendingLines.length - PENDING_LINES_CAP)
+  }
   if (eventsCache) {
     eventsCache.push(ev)
     if (eventsCache.length > CACHE_MAX_EVENTS) {
