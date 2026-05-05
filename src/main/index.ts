@@ -9,7 +9,6 @@ import { registerClaudeExplainHandlers } from '@main/ipc/claude-explain'
 import { registerSkillsHandlers } from '@main/ipc/skills'
 import { registerActivityHandlers } from '@main/ipc/activity'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
-import { registerWorktreeHandlers } from '@main/ipc/worktree'
 import { registerDevServerHandlers } from '@main/ipc/dev-servers'
 import { killAll, killOrphanedPtys } from '@main/services/pty-manager'
 import { compactActivity, flushActivity } from '@main/services/activity-service'
@@ -79,7 +78,6 @@ registerSkillsHandlers()
 registerUpdaterHandlers()
 registerActivityHandlers()
 registerTokenUsageHandlers()
-registerWorktreeHandlers()
 registerDevServerHandlers()
 
 function buildMenu(): Electron.MenuItemConstructorOptions[] {

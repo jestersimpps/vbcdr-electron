@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useGitStore } from '@/stores/git-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useDiffViewStore } from '@/stores/diff-view-store'
@@ -245,8 +245,6 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
   const [committing, setCommitting] = useState(false)
   const [commitError, setCommitError] = useState<string | null>(null)
   const [pulling, setPulling] = useState(false)
-  const [pendingLlmCommitTabId, setPendingLlmCommitTabId] = useState<string | null>(null)
-  const llmCommitSawBusyRef = useRef(false)
 
   const handlePull = async (): Promise<void> => {
     if (!effectiveProjectId || !effectivePath || pulling) return
@@ -310,8 +308,6 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
       ? `commit the following changes:\n${fileList}`
       : 'commit the current changes'
     sendToTerminalViaPty(llmTab.id, message)
-    llmCommitSawBusyRef.current = false
-    setPendingLlmCommitTabId(llmTab.id)
   }
 
   const handleCommit = async (): Promise<void> => {
@@ -349,33 +345,6 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
     if (!effectiveProjectId || !effectivePath) return
     void loadRangeFileCounts(effectiveProjectId, effectivePath)
   }, [effectiveProjectId, effectivePath, drift?.ahead, drift?.behind, drift?.remoteBranch, drift?.diverged])
-
-  useEffect(() => {
-    if (!pendingLlmCommitTabId || !effectiveProjectId || !effectivePath) return
-    const tabId = pendingLlmCommitTabId
-    const pid = effectiveProjectId
-    const path = effectivePath
-    const unsub = useTerminalStore.subscribe((state, prev) => {
-      const cur = state.tabStatuses[tabId]
-      const was = prev.tabStatuses[tabId]
-      if (cur === 'busy') {
-        llmCommitSawBusyRef.current = true
-        return
-      }
-      if (cur === 'idle' && was === 'busy' && llmCommitSawBusyRef.current) {
-        llmCommitSawBusyRef.current = false
-        setPendingLlmCommitTabId(null)
-        void (async () => {
-          await loadStatus(pid, path)
-          await loadGitData(pid, path)
-          const d = await window.api.git.fetchNow(path)
-          useGitStore.getState().setDrift(pid, d)
-          await loadRangeFileCounts(pid, path)
-        })()
-      }
-    })
-    return unsub
-  }, [pendingLlmCommitTabId, effectiveProjectId, effectivePath, loadStatus, loadGitData, loadRangeFileCounts])
 
   const graphRows = useMemo(() => (commits ? buildGraph(commits) : []), [commits])
   const graphWidth = useMemo(() => {

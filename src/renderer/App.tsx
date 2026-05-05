@@ -12,7 +12,6 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { useUpdaterStore } from '@/stores/updater-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
-import { useWorktreeStore } from '@/stores/worktree-store'
 import { applyThemeToAll } from '@/components/terminal/TerminalInstance'
 import type { CustomThemeUI } from '@/models/custom-theme'
 import type { FileNode } from '@/models/types'
@@ -106,7 +105,6 @@ export function App(): React.ReactElement {
 
     useFileTreeStore.getState().loadTree(projectId, cwd, showIgnored)
     useGitStore.getState().loadStatus(projectId, cwd)
-    void useWorktreeStore.getState().reconcile(projectId, cwd)
     window.api.fs.watch(cwd, showIgnored)
 
     const unsub = window.api.fs.onTreeChanged((newTree) => {

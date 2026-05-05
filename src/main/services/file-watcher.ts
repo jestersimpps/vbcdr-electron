@@ -149,8 +149,6 @@ export function startWatching(rootPath: string, win: BrowserWindow, showIgnored:
 }
 
 export function readFileContents(filePath: string): FileReadResult {
-  const stat = fs.statSync(filePath)
-  if (stat.isDirectory()) return { content: '', isBinary: true }
   const ext = getExt(filePath)
   if (IMAGE_EXTS.has(ext)) {
     return { content: fs.readFileSync(filePath).toString('base64'), isBinary: true }

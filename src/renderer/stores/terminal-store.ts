@@ -1,32 +1,10 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import type { TerminalTab } from '@/models/types'
-import { useWorktreeStore } from '@/stores/worktree-store'
-import { useGitStore } from '@/stores/git-store'
 
 type TabStatus = 'idle' | 'busy'
 
 const OUTPUT_BUFFER_SIZE = 10
-
-function maybeStartWorktree(
-  tabId: string,
-  projectId: string,
-  projectRoot: string,
-  initialCommand: string,
-  applyCwd: (tabId: string, cwd: string, pending: boolean) => void
-): boolean {
-  const wt = useWorktreeStore.getState()
-  if (!wt.isEnabled(projectId)) return false
-  const isRepo = useGitStore.getState().isRepoPerProject[projectId] ?? false
-  if (!isRepo) return false
-
-  applyCwd(tabId, projectRoot, true)
-  void wt.createForTab(tabId, projectRoot, initialCommand).then((info) => {
-    if (info) applyCwd(tabId, info.path, false)
-    else applyCwd(tabId, projectRoot, false)
-  })
-  return true
-}
 
 interface TerminalStore {
   tabs: TerminalTab[]
@@ -76,15 +54,6 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       tabs: [...state.tabs, tab],
       activeTabPerProject: { ...state.activeTabPerProject, [projectId]: tabId }
     }))
-    if (initialCommand) {
-      maybeStartWorktree(tabId, projectId, cwd, initialCommand, (id, newCwd, pending) => {
-        set((state) => ({
-          tabs: state.tabs.map((t) =>
-            t.id === id ? { ...t, cwd: newCwd, pendingWorktree: pending } : t
-          )
-        }))
-      })
-    }
     return tabId
   },
 
@@ -109,44 +78,21 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
 
       return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab, focusedTabId }
     })
-
-    // Keep on-disk worktree intact (user discards explicitly via the pill);
-    // just drop the in-memory mapping so closed tabs don't haunt the UI.
-    const wt = useWorktreeStore.getState()
-    if (wt.getInfo(tabId)) {
-      useWorktreeStore.setState((state) => {
-        const next = { ...state.worktreesPerTab }
-        delete next[tabId]
-        return { worktreesPerTab: next }
-      })
-    }
   },
 
   replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => {
     const newTabId = uuid()
-    const oldInfo = useWorktreeStore.getState().getInfo(oldTabId)
     const tab: TerminalTab = {
       id: newTabId,
       title: initialCommand ? 'LLM' : 'Terminal',
       projectId,
-      cwd: oldInfo ? oldInfo.path : cwd,
+      cwd,
       initialCommand
     }
     set((state) => ({
       tabs: [...state.tabs.filter((t) => t.id !== oldTabId), tab],
       activeTabPerProject: { ...state.activeTabPerProject, [projectId]: newTabId }
     }))
-    if (oldInfo) {
-      void useWorktreeStore.getState().rebindTab(oldTabId, newTabId)
-    } else if (initialCommand) {
-      maybeStartWorktree(newTabId, projectId, cwd, initialCommand, (id, newCwd, pending) => {
-        set((state) => ({
-          tabs: state.tabs.map((t) =>
-            t.id === id ? { ...t, cwd: newCwd, pendingWorktree: pending } : t
-          )
-        }))
-      })
-    }
     return newTabId
   },
 
