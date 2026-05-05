@@ -71,7 +71,7 @@ export function TaskQueuePanel({ tabId }: TaskQueuePanelProps): React.ReactEleme
               <span
                 key={item.id}
                 className={cn(
-                  'group inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition-colors',
+                  'group inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-meta transition-colors',
                   isEditing
                     ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-200'
                     : 'border-zinc-700 bg-zinc-900 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-800'
@@ -106,7 +106,7 @@ export function TaskQueuePanel({ tabId }: TaskQueuePanelProps): React.ReactEleme
           type="button"
           onClick={() => setAutoRun(tabId, !autoRun)}
           className={cn(
-            'flex h-7 shrink-0 items-center gap-1 rounded px-2 text-[11px] font-medium transition-colors',
+            'flex h-7 shrink-0 items-center gap-1 rounded px-2 text-meta font-medium transition-colors',
             autoRun
               ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
               : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
@@ -122,7 +122,7 @@ export function TaskQueuePanel({ tabId }: TaskQueuePanelProps): React.ReactEleme
             addItem(tabId, '/commit')
             addItem(tabId, '/clear')
           }}
-          className="flex h-7 shrink-0 items-center gap-1 rounded bg-zinc-800 px-2 text-[11px] font-medium text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
+          className="flex h-7 shrink-0 items-center gap-1 rounded bg-zinc-800 px-2 text-meta font-medium text-zinc-400 transition-colors hover:bg-zinc-700 hover:text-zinc-200"
           title="Queue /commit then /clear"
         >
           <GitCommit size={11} />
@@ -148,7 +148,7 @@ export function TaskQueuePanel({ tabId }: TaskQueuePanelProps): React.ReactEleme
           onClick={commitDraft}
           disabled={!draft.trim()}
           className={cn(
-            'h-7 shrink-0 rounded px-3 text-[11px] font-medium transition-colors',
+            'h-7 shrink-0 rounded px-3 text-meta font-medium transition-colors',
             editingId
               ? 'bg-emerald-600 text-white hover:bg-emerald-500'
               : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',

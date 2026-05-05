@@ -102,11 +102,11 @@ export function ProjectCard({ project, onOpenModal, isModalOpen, maxColSpan }: P
           {currentBranch && (
             <>
               <GitBranchIcon size={11} className="shrink-0 text-zinc-600" />
-              <span className="truncate font-mono text-[11px] text-zinc-500">{currentBranch.name}</span>
+              <span className="truncate font-mono text-meta text-zinc-500">{currentBranch.name}</span>
             </>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2 text-[11px] text-zinc-600">
+        <div className="flex shrink-0 items-center gap-2 text-meta text-zinc-600">
           <span className="flex items-center gap-1">
             <FileText size={10} />
             {openFilesCount}
@@ -154,7 +154,7 @@ export function ProjectCard({ project, onOpenModal, isModalOpen, maxColSpan }: P
                 }}
               >
                 <div className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity group-hover/pane:opacity-100" style={{ boxShadow: 'inset 0 0 0 1px rgb(96 165 250)' }} />
-                <div className="flex h-7 shrink-0 items-center justify-between gap-1.5 border-b border-zinc-800 bg-zinc-900/30 px-2 text-[11px]">
+                <div className="flex h-7 shrink-0 items-center justify-between gap-1.5 border-b border-zinc-800 bg-zinc-900/30 px-2 text-meta">
                   <div className="flex min-w-0 items-center gap-1.5">
                     <span
                       className={cn(
@@ -167,7 +167,7 @@ export function ProjectCard({ project, onOpenModal, isModalOpen, maxColSpan }: P
                     <span className="truncate font-mono text-zinc-400">{tab.title}</span>
                   </div>
                   {tokens != null && (
-                    <span className="shrink-0 tabular-nums text-[9px]" style={{ color: `${fill}aa` }}>
+                    <span className="shrink-0 tabular-nums text-micro" style={{ color: `${fill}aa` }}>
                       {formatTokens(tokens)}
                     </span>
                   )}
@@ -176,7 +176,7 @@ export function ProjectCard({ project, onOpenModal, isModalOpen, maxColSpan }: P
                   {hasInstance && !isModalOpen ? (
                     <DashboardTerminal tabId={tab.id} />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-[11px] text-zinc-700">
+                    <div className="flex h-full items-center justify-center text-meta text-zinc-700">
                       starting…
                     </div>
                   )}
@@ -197,13 +197,13 @@ export function ProjectCard({ project, onOpenModal, isModalOpen, maxColSpan }: P
           })}
         </div>
       ) : previewLines.length > 0 ? (
-        <div className="flex-1 min-h-0 overflow-hidden bg-zinc-950 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-zinc-500">
+        <div className="flex-1 min-h-0 overflow-hidden bg-zinc-950 px-2.5 py-2 font-mono text-meta leading-relaxed text-zinc-500">
           {previewLines.map((line, i) => (
             <div key={i} className="truncate">{line}</div>
           ))}
         </div>
       ) : (
-        <div className="flex flex-1 items-center justify-center bg-zinc-950 text-[11px] text-zinc-700">
+        <div className="flex flex-1 items-center justify-center bg-zinc-950 text-meta text-zinc-700">
           no session
         </div>
       )}

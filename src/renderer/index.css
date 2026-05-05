@@ -46,6 +46,24 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Semantic text scale. Pair with font-medium on labels/headers/badges. */
+@utility text-micro {
+  font-size: 10px;
+  line-height: 1.4;
+}
+@utility text-meta {
+  font-size: 11px;
+  line-height: 1.4;
+}
+@utility text-body {
+  font-size: 12px;
+  line-height: 1.45;
+}
+@utility text-emphasis {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .xterm {
   position: relative;
   width: 100%;

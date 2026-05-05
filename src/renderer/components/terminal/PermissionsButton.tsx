@@ -126,7 +126,7 @@ export function PermissionsButton({ projectPath }: Props): JSX.Element {
       {open && (
         <div className="absolute bottom-7 left-1/2 z-50 flex max-h-[70vh] w-80 -translate-x-1/2 flex-col rounded border border-zinc-700 bg-zinc-900 text-xs shadow-lg">
           <div className="flex-1 overflow-y-auto p-3">
-            <div className="mb-2 text-[10px] uppercase tracking-wide text-zinc-500">Presets</div>
+            <div className="mb-2 text-micro uppercase tracking-wide text-zinc-500">Presets</div>
             <div className="mb-3 grid grid-cols-2 gap-1">
               {presets.map((p) => {
                 const active = activePreset?.id === p.id
@@ -158,7 +158,7 @@ export function PermissionsButton({ projectPath }: Props): JSX.Element {
               return (
                 <div key={b.key} className="mb-2">
                   <div className="mb-1 flex items-center justify-between">
-                    <div className="text-[10px] uppercase tracking-wide text-zinc-500">
+                    <div className="text-micro uppercase tracking-wide text-zinc-500">
                       {b.label} <span className="text-zinc-600">({list.length})</span>
                     </div>
                   </div>
@@ -169,7 +169,7 @@ export function PermissionsButton({ projectPath }: Props): JSX.Element {
                           key={rule}
                           className="flex items-center justify-between gap-2 rounded bg-zinc-800/60 px-2 py-1"
                         >
-                          <code className="truncate font-mono text-[11px] text-zinc-200">{rule}</code>
+                          <code className="truncate font-mono text-meta text-zinc-200">{rule}</code>
                           <button
                             onClick={() => onRemove(b.key, rule)}
                             className="rounded p-0.5 text-zinc-500 hover:bg-zinc-700 hover:text-zinc-200"
@@ -190,7 +190,7 @@ export function PermissionsButton({ projectPath }: Props): JSX.Element {
                         if (e.key === 'Enter') onAdd(b.key)
                       }}
                       placeholder={b.placeholder}
-                      className="h-6 flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 font-mono text-[11px] text-zinc-200 outline-none focus:border-zinc-500"
+                      className="h-6 flex-1 rounded border border-zinc-700 bg-zinc-800 px-2 font-mono text-meta text-zinc-200 outline-none focus:border-zinc-500"
                     />
                     <button
                       onClick={() => onAdd(b.key)}
@@ -206,7 +206,7 @@ export function PermissionsButton({ projectPath }: Props): JSX.Element {
             })}
           </div>
 
-          <div className="border-t border-zinc-800 px-3 py-2 text-[10px] leading-snug text-zinc-500">
+          <div className="border-t border-zinc-800 px-3 py-2 text-micro leading-snug text-zinc-500">
             Edits <code className="text-zinc-400">.claude/settings.local.json</code>. Applies to new
             sessions.
           </div>

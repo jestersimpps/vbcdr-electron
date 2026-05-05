@@ -229,7 +229,7 @@ export function SkillsPanel({ projectId, scope = 'all' }: SkillsPanelProps): Rea
           <div className="flex-1 min-h-0 overflow-y-auto">
             {query.trim().length < 2 && (
               <>
-                <div className="flex items-center justify-between px-3 py-1.5 text-[10px] uppercase tracking-wide text-zinc-500 border-b border-zinc-900">
+                <div className="flex items-center justify-between px-3 py-1.5 text-micro uppercase tracking-wide text-zinc-500 border-b border-zinc-900">
                   <span>Top on skills.sh</span>
                   <a
                     href="https://skills.sh"
@@ -284,17 +284,17 @@ export function SkillsPanel({ projectId, scope = 'all' }: SkillsPanelProps): Rea
           {output && (
             <div className="border-t border-zinc-800 bg-black">
               <div className="flex items-center justify-between px-2 py-1">
-                <span className="text-[10px] uppercase tracking-wide text-zinc-600">Output</span>
+                <span className="text-micro uppercase tracking-wide text-zinc-600">Output</span>
                 <button
                   onClick={() => setOutput('')}
-                  className="text-[10px] text-zinc-600 hover:text-zinc-400"
+                  className="text-micro text-zinc-600 hover:text-zinc-400"
                 >
                   Clear
                 </button>
               </div>
               <pre
                 ref={outputRef}
-                className="max-h-40 overflow-y-auto px-2 pb-2 text-[11px] leading-tight text-zinc-400 font-mono whitespace-pre-wrap"
+                className="max-h-40 overflow-y-auto px-2 pb-2 text-meta leading-tight text-zinc-400 font-mono whitespace-pre-wrap"
               >
                 {output}
               </pre>
@@ -336,11 +336,11 @@ function SkillRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium text-zinc-200">{skill.name}</span>
-          <span className="shrink-0 text-[10px] text-zinc-600">
+          <span className="shrink-0 text-micro text-zinc-600">
             {formatInstalls(skill.installs)} installs
           </span>
         </div>
-        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-zinc-500">
+        <div className="mt-0.5 flex items-center gap-2 text-meta text-zinc-500">
           <span className="truncate">{skill.source}</span>
           <a
             href={`https://skills.sh/${skill.source}/${skill.skillId}`}
@@ -359,7 +359,7 @@ function SkillRow({
             onClick={() => onInstall(skill, 'project')}
             disabled={projectBusy || !projectPath}
             className={cn(
-              'inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors',
+              'inline-flex items-center gap-1 rounded px-2 py-1 text-meta font-medium transition-colors',
               projectInstalled
                 ? 'border border-emerald-900 bg-emerald-950 text-emerald-400 hover:bg-emerald-900/50'
                 : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
@@ -382,7 +382,7 @@ function SkillRow({
             onClick={() => onInstall(skill, 'global')}
             disabled={globalBusy}
             className={cn(
-              'inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors',
+              'inline-flex items-center gap-1 rounded px-2 py-1 text-meta font-medium transition-colors',
               globalInstalled
                 ? 'border border-emerald-900 bg-emerald-950 text-emerald-400 hover:bg-emerald-900/50'
                 : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700',
@@ -415,13 +415,13 @@ interface InstalledGroupProps {
 function InstalledGroup({ label, Icon, items, onUninstall, busyKey, emptyHint }: InstalledGroupProps): React.ReactElement {
   return (
     <div className="py-1">
-      <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] uppercase tracking-wide text-zinc-500">
+      <div className="flex items-center gap-1.5 px-2 py-1 text-meta uppercase tracking-wide text-zinc-500">
         <Icon size={11} />
         <span>{label}</span>
         <span className="ml-auto text-zinc-600">{items.length}</span>
       </div>
       {items.length === 0 && (
-        <div className="px-2 py-1 text-[11px] text-zinc-600">{emptyHint}</div>
+        <div className="px-2 py-1 text-meta text-zinc-600">{emptyHint}</div>
       )}
       {items.map((skill) => {
         const key = `uninstall:${skill.scope}:${skill.name}`
@@ -434,7 +434,7 @@ function InstalledGroup({ label, Icon, items, onUninstall, busyKey, emptyHint }:
             <div className="min-w-0 flex-1">
               <div className="text-xs text-zinc-300">{skill.name}</div>
               {skill.description && (
-                <div className="text-[10px] text-zinc-600">{skill.description}</div>
+                <div className="text-micro text-zinc-600">{skill.description}</div>
               )}
             </div>
             <button

@@ -192,7 +192,7 @@ function RefBadge({ label, index }: { label: string; index: number }): React.Rea
   const displayLabel = label.startsWith('tag: ') ? label.slice(5) : label
 
   return (
-    <span className={`shrink-0 inline-flex items-center rounded px-1 py-px text-[9px] font-medium leading-tight max-w-[80px] truncate ${base}`}>
+    <span className={`shrink-0 inline-flex items-center rounded px-1 py-px text-micro font-medium leading-tight max-w-[80px] truncate ${base}`}>
       {displayLabel}
     </span>
   )
@@ -374,12 +374,12 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/50 px-2">
         <div className="flex min-w-0 items-center gap-1.5">
           <GitBranchIcon size={13} className="shrink-0 text-zinc-500" />
-          <span className="shrink-0 text-[11px] text-zinc-400">Git</span>
+          <span className="shrink-0 text-meta text-zinc-400">Git</span>
           <BranchSwitcher projectId={effectiveProjectId} cwd={effectivePath} />
           {drift?.diverged && (
             <button
               onClick={() => rebaseAction(effectiveProjectId, effectivePath)}
-              className="flex shrink-0 items-center gap-0.5 rounded bg-amber-500/15 px-1 py-px text-[10px] font-medium text-amber-400 hover:bg-amber-500/25"
+              className="flex shrink-0 items-center gap-0.5 rounded bg-amber-500/15 px-1 py-px text-micro font-medium text-amber-400 hover:bg-amber-500/25"
               title={`Diverged: ${drift.ahead} ahead, ${drift.behind} behind, click to rebase`}
             >
               <GitMerge size={9} />
@@ -389,7 +389,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
         </div>
         <div className="flex items-center gap-0.5">
           {projectId && (
-            <span className="mr-1 rounded bg-purple-500/15 px-1 py-px text-[9px] font-medium text-purple-400">
+            <span className="mr-1 rounded bg-purple-500/15 px-1 py-px text-micro font-medium text-purple-400">
               ~/.claude
             </span>
           )}
@@ -425,14 +425,14 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
               title={`Show diff for ${incomingCount} incoming commit${incomingCount === 1 ? '' : 's'} from ${drift?.remoteBranch ?? 'remote'}`}
             >
               <CloudDownload size={12} className="shrink-0 text-blue-400" />
-              <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-200">
+              <span className="min-w-0 flex-1 truncate text-body text-zinc-200">
                 Incoming from {drift?.remoteBranch ?? 'remote'}
               </span>
-              <span className="shrink-0 rounded bg-blue-500/15 px-1.5 py-px text-[10px] font-medium text-blue-400">
+              <span className="shrink-0 rounded bg-blue-500/15 px-1.5 py-px text-micro font-medium text-blue-400">
                 {incomingCount} commit{incomingCount === 1 ? '' : 's'}
               </span>
               {incomingFileCount > 0 && (
-                <span className="shrink-0 rounded bg-blue-500/15 px-1.5 py-px text-[10px] font-medium text-blue-400">
+                <span className="shrink-0 rounded bg-blue-500/15 px-1.5 py-px text-micro font-medium text-blue-400">
                   {incomingFileCount} file{incomingFileCount === 1 ? '' : 's'}
                 </span>
               )}
@@ -440,7 +440,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
             <button
               onClick={handlePull}
               disabled={pulling}
-              className="mr-1 flex shrink-0 items-center gap-1 rounded bg-blue-500/15 px-2 py-1 text-[10px] font-medium text-blue-400 hover:bg-blue-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+              className="mr-1 flex shrink-0 items-center gap-1 rounded bg-blue-500/15 px-2 py-1 text-micro font-medium text-blue-400 hover:bg-blue-500/25 disabled:cursor-not-allowed disabled:opacity-40"
               title={`Pull ${incomingCount} commit${incomingCount === 1 ? '' : 's'} from ${drift?.remoteBranch ?? 'remote'}`}
             >
               {pulling ? <Loader2 size={11} className="animate-spin" /> : <ArrowDown size={11} />}
@@ -459,8 +459,8 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
               title="Show diff for uncommitted changes"
             >
               <FileDiff size={12} className="shrink-0 text-yellow-400" />
-              <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-200">Working changes</span>
-              <span className="shrink-0 rounded bg-yellow-500/15 px-1.5 py-px text-[10px] font-medium text-yellow-400">
+              <span className="min-w-0 flex-1 truncate text-body text-zinc-200">Working changes</span>
+              <span className="shrink-0 rounded bg-yellow-500/15 px-1.5 py-px text-micro font-medium text-yellow-400">
                 {workingCount} file{workingCount === 1 ? '' : 's'}
               </span>
             </button>
@@ -469,7 +469,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
                 setCommitError(null)
                 setCommitOpen((v) => !v)
               }}
-              className={`mr-1 flex shrink-0 items-center gap-1 rounded bg-yellow-500/15 px-2 py-1 text-[10px] font-medium text-yellow-400 hover:bg-yellow-500/25 disabled:cursor-not-allowed disabled:opacity-40 ${
+              className={`mr-1 flex shrink-0 items-center gap-1 rounded bg-yellow-500/15 px-2 py-1 text-micro font-medium text-yellow-400 hover:bg-yellow-500/25 disabled:cursor-not-allowed disabled:opacity-40 ${
                 commitOpen ? 'ring-1 ring-yellow-400/40' : ''
               }`}
               title={commitOpen ? 'Hide commit form' : 'Commit working changes'}
@@ -481,7 +481,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
           {commitOpen && (
             <div className="border-t border-zinc-800/50 px-2 py-1.5">
               {commitError && (
-                <div className="mb-1 truncate text-[10px] text-red-400" title={commitError}>
+                <div className="mb-1 truncate text-micro text-red-400" title={commitError}>
                   {commitError}
                 </div>
               )}
@@ -502,12 +502,12 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
                   placeholder="Commit message — empty for LLM commit"
                   disabled={committing}
                   autoFocus
-                  className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-[11px] text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-700"
+                  className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-meta text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-700"
                 />
                 <button
                   onClick={handleCommit}
                   disabled={committing || workingCount === 0}
-                  className="flex shrink-0 items-center gap-1 rounded bg-yellow-500/15 px-2 py-1 text-[10px] font-medium text-yellow-400 hover:bg-yellow-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex shrink-0 items-center gap-1 rounded bg-yellow-500/15 px-2 py-1 text-micro font-medium text-yellow-400 hover:bg-yellow-500/25 disabled:cursor-not-allowed disabled:opacity-40"
                   title={
                     commitMessage.trim()
                       ? `Commit ${workingCount} file${workingCount === 1 ? '' : 's'}`
@@ -537,14 +537,14 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
               title={`Show diff for ${outgoingCount} unpushed commit${outgoingCount === 1 ? '' : 's'}`}
             >
               <CloudUpload size={12} className="shrink-0 text-emerald-400" />
-              <span className="min-w-0 flex-1 truncate text-[11px] text-zinc-200">
+              <span className="min-w-0 flex-1 truncate text-body text-zinc-200">
                 Local work to {drift?.remoteBranch ?? 'remote'}
               </span>
-              <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
+              <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-micro font-medium text-emerald-400">
                 {outgoingCount} commit{outgoingCount === 1 ? '' : 's'}
               </span>
               {outgoingFileCount > 0 && (
-                <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-[10px] font-medium text-emerald-400">
+                <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-px text-micro font-medium text-emerald-400">
                   {outgoingFileCount} file{outgoingFileCount === 1 ? '' : 's'}
                 </span>
               )}
@@ -552,7 +552,7 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
             <button
               onClick={handlePush}
               disabled={isPushing}
-              className="mr-1 flex shrink-0 items-center gap-1 rounded bg-emerald-500/15 px-2 py-1 text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+              className="mr-1 flex shrink-0 items-center gap-1 rounded bg-emerald-500/15 px-2 py-1 text-micro font-medium text-emerald-400 hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40"
               title={`Push ${outgoingCount} commit${outgoingCount === 1 ? '' : 's'} to ${drift?.remoteBranch ?? 'remote'}`}
             >
               {isPushing ? <Loader2 size={11} className="animate-spin" /> : <ArrowUp size={11} />}
@@ -595,18 +595,18 @@ export function GitTree({ projectId, cwd }: GitTreeProps = {}): React.ReactEleme
                         <RefBadge key={ref} label={ref} index={ri} />
                       ))}
                     {row.commit.refs.length > 2 && (
-                      <span className="shrink-0 text-[9px] text-zinc-500">+{row.commit.refs.length - 2}</span>
+                      <span className="shrink-0 text-micro text-zinc-500">+{row.commit.refs.length - 2}</span>
                     )}
-                    <span className="truncate text-[11px] leading-tight text-zinc-300">{row.commit.message}</span>
+                    <span className="truncate text-body leading-tight text-zinc-300">{row.commit.message}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 overflow-hidden text-[9px] text-zinc-500">
+                  <div className="flex items-center gap-1.5 overflow-hidden text-micro text-zinc-500">
                     <span className="shrink-0 font-mono">{row.commit.shortHash}</span>
                     <span className="truncate">{row.commit.author}</span>
                     <span className="shrink-0">{row.commit.date}</span>
                   </div>
                 </div>
                 {typeof fileCount === 'number' && fileCount > 0 && (
-                  <span className="ml-2 shrink-0 inline-flex items-center gap-0.5 rounded bg-zinc-800/60 px-1.5 py-px text-[9px] font-medium text-zinc-400">
+                  <span className="ml-2 shrink-0 inline-flex items-center gap-0.5 rounded bg-zinc-800/60 px-1.5 py-px text-micro font-medium text-zinc-400">
                     <FileText size={9} />
                     {fileCount}
                   </span>

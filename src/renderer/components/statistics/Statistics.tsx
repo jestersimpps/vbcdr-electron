@@ -758,7 +758,7 @@ export function Statistics(): React.ReactElement {
                   <div key={a.id} className="flex items-center justify-between text-xs">
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium text-zinc-300">{a.name}</div>
-                      <div className="truncate text-[10px] text-zinc-500" title={a.path}>{a.path}</div>
+                      <div className="truncate text-micro text-zinc-500" title={a.path}>{a.path}</div>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
                       <button
@@ -768,7 +768,7 @@ export function Statistics(): React.ReactElement {
                           const rows = (await window.api.projects.listArchived()) as ArchivedProjectInfo[]
                           setArchivedProjects(rows)
                         }}
-                        className="rounded border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
+                        className="rounded border border-zinc-700 px-2 py-0.5 text-micro text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
                       >
                         Unarchive
                       </button>
@@ -778,7 +778,7 @@ export function Statistics(): React.ReactElement {
                           const rows = (await window.api.projects.listArchived()) as ArchivedProjectInfo[]
                           setArchivedProjects(rows)
                         }}
-                        className="rounded border border-zinc-800 px-2 py-0.5 text-[10px] text-zinc-500 hover:border-red-700 hover:text-red-400"
+                        className="rounded border border-zinc-800 px-2 py-0.5 text-micro text-zinc-500 hover:border-red-700 hover:text-red-400"
                       >
                         Delete
                       </button>
@@ -926,7 +926,7 @@ function SessionSettingsPopover({
 function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return (
     <section className="space-y-3">
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
+      <h2 className="text-meta font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
       {children}
     </section>
   )
@@ -1032,7 +1032,7 @@ function HistoricalWorkCard({
                 key={o.key}
                 onClick={() => setSource(o.key)}
                 className={cn(
-                  'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                  'rounded px-2 py-0.5 text-meta font-medium transition-colors',
                   source === o.key ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
@@ -1046,7 +1046,7 @@ function HistoricalWorkCard({
                 key={w.key}
                 onClick={() => setWindow(w.key)}
                 className={cn(
-                  'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                  'rounded px-2 py-0.5 text-meta font-medium transition-colors',
                   historyWindow === w.key ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
@@ -1058,7 +1058,7 @@ function HistoricalWorkCard({
             <button
               onClick={() => setView('timeline')}
               className={cn(
-                'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                'rounded px-2 py-0.5 text-meta font-medium transition-colors',
                 view === 'timeline' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
               )}
             >
@@ -1067,7 +1067,7 @@ function HistoricalWorkCard({
             <button
               onClick={() => setView('heatmap')}
               className={cn(
-                'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                'rounded px-2 py-0.5 text-meta font-medium transition-colors',
                 view === 'heatmap' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
               )}
             >
@@ -1079,7 +1079,7 @@ function HistoricalWorkCard({
               <button
                 onClick={() => setMetric('hours')}
                 className={cn(
-                  'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                  'rounded px-2 py-0.5 text-meta font-medium transition-colors',
                   metric === 'hours' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
@@ -1088,7 +1088,7 @@ function HistoricalWorkCard({
               <button
                 onClick={() => setMetric('commits')}
                 className={cn(
-                  'rounded px-2 py-0.5 text-[11px] font-medium transition-colors',
+                  'rounded px-2 py-0.5 text-meta font-medium transition-colors',
                   metric === 'commits' ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
                 )}
               >
@@ -1099,7 +1099,7 @@ function HistoricalWorkCard({
           <select
             value={projectId ?? ''}
             onChange={(e) => setProjectId(e.target.value || null)}
-            className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-[11px] text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-meta text-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-600"
           >
             <option value="">All projects</option>
             {projects.map((p) => (
@@ -1123,7 +1123,7 @@ function HistoricalWorkCard({
       </div>
 
       {historyWindow === 'custom' && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-meta text-zinc-400">
           <span>From</span>
           <input
             type="date"
@@ -1183,7 +1183,7 @@ function SortHeader({
         )}
       >
         {label}
-        <span className="text-[9px]">{active ? (dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+        <span className="text-micro">{active ? (dir === 'asc' ? '▲' : '▼') : '↕'}</span>
       </button>
     </th>
   )
@@ -1390,7 +1390,7 @@ function YearHeatmap({
   return (
     <div className="overflow-x-auto">
       <div className="inline-block">
-        <div className="flex h-3 text-[10px] text-zinc-500">
+        <div className="flex h-3 text-micro text-zinc-500">
           <div className="w-8 shrink-0" />
           {monthRow.map((label, i) => (
             <div key={i} className="relative w-[14px] shrink-0">
@@ -1400,7 +1400,7 @@ function YearHeatmap({
         </div>
         {days.map((day, dayIdx) => (
           <div key={day} className="flex items-center">
-            <div className="w-8 text-[10px] text-zinc-500">{dayIdx % 2 === 0 ? day : ''}</div>
+            <div className="w-8 text-micro text-zinc-500">{dayIdx % 2 === 0 ? day : ''}</div>
             {calendar.weeks.map((week, wIdx) => {
               const cell = week[dayIdx]
               const outOfWindow = cell.dateMs > now || cell.dateMs > calendar.endMs || cell.dateMs < calendar.startMs
@@ -1534,7 +1534,7 @@ function DailyTimeline({ sessions, range, colorForProject, emptyColor }: DailyTi
     <div className="space-y-3">
       <div className="overflow-x-auto">
         <div className="min-w-[720px]">
-          <div className="flex items-center pb-1 text-[10px] text-zinc-500">
+          <div className="flex items-center pb-1 text-micro text-zinc-500">
             <div className="w-28 shrink-0" />
             <div className="relative flex-1">
               <div className="flex">
@@ -1559,7 +1559,7 @@ function DailyTimeline({ sessions, range, colorForProject, emptyColor }: DailyTi
           <div className="space-y-1">
             {rows.map((row) => (
               <div key={row.dateMs} className="flex items-center">
-                <div className="w-28 shrink-0 text-[11px] text-zinc-400">
+                <div className="w-28 shrink-0 text-meta text-zinc-400">
                   {formatDayLabel(row.dateMs)}
                 </div>
                 <div
@@ -1588,7 +1588,7 @@ function DailyTimeline({ sessions, range, colorForProject, emptyColor }: DailyTi
                     )
                   })}
                 </div>
-                <div className="w-14 shrink-0 text-right text-[11px] tabular-nums text-zinc-300">
+                <div className="w-14 shrink-0 text-right text-meta tabular-nums text-zinc-300">
                   {formatDuration(row.totalMs)}
                 </div>
               </div>
@@ -1598,7 +1598,7 @@ function DailyTimeline({ sessions, range, colorForProject, emptyColor }: DailyTi
       </div>
 
       {projectLegend.length > 0 && (
-        <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-[11px] text-zinc-400">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-meta text-zinc-400">
           {projectLegend.map((p) => (
             <div key={p.projectId} className="flex items-center gap-1.5">
               <span
@@ -1621,7 +1621,7 @@ function Heatmap({ grid, max, baseColor, emptyColor }: { grid: number[][]; max: 
   return (
     <div className="overflow-x-auto">
       <div className="inline-block">
-        <div className="flex text-[10px] text-zinc-500">
+        <div className="flex text-micro text-zinc-500">
           <div className="w-8" />
           {Array.from({ length: 24 }, (_, h) => (
             <div key={h} className="w-5 text-center">
@@ -1631,7 +1631,7 @@ function Heatmap({ grid, max, baseColor, emptyColor }: { grid: number[][]; max: 
         </div>
         {grid.map((row, dayIdx) => (
           <div key={dayIdx} className="flex items-center">
-            <div className="w-8 text-[10px] text-zinc-500">{days[dayIdx]}</div>
+            <div className="w-8 text-micro text-zinc-500">{days[dayIdx]}</div>
             {row.map((hours, h) => {
               const intensity = hours / max
               const bg = intensity === 0 ? emptyColor : `rgba(${r}, ${g}, ${b}, ${0.15 + intensity * 0.85})`

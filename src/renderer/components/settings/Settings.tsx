@@ -127,7 +127,7 @@ export function Settings(): React.ReactElement {
 function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return (
     <section className="space-y-3">
-      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
+      <h2 className="text-meta font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
       {children}
     </section>
   )
@@ -333,7 +333,7 @@ function EditorSection(): React.ReactElement {
         <div className="flex items-center justify-between gap-3 border-t border-zinc-800 pt-3">
           <div className="min-w-0">
             <div className="text-xs font-medium text-zinc-200">Default diff view</div>
-            <div className="text-[11px] text-zinc-500">
+            <div className="text-meta text-zinc-500">
               How the Diff tab opens. The in-panel toggle still works per session.
             </div>
           </div>
@@ -472,7 +472,7 @@ function PrefToggle({
       <Toggle enabled={enabled} onToggle={onToggle} accent={accent} ariaLabel={`Toggle ${label}`} />
       <div className="flex flex-col">
         <span className="text-xs text-zinc-300">{label}</span>
-        {description && <span className="text-[11px] text-zinc-500">{description}</span>}
+        {description && <span className="text-meta text-zinc-500">{description}</span>}
       </div>
     </div>
   )
@@ -549,7 +549,7 @@ function ThemeSection(): React.ReactElement {
         <div className="mb-2 flex items-center justify-between">
           <span className="text-xs font-medium text-zinc-400">Variant</span>
           {!supportsLight && (
-            <span className="text-[10px] text-zinc-600">Current theme is dark only</span>
+            <span className="text-micro text-zinc-600">Current theme is dark only</span>
           )}
         </div>
         <div className="inline-flex rounded border border-zinc-800 bg-zinc-900/80 p-0.5">
