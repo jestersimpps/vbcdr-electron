@@ -1,10 +1,11 @@
 import fs from 'fs'
 import path from 'path'
-import { ipcMain, BrowserWindow, shell } from 'electron'
+import { BrowserWindow, shell } from 'electron'
 import Store from 'electron-store'
 import { readTree, readFileContents, startWatching, stopWatching } from '@main/services/file-watcher'
 import type { FileReadResult } from '@main/services/file-watcher'
 import type { FileNode, Project, SearchResult } from '@main/models/types'
+import { safeHandle } from '@main/ipc/safe-handle'
 
 const store = new Store<{ projects: Project[] }>({ defaults: { projects: [] } })
 
@@ -85,32 +86,32 @@ function searchFiles(rootPath: string, query: string, maxResults: number = 100):
 }
 
 export function registerFilesystemHandlers(): void {
-  ipcMain.handle('fs:read-tree', (_event, rootPath: string, showIgnored: boolean = false): FileNode => {
+  safeHandle('fs:read-tree', (_event, rootPath: string, showIgnored: boolean = false): FileNode => {
     return readTree(rootPath, showIgnored)
   })
 
-  ipcMain.handle('fs:watch', (event, rootPath: string, showIgnored: boolean = false): void => {
+  safeHandle('fs:watch', (event, rootPath: string, showIgnored: boolean = false): void => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) startWatching(rootPath, win, showIgnored)
   })
 
-  ipcMain.handle('fs:read-file', (_event, filePath: string): FileReadResult => {
+  safeHandle('fs:read-file', (_event, filePath: string): FileReadResult => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
     return readFileContents(resolved)
   })
 
-  ipcMain.handle('fs:unwatch', (): void => {
+  safeHandle('fs:unwatch', (): void => {
     stopWatching()
   })
 
-  ipcMain.handle('fs:write-file', (_event, filePath: string, content: string): void => {
+  safeHandle('fs:write-file', (_event, filePath: string, content: string): void => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
     fs.writeFileSync(resolved, content, 'utf-8')
   })
 
-  ipcMain.handle('fs:delete-file', (_event, filePath: string): void => {
+  safeHandle('fs:delete-file', (_event, filePath: string): void => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
     const stat = fs.statSync(resolved)
@@ -121,19 +122,19 @@ export function registerFilesystemHandlers(): void {
     }
   })
 
-  ipcMain.handle('fs:create-file', (_event, filePath: string): void => {
+  safeHandle('fs:create-file', (_event, filePath: string): void => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
     fs.writeFileSync(resolved, '', 'utf-8')
   })
 
-  ipcMain.handle('fs:create-folder', (_event, folderPath: string): void => {
+  safeHandle('fs:create-folder', (_event, folderPath: string): void => {
     const resolved = path.resolve(folderPath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
     fs.mkdirSync(resolved, { recursive: true })
   })
 
-  ipcMain.handle('fs:rename', (_event, oldPath: string, newPath: string): void => {
+  safeHandle('fs:rename', (_event, oldPath: string, newPath: string): void => {
     const resolvedOld = path.resolve(oldPath)
     const resolvedNew = path.resolve(newPath)
     if (!isWithinProjectRoot(resolvedOld)) throw new Error('Path outside project root')
@@ -141,7 +142,7 @@ export function registerFilesystemHandlers(): void {
     fs.renameSync(resolvedOld, resolvedNew)
   })
 
-  ipcMain.handle('fs:duplicate', (_event, filePath: string): string => {
+  safeHandle('fs:duplicate', (_event, filePath: string): string => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
     const dir = path.dirname(resolved)
@@ -157,13 +158,13 @@ export function registerFilesystemHandlers(): void {
     return newPath
   })
 
-  ipcMain.handle('fs:search', (_event, rootPath: string, query: string): SearchResult[] => {
+  safeHandle('fs:search', (_event, rootPath: string, query: string): SearchResult[] => {
     const resolved = path.resolve(rootPath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
     return searchFiles(resolved, query)
   })
 
-  ipcMain.handle('fs:show-in-folder', (_event, filePath: string): void => {
+  safeHandle('fs:show-in-folder', (_event, filePath: string): void => {
     shell.showItemInFolder(path.resolve(filePath))
   })
 }
