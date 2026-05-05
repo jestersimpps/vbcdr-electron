@@ -32,7 +32,7 @@ const send = vi.fn()
 const showMessageBox = vi.fn(async () => ({ response: 0, checkboxChecked: false }))
 
 vi.mock('electron', () => ({
-  BrowserWindow: { getAllWindows: () => [{ webContents: { send } }] },
+  BrowserWindow: { getAllWindows: () => [{ webContents: { send }, isDestroyed: () => false }] },
   dialog: { showMessageBox: (opts: unknown) => showMessageBox(opts) }
 }))
 

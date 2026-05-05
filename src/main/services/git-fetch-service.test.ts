@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockSend = vi.fn()
-const mockGetAllWindows = vi.fn(() => [{ webContents: { send: mockSend } }])
+const mockGetAllWindows = vi.fn(() => [{ webContents: { send: mockSend }, isDestroyed: () => false }])
 const mockFetchRemote = vi.fn(async () => undefined)
 const mockGetBranchDrift = vi.fn(async () => ({ ahead: 0, behind: 0, diverged: false, remoteBranch: 'origin/main' }))
 const mockIsGitRepo = vi.fn(async () => true)
