@@ -14,6 +14,7 @@ import { useEditorStore } from '@/stores/editor-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
+import { MonacoErrorBoundary } from '@/components/editor/MonacoErrorBoundary'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
 import { useGitStore } from '@/stores/git-store'
 import { X, FileWarning, Circle } from 'lucide-react'
@@ -526,47 +527,51 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
           activeFile.isBinary ? (
             <BinaryPreview file={activeFile} />
           ) : typeof activeFile.originalContent === 'string' ? (
-            <DiffEditor
-              key={`diff-${activeFile.path}`}
-              original={activeFile.originalContent}
-              modified={activeFile.content}
-              language={detectLanguage(activeFile.name)}
-              theme={monacoTheme}
-              beforeMount={handleBeforeMount}
-              onMount={(diffEditor) => handleEditorMount(diffEditor.getModifiedEditor())}
-              onChange={handleChange}
-              options={{
-                readOnly: false,
-                originalEditable: false,
-                renderSideBySide: false,
-                minimap: { enabled: minimapEnabled },
-                fontSize,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-                padding: { top: 8 },
-                bracketPairColorization: { enabled: bracketPairColorization }
-              }}
-            />
+            <MonacoErrorBoundary onRecover={() => { editorRef.current = null }}>
+              <DiffEditor
+                key={`diff-${activeFile.path}`}
+                original={activeFile.originalContent}
+                modified={activeFile.content}
+                language={detectLanguage(activeFile.name)}
+                theme={monacoTheme}
+                beforeMount={handleBeforeMount}
+                onMount={(diffEditor) => handleEditorMount(diffEditor.getModifiedEditor())}
+                onChange={handleChange}
+                options={{
+                  readOnly: false,
+                  originalEditable: false,
+                  renderSideBySide: false,
+                  minimap: { enabled: minimapEnabled },
+                  fontSize,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  padding: { top: 8 },
+                  bracketPairColorization: { enabled: bracketPairColorization }
+                }}
+              />
+            </MonacoErrorBoundary>
           ) : (
-            <Editor
-              key={activeFile.path}
-              value={activeFile.content}
-              language={detectLanguage(activeFile.name)}
-              theme={monacoTheme}
-              beforeMount={handleBeforeMount}
-              onMount={handleEditorMount}
-              onChange={handleChange}
-              options={{
-                minimap: { enabled: minimapEnabled },
-                fontSize,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-                padding: { top: 8 },
-                bracketPairColorization: { enabled: bracketPairColorization }
-              }}
-            />
+            <MonacoErrorBoundary onRecover={() => { editorRef.current = null }}>
+              <Editor
+                key={activeFile.path}
+                value={activeFile.content}
+                language={detectLanguage(activeFile.name)}
+                theme={monacoTheme}
+                beforeMount={handleBeforeMount}
+                onMount={handleEditorMount}
+                onChange={handleChange}
+                options={{
+                  minimap: { enabled: minimapEnabled },
+                  fontSize,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  padding: { top: 8 },
+                  bracketPairColorization: { enabled: bracketPairColorization }
+                }}
+              />
+            </MonacoErrorBoundary>
           )
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-zinc-600">

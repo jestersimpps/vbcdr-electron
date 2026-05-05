@@ -3,6 +3,7 @@ import Editor, { type Monaco } from '@monaco-editor/react'
 import { useClaudeStore } from '@/stores/claude-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
+import { MonacoErrorBoundary } from '@/components/editor/MonacoErrorBoundary'
 import type { editor } from 'monaco-editor'
 
 const EXT_LANG: Record<string, string> = {
@@ -76,22 +77,24 @@ export function ClaudeEditor({ projectId }: { projectId: string }): React.ReactE
         </span>
       </div>
       <div className="flex-1">
-        <Editor
-          key={activeFilePath}
-          value={content}
-          language={detectLanguage(filename)}
-          theme={monacoTheme}
-          beforeMount={handleBeforeMount}
-          onMount={handleMount}
-          options={{
-            minimap: { enabled: false },
-            fontSize: 13,
-            lineNumbers: 'on',
-            scrollBeyondLastLine: false,
-            wordWrap: 'on',
-            padding: { top: 8 }
-          }}
-        />
+        <MonacoErrorBoundary>
+          <Editor
+            key={activeFilePath}
+            value={content}
+            language={detectLanguage(filename)}
+            theme={monacoTheme}
+            beforeMount={handleBeforeMount}
+            onMount={handleMount}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 13,
+              lineNumbers: 'on',
+              scrollBeyondLastLine: false,
+              wordWrap: 'on',
+              padding: { top: 8 }
+            }}
+          />
+        </MonacoErrorBoundary>
       </div>
     </div>
   )
