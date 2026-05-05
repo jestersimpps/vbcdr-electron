@@ -1,8 +1,8 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import { ipcMain } from 'electron'
 import type { ClaudeFileEntry, ClaudeSection } from '@main/models/types'
+import { safeHandle } from '@main/ipc/safe-handle'
 
 const SKIP_DIRS = new Set(['cache', 'debug', 'telemetry', 'todos', 'sessions'])
 const SKIP_EXTS = new Set(['.jsonl'])
@@ -135,28 +135,28 @@ function isAllowedClaudePath(filePath: string, projectPath?: string): boolean {
 }
 
 export function registerClaudeConfigHandlers(): void {
-  ipcMain.handle('claude:home-path', (): string => {
+  safeHandle('claude:home-path', (): string => {
     return path.join(os.homedir(), '.claude')
   })
 
-  ipcMain.handle('claude:scan-files', (_event, projectPath: string): ClaudeFileEntry[] => {
+  safeHandle('claude:scan-files', (_event, projectPath: string): ClaudeFileEntry[] => {
     return scanClaudeFiles(projectPath)
   })
 
-  ipcMain.handle('claude:read-file', (_event, filePath: string, projectPath: string): string => {
+  safeHandle('claude:read-file', (_event, filePath: string, projectPath: string): string => {
     const resolved = path.resolve(filePath)
     if (!isAllowedClaudePath(resolved, projectPath)) throw new Error('Path not allowed')
     return fs.readFileSync(resolved, 'utf-8')
   })
 
-  ipcMain.handle('claude:write-file', (_event, filePath: string, content: string, projectPath: string): void => {
+  safeHandle('claude:write-file', (_event, filePath: string, content: string, projectPath: string): void => {
     const resolved = path.resolve(filePath)
     if (!isAllowedClaudePath(resolved, projectPath)) throw new Error('Path not allowed')
     fs.mkdirSync(path.dirname(resolved), { recursive: true })
     fs.writeFileSync(resolved, content, 'utf-8')
   })
 
-  ipcMain.handle('claude:delete-file', (_event, filePath: string, projectPath: string): void => {
+  safeHandle('claude:delete-file', (_event, filePath: string, projectPath: string): void => {
     const resolved = path.resolve(filePath)
     if (!isAllowedClaudePath(resolved, projectPath)) throw new Error('Path not allowed')
     fs.unlinkSync(resolved)
