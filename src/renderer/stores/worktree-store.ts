@@ -166,8 +166,9 @@ export const useWorktreeStore = create<WorktreeState>()(
             if (info.projectRoot === projectRoot) delete next[tabId]
           }
           for (const info of infos) next[info.tabId] = info
+          const userPref = state.enabledPerProject[projectId]
           const enabled =
-            infos.length > 0
+            infos.length > 0 && userPref === undefined
               ? { ...state.enabledPerProject, [projectId]: true }
               : state.enabledPerProject
           return { worktreesPerTab: next, enabledPerProject: enabled }
