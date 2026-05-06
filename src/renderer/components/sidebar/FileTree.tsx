@@ -319,7 +319,7 @@ export function FileTree({
   )
   const treeKey = rootOverride ?? projectId
   const tree = useFileTreeStore((s) => s.treePerProject[treeKey])
-  const showIgnored = useFileTreeStore((s) => s.showIgnoredPerProject[treeKey] ?? true)
+  const showIgnored = useFileTreeStore((s) => s.showIgnoredPerProject[treeKey] ?? false)
   const loadTree = useFileTreeStore((s) => s.loadTree)
   const toggleShowIgnored = useFileTreeStore((s) => s.toggleShowIgnored)
   const toggleExpanded = useFileTreeStore((s) => s.toggleExpanded)

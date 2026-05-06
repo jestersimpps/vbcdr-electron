@@ -103,7 +103,7 @@ export function App(): React.ReactElement {
     const projectId = activeProjectId
     const cwd = activeProjectPath
     const fileTreeStore = useFileTreeStore.getState()
-    const showIgnored = fileTreeStore.showIgnoredPerProject[projectId] ?? true
+    const showIgnored = fileTreeStore.showIgnoredPerProject[projectId] ?? false
     const cachedTree = fileTreeStore.treePerProject[projectId]
     const cachedPath = fileTreeStore.cwdPerProject[projectId]
 
