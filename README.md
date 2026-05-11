@@ -19,6 +19,8 @@ The editor is still there when you need to peek at something, but it's intention
 
 ## Screenshots
 
+![vbcdr workspace: dev terminals, Claude Code terminal, and git tree with working changes](docs/screenshot-hero.png)
+
 ![Sortable projects analytics table with active days and totals](docs/screenshot-projects.png)
 
 ## Features
