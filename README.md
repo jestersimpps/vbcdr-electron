@@ -13,7 +13,7 @@ A desktop environment built around terminal AI agents, not traditional code edit
 AIDE stands for AI-Integrated Development Environment
 
 Traditional IDEs put the code editor front and center
-vbcdr flips that — terminals and browser previews take the main stage, because in a vibe coding workflow the AI writes the code and you steer, review, and test
+vbcdr flips that — terminals take the main stage, because in a vibe coding workflow the AI writes the code and you steer, review, and test
 
 The editor is still there when you need to peek at something, but it's intentionally secondary
 
@@ -27,43 +27,37 @@ The editor is still there when you need to peek at something, but it's intention
 
 ### Workspace
 
-- **Multi-project dashboard** — switch between projects in one click, all state travels with you (terminals, file tree, browser tabs, queues)
-- **Project cards with modal** — open any project in a focused modal with its own terminal preview
+- **Multi-project dashboard** — switch between projects in one click, all state travels with you (terminals, file tree, queues, splits)
+- **Project cards with modal** — open any project in a focused modal with its own embedded terminal
 - **Command palette** — fuzzy finder for projects, terminals, files, themes, settings, and actions
 - **File tree** — hides gitignored files by default, with context menu and drag-and-drop into terminals
 - **Project switcher** with async tree loading and cache for fast first-time opens
 
 ### Terminals (the main stage)
 
-- **Large terminal panel** with multiple tabs per project, WebGL rendering, search, scrollback persistence across restarts
-- **Dynamic tab labels** that reflect Claude Code's current state, busy/idle status indicators
+- **Multiple terminals per project** with WebGL rendering, search, and scrollback persistence across app restarts
+- **LLM terminal + dev terminals** — a dedicated panel for the LLM coding agent (Claude Code by default) and a separate panel for dev terminals
+- **Dynamic tab labels** that reflect Claude Code's current state, with busy/idle status indicators
 - **Permissions presets** — switch between read-only / auto-accept / yolo modes per terminal with a single button
 - **Task queue panel** — line up prompts and feed them to the LLM terminal one by one
 - **Shift+Enter newlines** — insert newlines in LLM coding terminal input without submitting (kitty keyboard protocol)
 - **File drag-and-drop** into terminals for quick context; images auto-attach via clipboard
-- **Send to LLM** — one-click forward of console errors, network failures, and selected files to the active LLM terminal
-
-### Browser & devtools
-
-- **Integrated browser** — per-project tabs for localhost, dashboards, docs, with history, bookmarks, zoom, find-in-page, tab drag-and-drop
-- **Device emulation** — preview your app in mobile and tablet viewports
-- **Console panel** with one-click send to LLM
-- **Network inspector** — expandable request details, headers, accurate response sizes, response body viewer
-- **Browserless mode** — per-project toggle that merges terminals into the main panel as tabs (Terminals/Editor/Claude) when you don't need the browser
+- **Idle sound** — optional notification sound when the LLM goes idle
+- **Configurable LLM startup command** — defaults to `claude`, swap in any CLI agent
 
 ### Claude Code integration
 
 - **Claude config editor** — edit `~/.claude` settings, CLAUDE.md files, and global config directly from the UI
 - **Skills page** — browse and install Claude Code skills with per-scope (project/user) install buttons
-- **Activity feed** — live stream of file changes, commands, and diffs surfaced after each terminal action
-- **Inline diff overlay** — see the diff of every change made by the LLM right after each terminal command
+- **Activity feed** — live stream of file changes and commands surfaced after each terminal action
 - **Token velocity dashboard** — per-project token usage history, active-day tracking, sortable analytics table across all projects
+- **Token cap** with per-project sparkline
 
 ### Editor & git
 
 - **Monaco editor** — available when you need it, intentionally secondary; binary preview for non-text files
 - **Git tree** — commit graph with branch lanes, branch switcher, drift banner, conflict banner, diff panel
-- **Dev server scanner** — list of running dev servers across the system with port, PID, uptime, CPU, memory, and kill button
+- **Dev server scanner** — list of running dev servers across the system with port, PID, uptime, CPU, memory, and a kill button
 
 ### Polish
 
@@ -102,7 +96,7 @@ npm run build:win      # Windows NSIS installer
 
 ## Still on the roadmap
 
+- **Integrated browser & devtools** — preview localhost, inspect console/network, send errors straight to the LLM
 - **Password manager** — current password storage needs a redesign for better UX and reliability
 - Click files and folders in the project tree to send to the LLM for easy context input
-- Give the LLM access to the webview browser so it can manipulate and test the preview
 - Many more ideas
