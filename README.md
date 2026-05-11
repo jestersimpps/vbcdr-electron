@@ -21,8 +21,6 @@ The editor is still there when you need to peek at something, but it's intention
 
 ![Sortable projects analytics table with active days and totals](docs/screenshot-projects.png)
 
-![Monaco editor with file tree](docs/screenshot-editor.png)
-
 ## Features
 
 ### Workspace
@@ -57,6 +55,7 @@ The editor is still there when you need to peek at something, but it's intention
 
 - **Monaco editor** — available when you need it, intentionally secondary; binary preview for non-text files
 - **Git tree** — commit graph with branch lanes, branch switcher, drift banner, conflict banner, diff panel
+- **AI code review** — Functional / Technical / Deep modes annotate the diff with inline comments pinned to the right line. Functional = plain-language for non-developers, Technical = design choices & trade-offs for another dev, Deep = line-by-line *why*. Includes a comment tour (Play/Prev/Next, `[` `]` shortcuts) that walks you through every annotation
 - **Dev server scanner** — list of running dev servers across the system with port, PID, uptime, CPU, memory, and a kill button
 
 ### Polish
@@ -94,9 +93,3 @@ npm run build:linux    # Linux AppImage + deb
 npm run build:win      # Windows NSIS installer
 ```
 
-## Still on the roadmap
-
-- **Integrated browser & devtools** — preview localhost, inspect console/network, send errors straight to the LLM
-- **Password manager** — current password storage needs a redesign for better UX and reliability
-- Click files and folders in the project tree to send to the LLM for easy context input
-- Many more ideas
