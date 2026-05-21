@@ -1,20 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
 import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
 import { GitTree } from '@/components/git/GitTree'
-import { TerminalInstance } from '@/components/terminal/TerminalInstance'
-import { useTerminalStore } from '@/stores/terminal-store'
+import { TerminalPanel } from '@/components/terminal/TerminalPanel'
 
-const GLOBAL_PID = '__global__'
+const GLOBAL_PID = '__claude_page__'
 const GLOBAL_GIT_PID = '__claude__'
 
 export function ClaudePage(): React.ReactElement {
   const [homeDir, setHomeDir] = useState<string | null>(null)
-  const llmTab = useTerminalStore((s) =>
-    s.tabs.find((t) => t.projectId === GLOBAL_PID && t.initialCommand)
-  )
-  const initProject = useTerminalStore((s) => s.initProject)
 
   useEffect(() => {
     let cancelled = false
@@ -26,10 +21,10 @@ export function ClaudePage(): React.ReactElement {
     }
   }, [])
 
-  useEffect(() => {
-    if (!homeDir) return
-    void initProject(GLOBAL_PID, homeDir)
-  }, [homeDir, initProject])
+  const ownerOverride = useMemo(
+    () => (homeDir ? { id: GLOBAL_PID, cwd: homeDir } : undefined),
+    [homeDir]
+  )
 
   return (
     <div className="h-full bg-zinc-950">
@@ -50,13 +45,8 @@ export function ClaudePage(): React.ReactElement {
                 <PanelResizeHandle className="h-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
                 <Panel defaultSize={50} minSize={15}>
                   <div className="h-full bg-black">
-                    {llmTab && homeDir ? (
-                      <TerminalInstance
-                        tabId={llmTab.id}
-                        projectId={GLOBAL_PID}
-                        cwd={homeDir}
-                        initialCommand={llmTab.initialCommand}
-                      />
+                    {ownerOverride ? (
+                      <TerminalPanel ownerOverride={ownerOverride} />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-zinc-600">
                         Starting Claude…

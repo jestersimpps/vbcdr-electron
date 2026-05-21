@@ -100,18 +100,20 @@ const SortableTerminalTab = memo(function SortableTerminalTab({
 
 interface TerminalPanelProps {
   global?: boolean
+  ownerOverride?: { id: string; cwd: string }
 }
 
-export function TerminalPanel({ global = false }: TerminalPanelProps = {}): React.ReactElement {
+export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelProps = {}): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => {
     const id = s.activeProjectId
     return id ? s.projects.find((p) => p.id === id) : undefined
   })
 
-  const ownerId = global ? GLOBAL_TERMINAL_OWNER : activeProjectId
-  const ownerCwd = global ? (activeProject?.path ?? '') : (activeProject?.path ?? '')
-  const hasOwner = global || !!activeProject
+  const ownerId = ownerOverride ? ownerOverride.id : global ? GLOBAL_TERMINAL_OWNER : activeProjectId
+  const ownerCwd = ownerOverride ? ownerOverride.cwd : (activeProject?.path ?? '')
+  const hasOwner = !!ownerOverride || global || !!activeProject
+  const isCustomOwner = !!ownerOverride || global
 
   const tabs = useTerminalStore((s) => s.tabs)
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
@@ -183,16 +185,16 @@ export function TerminalPanel({ global = false }: TerminalPanelProps = {}): Reac
   }, [activeTabId, centerTab])
 
   useEffect(() => {
-    if (global) {
-      if (projectTabs.length === 0) {
-        void initProject(GLOBAL_TERMINAL_OWNER, ownerCwd)
+    if (isCustomOwner) {
+      if (ownerId && projectTabs.length === 0) {
+        void initProject(ownerId, ownerCwd)
       }
       return
     }
     if (activeProject && projectTabs.length === 0) {
       void initProject(activeProject.id, activeProject.path)
     }
-  }, [global, activeProject?.id, projectTabs.length, ownerCwd])
+  }, [isCustomOwner, ownerId, ownerCwd, activeProject?.id, projectTabs.length])
 
   const teardownInFlight = useRef<Set<string>>(new Set())
 
@@ -388,7 +390,7 @@ export function TerminalPanel({ global = false }: TerminalPanelProps = {}): Reac
           <RotateCw size={16} />
         </button>
         <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
-        {!global && (
+        {!isCustomOwner && (
           <>
             <GitActions />
             <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
