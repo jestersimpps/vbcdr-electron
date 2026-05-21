@@ -22,6 +22,7 @@ import {
   buildSessions,
   clipSessionsToRange,
   activityToSessions,
+  filterShortSessions,
   mergeSessions,
   formatHours,
   formatDuration,
@@ -141,12 +142,14 @@ export function Statistics(): React.ReactElement {
   const includeAllAuthors = useStatsStore((s) => s.includeAllAuthors)
   const source = useStatsStore((s) => s.source)
   const idleMinutes = useStatsStore((s) => s.idleMinutes)
+  const minSessionMinutes = useStatsStore((s) => s.minSessionMinutes)
   const setRange = useStatsStore((s) => s.setRange)
   const setGapMinutes = useStatsStore((s) => s.setGapMinutes)
   const setLeadInMinutes = useStatsStore((s) => s.setLeadInMinutes)
   const setIncludeAllAuthors = useStatsStore((s) => s.setIncludeAllAuthors)
   const setSource = useStatsStore((s) => s.setSource)
   const setIdleMinutes = useStatsStore((s) => s.setIdleMinutes)
+  const setMinSessionMinutes = useStatsStore((s) => s.setMinSessionMinutes)
   const themeId = useThemeStore((s) => s.getFullThemeId())
   const palette = useMemo(() => getChartPalette(themeId), [themeId])
 
@@ -364,15 +367,17 @@ export function Statistics(): React.ReactElement {
     return map
   }, [allStatsProjects])
 
+  const minSessionMs = minSessionMinutes * 60_000
+
   const sessions = useMemo<Session[]>(() => {
     const commitSessions = buildSessions(filteredCommits, gapMinutes, leadInMinutes)
-    const activitySessions = activityToSessions(activity, projectNameById)
+    const activitySessions = filterShortSessions(activityToSessions(activity, projectNameById), minSessionMs)
     let combined: Session[]
     if (source === 'commits') combined = commitSessions
     else if (source === 'terminal') combined = activitySessions
     else combined = mergeSessions([...commitSessions, ...activitySessions])
     return clipSessionsToRange(combined, rangeStartMs(range))
-  }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, range, source])
+  }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, range, source, minSessionMs])
 
   const perProjectHours = useMemo(() => {
     const map: Record<string, { projectId: string; projectName: string; ms: number }> = {}
@@ -390,14 +395,14 @@ export function Statistics(): React.ReactElement {
   const todayMs = useMemo(() => {
     const start = rangeStartMs('today')!
     const commitSessions = buildSessions(filteredCommits, gapMinutes, leadInMinutes)
-    const activitySessions = activityToSessions(activity, projectNameById)
+    const activitySessions = filterShortSessions(activityToSessions(activity, projectNameById), minSessionMs)
     let combined: Session[]
     if (source === 'commits') combined = commitSessions
     else if (source === 'terminal') combined = activitySessions
     else combined = mergeSessions([...commitSessions, ...activitySessions])
     const todaySessions = clipSessionsToRange(combined, start)
     return todaySessions.reduce((acc, s) => acc + s.durationMs, 0)
-  }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, source])
+  }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, source, minSessionMs])
 
   const topProject = perProjectHours[0]?.projectName ?? '—'
 
@@ -427,7 +432,7 @@ export function Statistics(): React.ReactElement {
   const heatmap = useMemo(() => {
     const grid: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0))
     const commitSessions = buildSessions(filteredCommits, gapMinutes, leadInMinutes)
-    const activitySessions = activityToSessions(activity, projectNameById)
+    const activitySessions = filterShortSessions(activityToSessions(activity, projectNameById), minSessionMs)
     let allTimeSessions: Session[]
     if (source === 'commits') allTimeSessions = commitSessions
     else if (source === 'terminal') allTimeSessions = activitySessions
@@ -440,7 +445,7 @@ export function Statistics(): React.ReactElement {
     }
     const max = Math.max(...grid.flat(), 0.0001)
     return { grid, max }
-  }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, source])
+  }, [filteredCommits, activity, projectNameById, gapMinutes, leadInMinutes, source, minSessionMs])
 
   useEffect(() => {
     if (historyProjectId && !allStatsProjects.some((p) => p.id === historyProjectId)) {
@@ -450,14 +455,14 @@ export function Statistics(): React.ReactElement {
 
   const historySessions = useMemo<Session[]>(() => {
     const commitSessions = buildSessions(historyCommits, gapMinutes, leadInMinutes)
-    const activitySessions = activityToSessions(historyActivity, projectNameById)
+    const activitySessions = filterShortSessions(activityToSessions(historyActivity, projectNameById), minSessionMs)
     let combined: Session[]
     if (source === 'commits') combined = commitSessions
     else if (source === 'terminal') combined = activitySessions
     else combined = mergeSessions([...commitSessions, ...activitySessions])
     const clipped = clipSessionsToRange(combined, currentHistoryRange.start)
     return clipped.filter((s) => s.start <= currentHistoryRange.end)
-  }, [historyCommits, historyActivity, projectNameById, gapMinutes, leadInMinutes, source, currentHistoryRange.start, currentHistoryRange.end])
+  }, [historyCommits, historyActivity, projectNameById, gapMinutes, leadInMinutes, source, currentHistoryRange.start, currentHistoryRange.end, minSessionMs])
 
   const historyFilteredSessions = useMemo<Session[]>(() => {
     if (!historyProjectId) return historySessions
@@ -604,6 +609,8 @@ export function Statistics(): React.ReactElement {
           setLeadInMinutes={setLeadInMinutes}
           idleMinutes={idleMinutes}
           setIdleMinutes={setIdleMinutes}
+          minSessionMinutes={minSessionMinutes}
+          setMinSessionMinutes={setMinSessionMinutes}
           sessions={historyFilteredSessions}
           range={currentHistoryRange}
           colorForProject={colorForAnyProject}
@@ -805,6 +812,8 @@ interface SessionSettingsPopoverProps {
   setLeadInMinutes: (v: number) => void
   idleMinutes: number
   setIdleMinutes: (v: number) => void
+  minSessionMinutes: number
+  setMinSessionMinutes: (v: number) => void
 }
 
 function SessionSettingsPopover({
@@ -816,7 +825,9 @@ function SessionSettingsPopover({
   leadInMinutes,
   setLeadInMinutes,
   idleMinutes,
-  setIdleMinutes
+  setIdleMinutes,
+  minSessionMinutes,
+  setMinSessionMinutes
 }: SessionSettingsPopoverProps): React.ReactElement {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -912,6 +923,22 @@ function SessionSettingsPopover({
                 </div>
               </div>
             )}
+            {showIdle && (
+              <div className="flex items-center justify-between text-xs text-zinc-300">
+                <span title="Hide terminal sessions shorter than this">Min session</span>
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <input
+                    type="number"
+                    min={0}
+                    max={60}
+                    value={minSessionMinutes}
+                    onChange={(e) => setMinSessionMinutes(Math.max(0, Math.min(60, parseInt(e.target.value, 10) || 0)))}
+                    className="w-16 rounded border border-zinc-800 bg-zinc-950 px-1.5 py-0.5 text-right text-xs"
+                  />
+                  min
+                </div>
+              </div>
+            )}
             {!showCommitFields && !showIdle && (
               <div className="text-xs text-zinc-500">No advanced settings for this source.</div>
             )}
@@ -985,6 +1012,8 @@ interface HistoricalWorkCardProps {
   setLeadInMinutes: (v: number) => void
   idleMinutes: number
   setIdleMinutes: (v: number) => void
+  minSessionMinutes: number
+  setMinSessionMinutes: (v: number) => void
 }
 
 function HistoricalWorkCard({
@@ -1016,7 +1045,9 @@ function HistoricalWorkCard({
   leadInMinutes,
   setLeadInMinutes,
   idleMinutes,
-  setIdleMinutes
+  setIdleMinutes,
+  minSessionMinutes,
+  setMinSessionMinutes
 }: HistoricalWorkCardProps): React.ReactElement {
   const hasCells = calendar.weeks.length > 0 && computeHistoryStats(calendar).possibleDays > 0
 
@@ -1087,6 +1118,8 @@ function HistoricalWorkCard({
             setLeadInMinutes={setLeadInMinutes}
             idleMinutes={idleMinutes}
             setIdleMinutes={setIdleMinutes}
+            minSessionMinutes={minSessionMinutes}
+            setMinSessionMinutes={setMinSessionMinutes}
           />
         </div>
       </div>

@@ -157,6 +157,11 @@ export function mergeSessions(sessions: Session[]): Session[] {
   return merged
 }
 
+export function filterShortSessions(sessions: Session[], minDurationMs: number): Session[] {
+  if (minDurationMs <= 0) return sessions
+  return sessions.filter((s) => s.durationMs >= minDurationMs)
+}
+
 export function clipSessionsToRange(sessions: Session[], startMs: number | null): Session[] {
   if (startMs === null) return sessions
   const out: Session[] = []

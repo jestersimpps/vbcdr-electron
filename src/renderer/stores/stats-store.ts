@@ -9,12 +9,14 @@ interface StatsStore {
   includeAllAuthors: boolean
   source: SessionSource
   idleMinutes: number
+  minSessionMinutes: number
   setRange: (range: TimeRange['key']) => void
   setGapMinutes: (n: number) => void
   setLeadInMinutes: (n: number) => void
   setIncludeAllAuthors: (v: boolean) => void
   setSource: (s: SessionSource) => void
   setIdleMinutes: (n: number) => void
+  setMinSessionMinutes: (n: number) => void
 }
 
 export const useStatsStore = create<StatsStore>()(
@@ -26,12 +28,14 @@ export const useStatsStore = create<StatsStore>()(
       includeAllAuthors: false,
       source: 'terminal',
       idleMinutes: 5,
+      minSessionMinutes: 2,
       setRange: (range) => set({ range }),
       setGapMinutes: (gapMinutes) => set({ gapMinutes }),
       setLeadInMinutes: (leadInMinutes) => set({ leadInMinutes }),
       setIncludeAllAuthors: (includeAllAuthors) => set({ includeAllAuthors }),
       setSource: (source) => set({ source }),
-      setIdleMinutes: (idleMinutes) => set({ idleMinutes })
+      setIdleMinutes: (idleMinutes) => set({ idleMinutes }),
+      setMinSessionMinutes: (minSessionMinutes) => set({ minSessionMinutes })
     }),
     { name: 'vbcdr-stats' }
   )
