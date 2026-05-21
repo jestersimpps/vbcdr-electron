@@ -47,6 +47,15 @@ function recordActivityDebounced(projectId: string, kind: 'i' | 'o'): void {
   window.api.activity.record(projectId, kind)
 }
 
+const MEANINGFUL_OUTPUT_MIN_CHARS = 2
+const NON_CONTENT_CHARS_RE = /[\s​-‏‪-‮⁠﻿\x00-\x08\x0B-\x1F\x7F]/g
+
+function isMeaningfulOutput(data: string): boolean {
+  if (!data) return false
+  const stripped = stripAnsi(data).replace(NON_CONTENT_CHARS_RE, '')
+  return stripped.length >= MEANINGFUL_OUTPUT_MIN_CHARS
+}
+
 let globalDataUnsub: (() => void) | null = null
 
 function ensureGlobalDataDispatcher(): void {
@@ -175,7 +184,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
 
       const onIncomingData = (data: string): void => {
-        recordActivityDebounced(projectId, 'o')
+        if (isMeaningfulOutput(data)) recordActivityDebounced(projectId, 'o')
         try {
           const buf = terminal.buffer.active
           const atBottom = buf.baseY - buf.viewportY <= 1

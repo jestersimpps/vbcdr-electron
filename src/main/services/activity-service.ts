@@ -24,6 +24,7 @@ const FLUSH_DEBOUNCE_MS = 1500
 const DEFAULT_IDLE_MINUTES = 5
 const SESSION_TAIL_MS = 60_000
 const PENDING_LINES_CAP = 10000
+const MIN_SESSION_EVENTS = 2
 
 const pendingLines = new Map<string, string[]>()
 let flushTimer: ReturnType<typeof setTimeout> | null = null
@@ -176,6 +177,7 @@ function buildSessionsFromEvents(
   let outputCount = events[0].k === 'o' ? 1 : 0
 
   const flush = (): void => {
+    if (inputCount + outputCount < MIN_SESSION_EVENTS) return
     const end = sEnd + SESSION_TAIL_MS
     sessions.push({
       projectId,

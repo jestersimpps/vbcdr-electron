@@ -91,54 +91,69 @@ describe('activity-service', () => {
 
     it('splits events further apart than idleMinutes into separate sessions', () => {
       mod.recordActivity('p1', 'i')
+      mod.recordActivity('p1', 'o')
       mod.flushActivity()
       vi.setSystemTime(new Date(Date.now() + 10 * 60_000))
       mod.recordActivity('p1', 'o')
+      mod.recordActivity('p1', 'i')
       mod.flushActivity()
 
       const sessions = mod.getSessions('p1', null, 5)
       expect(sessions).toHaveLength(2)
-      expect(sessions[0].inputCount).toBe(1)
-      expect(sessions[1].outputCount).toBe(1)
     })
 
     it('honours the sinceIso filter', () => {
       mod.recordActivity('p1', 'i')
+      mod.recordActivity('p1', 'o')
       mod.flushActivity()
       const cutoff = new Date(Date.now() + 60_000).toISOString()
       vi.setSystemTime(new Date(Date.now() + 120_000))
+      mod.recordActivity('p1', 'o')
       mod.recordActivity('p1', 'o')
       mod.flushActivity()
 
       const sessions = mod.getSessions('p1', cutoff, 5)
       expect(sessions).toHaveLength(1)
-      expect(sessions[0].outputCount).toBe(1)
+      expect(sessions[0].outputCount).toBe(2)
       expect(sessions[0].inputCount).toBe(0)
     })
 
     it('returns events from pendingLines even before they are flushed to disk', () => {
       mod.recordActivity('p1', 'i')
+      mod.recordActivity('p1', 'o')
       const sessions = mod.getSessions('p1', null, 5)
       expect(sessions).toHaveLength(1)
       expect(sessions[0].inputCount).toBe(1)
+      expect(sessions[0].outputCount).toBe(1)
+    })
+
+    it('drops single-event sessions as noise', () => {
+      mod.recordActivity('p1', 'i')
+      mod.flushActivity()
+      const sessions = mod.getSessions('p1', null, 5)
+      expect(sessions).toEqual([])
     })
 
     it('skips malformed JSON lines silently', () => {
       fs.mkdirSync(activityDir(), { recursive: true })
+      const now = Date.now()
       fs.writeFileSync(
         path.join(activityDir(), 'p1.jsonl'),
-        '{not valid json}\n{"t":' + Date.now() + ',"k":"i"}\n'
+        '{not valid json}\n{"t":' + now + ',"k":"i"}\n{"t":' + (now + 1000) + ',"k":"o"}\n'
       )
       const sessions = mod.getSessions('p1', null, 5)
       expect(sessions).toHaveLength(1)
       expect(sessions[0].inputCount).toBe(1)
+      expect(sessions[0].outputCount).toBe(1)
     })
   })
 
   describe('getAllSessions', () => {
     it('aggregates sessions across all on-disk projects', () => {
       mod.recordActivity('p1', 'i')
+      mod.recordActivity('p1', 'o')
       mod.recordActivity('p2', 'o')
+      mod.recordActivity('p2', 'i')
       mod.flushActivity()
 
       const sessions = mod.getAllSessions(null, 5)
@@ -149,6 +164,7 @@ describe('activity-service', () => {
 
     it('also includes pending-only projects with no on-disk file yet', () => {
       mod.recordActivity('only-pending', 'i')
+      mod.recordActivity('only-pending', 'o')
       const sessions = mod.getAllSessions(null, 5)
       expect(sessions.some((s) => s.projectId === 'only-pending')).toBe(true)
     })
