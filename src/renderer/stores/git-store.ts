@@ -31,6 +31,7 @@ interface GitStore {
   push: (projectId: string, cwd: string) => Promise<GitOpResult>
   rebaseRemote: (projectId: string, cwd: string) => Promise<GitOpResult>
   initFetchListener: () => () => void
+  removeProjectState: (projectId: string) => void
 }
 
 export const useGitStore = create<GitStore>((set, get) => ({
@@ -267,6 +268,50 @@ export const useGitStore = create<GitStore>((set, get) => ({
   initFetchListener: () => {
     return window.api.git.onDrift((projectId: string, drift: unknown) => {
       get().setDrift(projectId, drift as BranchDriftInfo)
+    })
+  },
+
+  removeProjectState: (projectId: string) => {
+    set((s) => {
+      const {
+        commitsPerProject,
+        branchesPerProject,
+        isRepoPerProject,
+        statusPerProject,
+        commitFileCountsPerProject,
+        rangeFileCountsPerProject,
+        unpushedHashesPerProject,
+        pushingPerProject,
+        pullingPerProject,
+        rebasingPerProject,
+        lastGitErrorPerProject,
+        driftPerProject,
+        driftDismissed,
+        conflictsPerProject,
+        conflictsDismissedPerProject
+      } = s
+      const drop = <T,>(rec: Record<string, T>): Record<string, T> => {
+        if (!(projectId in rec)) return rec
+        const { [projectId]: _, ...rest } = rec
+        return rest
+      }
+      return {
+        commitsPerProject: drop(commitsPerProject),
+        branchesPerProject: drop(branchesPerProject),
+        isRepoPerProject: drop(isRepoPerProject),
+        statusPerProject: drop(statusPerProject),
+        commitFileCountsPerProject: drop(commitFileCountsPerProject),
+        rangeFileCountsPerProject: drop(rangeFileCountsPerProject),
+        unpushedHashesPerProject: drop(unpushedHashesPerProject),
+        pushingPerProject: drop(pushingPerProject),
+        pullingPerProject: drop(pullingPerProject),
+        rebasingPerProject: drop(rebasingPerProject),
+        lastGitErrorPerProject: drop(lastGitErrorPerProject),
+        driftPerProject: drop(driftPerProject),
+        driftDismissed: drop(driftDismissed),
+        conflictsPerProject: drop(conflictsPerProject),
+        conflictsDismissedPerProject: drop(conflictsDismissedPerProject)
+      }
     })
   }
 }))

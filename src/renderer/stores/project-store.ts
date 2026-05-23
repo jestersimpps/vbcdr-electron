@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { useTerminalStore } from './terminal-store'
 import { useDevTerminalStore } from './dev-terminal-store'
+import { useEditorStore } from './editor-store'
+import { useFileTreeStore } from './filetree-store'
+import { useGitStore } from './git-store'
+import { useQueueStore } from './queue-store'
+import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 import type { Project } from '@/models/types'
 
 interface ProjectStore {
@@ -68,11 +73,27 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   removeProject: async (id: string) => {
-    const termTabs = useTerminalStore.getState().tabs.filter((t) => t.projectId === id)
-    const devTabs = useDevTerminalStore.getState().tabs.filter((t) => t.projectId === id)
-    await Promise.all(
-      [...termTabs, ...devTabs].map((tab) => window.api.terminal.kill(tab.id))
-    )
+    const termStore = useTerminalStore.getState()
+    const devStore = useDevTerminalStore.getState()
+    const queueStore = useQueueStore.getState()
+    const termTabs = termStore.tabs.filter((t) => t.projectId === id)
+    const devTabs = devStore.tabs.filter((t) => t.projectId === id)
+    const allTabs = [...termTabs, ...devTabs]
+
+    for (const tab of allTabs) {
+      disposeTerminal(tab.id)
+      queueStore.clearTab(tab.id)
+    }
+    for (const tab of termTabs) termStore.closeTab(tab.id)
+    for (const tab of devTabs) devStore.closeTab(tab.id)
+
+    try { await window.api.git.unregisterFetch(id) } catch { /* main may have already cleaned up */ }
+
+    useEditorStore.getState().removeProjectState(id)
+    useFileTreeStore.getState().removeProjectState(id)
+    useGitStore.getState().removeProjectState(id)
+
+    await Promise.all(allTabs.map((tab) => window.api.terminal.kill(tab.id)))
     await window.api.projects.remove(id)
     const state = get()
     if (state.activeProjectId === id) {

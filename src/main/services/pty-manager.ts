@@ -9,6 +9,7 @@ import {
   clearScrollback,
   flushScrollback
 } from '@main/services/terminal-scrollback'
+import { resetTabTokenTracking } from '@main/services/token-usage-service'
 
 export { flushScrollback }
 
@@ -140,6 +141,7 @@ export function createPty(
       win.webContents.send('terminal:exit', tabId, exitCode)
     }
     instances.delete(tabId)
+    resetTabTokenTracking(tabId)
   })
 }
 
@@ -159,6 +161,7 @@ export function killPty(tabId: string): void {
     instances.delete(tabId)
   }
   clearScrollback(tabId)
+  resetTabTokenTracking(tabId)
 }
 
 export function killAll(): void {

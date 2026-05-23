@@ -6,6 +6,8 @@ import path from 'path'
 import type { Project } from '@main/models/types'
 import { purgeProjectActivity } from '@main/services/activity-service'
 import { purgeProjectTokenUsage } from '@main/services/token-usage-service'
+import { unregisterProject } from '@main/services/git-fetch-service'
+import { unwatchRefs } from '@main/services/git-refs-watcher'
 
 export interface ArchivedProject {
   id: string
@@ -67,6 +69,8 @@ export function registerProjectHandlers(): void {
       archive.push({ id: removed.id, name: removed.name, path: removed.path, archivedAt: Date.now() })
       store.set('projectArchive', archive)
     }
+    unregisterProject(id)
+    unwatchRefs(id)
     return true
   })
 

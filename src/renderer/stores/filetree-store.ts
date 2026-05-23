@@ -13,6 +13,7 @@ interface FileTreeStore {
   getTree: (projectId: string) => FileNode | undefined
   getExpanded: (projectId: string) => Set<string>
   getShowIgnored: (projectId: string) => boolean
+  removeProjectState: (projectId: string) => void
 }
 
 const EMPTY_SET = new Set<string>()
@@ -74,5 +75,15 @@ export const useFileTreeStore = create<FileTreeStore>((set, get) => ({
 
   getShowIgnored: (projectId: string) => {
     return get().showIgnoredPerProject[projectId] ?? false
+  },
+
+  removeProjectState: (projectId: string) => {
+    set((state) => {
+      const { [projectId]: _t, ...treePerProject } = state.treePerProject
+      const { [projectId]: _c, ...cwdPerProject } = state.cwdPerProject
+      const { [projectId]: _e, ...expandedPerProject } = state.expandedPerProject
+      const { [projectId]: _s, ...showIgnoredPerProject } = state.showIgnoredPerProject
+      return { treePerProject, cwdPerProject, expandedPerProject, showIgnoredPerProject }
+    })
   }
 }))

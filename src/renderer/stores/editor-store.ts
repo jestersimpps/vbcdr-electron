@@ -23,6 +23,7 @@ interface EditorStore {
   openDefaultFile: (projectId: string, tree: FileNode) => Promise<void>
   setPendingRevealLine: (filePath: string, line: number) => void
   consumePendingRevealLine: (filePath: string) => number | null
+  removeProjectState: (projectId: string) => void
 }
 
 const EMPTY_STATE: ProjectEditorState = { openFiles: [], activeFilePath: null }
@@ -239,6 +240,14 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
           [projectId]: { ...prev, openFiles: files }
         }
       }
+    })
+  },
+
+  removeProjectState: (projectId: string) => {
+    set((s) => {
+      const { [projectId]: _drop, ...statePerProject } = s.statePerProject
+      const { [projectId]: _tab, ...centerTabPerProject } = s.centerTabPerProject
+      return { statePerProject, centerTabPerProject }
     })
   },
 

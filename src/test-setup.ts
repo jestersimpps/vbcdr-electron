@@ -65,6 +65,7 @@ const api = {
     pull: fn(async () => undefined),
     rebaseRemote: fn(async () => undefined),
     registerFetch: fn(() => undefined),
+    unregisterFetch: fn(async () => undefined),
     onDrift: fn(() => () => undefined),
     watchRefs: fn(() => undefined),
     unwatchRefs: fn(() => undefined),
@@ -73,6 +74,12 @@ const api = {
     rangeFileCount: fn(async () => 0),
     rangeHashes: fn(async () => []),
     fetchNow: fn(async () => ({ ahead: 0, behind: 0, diverged: false, remoteBranch: null }))
+  },
+  tokenUsage: {
+    record: fn(async () => undefined),
+    resetTab: fn(async () => undefined),
+    daily: fn(async () => []),
+    events: fn(async () => [])
   }
 }
 
