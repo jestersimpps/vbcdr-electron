@@ -110,9 +110,15 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       const xtermEl = entry.terminal.element
       if (xtermEl && xtermEl.parentElement !== el) {
         try { el.appendChild(xtermEl) } catch { /* element may have been removed */ }
-        if (el.offsetParent !== null) {
-          try { entry.fitAddon.fit() } catch { /* container may not be sized yet */ }
+        const reattachFit = (): void => {
+          try {
+            if (el.clientWidth === 0 || el.clientHeight === 0) return
+            entry!.fitAddon.fit()
+          } catch { /* disposed */ }
         }
+        reattachFit()
+        requestAnimationFrame(reattachFit)
+        setTimeout(reattachFit, 100)
         try { entry.terminal.refresh(0, entry.terminal.rows - 1) } catch { /* disposed */ }
       } else if (!xtermEl) {
         try { entry.terminal.dispose() } catch { /* not yet open */ }
@@ -298,6 +304,19 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
             window.api.terminal.write(tabId, initialCommand + '\n')
           }, 500)
         }
+
+        const refit = (): void => {
+          try {
+            if (el.clientWidth === 0 || el.clientHeight === 0) return
+            fitAddon.fit()
+          } catch { /* disposed */ }
+        }
+        requestAnimationFrame(refit)
+        setTimeout(refit, 100)
+        setTimeout(refit, 500)
+        if (typeof document !== 'undefined' && (document as Document & { fonts?: FontFaceSet }).fonts?.ready) {
+          (document as Document & { fonts: FontFaceSet }).fonts.ready.then(refit).catch(() => { /* ignore */ })
+        }
       }
 
       const sizeObserver = new ResizeObserver(openWhenSized)
@@ -309,25 +328,35 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
     let resizeTimer: ReturnType<typeof setTimeout> | null = null
     let prevCols = terminal.cols
     let prevRows = terminal.rows
+    const runFit = (): void => {
+      try {
+        if (!el.contains(terminal.element ?? null)) return
+        if (el.clientWidth === 0 || el.clientHeight === 0) return
+        const buf = terminal.buffer.active
+        const atBottom = buf.baseY - buf.viewportY <= 1
+        fitAddon.fit()
+        if (terminal.cols === prevCols && terminal.rows === prevRows) return
+        prevCols = terminal.cols
+        prevRows = terminal.rows
+        const e = terminalsMap.get(tabId)
+        if (e) e.suppressBusyUntil = Date.now() + 1000
+        const autoScroll = useTerminalStore.getState().isAutoScroll(tabId)
+        if (autoScroll && atBottom) terminal.scrollToBottom()
+      } catch { /* element may be unmounted during resize */ }
+    }
+
     const observer = new ResizeObserver(() => {
       if (resizeTimer) clearTimeout(resizeTimer)
-      resizeTimer = setTimeout(() => {
-        try {
-          if (!el.contains(terminal.element ?? null)) return
-          const buf = terminal.buffer.active
-          const atBottom = buf.baseY - buf.viewportY <= 1
-          fitAddon.fit()
-          if (terminal.cols === prevCols && terminal.rows === prevRows) return
-          prevCols = terminal.cols
-          prevRows = terminal.rows
-          const e = terminalsMap.get(tabId)
-          if (e) e.suppressBusyUntil = Date.now() + 1000
-          const autoScroll = useTerminalStore.getState().isAutoScroll(tabId)
-          if (autoScroll && atBottom) terminal.scrollToBottom()
-        } catch { /* element may be unmounted during resize */ }
-      }, 150)
+      resizeTimer = setTimeout(runFit, 150)
     })
     observer.observe(el)
+
+    const intersectionObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) runFit()
+      }
+    })
+    intersectionObserver.observe(el)
 
     const onDragOver = (e: DragEvent) => {
       e.preventDefault()
@@ -406,6 +435,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
       observer.disconnect()
+      intersectionObserver.disconnect()
       el.removeEventListener('dragover', onDragOver)
       el.removeEventListener('dragenter', onDragEnter)
       el.removeEventListener('dragleave', onDragLeave)
