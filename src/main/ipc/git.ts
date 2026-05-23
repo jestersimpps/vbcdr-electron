@@ -33,6 +33,7 @@ import {
   removeFromGitignore
 } from '@main/services/git-service'
 import { registerProject, unregisterProject, fetchNow } from '@main/services/git-fetch-service'
+import { watchRefs, unwatchRefs } from '@main/services/git-refs-watcher'
 import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
 import type { CommitChangedFile, DiffNumstat, GitFileBytes } from '@main/services/git-service'
 
@@ -154,6 +155,14 @@ export function registerGitHandlers(): void {
 
   safeHandle('git:unregister-fetch', (_event, projectId: string): void => {
     unregisterProject(projectId)
+  })
+
+  safeHandle('git:watch-refs', (_event, projectId: string, cwd: string): void => {
+    watchRefs(projectId, cwd)
+  })
+
+  safeHandle('git:unwatch-refs', (_event, projectId: string): void => {
+    unwatchRefs(projectId)
   })
 
   safeHandle('git:fetch-now', async (_event, cwd: string): Promise<BranchDriftInfo> => {

@@ -122,6 +122,15 @@ const api = {
     diffSummary: (cwd: string, baseBranch: string) => ipcRenderer.invoke('git:diff-summary', cwd, baseBranch),
     registerFetch: (projectId: string, cwd: string) => ipcRenderer.invoke('git:register-fetch', projectId, cwd),
     unregisterFetch: (projectId: string) => ipcRenderer.invoke('git:unregister-fetch', projectId),
+    watchRefs: (projectId: string, cwd: string) => ipcRenderer.invoke('git:watch-refs', projectId, cwd),
+    unwatchRefs: (projectId: string) => ipcRenderer.invoke('git:unwatch-refs', projectId),
+    onRefsChanged: (callback: (projectId: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, projectId: string) => callback(projectId)
+      ipcRenderer.on('git:refs-changed', handler)
+      return (): void => {
+        ipcRenderer.removeListener('git:refs-changed', handler)
+      }
+    },
     fetchNow: (cwd: string) => ipcRenderer.invoke('git:fetch-now', cwd),
     pull: (cwd: string) => ipcRenderer.invoke('git:pull', cwd),
     push: (cwd: string) => ipcRenderer.invoke('git:push', cwd),

@@ -112,15 +112,26 @@ export function App(): React.ReactElement {
     }
     useGitStore.getState().loadStatus(projectId, cwd)
     window.api.fs.watch(cwd, showIgnored)
+    window.api.git.watchRefs(projectId, cwd)
 
-    const unsub = window.api.fs.onTreeChanged((newTree) => {
+    const unsubTree = window.api.fs.onTreeChanged((newTree) => {
       useFileTreeStore.getState().setTree(projectId, newTree as FileNode)
       useGitStore.getState().loadStatus(projectId, cwd)
     })
 
+    const unsubRefs = window.api.git.onRefsChanged((changedId) => {
+      if (changedId !== projectId) return
+      const git = useGitStore.getState()
+      void git.loadGitData(projectId, cwd)
+      void git.loadStatus(projectId, cwd)
+      void git.loadRangeFileCounts(projectId, cwd)
+    })
+
     return () => {
-      unsub()
+      unsubTree()
+      unsubRefs()
       window.api.fs.unwatch()
+      window.api.git.unwatchRefs(projectId)
     }
   }, [activeProjectId, activeProjectPath])
 

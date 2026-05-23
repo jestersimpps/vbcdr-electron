@@ -17,6 +17,7 @@ import { stopWatching } from '@main/services/file-watcher'
 import { registerUpdaterHandlers } from '@main/ipc/updater'
 import { initAutoUpdater, checkForUpdates, checkForUpdatesInteractive } from '@main/services/auto-updater'
 import { stopAutoFetch } from '@main/services/git-fetch-service'
+import { stopAllRefsWatchers } from '@main/services/git-refs-watcher'
 
 app.setName('vbcdr')
 app.setAboutPanelOptions({
@@ -384,6 +385,7 @@ app.on('window-all-closed', () => {
   killAll()
   stopWatching()
   stopAutoFetch()
+  stopAllRefsWatchers()
   flushActivity()
   flushTokenUsage()
   if (process.platform !== 'darwin') app.quit()
@@ -393,6 +395,7 @@ app.on('before-quit', () => {
   killAll()
   stopWatching()
   stopAutoFetch()
+  stopAllRefsWatchers()
   flushActivity()
   flushTokenUsage()
 })
