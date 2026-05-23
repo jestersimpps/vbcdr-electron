@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { X, Loader2 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useGitStore } from '@/stores/git-store'
 
@@ -10,6 +10,8 @@ export function DriftBanner(): React.ReactElement | null {
   const dismissDrift = useGitStore((s) => s.dismissDrift)
   const pullAction = useGitStore((s) => s.pull)
   const rebaseAction = useGitStore((s) => s.rebaseRemote)
+  const isPulling = useGitStore((s) => activeProjectId ? s.pullingPerProject[activeProjectId] ?? false : false)
+  const isRebasing = useGitStore((s) => activeProjectId ? s.rebasingPerProject[activeProjectId] ?? false : false)
 
   const project = activeProject()
   if (!activeProjectId || !project) return null
@@ -31,16 +33,20 @@ export function DriftBanner(): React.ReactElement | null {
       {isDiverged ? (
         <button
           onClick={() => rebaseAction(activeProjectId, project.path)}
-          className="rounded bg-white/20 px-2 py-0.5 text-xs font-medium hover:bg-white/30"
+          disabled={isRebasing}
+          className="flex items-center gap-1 rounded bg-white/20 px-2 py-0.5 text-xs font-medium hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Rebase
+          {isRebasing && <Loader2 size={11} className="animate-spin" />}
+          <span>{isRebasing ? 'Rebasing…' : 'Rebase'}</span>
         </button>
       ) : (
         <button
           onClick={() => pullAction(activeProjectId, project.path)}
-          className="rounded bg-white/20 px-2 py-0.5 text-xs font-medium hover:bg-white/30"
+          disabled={isPulling}
+          className="flex items-center gap-1 rounded bg-white/20 px-2 py-0.5 text-xs font-medium hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Pull
+          {isPulling && <Loader2 size={11} className="animate-spin" />}
+          <span>{isPulling ? 'Pulling…' : 'Pull'}</span>
         </button>
       )}
       <button

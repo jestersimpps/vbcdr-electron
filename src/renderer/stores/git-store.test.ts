@@ -31,8 +31,8 @@ beforeEach(() => {
     status: vi.fn(async () => ({ '/p/a.ts': 'modified' })),
     checkout: vi.fn(async () => ({ success: true, branch: 'main', stashed: false })),
     conflicts: vi.fn(async () => []),
-    pull: vi.fn(async () => undefined),
-    rebaseRemote: vi.fn(async () => undefined),
+    pull: vi.fn(async () => ({ ok: true, output: '' })),
+    rebaseRemote: vi.fn(async () => ({ ok: true, output: '' })),
     registerFetch: vi.fn(),
     onDrift: vi.fn((cb: (projectId: string, drift: unknown) => void) => {
       lastDriftCb = cb
@@ -60,7 +60,7 @@ beforeEach(() => {
     driftPerProject: {},
     driftDismissed: {},
     conflictsPerProject: {},
-    conflictsDismissed: false as never
+    conflictsDismissedPerProject: {}
   })
 })
 

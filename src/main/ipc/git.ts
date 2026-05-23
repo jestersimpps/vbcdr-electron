@@ -34,7 +34,7 @@ import {
 } from '@main/services/git-service'
 import { registerProject, unregisterProject, fetchNow } from '@main/services/git-fetch-service'
 import { watchRefs, unwatchRefs } from '@main/services/git-refs-watcher'
-import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
+import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, GitOpResult, StatsCommit, LanguageTally } from '@main/models/types'
 import type { CommitChangedFile, DiffNumstat, GitFileBytes } from '@main/services/git-service'
 
 export function registerGitHandlers(): void {
@@ -169,15 +169,15 @@ export function registerGitHandlers(): void {
     return fetchNow(cwd)
   })
 
-  safeHandle('git:pull', async (_event, cwd: string): Promise<string> => {
+  safeHandle('git:pull', async (_event, cwd: string): Promise<GitOpResult> => {
     return pull(cwd)
   })
 
-  safeHandle('git:push', async (_event, cwd: string): Promise<string> => {
+  safeHandle('git:push', async (_event, cwd: string): Promise<GitOpResult> => {
     return push(cwd)
   })
 
-  safeHandle('git:rebase-remote', async (_event, cwd: string): Promise<string> => {
+  safeHandle('git:rebase-remote', async (_event, cwd: string): Promise<GitOpResult> => {
     return rebaseRemote(cwd)
   })
 

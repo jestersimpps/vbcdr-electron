@@ -2,7 +2,7 @@ import { execFile as execFileCb } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
 import fs from 'fs'
-import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, StatsCommit, LanguageTally } from '@main/models/types'
+import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, GitOpResult, StatsCommit, LanguageTally } from '@main/models/types'
 import { EXT_TO_LANGUAGE } from '@main/services/language-map'
 
 const execFile = promisify(execFileCb)
@@ -43,18 +43,18 @@ async function runGitBuffer(cwd: string, args: string[], timeout: number = 10000
   return stdout as Buffer
 }
 
-async function runGitWithAuth(cwd: string, args: string[], timeout: number = 30000, maxBuffer: number = 10 * 1024 * 1024): Promise<string> {
-  const { stdout } = await execFile('git', args, {
+async function runGitRemote(cwd: string, args: string[], timeout: number = 30000, maxBuffer: number = 10 * 1024 * 1024): Promise<string> {
+  const { stdout, stderr } = await execFile('git', args, {
     cwd,
     encoding: 'utf-8',
     timeout,
     maxBuffer,
     env: {
       ...process.env,
-      GIT_TERMINAL_PROMPT: '0'
+      GIT_TERMINAL_PROMPT: '1'
     }
   })
-  return stdout.trim()
+  return [stdout.trim(), stderr.trim()].filter(Boolean).join('\n')
 }
 
 export async function isGitRepo(cwd: string): Promise<boolean> {
@@ -548,27 +548,37 @@ export async function getConflicts(cwd: string): Promise<ConflictInfo[]> {
   }
 }
 
-export async function pull(cwd: string): Promise<string> {
+function gitErrorMessage(err: unknown): string {
+  const e = err as { stderr?: string; stdout?: string; message?: string }
+  const stderr = (e.stderr ?? '').trim()
+  const stdout = (e.stdout ?? '').trim()
+  return stderr || stdout || e.message || 'git command failed'
+}
+
+export async function pull(cwd: string): Promise<GitOpResult> {
   try {
-    return await runGitWithAuth(cwd, ['pull'], 30000)
+    const output = await runGitRemote(cwd, ['pull'], 30000)
+    return { ok: true, output }
   } catch (err) {
-    return (err as Error).message
+    return { ok: false, output: '', error: gitErrorMessage(err) }
   }
 }
 
-export async function push(cwd: string): Promise<string> {
+export async function push(cwd: string): Promise<GitOpResult> {
   try {
-    return await runGitWithAuth(cwd, ['push'], 30000)
+    const output = await runGitRemote(cwd, ['push'], 30000)
+    return { ok: true, output }
   } catch (err) {
-    return (err as Error).message
+    return { ok: false, output: '', error: gitErrorMessage(err) }
   }
 }
 
-export async function rebaseRemote(cwd: string): Promise<string> {
+export async function rebaseRemote(cwd: string): Promise<GitOpResult> {
   try {
-    return await runGitWithAuth(cwd, ['pull', '--rebase'], 30000)
+    const output = await runGitRemote(cwd, ['pull', '--rebase'], 30000)
+    return { ok: true, output }
   } catch (err) {
-    return (err as Error).message
+    return { ok: false, output: '', error: gitErrorMessage(err) }
   }
 }
 

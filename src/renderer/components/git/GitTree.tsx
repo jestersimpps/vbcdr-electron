@@ -5,7 +5,7 @@ import { useDiffViewStore } from '@/stores/diff-view-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
-import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, GitCommit as GitCommitIcon, Loader2, CloudDownload, CloudUpload, FileText } from 'lucide-react'
+import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, GitCommit as GitCommitIcon, Loader2, CloudDownload, CloudUpload, FileText, X } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 import { BranchSwitcher } from '@/components/git/BranchSwitcher'
 
@@ -223,6 +223,10 @@ export function GitTree({ projectId, cwd, llmTabProjectId }: GitTreeProps = {}):
   const pullAction = useGitStore((s) => s.pull)
   const pushAction = useGitStore((s) => s.push)
   const isPushing = useGitStore((s) => effectiveProjectId ? s.pushingPerProject[effectiveProjectId] ?? false : false)
+  const isPulling = useGitStore((s) => effectiveProjectId ? s.pullingPerProject[effectiveProjectId] ?? false : false)
+  const isRebasing = useGitStore((s) => effectiveProjectId ? s.rebasingPerProject[effectiveProjectId] ?? false : false)
+  const lastGitError = useGitStore((s) => effectiveProjectId ? s.lastGitErrorPerProject[effectiveProjectId] : undefined)
+  const clearGitError = useGitStore((s) => s.clearGitError)
   const rebaseAction = useGitStore((s) => s.rebaseRemote)
   const loadStatus = useGitStore((s) => s.loadStatus)
   const loadRangeFileCounts = useGitStore((s) => s.loadRangeFileCounts)
@@ -245,16 +249,10 @@ export function GitTree({ projectId, cwd, llmTabProjectId }: GitTreeProps = {}):
   const [commitMessage, setCommitMessage] = useState('')
   const [committing, setCommitting] = useState(false)
   const [commitError, setCommitError] = useState<string | null>(null)
-  const [pulling, setPulling] = useState(false)
 
   const handlePull = async (): Promise<void> => {
-    if (!effectiveProjectId || !effectivePath || pulling) return
-    setPulling(true)
-    try {
-      await pullAction(effectiveProjectId, effectivePath)
-    } finally {
-      setPulling(false)
-    }
+    if (!effectiveProjectId || !effectivePath) return
+    await pullAction(effectiveProjectId, effectivePath)
   }
 
   const incomingCount = drift && !drift.diverged ? drift.behind : 0
@@ -264,10 +262,12 @@ export function GitTree({ projectId, cwd, llmTabProjectId }: GitTreeProps = {}):
 
   const handlePush = async (): Promise<void> => {
     if (!effectiveProjectId || !effectivePath) return
-    const result = await pushAction(effectiveProjectId, effectivePath)
-    if (result && /error|rejected|failed/i.test(result)) {
-      console.error('git push failed:', result)
-    }
+    await pushAction(effectiveProjectId, effectivePath)
+  }
+
+  const handleRebase = async (): Promise<void> => {
+    if (!effectiveProjectId || !effectivePath) return
+    await rebaseAction(effectiveProjectId, effectivePath)
   }
 
   const handleCommitClick = (commit: GitCommit): void => {
@@ -380,11 +380,12 @@ export function GitTree({ projectId, cwd, llmTabProjectId }: GitTreeProps = {}):
           <BranchSwitcher projectId={effectiveProjectId} cwd={effectivePath} />
           {drift?.diverged && (
             <button
-              onClick={() => rebaseAction(effectiveProjectId, effectivePath)}
-              className="flex shrink-0 items-center gap-0.5 rounded bg-amber-500/15 px-1 py-px text-micro font-medium text-amber-400 hover:bg-amber-500/25"
+              onClick={handleRebase}
+              disabled={isRebasing}
+              className="flex shrink-0 items-center gap-0.5 rounded bg-amber-500/15 px-1 py-px text-micro font-medium text-amber-400 hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-40"
               title={`Diverged: ${drift.ahead} ahead, ${drift.behind} behind, click to rebase`}
             >
-              <GitMerge size={9} />
+              {isRebasing ? <Loader2 size={9} className="animate-spin" /> : <GitMerge size={9} />}
               <span>{drift.ahead}/{drift.behind}</span>
             </button>
           )}
@@ -412,6 +413,21 @@ export function GitTree({ projectId, cwd, llmTabProjectId }: GitTreeProps = {}):
           </button>
         </div>
       </div>
+
+      {lastGitError && (
+        <div className="flex items-start gap-2 border-b border-red-500/30 bg-red-500/10 px-2 py-1.5">
+          <span className="min-w-0 flex-1 break-words text-micro text-red-300" title={lastGitError}>
+            {lastGitError}
+          </span>
+          <button
+            onClick={() => clearGitError(effectiveProjectId)}
+            className="shrink-0 rounded p-0.5 text-red-300 hover:bg-red-500/20"
+            title="Dismiss"
+          >
+            <X size={11} />
+          </button>
+        </div>
+      )}
 
       {incomingCount > 0 && (
         <div className={`border-b border-zinc-800 ${isIncomingSelected ? 'bg-blue-500/15' : 'bg-blue-500/5'}`}>
@@ -441,12 +457,12 @@ export function GitTree({ projectId, cwd, llmTabProjectId }: GitTreeProps = {}):
             </button>
             <button
               onClick={handlePull}
-              disabled={pulling}
+              disabled={isPulling}
               className="mr-1 flex shrink-0 items-center gap-1 rounded bg-blue-500/15 px-2 py-1 text-micro font-medium text-blue-400 hover:bg-blue-500/25 disabled:cursor-not-allowed disabled:opacity-40"
               title={`Pull ${incomingCount} commit${incomingCount === 1 ? '' : 's'} from ${drift?.remoteBranch ?? 'remote'}`}
             >
-              {pulling ? <Loader2 size={11} className="animate-spin" /> : <ArrowDown size={11} />}
-              <span>{pulling ? 'Pulling…' : 'Pull'}</span>
+              {isPulling ? <Loader2 size={11} className="animate-spin" /> : <ArrowDown size={11} />}
+              <span>{isPulling ? 'Pulling…' : 'Pull'}</span>
             </button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { GitCommit, GitBranch, GitFileStatus, BranchDriftInfo, ConflictInfo } from '@/models/types'
+import type { GitCommit, GitBranch, GitFileStatus, BranchDriftInfo, ConflictInfo, GitOpResult } from '@/models/types'
 
 interface GitStore {
   commitsPerProject: Record<string, GitCommit[]>
@@ -11,10 +11,13 @@ interface GitStore {
   unpushedHashesPerProject: Record<string, Set<string>>
   switchingBranch: boolean
   pushingPerProject: Record<string, boolean>
+  pullingPerProject: Record<string, boolean>
+  rebasingPerProject: Record<string, boolean>
+  lastGitErrorPerProject: Record<string, string>
   driftPerProject: Record<string, BranchDriftInfo>
   driftDismissed: Record<string, boolean>
   conflictsPerProject: Record<string, ConflictInfo[]>
-  conflictsDismissed: boolean
+  conflictsDismissedPerProject: Record<string, boolean>
   loadGitData: (projectId: string, cwd: string) => Promise<void>
   loadStatus: (projectId: string, cwd: string) => Promise<void>
   loadRangeFileCounts: (projectId: string, cwd: string) => Promise<void>
@@ -22,10 +25,11 @@ interface GitStore {
   setDrift: (projectId: string, drift: BranchDriftInfo) => void
   dismissDrift: (projectId: string) => void
   loadConflicts: (projectId: string, cwd: string) => Promise<void>
-  dismissConflicts: () => void
-  pull: (projectId: string, cwd: string) => Promise<void>
-  push: (projectId: string, cwd: string) => Promise<string>
-  rebaseRemote: (projectId: string, cwd: string) => Promise<void>
+  dismissConflicts: (projectId: string) => void
+  clearGitError: (projectId: string) => void
+  pull: (projectId: string, cwd: string) => Promise<GitOpResult>
+  push: (projectId: string, cwd: string) => Promise<GitOpResult>
+  rebaseRemote: (projectId: string, cwd: string) => Promise<GitOpResult>
   initFetchListener: () => () => void
 }
 
@@ -39,10 +43,13 @@ export const useGitStore = create<GitStore>((set, get) => ({
   unpushedHashesPerProject: {},
   switchingBranch: false,
   pushingPerProject: {},
+  pullingPerProject: {},
+  rebasingPerProject: {},
+  lastGitErrorPerProject: {},
   driftPerProject: {},
   driftDismissed: {},
   conflictsPerProject: {},
-  conflictsDismissed: false,
+  conflictsDismissedPerProject: {},
 
   loadGitData: async (projectId: string, cwd: string) => {
     const isRepo = await window.api.git.isRepo(cwd)
@@ -147,36 +154,74 @@ export const useGitStore = create<GitStore>((set, get) => ({
     const conflicts = await window.api.git.conflicts(cwd)
     set((s) => ({
       conflictsPerProject: { ...s.conflictsPerProject, [projectId]: conflicts },
-      conflictsDismissed: conflicts.length === 0
+      conflictsDismissedPerProject: {
+        ...s.conflictsDismissedPerProject,
+        [projectId]: conflicts.length === 0
+      }
     }))
   },
 
-  dismissConflicts: () => {
-    set({ conflictsDismissed: true })
+  dismissConflicts: (projectId: string) => {
+    set((s) => ({
+      conflictsDismissedPerProject: { ...s.conflictsDismissedPerProject, [projectId]: true }
+    }))
+  },
+
+  clearGitError: (projectId: string) => {
+    set((s) => {
+      const { [projectId]: _, ...rest } = s.lastGitErrorPerProject
+      return { lastGitErrorPerProject: rest }
+    })
   },
 
   pull: async (projectId: string, cwd: string) => {
-    await window.api.git.pull(cwd)
-    set((s) => {
-      const { [projectId]: _, ...rest } = s.driftPerProject
-      return { driftPerProject: rest }
-    })
-    await get().loadGitData(projectId, cwd)
-    await get().loadStatus(projectId, cwd)
-    const drift = await window.api.git.fetchNow(cwd)
-    get().setDrift(projectId, drift)
-    await get().loadRangeFileCounts(projectId, cwd)
+    if (get().pullingPerProject[projectId]) return { ok: false, output: '', error: 'pull already in progress' }
+    set((s) => ({
+      pullingPerProject: { ...s.pullingPerProject, [projectId]: true },
+      lastGitErrorPerProject: (() => {
+        const { [projectId]: _, ...rest } = s.lastGitErrorPerProject
+        return rest
+      })()
+    }))
+    try {
+      const result = await window.api.git.pull(cwd)
+      if (!result.ok) {
+        set((s) => ({
+          lastGitErrorPerProject: { ...s.lastGitErrorPerProject, [projectId]: result.error ?? 'pull failed' }
+        }))
+      }
+      await get().loadGitData(projectId, cwd)
+      await get().loadStatus(projectId, cwd)
+      const drift = await window.api.git.fetchNow(cwd)
+      get().setDrift(projectId, drift)
+      await get().loadRangeFileCounts(projectId, cwd)
+      return result
+    } finally {
+      set((s) => {
+        const { [projectId]: _, ...rest } = s.pullingPerProject
+        return { pullingPerProject: rest }
+      })
+    }
   },
 
   push: async (projectId: string, cwd: string) => {
-    set((s) => ({ pushingPerProject: { ...s.pushingPerProject, [projectId]: true } }))
+    if (get().pushingPerProject[projectId]) return { ok: false, output: '', error: 'push already in progress' }
+    set((s) => ({
+      pushingPerProject: { ...s.pushingPerProject, [projectId]: true },
+      lastGitErrorPerProject: (() => {
+        const { [projectId]: _, ...rest } = s.lastGitErrorPerProject
+        return rest
+      })()
+    }))
     try {
       const result = await window.api.git.push(cwd)
-      set((s) => {
-        const { [projectId]: _, ...rest } = s.driftPerProject
-        return { driftPerProject: rest }
-      })
+      if (!result.ok) {
+        set((s) => ({
+          lastGitErrorPerProject: { ...s.lastGitErrorPerProject, [projectId]: result.error ?? 'push failed' }
+        }))
+      }
       await get().loadGitData(projectId, cwd)
+      await get().loadStatus(projectId, cwd)
       const drift = await window.api.git.fetchNow(cwd)
       get().setDrift(projectId, drift)
       await get().loadRangeFileCounts(projectId, cwd)
@@ -190,16 +235,33 @@ export const useGitStore = create<GitStore>((set, get) => ({
   },
 
   rebaseRemote: async (projectId: string, cwd: string) => {
-    await window.api.git.rebaseRemote(cwd)
-    set((s) => {
-      const { [projectId]: _, ...rest } = s.driftPerProject
-      return { driftPerProject: rest }
-    })
-    await get().loadGitData(projectId, cwd)
-    await get().loadStatus(projectId, cwd)
-    const drift = await window.api.git.fetchNow(cwd)
-    get().setDrift(projectId, drift)
-    await get().loadRangeFileCounts(projectId, cwd)
+    if (get().rebasingPerProject[projectId]) return { ok: false, output: '', error: 'rebase already in progress' }
+    set((s) => ({
+      rebasingPerProject: { ...s.rebasingPerProject, [projectId]: true },
+      lastGitErrorPerProject: (() => {
+        const { [projectId]: _, ...rest } = s.lastGitErrorPerProject
+        return rest
+      })()
+    }))
+    try {
+      const result = await window.api.git.rebaseRemote(cwd)
+      if (!result.ok) {
+        set((s) => ({
+          lastGitErrorPerProject: { ...s.lastGitErrorPerProject, [projectId]: result.error ?? 'rebase failed' }
+        }))
+      }
+      await get().loadGitData(projectId, cwd)
+      await get().loadStatus(projectId, cwd)
+      const drift = await window.api.git.fetchNow(cwd)
+      get().setDrift(projectId, drift)
+      await get().loadRangeFileCounts(projectId, cwd)
+      return result
+    } finally {
+      set((s) => {
+        const { [projectId]: _, ...rest } = s.rebasingPerProject
+        return { rebasingPerProject: rest }
+      })
+    }
   },
 
   initFetchListener: () => {

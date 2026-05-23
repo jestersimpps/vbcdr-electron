@@ -9,7 +9,7 @@ export function ConflictBanner(): React.ReactElement | null {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => s.activeProject)
   const conflictsPerProject = useGitStore((s) => s.conflictsPerProject)
-  const conflictsDismissed = useGitStore((s) => s.conflictsDismissed)
+  const conflictsDismissedPerProject = useGitStore((s) => s.conflictsDismissedPerProject)
   const dismissConflicts = useGitStore((s) => s.dismissConflicts)
   const activeTerminalTabId = useTerminalStore((s) => activeProjectId ? s.activeTabPerProject[activeProjectId] : undefined)
   const openFile = useEditorStore((s) => s.openFile)
@@ -18,7 +18,7 @@ export function ConflictBanner(): React.ReactElement | null {
   if (!activeProjectId || !project) return null
 
   const conflicts = conflictsPerProject[activeProjectId]
-  if (!conflicts || conflicts.length === 0 || conflictsDismissed) return null
+  if (!conflicts || conflicts.length === 0 || conflictsDismissedPerProject[activeProjectId]) return null
 
   const handleView = (): void => {
     for (const conflict of conflicts) {
@@ -53,7 +53,7 @@ export function ConflictBanner(): React.ReactElement | null {
         Ask Claude
       </button>
       <button
-        onClick={dismissConflicts}
+        onClick={() => dismissConflicts(activeProjectId)}
         className="ml-1 rounded p-0.5 hover:bg-white/20"
       >
         <X size={12} />

@@ -67,6 +67,12 @@ export interface ConflictInfo {
   absolutePath: string
 }
 
+export interface GitOpResult {
+  ok: boolean
+  output: string
+  error?: string
+}
+
 export type GitFileStatus = 'modified' | 'added' | 'untracked' | 'deleted' | 'renamed' | 'conflict'
 
 export interface OpenFile {
