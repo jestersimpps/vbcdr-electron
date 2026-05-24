@@ -14,6 +14,7 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { useUpdaterStore } from '@/stores/updater-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
+import { loadProjectIntoMonaco, unloadProjectFromMonaco } from '@/services/monaco-project-loader'
 import { applyThemeToAll } from '@/components/terminal/TerminalInstance'
 import type { CustomThemeUI } from '@/models/custom-theme'
 import type { FileNode } from '@/models/types'
@@ -128,11 +129,14 @@ export function App(): React.ReactElement {
       void git.loadRangeFileCounts(projectId, cwd)
     })
 
+    void loadProjectIntoMonaco(cwd)
+
     return () => {
       unsubTree()
       unsubRefs()
       window.api.fs.unwatch()
       window.api.git.unwatchRefs(projectId)
+      unloadProjectFromMonaco(cwd)
     }
   }, [activeProjectId, activeProjectPath])
 

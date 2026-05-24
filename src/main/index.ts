@@ -10,6 +10,7 @@ import { registerSkillsHandlers } from '@main/ipc/skills'
 import { registerActivityHandlers } from '@main/ipc/activity'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
 import { registerDevServerHandlers } from '@main/ipc/dev-servers'
+import { registerTsProjectHandlers } from '@main/ipc/ts-project'
 import { killAll, killOrphanedPtys } from '@main/services/pty-manager'
 import { compactActivity, flushActivity } from '@main/services/activity-service'
 import { compactTokenUsage, flushTokenUsage } from '@main/services/token-usage-service'
@@ -116,6 +117,7 @@ registerUpdaterHandlers()
 registerActivityHandlers()
 registerTokenUsageHandlers()
 registerDevServerHandlers()
+registerTsProjectHandlers()
 
 function buildMenu(): Electron.MenuItemConstructorOptions[] {
   const isMac = process.platform === 'darwin'

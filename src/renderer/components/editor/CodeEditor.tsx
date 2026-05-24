@@ -13,7 +13,9 @@ import { CSS } from '@dnd-kit/utilities'
 import { useEditorStore } from '@/stores/editor-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useThemeStore } from '@/stores/theme-store'
+import { useProjectStore } from '@/stores/project-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
+import { updateFileInMonaco } from '@/services/monaco-project-loader'
 import { MonacoErrorBoundary } from '@/components/editor/MonacoErrorBoundary'
 import { BinaryPreview } from '@/components/editor/BinaryPreview'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
@@ -144,8 +146,10 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   useEffect(() => {
     return window.api.fs.onFileChanged((path, content) => {
       useEditorStore.getState().updateFileContent(path, content)
+      const projectPath = useProjectStore.getState().projects.find((p) => p.id === projectId)?.path
+      if (projectPath) void updateFileInMonaco(projectPath, path, content)
     })
-  }, [])
+  }, [projectId])
 
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const formatOnSaveRef = useRef(formatOnSave)
@@ -160,7 +164,15 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
         // Formatter may not exist for this language — fall through to save
       }
     }
-    return useEditorStore.getState().saveFile(projectId, filePath)
+    const saved = await useEditorStore.getState().saveFile(projectId, filePath)
+    if (saved) {
+      const projectPath = useProjectStore.getState().projects.find((p) => p.id === projectId)?.path
+      const content = ed?.getValue()
+      if (projectPath && typeof content === 'string') {
+        void updateFileInMonaco(projectPath, filePath, content)
+      }
+    }
+    return saved
   }, [projectId])
 
   const applyPendingReveal = useCallback((filePath: string | null): void => {

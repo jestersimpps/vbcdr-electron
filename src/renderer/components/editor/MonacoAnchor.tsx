@@ -15,32 +15,13 @@ export function MonacoAnchor(): React.ReactElement {
         if (cancelled || !hostRef.current || editorRef.current) return
         registerMonacoThemes(monaco)
 
-        const compilerOptions = {
-          target: monaco.languages.typescript.ScriptTarget.ESNext,
-          module: monaco.languages.typescript.ModuleKind.ESNext,
-          moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-          jsx: monaco.languages.typescript.JsxEmit.React,
-          allowJs: true,
-          allowNonTsExtensions: true,
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-          isolatedModules: true,
-          resolveJsonModule: true,
-          skipLibCheck: true,
-          experimentalDecorators: true,
-          baseUrl: '.',
-          paths: { '@/*': ['src/*'] }
-        }
-        monaco.languages.typescript.typescriptDefaults.setCompilerOptions(compilerOptions)
-        monaco.languages.typescript.javascriptDefaults.setCompilerOptions(compilerOptions)
-
         const diagnosticsOptions = {
           noSemanticValidation: false,
           noSyntaxValidation: false,
           noSuggestionDiagnostics: true,
           diagnosticCodesToIgnore: [
-            2304, 2305, 2306, 2307, 2503, 2552, 2580, 2611, 2683, 2686,
-            2792, 6133, 6196, 7016, 7026, 7031, 8006
+            2306, 2503, 2580, 2611, 2683, 2686, 2792,
+            6133, 6196, 7016, 7026, 7031, 8006
           ]
         }
         monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions)

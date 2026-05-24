@@ -210,6 +210,16 @@ const api = {
       ipcRenderer.invoke('dev-servers:open', port) as Promise<void>
   },
 
+  tsproject: {
+    scan: (rootPath: string) => ipcRenderer.invoke('tsproject:scan', rootPath) as Promise<{
+      rootPath: string
+      tsconfigFound: boolean
+      compilerOptions: Record<string, unknown>
+      files: Record<string, string>
+      truncated: boolean
+    }>
+  },
+
   skills: {
     search: (query: string) => ipcRenderer.invoke('skills:search', query),
     top: () => ipcRenderer.invoke('skills:top'),
