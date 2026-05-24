@@ -25,9 +25,31 @@ function isWithinProjectRoot(filePath: string): boolean {
   return projects.some((p) => resolved.startsWith(p.path + path.sep) || resolved === p.path)
 }
 
-function searchFiles(rootPath: string, query: string, maxResults: number = 100): SearchResult[] {
+function normalizeExclude(entry: string): string {
+  return entry.replace(/^\/+|\/+$/g, '').replace(/\\/g, '/').trim()
+}
+
+function isExcluded(relDir: string, excludes: string[]): boolean {
+  if (excludes.length === 0) return false
+  const norm = relDir.replace(/\\/g, '/')
+  for (const ex of excludes) {
+    if (!ex) continue
+    if (norm === ex) return true
+    if (norm.startsWith(ex + '/')) return true
+    if (!ex.includes('/') && norm.split('/').includes(ex)) return true
+  }
+  return false
+}
+
+function searchFiles(
+  rootPath: string,
+  query: string,
+  maxResults: number = 100,
+  excludeFolders: string[] = []
+): SearchResult[] {
   const results: SearchResult[] = []
   const lowerQuery = query.toLowerCase()
+  const excludes = excludeFolders.map(normalizeExclude).filter(Boolean)
 
   function walk(dirPath: string): void {
     if (results.length >= maxResults) return
@@ -42,8 +64,10 @@ function searchFiles(rootPath: string, query: string, maxResults: number = 100):
       if (ALWAYS_IGNORE.has(entry.name)) continue
       const fullPath = path.join(dirPath, entry.name)
       const relativePath = path.relative(rootPath, fullPath)
+      const relPosix = relativePath.replace(/\\/g, '/')
 
       if (entry.isDirectory()) {
+        if (isExcluded(relPosix, excludes)) continue
         walk(fullPath)
         continue
       }
@@ -159,10 +183,10 @@ export function registerFilesystemHandlers(): void {
     return newPath
   })
 
-  safeHandle('fs:search', (_event, rootPath: string, query: string): SearchResult[] => {
+  safeHandle('fs:search', (_event, rootPath: string, query: string, excludeFolders?: string[]): SearchResult[] => {
     const resolved = path.resolve(rootPath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
-    return searchFiles(resolved, query)
+    return searchFiles(resolved, query, 100, Array.isArray(excludeFolders) ? excludeFolders : [])
   })
 
   safeHandle('fs:show-in-folder', (_event, filePath: string): void => {

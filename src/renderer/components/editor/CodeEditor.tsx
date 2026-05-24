@@ -199,6 +199,25 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   }, [tabSize, activeFilePath])
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (!((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key === 'f')) return
+      const ed = editorRef.current
+      if (!ed) return
+      const centerTab = useEditorStore.getState().centerTabPerProject[projectId]
+      if (centerTab !== 'editor') return
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+      if (target?.closest?.('[data-terminal-panel]')) return
+      e.preventDefault()
+      ed.focus()
+      ed.getAction('actions.find')?.run()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [projectId])
+
+  useEffect(() => {
     if (!activeFilePath) return
     const id = requestAnimationFrame(() => applyPendingReveal(activeFilePath))
     return () => cancelAnimationFrame(id)

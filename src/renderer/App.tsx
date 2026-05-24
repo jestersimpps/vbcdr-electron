@@ -5,6 +5,7 @@ import { UpdateBanner } from '@/components/layout/UpdateBanner'
 
 import { ConflictBanner } from '@/components/git/ConflictBanner'
 import { CommandPalette } from '@/components/palette/CommandPalette'
+import { GlobalSearchPanel } from '@/components/editor/GlobalSearchPanel'
 import { useThemeStore } from '@/stores/theme-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
@@ -277,6 +278,7 @@ export function App(): React.ReactElement {
       <ConflictBanner />
       <AppLayoutGrid />
       <CommandPalette />
+      <GlobalSearchPanel />
     </div>
   )
 }

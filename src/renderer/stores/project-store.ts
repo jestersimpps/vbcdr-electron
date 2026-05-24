@@ -5,6 +5,7 @@ import { useEditorStore } from './editor-store'
 import { useFileTreeStore } from './filetree-store'
 import { useGitStore } from './git-store'
 import { useQueueStore } from './queue-store'
+import { useSearchPrefsStore } from './search-prefs-store'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 import type { Project } from '@/models/types'
 
@@ -92,6 +93,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     useEditorStore.getState().removeProjectState(id)
     useFileTreeStore.getState().removeProjectState(id)
     useGitStore.getState().removeProjectState(id)
+    useSearchPrefsStore.getState().removeProjectExcludes(id)
 
     await Promise.all(allTabs.map((tab) => window.api.terminal.kill(tab.id)))
     await window.api.projects.remove(id)

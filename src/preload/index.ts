@@ -48,7 +48,8 @@ const api = {
     createFolder: (folderPath: string) => ipcRenderer.invoke('fs:create-folder', folderPath),
     rename: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:rename', oldPath, newPath),
     duplicate: (filePath: string) => ipcRenderer.invoke('fs:duplicate', filePath) as Promise<string>,
-    search: (rootPath: string, query: string) => ipcRenderer.invoke('fs:search', rootPath, query),
+    search: (rootPath: string, query: string, excludeFolders?: string[]) =>
+      ipcRenderer.invoke('fs:search', rootPath, query, excludeFolders ?? []),
     showInFolder: (filePath: string) => ipcRenderer.invoke('fs:show-in-folder', filePath),
     copyPath: (filePath: string) => ipcRenderer.invoke('fs:copy-path', filePath),
     watch: (rootPath: string, showIgnored?: boolean) => ipcRenderer.invoke('fs:watch', rootPath, showIgnored ?? false),
