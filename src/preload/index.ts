@@ -15,6 +15,7 @@ const api = {
 
   claude: {
     homePath: () => ipcRenderer.invoke('claude:home-path') as Promise<string>,
+    userHome: () => ipcRenderer.invoke('claude:user-home') as Promise<string>,
     scanFiles: (projectPath: string) => ipcRenderer.invoke('claude:scan-files', projectPath),
     readFile: (filePath: string, projectPath: string) => ipcRenderer.invoke('claude:read-file', filePath, projectPath),
     writeFile: (filePath: string, content: string, projectPath: string) => ipcRenderer.invoke('claude:write-file', filePath, content, projectPath),
@@ -36,7 +37,17 @@ const api = {
           summary?: string
           comments: Array<{ line: number; side: 'old' | 'new'; text: string }>
         }>
-      }>
+      }>,
+    listSessions: (projectPath: string) =>
+      ipcRenderer.invoke('claude-sessions:list', projectPath) as Promise<
+        Array<{
+          id: string
+          mtime: number
+          turnCount: number
+          firstUserMessage: string
+          firstUserTimestamp: string | null
+        }>
+      >
   },
 
   fs: {

@@ -6,6 +6,7 @@ import { registerTerminalHandlers } from '@main/ipc/terminal'
 import { registerGitHandlers } from '@main/ipc/git'
 import { registerClaudeConfigHandlers } from '@main/ipc/claude-config'
 import { registerClaudeExplainHandlers } from '@main/ipc/claude-explain'
+import { registerClaudeSessionsHandlers } from '@main/ipc/claude-sessions'
 import { registerSkillsHandlers } from '@main/ipc/skills'
 import { registerActivityHandlers } from '@main/ipc/activity'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
@@ -112,6 +113,7 @@ registerTerminalHandlers()
 registerGitHandlers()
 registerClaudeConfigHandlers()
 registerClaudeExplainHandlers()
+registerClaudeSessionsHandlers()
 registerSkillsHandlers()
 registerUpdaterHandlers()
 registerActivityHandlers()

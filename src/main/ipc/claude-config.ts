@@ -139,6 +139,10 @@ export function registerClaudeConfigHandlers(): void {
     return path.join(os.homedir(), '.claude')
   })
 
+  safeHandle('claude:user-home', (): string => {
+    return os.homedir()
+  })
+
   safeHandle('claude:scan-files', (_event, projectPath: string): ClaudeFileEntry[] => {
     return scanClaudeFiles(projectPath)
   })

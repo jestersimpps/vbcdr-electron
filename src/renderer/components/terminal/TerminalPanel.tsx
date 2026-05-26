@@ -16,7 +16,8 @@ import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
-import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles } from 'lucide-react'
+import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History } from 'lucide-react'
+import { SessionHistoryModal } from './SessionHistoryModal'
 import { cn } from '@/lib/utils'
 import type { TerminalTab } from '@/models/types'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
@@ -136,6 +137,19 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
 
   const [searchQuery, setSearchQuery] = useState('')
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [userHome, setUserHome] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!global) return
+    let cancelled = false
+    window.api.claude.userHome().then((home) => {
+      if (!cancelled) setUserHome(home)
+    })
+    return (): void => {
+      cancelled = true
+    }
+  }, [global])
 
   const projectTabs = useMemo(
     () => tabs.filter((t) => t.projectId === ownerId),
@@ -216,6 +230,19 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     if (!hasOwner) return
     const cmd = useLayoutStore.getState().llmStartupCommand
     createTab(ownerId!, ownerCwd, cmd)
+  }
+
+  const handleResumeHere = (sessionId: string): void => {
+    if (!activeTabId) return
+    window.api.terminal.write(activeTabId, `claude --resume ${sessionId}\n`)
+    setHistoryOpen(false)
+    focusTerminal(activeTabId)
+  }
+
+  const handleResumeNewTab = (sessionId: string): void => {
+    if (!hasOwner || !ownerId) return
+    createTab(ownerId, ownerCwd, `claude --resume ${sessionId}`)
+    setHistoryOpen(false)
   }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -389,6 +416,15 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
         >
           <RotateCw size={16} />
         </button>
+        <button
+          onClick={() => setHistoryOpen(true)}
+          disabled={!hasOwner}
+          onMouseDown={(e) => e.preventDefault()}
+          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          title="Claude session history"
+        >
+          <History size={16} />
+        </button>
         <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
         {!isCustomOwner && (
           <>
@@ -512,6 +548,15 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
       </div>
 
       <TaskQueuePanel tabId={activeTab?.initialCommand ? activeTabId : null} />
+      {historyOpen && (global ? userHome : activeProject) && (
+        <SessionHistoryModal
+          projectPath={global ? (userHome as string) : activeProject!.path}
+          projectName={global ? '~' : activeProject!.name}
+          onClose={() => setHistoryOpen(false)}
+          onResumeHere={handleResumeHere}
+          onResumeNewTab={handleResumeNewTab}
+        />
+      )}
     </div>
   )
 }
