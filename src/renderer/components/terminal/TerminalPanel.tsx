@@ -232,14 +232,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     createTab(ownerId!, ownerCwd, cmd)
   }
 
-  const handleResumeHere = (sessionId: string): void => {
-    if (!activeTabId) return
-    window.api.terminal.write(activeTabId, `claude --resume ${sessionId}\n`)
-    setHistoryOpen(false)
-    focusTerminal(activeTabId)
-  }
-
-  const handleResumeNewTab = (sessionId: string): void => {
+  const handleResume = (sessionId: string): void => {
     if (!hasOwner || !ownerId) return
     createTab(ownerId, ownerCwd, `claude --resume ${sessionId}`)
     setHistoryOpen(false)
@@ -553,8 +546,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
           projectPath={global ? (userHome as string) : activeProject!.path}
           projectName={global ? '~' : activeProject!.name}
           onClose={() => setHistoryOpen(false)}
-          onResumeHere={handleResumeHere}
-          onResumeNewTab={handleResumeNewTab}
+          onResume={handleResume}
         />
       )}
     </div>

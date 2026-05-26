@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, History, Terminal, MessageSquare, Loader2 } from 'lucide-react'
+import { X, History, MessageSquare, Loader2 } from 'lucide-react'
 
 interface SessionSummary {
   id: string
@@ -13,8 +13,7 @@ interface SessionHistoryModalProps {
   projectPath: string
   projectName: string
   onClose: () => void
-  onResumeHere: (sessionId: string) => void
-  onResumeNewTab: (sessionId: string) => void
+  onResume: (sessionId: string) => void
 }
 
 function formatWhen(ms: number): string {
@@ -42,8 +41,7 @@ export function SessionHistoryModal({
   projectPath,
   projectName,
   onClose,
-  onResumeHere,
-  onResumeNewTab
+  onResume
 }: SessionHistoryModalProps): React.ReactElement {
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -124,35 +122,22 @@ export function SessionHistoryModal({
           {sessions && sessions.length > 0 && (
             <ul className="divide-y divide-zinc-800/60">
               {sessions.map((s) => (
-                <li
-                  key={s.id}
-                  className="group flex items-center gap-3 px-3 py-1.5 text-xs hover:bg-zinc-800/40"
-                >
-                  <span className="w-48 shrink-0 whitespace-nowrap text-[11px] text-zinc-500">{formatWhen(s.mtime)}</span>
-                  <span className="inline-flex w-16 shrink-0 items-center gap-1 text-[11px] text-zinc-500">
-                    <MessageSquare size={10} />
-                    {s.turnCount}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-zinc-200" title={s.firstUserMessage}>
-                    {s.firstUserMessage || <span className="italic text-zinc-500">(no user message)</span>}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                      onClick={() => onResumeHere(s.id)}
-                      className="rounded border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-[11px] text-zinc-200 hover:border-blue-500/60 hover:bg-blue-500/10 hover:text-blue-300"
-                      title="Resume in this terminal"
-                    >
-                      Resume here
-                    </button>
-                    <button
-                      onClick={() => onResumeNewTab(s.id)}
-                      className="inline-flex items-center gap-1 rounded border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-[11px] text-zinc-200 hover:border-emerald-500/60 hover:bg-emerald-500/10 hover:text-emerald-300"
-                      title="Resume in a new terminal tab"
-                    >
-                      <Terminal size={11} />
-                      New tab
-                    </button>
-                  </span>
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => onResume(s.id)}
+                    className="flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs hover:bg-zinc-800/40"
+                    title="Resume in a new terminal tab"
+                  >
+                    <span className="w-48 shrink-0 whitespace-nowrap text-[11px] text-zinc-500">{formatWhen(s.mtime)}</span>
+                    <span className="inline-flex w-16 shrink-0 items-center gap-1 text-[11px] text-zinc-500">
+                      <MessageSquare size={10} />
+                      {s.turnCount}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-zinc-200" title={s.firstUserMessage}>
+                      {s.firstUserMessage || <span className="italic text-zinc-500">(no user message)</span>}
+                    </span>
+                  </button>
                 </li>
               ))}
             </ul>
