@@ -53,6 +53,7 @@ const api = {
   fs: {
     readTree: (rootPath: string, showIgnored?: boolean) => ipcRenderer.invoke('fs:read-tree', rootPath, showIgnored ?? false),
     readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
+    readImageAsDataUrl: (filePath: string) => ipcRenderer.invoke('fs:read-image-data-url', filePath) as Promise<string | null>,
     writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:write-file', filePath, content),
     deleteFile: (filePath: string) => ipcRenderer.invoke('fs:delete-file', filePath),
     createFile: (filePath: string) => ipcRenderer.invoke('fs:create-file', filePath),

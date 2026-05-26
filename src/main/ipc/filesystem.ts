@@ -126,6 +126,20 @@ export function registerFilesystemHandlers(): void {
     return readFileContents(resolved)
   })
 
+  safeHandle('fs:read-image-data-url', async (_event, filePath: string): Promise<string | null> => {
+    const resolved = path.resolve(filePath)
+    const ext = path.extname(resolved).slice(1).toLowerCase()
+    const mime: Record<string, string> = {
+      png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
+      webp: 'image/webp', bmp: 'image/bmp', svg: 'image/svg+xml', avif: 'image/avif'
+    }
+    if (!mime[ext]) return null
+    const stat = await fsp.stat(resolved)
+    if (!stat.isFile() || stat.size > 8 * 1024 * 1024) return null
+    const buf = await fsp.readFile(resolved)
+    return `data:${mime[ext]};base64,${buf.toString('base64')}`
+  })
+
   safeHandle('fs:unwatch', (): void => {
     stopWatching()
   })

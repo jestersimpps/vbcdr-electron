@@ -84,6 +84,7 @@ export function ClaudeEditor({ projectId }: { projectId: string }): React.ReactE
         <MonacoErrorBoundary>
           <Editor
             key={activeFilePath}
+            path={`inmemory://editor${activeFilePath}`}
             value={content}
             language={detectLanguage(filename)}
             theme={monacoTheme}

@@ -8,8 +8,10 @@ import { useThemeStore } from '@/stores/theme-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useProjectStore } from '@/stores/project-store'
+import { useEditorStore } from '@/stores/editor-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import { playSound } from '@/lib/sound'
+import { findFileMatches } from '@/lib/terminal-output-tidy'
 
 interface TerminalInstanceProps {
   tabId: string
@@ -95,10 +97,60 @@ function parseTokenCount(line: string): number | null {
   return parseInt(m[1].replace(/[,.]/g, ''), 10)
 }
 
+function isAbsolutePath(p: string): boolean {
+  return p.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(p)
+}
+
+function resolveAgainstCwd(rawPath: string, cwd: string): string {
+  if (isAbsolutePath(rawPath)) return rawPath
+  const cleaned = rawPath.replace(/^\.\//, '')
+  const base = cwd.replace(/[\\/]+$/, '')
+  return `${base}/${cleaned}`
+}
+
+function relativeToCwd(absolutePath: string, cwd: string): string {
+  const base = cwd.replace(/[\\/]+$/, '')
+  if (absolutePath === base) return '.'
+  if (absolutePath.startsWith(base + '/')) return absolutePath.slice(base.length + 1)
+  return absolutePath
+}
+
+async function openPathFromTerminal(
+  projectId: string,
+  cwd: string,
+  rawPath: string,
+  line: number | null
+): Promise<void> {
+  const absolute = resolveAgainstCwd(rawPath, cwd)
+  const name = rawPath.split(/[\\/]/).pop() ?? rawPath
+  const editor = useEditorStore.getState()
+  if (line !== null) editor.setPendingRevealLine(absolute, line)
+  try {
+    await editor.openFile(projectId, absolute, name, cwd)
+  } catch {
+    /* file may not exist or be readable; silently ignore */
+  }
+}
+
 export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: TerminalInstanceProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [thumbSrc, setThumbSrc] = useState<string | null>(null)
   const dragCounter = useRef(0)
+  const thumbTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showImageThumbnailRef = useRef<(absolutePath: string) => void>(() => undefined)
+  const dismissThumbnailRef = useRef<() => void>(() => undefined)
+  showImageThumbnailRef.current = async (absolutePath: string) => {
+    const dataUrl = await window.api.fs.readImageAsDataUrl(absolutePath)
+    if (!dataUrl) return
+    if (thumbTimerRef.current) { clearTimeout(thumbTimerRef.current); thumbTimerRef.current = null }
+    setThumbSrc(dataUrl)
+  }
+  dismissThumbnailRef.current = () => {
+    if (thumbTimerRef.current) { clearTimeout(thumbTimerRef.current); thumbTimerRef.current = null }
+    setThumbSrc(null)
+  }
 
   useEffect(() => {
     const el = containerRef.current
@@ -174,6 +226,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       terminal.onData((data) => {
         window.api.terminal.write(tabId, data)
         recordActivityDebounced(projectId, 'i')
+        if (data.includes('\r') || data.includes('\n')) {
+          dismissThumbnailRef.current()
+        }
         if (isLlm) {
           const e = terminalsMap.get(tabId)
           if (e) e.suppressBusyUntil = Date.now() + 300
@@ -279,6 +334,25 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
         terminal.open(el)
 
+        terminal.registerLinkProvider({
+          provideLinks: (lineNumber, callback) => {
+            const buf = terminal.buffer.active
+            const row = buf.getLine(lineNumber - 1)
+            if (!row) { callback(undefined); return }
+            const text = row.translateToString(true)
+            const matches = findFileMatches(text)
+            if (matches.length === 0) { callback(undefined); return }
+            callback(matches.map((m) => ({
+              range: {
+                start: { x: m.start + 1, y: lineNumber },
+                end: { x: m.end, y: lineNumber }
+              },
+              text: text.slice(m.start, m.end),
+              activate: () => openPathFromTerminal(projectId, cwd, m.rawPath, m.line)
+            })))
+          }
+        })
+
         const textarea = terminal.textarea
         if (textarea) {
           const onFocus = (): void => {
@@ -367,7 +441,8 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       e.preventDefault()
       e.stopPropagation()
       dragCounter.current++
-      if (e.dataTransfer?.types.includes('Files')) {
+      const types = e.dataTransfer?.types
+      if (types?.includes('Files') || types?.includes('application/x-vbcdr-file')) {
         setIsDragOver(true)
       }
     }
@@ -384,6 +459,18 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       e.stopPropagation()
       dragCounter.current = 0
       setIsDragOver(false)
+
+      const internalPath = e.dataTransfer?.getData('application/x-vbcdr-file')
+      if (internalPath) {
+        const rel = relativeToCwd(internalPath, cwd)
+        terminalsMap.get(tabId)?.terminal.paste(`@${rel} `)
+        const ext = internalPath.slice(internalPath.lastIndexOf('.')).toLowerCase()
+        if (IMAGE_EXTENSIONS.has(ext)) {
+          showImageThumbnailRef.current(internalPath)
+        }
+        focusTerminal(tabId)
+        return
+      }
 
       const files = e.dataTransfer?.files
       if (!files || files.length === 0) return
@@ -404,6 +491,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
       for (const imgPath of imagePaths) {
         window.api.terminal.pasteImage(tabId, imgPath)
+      }
+      if (imagePaths.length > 0) {
+        showImageThumbnailRef.current(imagePaths[imagePaths.length - 1])
       }
 
       if (otherPaths.length > 0) {
@@ -434,6 +524,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
+      if (thumbTimerRef.current) clearTimeout(thumbTimerRef.current)
       observer.disconnect()
       intersectionObserver.disconnect()
       el.removeEventListener('dragover', onDragOver)
@@ -445,18 +536,76 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
   }, [tabId, projectId, cwd, initialCommand])
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        width: '100%',
-        height: '100%',
-        overflow: 'hidden',
-        outline: isDragOver ? '2px solid rgba(96, 165, 250, 0.7)' : 'none',
-        outlineOffset: '-2px',
-        backgroundColor: isDragOver ? 'rgba(96, 165, 250, 0.05)' : undefined,
-        transition: 'outline 150ms ease, background-color 150ms ease'
-      }}
-    />
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          outline: isDragOver ? '2px solid rgba(96, 165, 250, 0.7)' : 'none',
+          outlineOffset: '-2px',
+          backgroundColor: isDragOver ? 'rgba(96, 165, 250, 0.05)' : undefined,
+          transition: 'outline 150ms ease, background-color 150ms ease'
+        }}
+      />
+      {thumbSrc && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            width: 140,
+            height: 100,
+            borderRadius: 6,
+            border: '1px solid rgba(255,255,255,0.15)',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
+            background: '#09090b',
+            animation: 'vbcdr-thumb-fade 220ms ease forwards',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <img
+            src={thumbSrc}
+            alt=""
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              pointerEvents: 'none'
+            }}
+          />
+          <button
+            type="button"
+            aria-label="Dismiss image preview"
+            onClick={() => dismissThumbnailRef.current()}
+            style={{
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              width: 18,
+              height: 18,
+              padding: 0,
+              borderRadius: 9,
+              border: 'none',
+              background: 'rgba(0,0,0,0.6)',
+              color: 'rgba(255,255,255,0.9)',
+              fontSize: 12,
+              lineHeight: '18px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 

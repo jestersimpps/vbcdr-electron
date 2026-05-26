@@ -125,6 +125,12 @@ function TreeNode({
     const isActive = node.path === activeFilePath
     return (
       <div
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = 'copy'
+          e.dataTransfer.setData('application/x-vbcdr-file', node.path)
+          e.dataTransfer.setData('text/plain', node.path)
+        }}
         className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-body hover:bg-zinc-800/50 ${ignoredStyle} ${
           isActive ? 'bg-zinc-800/70' : ''
         } ${statusColor || (isActive ? 'text-zinc-200' : 'text-zinc-400')}`}

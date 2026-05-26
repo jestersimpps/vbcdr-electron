@@ -300,6 +300,8 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
             <MonacoErrorBoundary onRecover={() => { editorRef.current = null }}>
               <DiffEditor
                 key={`diff-${activeFile.path}`}
+                originalModelPath={`inmemory://diff-orig${activeFile.path}`}
+                modifiedModelPath={`inmemory://diff-mod${activeFile.path}`}
                 original={activeFile.originalContent}
                 modified={activeFile.content}
                 language={detectLanguage(activeFile.name)}
@@ -330,6 +332,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
             <MonacoErrorBoundary onRecover={() => { editorRef.current = null }}>
               <Editor
                 key={activeFile.path}
+                path={`inmemory://editor${activeFile.path}`}
                 value={activeFile.content}
                 language={detectLanguage(activeFile.name)}
                 theme={monacoTheme}
