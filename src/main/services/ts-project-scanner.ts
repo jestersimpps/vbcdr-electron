@@ -4,9 +4,12 @@ import path from 'path'
 
 const SOURCE_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'])
 const DTS_EXT_RE = /\.d\.[cm]?ts$/
-const MAX_FILE_BYTES = 512 * 1024
-const MAX_TOTAL_BYTES = 32 * 1024 * 1024
-const ALWAYS_SKIP = new Set(['.git', 'dist', 'build', 'out', '.next', '.turbo', '.vercel', 'coverage'])
+const MAX_FILE_BYTES = 256 * 1024
+const MAX_TOTAL_BYTES = 12 * 1024 * 1024
+const ALWAYS_SKIP = new Set([
+  '.git', 'dist', 'build', 'out', '.next', '.turbo', '.vercel', 'coverage',
+  '.cache', '.parcel-cache', '.svelte-kit', '.nuxt', '.output', 'tmp', 'temp'
+])
 
 export interface TsProjectScanResult {
   rootPath: string
@@ -263,7 +266,7 @@ async function collectDtsInDir(
   files: Map<string, string>,
   byteBudget: { used: number },
   depth: number = 0,
-  maxDepth: number = 6
+  maxDepth: number = 4
 ): Promise<void> {
   if (depth > maxDepth) return
   if (byteBudget.used >= MAX_TOTAL_BYTES) return

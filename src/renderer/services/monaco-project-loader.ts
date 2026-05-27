@@ -4,14 +4,19 @@ import type { languages } from 'monaco-editor'
 
 type Disposable = { dispose(): void }
 
+interface LibHandles {
+  ts: Disposable
+  js: Disposable
+}
+
 interface LoadedProject {
   rootPath: string
-  extraLibs: Map<string, Disposable>
+  extraLibs: Map<string, LibHandles>
   fileMtimes: Map<string, number>
 }
 
 const loaded = new Map<string, LoadedProject>()
-let pendingScan: Promise<void> | null = null
+const pendingScans = new Map<string, Promise<void>>()
 
 function mapTarget(value: unknown): number | undefined {
   if (typeof value !== 'string') return undefined
@@ -69,6 +74,11 @@ async function getMonaco(): Promise<Monaco> {
   return loader.init()
 }
 
+function disposeLibs(libs: LibHandles): void {
+  try { libs.ts.dispose() } catch { /* already disposed */ }
+  try { libs.js.dispose() } catch { /* already disposed */ }
+}
+
 function applyExtraLibs(
   monaco: Monaco,
   project: LoadedProject,
@@ -83,15 +93,18 @@ function applyExtraLibs(
     const prevHash = project.fileMtimes.get(uri) ?? 0
     const nextHash = simpleHash(content)
     if (existing && prevHash === nextHash) continue
-    existing?.dispose()
-    const handle = ts.addExtraLib(content, uri)
-    js.addExtraLib(content, uri)
-    project.extraLibs.set(uri, handle)
+    if (existing) disposeLibs(existing)
+    const handles: LibHandles = {
+      ts: ts.addExtraLib(content, uri),
+      js: js.addExtraLib(content, uri)
+    }
+    project.extraLibs.set(uri, handles)
     project.fileMtimes.set(uri, nextHash)
   }
   for (const uri of Array.from(project.extraLibs.keys())) {
     if (seen.has(uri)) continue
-    project.extraLibs.get(uri)?.dispose()
+    const handles = project.extraLibs.get(uri)
+    if (handles) disposeLibs(handles)
     project.extraLibs.delete(uri)
     project.fileMtimes.delete(uri)
   }
@@ -104,8 +117,12 @@ function simpleHash(s: string): number {
 }
 
 export async function loadProjectIntoMonaco(rootPath: string): Promise<void> {
-  if (pendingScan) await pendingScan
-  pendingScan = (async () => {
+  const existing = pendingScans.get(rootPath)
+  if (existing) return existing
+  for (const otherPath of Array.from(loaded.keys())) {
+    if (otherPath !== rootPath) unloadProjectFromMonaco(otherPath)
+  }
+  const scan = (async () => {
     try {
       const monaco = await getMonaco()
       const result = await window.api.tsproject.scan(rootPath)
@@ -121,10 +138,12 @@ export async function loadProjectIntoMonaco(rootPath: string): Promise<void> {
       applyExtraLibs(monaco, project, result.files)
     } catch (err) {
       console.error('[monaco-project-loader] scan failed:', err)
+    } finally {
+      pendingScans.delete(rootPath)
     }
   })()
-  await pendingScan
-  pendingScan = null
+  pendingScans.set(rootPath, scan)
+  return scan
 }
 
 export async function updateFileInMonaco(rootPath: string, absolutePath: string, content: string): Promise<void> {
@@ -135,10 +154,12 @@ export async function updateFileInMonaco(rootPath: string, absolutePath: string,
   const ts = monaco.languages.typescript.typescriptDefaults
   const js = monaco.languages.typescript.javascriptDefaults
   const existing = project.extraLibs.get(uri)
-  existing?.dispose()
-  const handle = ts.addExtraLib(content, uri)
-  js.addExtraLib(content, uri)
-  project.extraLibs.set(uri, handle)
+  if (existing) disposeLibs(existing)
+  const handles: LibHandles = {
+    ts: ts.addExtraLib(content, uri),
+    js: js.addExtraLib(content, uri)
+  }
+  project.extraLibs.set(uri, handles)
   project.fileMtimes.set(uri, simpleHash(content))
 }
 
@@ -148,7 +169,7 @@ export async function removeFileFromMonaco(rootPath: string, absolutePath: strin
   const uri = `file://${absolutePath}`
   const existing = project.extraLibs.get(uri)
   if (!existing) return
-  existing.dispose()
+  disposeLibs(existing)
   project.extraLibs.delete(uri)
   project.fileMtimes.delete(uri)
 }
@@ -156,7 +177,7 @@ export async function removeFileFromMonaco(rootPath: string, absolutePath: strin
 export function unloadProjectFromMonaco(rootPath: string): void {
   const project = loaded.get(rootPath)
   if (!project) return
-  for (const handle of project.extraLibs.values()) handle.dispose()
+  for (const handles of project.extraLibs.values()) disposeLibs(handles)
   project.extraLibs.clear()
   project.fileMtimes.clear()
   loaded.delete(rootPath)

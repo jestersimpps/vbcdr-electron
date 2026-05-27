@@ -123,28 +123,33 @@ export function startWatching(rootPath: string, win: BrowserWindow, showIgnored:
     ignored: (filePath: string) => {
       const rel = path.relative(rootPath, filePath)
       if (!rel || rel === '.') return false
+      const firstSeg = rel.split(path.sep, 1)[0]
+      if (firstSeg === '.git' || firstSeg === 'node_modules' || firstSeg === '.DS_Store') return true
       if (alwaysIg.ignores(rel)) return true
-      if (!showIgnored && gitIg.ignores(rel)) return true
+      if (gitIg.ignores(rel)) return true
       return false
     },
     depth: 10,
-    persistent: true
+    persistent: true,
+    usePolling: false
   })
 
   watcher.on('all', (event: string, filePath: string) => {
     if (win.isDestroyed() || !currentRoot) return
 
-    if (treeDebounce) clearTimeout(treeDebounce)
-    treeDebounce = setTimeout(() => {
-      treeDebounce = null
-      if (win.isDestroyed() || !currentRoot) return
-      const root = currentRoot
-      const showIgnoredAtFire = currentShowIgnored
-      readTree(root, showIgnoredAtFire).then((tree) => {
-        if (win.isDestroyed() || currentRoot !== root) return
-        win.webContents.send('fs:tree-changed', tree)
-      }).catch(() => {})
-    }, 200)
+    if (event === 'add' || event === 'unlink' || event === 'addDir' || event === 'unlinkDir') {
+      if (treeDebounce) clearTimeout(treeDebounce)
+      treeDebounce = setTimeout(() => {
+        treeDebounce = null
+        if (win.isDestroyed() || !currentRoot) return
+        const root = currentRoot
+        const showIgnoredAtFire = currentShowIgnored
+        readTree(root, showIgnoredAtFire).then((tree) => {
+          if (win.isDestroyed() || currentRoot !== root) return
+          win.webContents.send('fs:tree-changed', tree)
+        }).catch(() => {})
+      }, 500)
+    }
 
     if (event === 'change') {
       if (BINARY_EXTS.has(getExt(filePath))) return

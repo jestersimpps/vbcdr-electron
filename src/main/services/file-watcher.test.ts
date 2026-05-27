@@ -303,7 +303,7 @@ describe('startWatching', () => {
     expect(ignored(root)).toBe(false)
   })
 
-  it('includes gitignored paths in the watcher when showIgnored=true', async () => {
+  it('excludes gitignored paths from the watcher even when showIgnored=true', async () => {
     writeFile('.gitignore', 'secret.env\n')
     const { startWatching } = await import('./file-watcher')
     const send = vi.fn()
@@ -311,7 +311,7 @@ describe('startWatching', () => {
     startWatching(root, win as never, true)
 
     const ignored = watchers[0].ignored!
-    expect(ignored(path.join(root, 'secret.env'))).toBe(false)
+    expect(ignored(path.join(root, 'secret.env'))).toBe(true)
     expect(ignored(path.join(root, '.git', 'HEAD'))).toBe(true)
   })
 
