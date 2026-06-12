@@ -58,20 +58,37 @@ function defaultShell(): string {
   return '/bin/sh'
 }
 
+let loginPathProbed = false
+let cachedLoginPath: string | null = null
+
+function probeLoginPath(): string | null {
+  if (loginPathProbed) return cachedLoginPath
+  loginPathProbed = true
+  if (os.platform() === 'win32') return null
+  try {
+    const loginPath = execSync('/bin/bash -ilc "echo $PATH"', {
+      encoding: 'utf-8',
+      timeout: 5000
+    }).trim()
+    cachedLoginPath = loginPath || null
+  } catch {
+    cachedLoginPath = null
+  }
+  return cachedLoginPath
+}
+
 function shellEnv(): Record<string, string> {
   const env = { ...process.env } as Record<string, string>
   env.TERM = 'xterm-256color'
   env.TERM_PROGRAM = 'vbcdr'
-  env.GIT_CONFIG_COUNT = '1'
-  env.GIT_CONFIG_KEY_0 = 'credential.helper'
-  env.GIT_CONFIG_VALUE_0 = 'osxkeychain'
+  if (os.platform() === 'darwin') {
+    env.GIT_CONFIG_COUNT = '1'
+    env.GIT_CONFIG_KEY_0 = 'credential.helper'
+    env.GIT_CONFIG_VALUE_0 = 'osxkeychain'
+  }
   if (!env.PATH || !env.PATH.includes('/usr/local/bin')) {
-    try {
-      const loginPath = execSync('/bin/bash -ilc "echo $PATH"', { encoding: 'utf-8' }).trim()
-      if (loginPath) env.PATH = loginPath
-    } catch {
-      // keep existing PATH
-    }
+    const loginPath = probeLoginPath()
+    if (loginPath) env.PATH = loginPath
   }
   return env
 }
@@ -145,8 +162,11 @@ export function createPty(
   })
 }
 
-export function writePty(tabId: string, data: string): void {
-  instances.get(tabId)?.process.write(data)
+export function writePty(tabId: string, data: string): boolean {
+  const instance = instances.get(tabId)
+  if (!instance) return false
+  instance.process.write(data)
+  return true
 }
 
 export function resizePty(tabId: string, cols: number, rows: number): void {

@@ -48,11 +48,18 @@ const setupRunnerState = (opts: {
   } as never)
 }
 
+const flushDispatch = async (): Promise<void> => {
+  await act(async () => {
+    await Promise.resolve()
+  })
+}
+
 describe('useQueueRunner', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
     sendToTerminalMock.mockReset()
+    vi.mocked(window.api.terminal.has).mockImplementation(async () => true)
     useProjectStore.setState({ activeProjectId: null } as never)
     useTerminalStore.setState({
       tabs: [],
@@ -70,7 +77,7 @@ describe('useQueueRunner', () => {
     vi.useRealTimers()
   })
 
-  it('does nothing when no project is active', () => {
+  it('does nothing when no project is active', async () => {
     setupRunnerState({
       tabs: [llmTab('t1', 'p1')],
       itemsPerTab: { t1: [{ id: 'q1', text: 'hello' }] },
@@ -78,10 +85,11 @@ describe('useQueueRunner', () => {
       tabStatuses: { t1: 'idle' }
     })
     renderHook(() => useQueueRunner())
+    await flushDispatch()
     expect(sendToTerminalMock).not.toHaveBeenCalled()
   })
 
-  it('does nothing when the active tab is not an LLM tab', () => {
+  it('does nothing when the active tab is not an LLM tab', async () => {
     setupRunnerState({
       activeProjectId: 'p1',
       tabs: [shellTab('shell-1', 'p1') as never],
@@ -91,10 +99,11 @@ describe('useQueueRunner', () => {
       tabStatuses: { 'shell-1': 'idle' }
     })
     renderHook(() => useQueueRunner())
+    await flushDispatch()
     expect(sendToTerminalMock).not.toHaveBeenCalled()
   })
 
-  it('does nothing when autoRun is disabled', () => {
+  it('does nothing when autoRun is disabled', async () => {
     setupRunnerState({
       activeProjectId: 'p1',
       tabs: [llmTab('t1', 'p1')],
@@ -104,10 +113,11 @@ describe('useQueueRunner', () => {
       tabStatuses: { t1: 'idle' }
     })
     renderHook(() => useQueueRunner())
+    await flushDispatch()
     expect(sendToTerminalMock).not.toHaveBeenCalled()
   })
 
-  it('auto-runs by default for a tab with no explicit autoRun preference', () => {
+  it('auto-runs by default for a tab with no explicit autoRun preference', async () => {
     setupRunnerState({
       activeProjectId: 'p1',
       tabs: [llmTab('t1', 'p1')],
@@ -117,10 +127,11 @@ describe('useQueueRunner', () => {
       tabStatuses: { t1: 'idle' }
     })
     renderHook(() => useQueueRunner())
+    await flushDispatch()
     expect(sendToTerminalMock).toHaveBeenCalledWith('t1', 'hello')
   })
 
-  it('does nothing when the tab is busy', () => {
+  it('does nothing when the tab is busy', async () => {
     setupRunnerState({
       activeProjectId: 'p1',
       tabs: [llmTab('t1', 'p1')],
@@ -130,10 +141,11 @@ describe('useQueueRunner', () => {
       tabStatuses: { t1: 'busy' }
     })
     renderHook(() => useQueueRunner())
+    await flushDispatch()
     expect(sendToTerminalMock).not.toHaveBeenCalled()
   })
 
-  it('does nothing when the queue is empty', () => {
+  it('does nothing when the queue is empty', async () => {
     setupRunnerState({
       activeProjectId: 'p1',
       tabs: [llmTab('t1', 'p1')],
@@ -143,10 +155,11 @@ describe('useQueueRunner', () => {
       tabStatuses: { t1: 'idle' }
     })
     renderHook(() => useQueueRunner())
+    await flushDispatch()
     expect(sendToTerminalMock).not.toHaveBeenCalled()
   })
 
-  it('dispatches the head item when conditions align: idle, autoRun, items present', () => {
+  it('dispatches the head item when conditions align: idle, autoRun, items present', async () => {
     setupRunnerState({
       activeProjectId: 'p1',
       tabs: [llmTab('t1', 'p1')],
@@ -156,12 +169,13 @@ describe('useQueueRunner', () => {
       tabStatuses: { t1: 'idle' }
     })
     renderHook(() => useQueueRunner())
+    await flushDispatch()
     expect(sendToTerminalMock).toHaveBeenCalledWith('t1', 'first')
     expect(useTerminalStore.getState().tabStatuses.t1).toBe('busy')
     expect(useQueueStore.getState().itemsPerTab.t1.map((i) => i.id)).toEqual(['q2'])
   })
 
-  it('does not dispatch a second item before the 2s cooldown elapses', () => {
+  it('does not dispatch a second item before the 2s cooldown elapses', async () => {
     setupRunnerState({
       activeProjectId: 'p1',
       tabs: [llmTab('t1', 'p1')],
@@ -171,17 +185,20 @@ describe('useQueueRunner', () => {
       tabStatuses: { t1: 'idle' }
     })
     renderHook(() => useQueueRunner())
+    await flushDispatch()
     expect(sendToTerminalMock).toHaveBeenCalledTimes(1)
 
     act(() => {
       useTerminalStore.getState().setTabStatus('t1', 'idle')
-      vi.advanceTimersByTime(500)
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500)
     })
 
     expect(sendToTerminalMock).toHaveBeenCalledTimes(1)
   })
 
-  it('dispatches the next item once the 2s cooldown has elapsed', () => {
+  it('dispatches the next item once the 2s cooldown has elapsed', async () => {
     setupRunnerState({
       activeProjectId: 'p1',
       tabs: [llmTab('t1', 'p1')],
@@ -191,14 +208,85 @@ describe('useQueueRunner', () => {
       tabStatuses: { t1: 'idle' }
     })
     renderHook(() => useQueueRunner())
+    await flushDispatch()
+    expect(sendToTerminalMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2500)
+      useTerminalStore.getState().setTabStatus('t1', 'idle')
+    })
+    await flushDispatch()
+
+    expect(sendToTerminalMock).toHaveBeenCalledTimes(2)
+    expect(sendToTerminalMock).toHaveBeenLastCalledWith('t1', 'second')
+  })
+
+  it('retries by itself once the cooldown elapses, without another state change', async () => {
+    setupRunnerState({
+      activeProjectId: 'p1',
+      tabs: [llmTab('t1', 'p1')],
+      activeTabPerProject: { p1: 't1' },
+      itemsPerTab: { t1: [{ id: 'q1', text: 'first' }, { id: 'q2', text: 'second' }] },
+      autoRunPerTab: { t1: true },
+      tabStatuses: { t1: 'idle' }
+    })
+    renderHook(() => useQueueRunner())
+    await flushDispatch()
     expect(sendToTerminalMock).toHaveBeenCalledTimes(1)
 
     act(() => {
-      vi.advanceTimersByTime(2500)
       useTerminalStore.getState().setTabStatus('t1', 'idle')
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100)
     })
 
     expect(sendToTerminalMock).toHaveBeenCalledTimes(2)
     expect(sendToTerminalMock).toHaveBeenLastCalledWith('t1', 'second')
+  })
+
+  it('does not throttle one tab because another tab dispatched recently', async () => {
+    setupRunnerState({
+      activeProjectId: 'p1',
+      tabs: [llmTab('t1', 'p1'), llmTab('t2', 'p1')],
+      activeTabPerProject: { p1: 't1' },
+      itemsPerTab: {
+        t1: [{ id: 'q1', text: 'for t1' }],
+        t2: [{ id: 'q2', text: 'for t2' }]
+      },
+      autoRunPerTab: { t1: true, t2: true },
+      tabStatuses: { t1: 'idle', t2: 'idle' }
+    })
+    renderHook(() => useQueueRunner())
+    await flushDispatch()
+    expect(sendToTerminalMock).toHaveBeenCalledWith('t1', 'for t1')
+
+    act(() => {
+      useTerminalStore.setState({
+        activeTabPerProject: { p1: 't2' }
+      } as never)
+    })
+    await flushDispatch()
+
+    expect(sendToTerminalMock).toHaveBeenCalledWith('t2', 'for t2')
+  })
+
+  it('keeps the item queued when the tab has no live PTY', async () => {
+    vi.mocked(window.api.terminal.has).mockImplementation(async () => false)
+    setupRunnerState({
+      activeProjectId: 'p1',
+      tabs: [llmTab('t1', 'p1')],
+      activeTabPerProject: { p1: 't1' },
+      itemsPerTab: { t1: [{ id: 'q1', text: 'hello' }] },
+      autoRunPerTab: { t1: true },
+      tabStatuses: { t1: 'idle' }
+    })
+    renderHook(() => useQueueRunner())
+    await flushDispatch()
+
+    expect(sendToTerminalMock).not.toHaveBeenCalled()
+    expect(useQueueStore.getState().itemsPerTab.t1.map((i) => i.id)).toEqual(['q1'])
+    expect(useTerminalStore.getState().tabStatuses.t1).toBe('idle')
   })
 })

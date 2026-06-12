@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, session, systemPreferences, dialog } from 'electron'
+import { app, BrowserWindow, Menu, session, shell, systemPreferences, dialog } from 'electron'
 import path from 'path'
 import { registerProjectHandlers } from '@main/ipc/projects'
 import { registerFilesystemHandlers } from '@main/ipc/filesystem'
@@ -72,9 +72,10 @@ function activeWebContents(): Electron.WebContents | null {
 function handleBeforeInput(_event: Electron.Event, input: Electron.Input): void {
   if (input.type !== 'keyDown') return
 
-  if (input.meta && input.alt && /^[1-9]$/.test(input.key)) {
+  const digit = /^Digit([1-9])$/.exec(input.code)
+  if (input.meta && input.alt && digit) {
     _event.preventDefault()
-    activeWebContents()?.send('menu:action', `switch-project-${input.key}`)
+    activeWebContents()?.send('menu:action', `switch-project-${digit[1]}`)
     return
   }
 }
@@ -95,6 +96,18 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.on('before-input-event', handleBeforeInput)
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//.test(url)) shell.openExternal(url)
+    return { action: 'deny' }
+  })
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const appOrigin = process.env.ELECTRON_RENDERER_URL ?? 'file://'
+    if (url.startsWith(appOrigin)) return
+    event.preventDefault()
+    if (/^https?:\/\//.test(url)) shell.openExternal(url)
+  })
 
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)

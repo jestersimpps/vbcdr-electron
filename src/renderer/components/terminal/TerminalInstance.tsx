@@ -203,7 +203,8 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         try {
           const buf = terminal.buffer.active
           const atBottom = buf.baseY - buf.viewportY <= 1
-          const hidden = el.offsetParent === null
+          // terminal.element is re-parented on tab remount; the original container div is not
+          const hidden = (terminal.element?.offsetParent ?? null) === null
           const autoScroll = useTerminalStore.getState().isAutoScroll(tabId)
           terminal.write(data, () => {
             if (autoScroll && (atBottom || hidden)) terminal.scrollToBottom()

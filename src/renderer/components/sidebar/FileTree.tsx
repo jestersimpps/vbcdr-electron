@@ -18,15 +18,22 @@ interface InlineInputState {
   currentPath?: string
 }
 
+function toFsErrorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err)
+  return raw.replace(/^Error invoking remote method '[^']+':\s*/, '').replace(/^Error:\s*/, '')
+}
+
 function InlineInput({
   type,
   currentName,
+  error,
   onSubmit,
   onCancel,
   depth
 }: {
   type: 'file' | 'folder' | 'rename'
   currentName?: string
+  error?: string | null
   onSubmit: (value: string) => void
   onCancel: () => void
   depth: number
@@ -42,6 +49,10 @@ function InlineInput({
     }
   }, [currentName])
 
+  useEffect(() => {
+    if (error) inputRef.current?.focus()
+  }, [error])
+
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter' && value.trim()) {
       onSubmit(value.trim())
@@ -53,20 +64,20 @@ function InlineInput({
   const icon = type === 'folder' ? <Folder size={14} className="shrink-0 text-zinc-500" /> : <File size={14} className="shrink-0 text-zinc-600" />
 
   return (
-    <div
-      className="flex items-center gap-1.5 px-1 py-0.5"
-      style={{ paddingLeft: `${depth * 12 + 4}px` }}
-    >
-      {icon}
-      <input
-        ref={inputRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={() => { if (value.trim()) onSubmit(value.trim()); else onCancel() }}
-        className="flex-1 rounded bg-zinc-800 px-1.5 py-0.5 text-body text-zinc-200 outline-none ring-1 ring-zinc-600 focus:ring-blue-500"
-        spellCheck={false}
-      />
+    <div style={{ paddingLeft: `${depth * 12 + 4}px` }} className="px-1 py-0.5">
+      <div className="flex items-center gap-1.5">
+        {icon}
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => { if (value.trim()) onSubmit(value.trim()); else onCancel() }}
+          className={`flex-1 rounded bg-zinc-800 px-1.5 py-0.5 text-body text-zinc-200 outline-none ring-1 ${error ? 'ring-red-500 focus:ring-red-500' : 'ring-zinc-600 focus:ring-blue-500'}`}
+          spellCheck={false}
+        />
+      </div>
+      {error && <div className="mt-0.5 pl-5 text-micro text-red-400">{error}</div>}
     </div>
   )
 }
@@ -79,6 +90,7 @@ function TreeNode({
   cwd,
   onContextMenu,
   inlineInput,
+  inlineError,
   renamingPath,
   onRenameSubmit,
   onRenameCancel,
@@ -92,6 +104,7 @@ function TreeNode({
   cwd: string
   onContextMenu: (e: React.MouseEvent, node: FileNode) => void
   inlineInput: InlineInputState | null
+  inlineError: string | null
   renamingPath: string | null
   onRenameSubmit: (newName: string) => void
   onRenameCancel: () => void
@@ -114,6 +127,7 @@ function TreeNode({
       <InlineInput
         type={node.isDirectory ? 'folder' : 'rename'}
         currentName={node.name}
+        error={inlineError}
         onSubmit={onRenameSubmit}
         onCancel={onRenameCancel}
         depth={depth}
@@ -176,7 +190,8 @@ function TreeNode({
           {showInlineInput && (
             <InlineInput
               type={inlineInput.type}
-              onSubmit={(val) => inlineInput.type === 'rename' ? onRenameSubmit(val) : onRenameSubmit(val)}
+              error={inlineError}
+              onSubmit={onRenameSubmit}
               onCancel={onRenameCancel}
               depth={depth + 1}
             />
@@ -191,6 +206,7 @@ function TreeNode({
               cwd={cwd}
               onContextMenu={onContextMenu}
               inlineInput={inlineInput}
+              inlineError={inlineError}
               renamingPath={renamingPath}
               onRenameSubmit={onRenameSubmit}
               onRenameCancel={onRenameCancel}
@@ -337,6 +353,7 @@ export function FileTree({
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ path: string; name: string; isDirectory: boolean } | null>(null)
   const [inlineInput, setInlineInput] = useState<InlineInputState | null>(null)
+  const [inlineError, setInlineError] = useState<string | null>(null)
   const [renamingPath, setRenamingPath] = useState<string | null>(null)
   const [showSearch, setShowSearch] = useState(false)
   const defaultFileOpened = useRef(false)
@@ -384,15 +401,18 @@ export function FileTree({
 
   const handleNewFile = (parentPath: string): void => {
     toggleExpanded(treeKey, parentPath)
+    setInlineError(null)
     setInlineInput({ parentPath, type: 'file' })
   }
 
   const handleNewFolder = (parentPath: string): void => {
     toggleExpanded(treeKey, parentPath)
+    setInlineError(null)
     setInlineInput({ parentPath, type: 'folder' })
   }
 
   const handleRename = (filePath: string, _name: string): void => {
+    setInlineError(null)
     setRenamingPath(filePath)
   }
 
@@ -415,7 +435,10 @@ export function FileTree({
       }
     } catch (err) {
       console.error('Failed to create:', err)
+      setInlineError(toFsErrorMessage(err))
+      return
     }
+    setInlineError(null)
     setInlineInput(null)
   }
 
@@ -428,7 +451,10 @@ export function FileTree({
       await window.api.fs.rename(renamingPath, newPath)
     } catch (err) {
       console.error('Failed to rename:', err)
+      setInlineError(toFsErrorMessage(err))
+      return
     }
+    setInlineError(null)
     setRenamingPath(null)
   }
 
@@ -513,8 +539,9 @@ export function FileTree({
         {inlineInput && inlineInput.parentPath === rootPath && (
           <InlineInput
             type={inlineInput.type}
+            error={inlineError}
             onSubmit={handleInlineSubmit}
-            onCancel={() => setInlineInput(null)}
+            onCancel={() => { setInlineError(null); setInlineInput(null) }}
             depth={0}
           />
         )}
@@ -528,9 +555,10 @@ export function FileTree({
             cwd={rootPath}
             onContextMenu={handleContextMenu}
             inlineInput={inlineInput}
+            inlineError={inlineError}
             renamingPath={renamingPath}
             onRenameSubmit={renamingPath ? handleRenameSubmit : handleInlineSubmit}
-            onRenameCancel={() => { setRenamingPath(null); setInlineInput(null) }}
+            onRenameCancel={() => { setInlineError(null); setRenamingPath(null); setInlineInput(null) }}
             onFileClick={onFileClick}
             externalActiveFilePath={externalActiveFilePath}
           />

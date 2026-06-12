@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useQueueStore } from '@/stores/queue-store'
 import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
+
+const DISPATCH_COOLDOWN_MS = 2000
 
 export function useQueueRunner(): void {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
@@ -18,7 +20,8 @@ export function useQueueRunner(): void {
   const items = activeTabId ? itemsPerTab[activeTabId] ?? [] : []
   const autoRun = activeTabId ? autoRunPerTab[activeTabId] ?? true : false
 
-  const lastDispatchAtRef = useRef<number>(0)
+  const lastDispatchAtPerTab = useRef<Map<string, number>>(new Map())
+  const [retryTick, setRetryTick] = useState(0)
 
   useEffect(() => {
     if (!activeTabId || !activeTab) return
@@ -26,12 +29,26 @@ export function useQueueRunner(): void {
     if (!autoRun) return
     if (status !== 'idle') return
     if (items.length === 0) return
-    if (Date.now() - lastDispatchAtRef.current < 2000) return
 
-    const next = items[0]
-    lastDispatchAtRef.current = Date.now()
-    useTerminalStore.getState().setTabStatus(activeTabId, 'busy')
-    useQueueStore.getState().dequeue(activeTabId)
-    sendToTerminalViaPty(activeTabId, next.text)
-  }, [activeTabId, activeTab?.initialCommand, status, autoRun, items])
+    const lastDispatchAt = lastDispatchAtPerTab.current.get(activeTabId) ?? 0
+    const elapsed = Date.now() - lastDispatchAt
+    if (elapsed < DISPATCH_COOLDOWN_MS) {
+      const timer = setTimeout(() => setRetryTick((t) => t + 1), DISPATCH_COOLDOWN_MS - elapsed)
+      return () => clearTimeout(timer)
+    }
+
+    let cancelled = false
+    window.api.terminal.has(activeTabId).then((alive) => {
+      if (cancelled || !alive) return
+      const next = useQueueStore.getState().itemsPerTab[activeTabId]?.[0]
+      if (!next) return
+      lastDispatchAtPerTab.current.set(activeTabId, Date.now())
+      useTerminalStore.getState().setTabStatus(activeTabId, 'busy')
+      useQueueStore.getState().dequeue(activeTabId)
+      sendToTerminalViaPty(activeTabId, next.text)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [activeTabId, activeTab?.initialCommand, status, autoRun, items, retryTick])
 }

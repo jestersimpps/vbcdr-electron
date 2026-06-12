@@ -11,8 +11,8 @@ export function registerTerminalHandlers(): void {
     }
   )
 
-  safeHandle('terminal:write', (_event, tabId: string, data: string): void => {
-    writePty(tabId, data)
+  safeHandle('terminal:write', (_event, tabId: string, data: string): boolean => {
+    return writePty(tabId, data)
   })
 
   safeHandle('terminal:resize', (_event, tabId: string, cols: number, rows: number): void => {
