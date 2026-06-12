@@ -12,6 +12,9 @@ import { useEditorStore } from '@/stores/editor-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import { playSound } from '@/lib/sound'
 import { findFileMatches } from '@/lib/terminal-output-tidy'
+import { isMeaningfulOutput, parseTokenCount, stripAnsi } from '@/lib/terminal-text'
+import { IMAGE_EXTENSIONS, relativeToCwd, resolveAgainstCwd, shellEscape } from '@/lib/terminal-paths'
+import { ImageThumbnail } from '@/components/terminal/ImageThumbnail'
 
 interface TerminalInstanceProps {
   tabId: string
@@ -49,15 +52,6 @@ function recordActivityDebounced(projectId: string, kind: 'i' | 'o'): void {
   window.api.activity.record(projectId, kind)
 }
 
-const MEANINGFUL_OUTPUT_MIN_CHARS = 2
-const NON_CONTENT_CHARS_RE = /[\s​-‏‪-‮⁠﻿\x00-\x08\x0B-\x1F\x7F]/g
-
-function isMeaningfulOutput(data: string): boolean {
-  if (!data) return false
-  const stripped = stripAnsi(data).replace(NON_CONTENT_CHARS_RE, '')
-  return stripped.length >= MEANINGFUL_OUTPUT_MIN_CHARS
-}
-
 let globalDataUnsub: (() => void) | null = null
 
 function ensureGlobalDataDispatcher(): void {
@@ -73,46 +67,6 @@ export function applyThemeToAll(themeId: string): void {
   terminalsMap.forEach(({ terminal }) => {
     terminal.options.theme = xtermTheme
   })
-}
-
-function shellEscape(path: string): string {
-  if (/[^a-zA-Z0-9_./:@~=-]/.test(path)) {
-    return "'" + path.replace(/'/g, "'\\''") + "'"
-  }
-  return path
-}
-
-const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'])
-
-const ANSI_RE = /\x1b(?:\[[0-9;?]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|\([ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz])/g
-const TOKEN_RE = /(\d[\d,.]*)\s*tokens?/
-
-function stripAnsi(str: string): string {
-  return str.replace(ANSI_RE, '')
-}
-
-function parseTokenCount(line: string): number | null {
-  const m = TOKEN_RE.exec(line)
-  if (!m) return null
-  return parseInt(m[1].replace(/[,.]/g, ''), 10)
-}
-
-function isAbsolutePath(p: string): boolean {
-  return p.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(p)
-}
-
-function resolveAgainstCwd(rawPath: string, cwd: string): string {
-  if (isAbsolutePath(rawPath)) return rawPath
-  const cleaned = rawPath.replace(/^\.\//, '')
-  const base = cwd.replace(/[\\/]+$/, '')
-  return `${base}/${cleaned}`
-}
-
-function relativeToCwd(absolutePath: string, cwd: string): string {
-  const base = cwd.replace(/[\\/]+$/, '')
-  if (absolutePath === base) return '.'
-  if (absolutePath.startsWith(base + '/')) return absolutePath.slice(base.length + 1)
-  return absolutePath
 }
 
 async function openPathFromTerminal(
@@ -549,62 +503,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           transition: 'outline 150ms ease, background-color 150ms ease'
         }}
       />
-      {thumbSrc && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            width: 140,
-            height: 100,
-            borderRadius: 6,
-            border: '1px solid rgba(255,255,255,0.15)',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
-            background: '#09090b',
-            animation: 'vbcdr-thumb-fade 220ms ease forwards',
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <img
-            src={thumbSrc}
-            alt=""
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              objectFit: 'contain',
-              pointerEvents: 'none'
-            }}
-          />
-          <button
-            type="button"
-            aria-label="Dismiss image preview"
-            onClick={() => dismissThumbnailRef.current()}
-            style={{
-              position: 'absolute',
-              top: 4,
-              right: 4,
-              width: 18,
-              height: 18,
-              padding: 0,
-              borderRadius: 9,
-              border: 'none',
-              background: 'rgba(0,0,0,0.6)',
-              color: 'rgba(255,255,255,0.9)',
-              fontSize: 12,
-              lineHeight: '18px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            ×
-          </button>
-        </div>
-      )}
+      {thumbSrc && <ImageThumbnail src={thumbSrc} onDismiss={() => dismissThumbnailRef.current()} />}
     </div>
   )
 }

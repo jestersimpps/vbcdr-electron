@@ -9,44 +9,13 @@ import { useSearchPrefsStore, DEFAULT_EXCLUDES } from '@/stores/search-prefs-sto
 import { MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
 import type { SearchResult } from '@/models/types'
 import { cn } from '@/lib/utils'
+import { detectLanguage } from '@/lib/language-detect'
 
 interface GroupedResults {
   path: string
   name: string
   relativePath: string
   matches: { line: number; lineContent: string }[]
-}
-
-const EXT_LANG: Record<string, string> = {
-  ts: 'typescript',
-  tsx: 'typescript',
-  js: 'javascript',
-  jsx: 'javascript',
-  mjs: 'javascript',
-  cjs: 'javascript',
-  json: 'json',
-  css: 'css',
-  scss: 'scss',
-  html: 'html',
-  md: 'markdown',
-  yaml: 'yaml',
-  yml: 'yaml',
-  py: 'python',
-  rs: 'rust',
-  go: 'go',
-  sql: 'sql',
-  sh: 'shell',
-  bash: 'shell',
-  xml: 'xml',
-  svg: 'xml',
-  toml: 'ini',
-  env: 'ini',
-  graphql: 'graphql'
-}
-
-function detectLanguage(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
-  return EXT_LANG[ext] ?? 'plaintext'
 }
 
 function groupByFile(results: SearchResult[]): GroupedResults[] {

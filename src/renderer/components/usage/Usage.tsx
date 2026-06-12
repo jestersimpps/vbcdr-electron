@@ -9,6 +9,7 @@ import { Sparkline } from '@/components/terminal/Sparkline'
 import { TIME_RANGES, rangeStartMs, type TimeRange } from '@/lib/sessions'
 import { cn } from '@/lib/utils'
 import { SegmentedToggle, SegmentedToggleItem } from '@/components/ui/ToolbarButton'
+import { Section, Kpi } from '@/components/ui/StatBlocks'
 
 interface DailyUsageRow {
   date: string
@@ -285,15 +286,6 @@ export function Usage(): React.ReactElement {
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
-  return (
-    <section className="space-y-3">
-      <h2 className="text-meta font-semibold uppercase tracking-wider text-zinc-500">{title}</h2>
-      {children}
-    </section>
-  )
-}
-
 interface TokenEvent {
   t: number
   p: string
@@ -503,24 +495,4 @@ function findBucket(buckets: ChartBucket[], t: number): number {
     if (t >= buckets[i].start && t < buckets[i].end) return i
   }
   return -1
-}
-
-interface KpiProps {
-  icon: React.ReactNode
-  label: string
-  value: string
-  sub?: string
-}
-
-function Kpi({ icon, label, value, sub }: KpiProps): React.ReactElement {
-  return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-      <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-1 text-xl font-semibold text-zinc-100">{value}</div>
-      {sub && <div className="mt-0.5 text-micro text-zinc-500">{sub}</div>}
-    </div>
-  )
 }

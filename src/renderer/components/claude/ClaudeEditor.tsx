@@ -5,25 +5,7 @@ import { useThemeStore } from '@/stores/theme-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
 import { MonacoErrorBoundary } from '@/components/editor/MonacoErrorBoundary'
 import type { editor } from 'monaco-editor'
-
-const EXT_LANG: Record<string, string> = {
-  md: 'markdown',
-  json: 'json',
-  ts: 'typescript',
-  js: 'javascript',
-  jsx: 'javascript',
-  mjs: 'javascript',
-  cjs: 'javascript',
-  tsx: 'typescript',
-  yaml: 'yaml',
-  yml: 'yaml',
-  toml: 'ini'
-}
-
-function detectLanguage(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
-  return EXT_LANG[ext] ?? 'plaintext'
-}
+import { detectLanguage } from '@/lib/language-detect'
 
 function handleBeforeMount(monaco: Monaco): void {
   registerMonacoThemes(monaco)

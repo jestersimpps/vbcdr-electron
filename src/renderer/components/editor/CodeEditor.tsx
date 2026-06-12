@@ -23,38 +23,7 @@ import { useGitStore } from '@/stores/git-store'
 import { X, Circle } from 'lucide-react'
 import type { OpenFile, GitFileStatus } from '@/models/types'
 import type { editor } from 'monaco-editor'
-
-const EXT_LANG: Record<string, string> = {
-  ts: 'typescript',
-  tsx: 'typescript',
-  js: 'javascript',
-  jsx: 'javascript',
-  mjs: 'javascript',
-  cjs: 'javascript',
-  json: 'json',
-  css: 'css',
-  scss: 'scss',
-  html: 'html',
-  md: 'markdown',
-  yaml: 'yaml',
-  yml: 'yaml',
-  py: 'python',
-  rs: 'rust',
-  go: 'go',
-  sql: 'sql',
-  sh: 'shell',
-  bash: 'shell',
-  xml: 'xml',
-  svg: 'xml',
-  toml: 'ini',
-  env: 'ini',
-  graphql: 'graphql'
-}
-
-function detectLanguage(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
-  return EXT_LANG[ext] ?? 'plaintext'
-}
+import { detectLanguage } from '@/lib/language-detect'
 
 function handleBeforeMount(monaco: Monaco): void {
   registerMonacoThemes(monaco)

@@ -1,13 +1,9 @@
-import { useAnnotationStore, type ExplainLevel } from '@/stores/annotation-store'
+import { useAnnotationStore, annotationViewKey, type ExplainLevel } from '@/stores/annotation-store'
 import type { DiffView } from '@/stores/diff-view-store'
 
 const inflight = new Map<string, Promise<void>>()
 
-function key(projectId: string, view: DiffView): string {
-  if (view.kind === 'working') return `${projectId}|working`
-  if (view.kind === 'commit') return `${projectId}|commit|${view.hash}`
-  return `${projectId}|${view.kind}|${view.from}..${view.to}`
-}
+const key = annotationViewKey
 
 function sourceFromView(view: DiffView):
   | { kind: 'working' }

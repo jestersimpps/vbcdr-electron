@@ -1,6 +1,6 @@
 import { watch, type FSWatcher } from 'chokidar'
-import { BrowserWindow } from 'electron'
 import path from 'path'
+import { broadcastToAllWindows } from '@main/services/window-broadcast'
 
 interface Entry {
   cwd: string
@@ -11,11 +11,7 @@ interface Entry {
 const projects = new Map<string, Entry>()
 
 function broadcast(projectId: string): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send('git:refs-changed', projectId)
-    }
-  }
+  broadcastToAllWindows('git:refs-changed', projectId)
 }
 
 export function watchRefs(projectId: string, cwd: string): void {

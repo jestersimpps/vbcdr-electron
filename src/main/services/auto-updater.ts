@@ -1,5 +1,6 @@
 import { autoUpdater, UpdateInfo, ProgressInfo } from 'electron-updater'
-import { BrowserWindow, dialog } from 'electron'
+import { dialog } from 'electron'
+import { broadcastToAllWindows } from '@main/services/window-broadcast'
 
 export type UpdateState = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
 
@@ -14,11 +15,7 @@ let currentStatus: UpdateStatus = { state: 'idle' }
 
 function broadcast(status: UpdateStatus): void {
   currentStatus = status
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send('updater:status', status)
-    }
-  }
+  broadcastToAllWindows('updater:status', status)
 }
 
 export function initAutoUpdater(): void {

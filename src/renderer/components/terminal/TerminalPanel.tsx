@@ -26,23 +26,12 @@ import { TaskQueuePanel } from './TaskQueuePanel'
 import { Sparkline } from './Sparkline'
 import { useQueueRunner } from '@/hooks/useQueueRunner'
 import { useTokenVelocity } from '@/hooks/useTokenVelocity'
-import type { ITheme } from '@xterm/xterm'
+import { formatTokens, tokenBarFill } from '@/lib/token-display'
 
 const TERMINAL_THEME_OPTIONS = [
   { id: '', label: 'Auto' },
   ...Object.keys(TERMINAL_THEMES).map((id) => ({ id, label: id }))
 ]
-
-function formatTokens(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return String(n)
-}
-
-function tokenBarFill(pct: number, theme: ITheme): string {
-  if (pct < 0.5) return theme.green ?? '#7ee787'
-  if (pct < 0.75) return theme.yellow ?? '#ffa657'
-  return theme.red ?? '#ff7b72'
-}
 
 const SortableTerminalTab = memo(function SortableTerminalTab({
   tab,

@@ -1,5 +1,5 @@
-import { BrowserWindow } from 'electron'
 import { fetchRemote, getBranchDrift, isGitRepo } from '@main/services/git-service'
+import { broadcastToAllWindows } from '@main/services/window-broadcast'
 import type { BranchDriftInfo } from '@main/models/types'
 
 const projects = new Map<string, string>()
@@ -7,11 +7,7 @@ let intervalId: ReturnType<typeof setInterval> | null = null
 let ticking = false
 
 function broadcast(projectId: string, drift: BranchDriftInfo): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send('git:drift', projectId, drift)
-    }
-  }
+  broadcastToAllWindows('git:drift', projectId, drift)
 }
 
 async function checkProject(projectId: string, cwd: string): Promise<void> {
