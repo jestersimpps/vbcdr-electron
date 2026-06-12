@@ -121,6 +121,7 @@ const api = {
     status: (cwd: string) => ipcRenderer.invoke('git:status', cwd),
     fileAtHead: (cwd: string, filePath: string) => ipcRenderer.invoke('git:file-at-head', cwd, filePath),
     fileAtRef: (cwd: string, ref: string, filePath: string) => ipcRenderer.invoke('git:file-at-ref', cwd, ref, filePath),
+    revertFile: (cwd: string, filePath: string) => ipcRenderer.invoke('git:revert-file', cwd, filePath),
     fileBytesAtHead: (cwd: string, filePath: string) => ipcRenderer.invoke('git:file-bytes-at-head', cwd, filePath),
     fileBytesAtRef: (cwd: string, ref: string, filePath: string) => ipcRenderer.invoke('git:file-bytes-at-ref', cwd, ref, filePath),
     commitFiles: (cwd: string, hash: string) => ipcRenderer.invoke('git:commit-files', cwd, hash),

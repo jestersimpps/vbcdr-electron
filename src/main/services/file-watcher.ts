@@ -194,7 +194,11 @@ export function readFileContents(filePath: string): FileReadResult {
   if (BINARY_EXTS.has(ext)) {
     return { content: '', isBinary: true }
   }
-  return { content: fs.readFileSync(filePath, 'utf-8'), isBinary: false }
+  const buf = fs.readFileSync(filePath)
+  if (buf.subarray(0, 8192).includes(0)) {
+    return { content: '', isBinary: true }
+  }
+  return { content: buf.toString('utf-8'), isBinary: false }
 }
 
 export function stopWatching(): void {

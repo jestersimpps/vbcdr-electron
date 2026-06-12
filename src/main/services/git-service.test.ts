@@ -152,6 +152,35 @@ describe('getStatus', () => {
     nextOutputs = [new Error('boom')]
     expect(await mod.getStatus('/p')).toEqual({})
   })
+
+  it('does not drop the entry after a rename whose origin path is short', async () => {
+    setOutputs(['R  newname.ts', 'a.c', ' M src/b.ts'].join('\0') + '\0')
+    const status = await mod.getStatus('/p')
+    expect(status['/p/newname.ts']).toBe('renamed')
+    expect(status['/p/src/b.ts']).toBe('modified')
+    expect(status['/p/a.c']).toBeUndefined()
+  })
+})
+
+describe('revertFile', () => {
+  it('runs git checkout HEAD -- relative-path', async () => {
+    setOutputs('')
+    const result = await mod.revertFile('/p', '/p/src/a.ts')
+    expect(result).toEqual({ success: true })
+    expect(calls[0].args).toEqual(['checkout', 'HEAD', '--', 'src/a.ts'])
+  })
+
+  it('rejects paths outside the repo without calling git', async () => {
+    const result = await mod.revertFile('/p', '/other/x.ts')
+    expect(result.success).toBe(false)
+    expect(calls).toHaveLength(0)
+  })
+
+  it('returns the git error on failure', async () => {
+    setOutputs(new Error('pathspec did not match'))
+    const result = await mod.revertFile('/p', '/p/x.ts')
+    expect(result.success).toBe(false)
+  })
 })
 
 describe('getFileAtHead', () => {

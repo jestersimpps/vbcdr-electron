@@ -126,7 +126,8 @@ export async function getFileAtHead(cwd: string, absolutePath: string): Promise<
   try {
     const relativePath = path.relative(cwd, absolutePath)
     if (relativePath.startsWith('..')) return null
-    return await runGit(cwd, ['show', `HEAD:${relativePath}`])
+    const buf = await runGitBuffer(cwd, ['show', `HEAD:${relativePath}`])
+    return buf.toString('utf-8')
   } catch {
     return null
   }
@@ -136,9 +137,23 @@ export async function getFileAtRef(cwd: string, ref: string, absolutePath: strin
   try {
     const relativePath = path.relative(cwd, absolutePath)
     if (relativePath.startsWith('..')) return null
-    return await runGit(cwd, ['show', `${ref}:${relativePath}`], 10000, 50 * 1024 * 1024)
+    const buf = await runGitBuffer(cwd, ['show', `${ref}:${relativePath}`])
+    return buf.toString('utf-8')
   } catch {
     return null
+  }
+}
+
+export async function revertFile(cwd: string, absolutePath: string): Promise<GitCommitResult> {
+  try {
+    const relativePath = path.relative(cwd, absolutePath)
+    if (!relativePath || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      return { success: false, error: 'Path is outside the project' }
+    }
+    await runGit(cwd, ['checkout', 'HEAD', '--', relativePath], 15000)
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: gitErrorMessage(err) }
   }
 }
 
@@ -160,10 +175,15 @@ export interface GitFileBytes {
   isBinary: boolean
 }
 
+function sniffBinary(buf: Buffer): boolean {
+  return Buffer.isBuffer(buf) && buf.subarray(0, 8192).includes(0)
+}
+
 function readBytesFromGit(buf: Buffer, ext: string): GitFileBytes {
   if (GIT_BASE64_EXTS.has(ext)) return { content: buf.toString('base64'), isBinary: true }
   if (ext === 'svg') return { content: buf.toString('utf-8'), isBinary: true }
   if (GIT_BINARY_EXTS.has(ext)) return { content: '', isBinary: true }
+  if (sniffBinary(buf)) return { content: '', isBinary: true }
   return { content: buf.toString('utf-8'), isBinary: false }
 }
 
@@ -401,9 +421,10 @@ export async function getStatus(cwd: string): Promise<Record<string, GitFileStat
 
     const statusMap: Record<string, GitFileStatus> = {}
 
-    const entries = raw.split('\0').filter((e) => e.length >= 4)
+    const entries = raw.split('\0')
     for (let i = 0; i < entries.length; i++) {
       const line = entries[i]
+      if (line.length < 4) continue
       const x = line[0]
       const y = line[1]
       const filePath = line.slice(3)

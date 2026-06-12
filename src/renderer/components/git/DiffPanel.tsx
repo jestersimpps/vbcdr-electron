@@ -26,38 +26,9 @@ import {
   type ContextMenuTarget
 } from '@/components/sidebar/FileContextMenu'
 import { MonacoErrorBoundary } from '@/components/editor/MonacoErrorBoundary'
-
-const EXT_LANG: Record<string, string> = {
-  ts: 'typescript',
-  tsx: 'typescript',
-  js: 'javascript',
-  jsx: 'javascript',
-  mjs: 'javascript',
-  cjs: 'javascript',
-  json: 'json',
-  css: 'css',
-  scss: 'scss',
-  html: 'html',
-  md: 'markdown',
-  yaml: 'yaml',
-  yml: 'yaml',
-  py: 'python',
-  rs: 'rust',
-  go: 'go',
-  sql: 'sql',
-  sh: 'shell',
-  bash: 'shell',
-  xml: 'xml',
-  svg: 'xml',
-  toml: 'ini',
-  env: 'ini',
-  graphql: 'graphql'
-}
-
-function detectLanguage(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
-  return EXT_LANG[ext] ?? 'plaintext'
-}
+import { BinaryPreview, isPreviewableBinary } from '@/components/editor/BinaryPreview'
+import { detectLanguage } from '@/lib/language-detect'
+import { useDiffEditorModels } from '@/hooks/useDiffEditorModels'
 
 interface DiffPanelProps {
   projectId: string
@@ -188,7 +159,9 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const [original, setOriginal] = useState<string>('')
   const [modified, setModified] = useState<string>('')
   const [loading, setLoading] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [isBinary, setIsBinary] = useState(false)
+  const [originalIsBinary, setOriginalIsBinary] = useState(false)
   const [collapsedDirs, setCollapsedDirs] = useState<Set<string>>(new Set())
   const [sideBySide, setSideBySide] = useState(defaultDiffView === 'split')
   const [commitFiles, setCommitFiles] = useState<ChangedFile[]>([])
@@ -316,6 +289,8 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
       setOriginal('')
       setModified('')
       setIsBinary(false)
+      setOriginalIsBinary(false)
+      setLoadFailed(false)
       setLoadedPath(null)
       return
     }
@@ -325,39 +300,53 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     let cancelled = false
     setLoading(true)
 
-    let loadHead: Promise<string>
-    let loadCurrent: Promise<{ content: string; isBinary: boolean }>
+    const empty = { content: '', isBinary: false }
+    const noHead = file.status === 'added' || file.status === 'untracked' || file.status === 'renamed'
+    let loadHead: Promise<{ content: string; isBinary: boolean } | null>
+    let loadCurrent: Promise<{ content: string; isBinary: boolean } | null>
 
     if (view.kind === 'commit') {
       const hash = view.hash
-      loadHead = file.status === 'added'
-        ? Promise.resolve('')
-        : window.api.git.fileAtRef(cwd, `${hash}^`, file.absolutePath).then((c) => c ?? '')
+      loadHead = noHead
+        ? Promise.resolve(empty)
+        : window.api.git.fileBytesAtRef(cwd, `${hash}^`, file.absolutePath)
       loadCurrent = file.status === 'deleted'
-        ? Promise.resolve({ content: '', isBinary: false })
-        : window.api.git.fileAtRef(cwd, hash, file.absolutePath).then((c) => ({ content: c ?? '', isBinary: false }))
+        ? Promise.resolve(empty)
+        : window.api.git.fileBytesAtRef(cwd, hash, file.absolutePath)
     } else if (view.kind === 'incoming' || view.kind === 'outgoing') {
       const fromRef = view.from
       const toRef = view.to
-      loadHead = file.status === 'added'
-        ? Promise.resolve('')
-        : window.api.git.fileAtRef(cwd, fromRef, file.absolutePath).then((c) => c ?? '')
+      loadHead = noHead
+        ? Promise.resolve(empty)
+        : window.api.git.fileBytesAtRef(cwd, fromRef, file.absolutePath)
       loadCurrent = file.status === 'deleted'
-        ? Promise.resolve({ content: '', isBinary: false })
-        : window.api.git.fileAtRef(cwd, toRef, file.absolutePath).then((c) => ({ content: c ?? '', isBinary: false }))
+        ? Promise.resolve(empty)
+        : window.api.git.fileBytesAtRef(cwd, toRef, file.absolutePath)
     } else {
-      loadHead = file.status === 'untracked' || file.status === 'added'
-        ? Promise.resolve('')
-        : window.api.git.fileAtHead(cwd, file.absolutePath).then((c) => c ?? '')
+      loadHead = noHead
+        ? Promise.resolve(empty)
+        : window.api.git.fileBytesAtHead(cwd, file.absolutePath)
       loadCurrent = file.status === 'deleted'
-        ? Promise.resolve({ content: '', isBinary: false })
-        : window.api.fs.readFile(file.absolutePath).catch(() => ({ content: '', isBinary: false }))
+        ? Promise.resolve(empty)
+        : window.api.fs.readFile(file.absolutePath).catch(() => null)
     }
 
     Promise.all([loadHead, loadCurrent]).then(([head, current]) => {
       if (cancelled) return
+      if (head === null || current === null) {
+        setLoadFailed(true)
+        setIsBinary(false)
+        setOriginalIsBinary(false)
+        setOriginal('')
+        setModified('')
+        setLoadedPath(file.absolutePath)
+        setLoading(false)
+        return
+      }
+      setLoadFailed(false)
       setIsBinary(current.isBinary)
-      setOriginal(head)
+      setOriginalIsBinary(head.isBinary)
+      setOriginal(head.content)
       setModified(current.content)
       setLoadedPath(file.absolutePath)
       setLoading(false)
@@ -570,21 +559,19 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
     return () => node.removeEventListener('keydown', onKey)
   }, [flatComments.length, currentCommentIndex, goToComment])
 
+  const trackDiffModels = useDiffEditorModels()
+
   const handleEditorMount = useCallback((editor: MonacoEditorNS.IStandaloneDiffEditor): void => {
     diffEditorRef.current = editor
-    editor.onDidDispose(() => {
-      if (diffEditorRef.current === editor) {
-        diffEditorRef.current = null
-        viewZoneIdsRef.current = { original: [], modified: [] }
-        decorationsRef.current = { original: [], modified: [] }
-      }
-    })
+    viewZoneIdsRef.current = { original: [], modified: [] }
+    decorationsRef.current = { original: [], modified: [] }
+    trackDiffModels(editor)
     const pending = pendingRevealRef.current
     if (pending) {
       const sub = pending.side === 'old' ? editor.getOriginalEditor() : editor.getModifiedEditor()
       sub.revealLineInCenter(pending.line)
     }
-  }, [])
+  }, [trackDiffModels])
 
   const handleContextMenu = (e: React.MouseEvent, path: string, name: string, isDirectory: boolean): void => {
     e.preventDefault()
@@ -644,14 +631,12 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   }
 
   const handleRevert = async (file: ChangedFile): Promise<void> => {
-    const headContent = await window.api.git.fileAtHead(cwd, file.absolutePath)
-    if (headContent === null) return
-    await window.api.fs.writeFile(file.absolutePath, headContent)
-    await loadStatus(projectId, cwd)
-    if (selectedPath === file.absolutePath) {
-      setOriginal(headContent)
-      setModified(headContent)
+    const result = await window.api.git.revertFile(cwd, file.absolutePath)
+    if (!result.success) {
+      console.error('Failed to revert:', result.error)
+      return
     }
+    await loadStatus(projectId, cwd)
   }
 
   const selectedFile = selectedPath ? files.find((f) => f.absolutePath === selectedPath) : null
@@ -722,7 +707,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
         <span className={`shrink-0 w-3 text-center text-micro font-semibold tabular-nums ${statusColor}`}>
           {statusLabel}
         </span>
-        {view.kind === 'working' && (
+        {view.kind === 'working' && file.status !== 'untracked' && (
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -935,10 +920,47 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             <div className="flex h-full items-center justify-center text-sm text-zinc-600">
               {files.length === 0 ? emptyMessage : 'Select a file to see the diff'}
             </div>
-          ) : isBinary && loadedPath === selectedPath ? (
+          ) : loadFailed && loadedPath === selectedPath ? (
             <div className="flex h-full items-center justify-center text-xs text-zinc-600">
-              Binary file, diff not shown
+              Couldn&apos;t load this diff
             </div>
+          ) : (isBinary || originalIsBinary) && loadedPath === selectedPath ? (
+            selectedFile && isPreviewableBinary(selectedFile.name) ? (
+              sideBySide ? (
+                <div className="grid h-full grid-cols-2 divide-x divide-zinc-800">
+                  <div className="relative min-h-0">
+                    {originalIsBinary && original ? (
+                      <BinaryPreview file={{ name: selectedFile.name, content: original }} />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+                        {selectedFile.status === 'added' || selectedFile.status === 'untracked' ? 'New file' : 'No previous version'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="relative min-h-0">
+                    {isBinary && modified ? (
+                      <BinaryPreview file={{ name: selectedFile.name, content: modified }} />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+                        {selectedFile.status === 'deleted' ? 'File deleted' : 'No current version'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : isBinary && modified ? (
+                <BinaryPreview file={{ name: selectedFile.name, content: modified }} />
+              ) : originalIsBinary && original ? (
+                <BinaryPreview file={{ name: selectedFile.name, content: original }} />
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+                  Binary file, diff not shown
+                </div>
+              )
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+                Binary file, diff not shown
+              </div>
+            )
           ) : loadedPath !== selectedPath ? (
             <div className="flex h-full items-center justify-center text-xs text-zinc-600">
               {loading ? 'Loading diff…' : ''}
@@ -957,6 +979,8 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
                 modified={modified}
                 language={language}
                 theme={monacoTheme}
+                keepCurrentOriginalModel
+                keepCurrentModifiedModel
                 beforeMount={handleBeforeMount}
                 onMount={handleEditorMount}
                 options={{

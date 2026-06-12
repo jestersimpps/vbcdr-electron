@@ -6,6 +6,7 @@ import {
   getStatus,
   getFileAtHead,
   getFileAtRef,
+  revertFile,
   getFileBytesAtHead,
   getFileBytesAtRef,
   getCommitChangedFiles,
@@ -68,6 +69,13 @@ export function registerGitHandlers(): void {
     'git:file-at-ref',
     async (_event, cwd: string, ref: string, filePath: string): Promise<string | null> => {
       return getFileAtRef(cwd, ref, filePath)
+    }
+  )
+
+  safeHandle(
+    'git:revert-file',
+    async (_event, cwd: string, filePath: string): Promise<GitCommitResult> => {
+      return revertFile(cwd, filePath)
     }
   )
 

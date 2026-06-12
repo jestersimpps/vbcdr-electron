@@ -24,6 +24,7 @@ import { X, Circle } from 'lucide-react'
 import type { OpenFile, GitFileStatus } from '@/models/types'
 import type { editor } from 'monaco-editor'
 import { detectLanguage } from '@/lib/language-detect'
+import { useDiffEditorModels } from '@/hooks/useDiffEditorModels'
 
 function handleBeforeMount(monaco: Monaco): void {
   registerMonacoThemes(monaco)
@@ -206,6 +207,8 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
+  const trackDiffModels = useDiffEditorModels()
+
   const handleTabDragEnd = useCallback((event: DragEndEvent): void => {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -275,8 +278,11 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
                 modified={activeFile.content}
                 language={detectLanguage(activeFile.name)}
                 theme={monacoTheme}
+                keepCurrentOriginalModel
+                keepCurrentModifiedModel
                 beforeMount={handleBeforeMount}
                 onMount={(diffEditor) => {
+                  trackDiffModels(diffEditor)
                   const modified = diffEditor.getModifiedEditor()
                   handleEditorMount(modified)
                   modified.onDidChangeModelContent(() => {
