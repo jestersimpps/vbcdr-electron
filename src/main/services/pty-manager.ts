@@ -17,11 +17,13 @@ interface PtyInstance {
   process: pty.IPty
   projectId: string
   pendingChunks: string[]
+  pendingBytes: number
   flushTimer: ReturnType<typeof setTimeout> | null
 }
 
 const instances = new Map<string, PtyInstance>()
 const IPC_BATCH_MS = 16
+const PENDING_BYTES_CAP = 4 * 1024 * 1024
 
 function flushPending(tabId: string, win: BrowserWindow): void {
   const instance = instances.get(tabId)
@@ -30,6 +32,7 @@ function flushPending(tabId: string, win: BrowserWindow): void {
   if (instance.pendingChunks.length === 0) return
   const batch = instance.pendingChunks.join('')
   instance.pendingChunks.length = 0
+  instance.pendingBytes = 0
   if (!win.isDestroyed()) {
     win.webContents.send('terminal:data', tabId, batch)
   }
@@ -136,13 +139,26 @@ export function createPty(
     return
   }
 
-  instances.set(tabId, { process: proc, projectId, pendingChunks: [], flushTimer: null })
+  instances.set(tabId, {
+    process: proc,
+    projectId,
+    pendingChunks: [],
+    pendingBytes: 0,
+    flushTimer: null
+  })
 
   proc.onData((data: string) => {
     appendScrollback(tabId, data)
     const instance = instances.get(tabId)
     if (!instance) return
     instance.pendingChunks.push(data)
+    instance.pendingBytes += data.length
+    if (instance.pendingBytes > PENDING_BYTES_CAP) {
+      const joined = instance.pendingChunks.join('').slice(-PENDING_BYTES_CAP)
+      instance.pendingChunks.length = 0
+      instance.pendingChunks.push(joined)
+      instance.pendingBytes = joined.length
+    }
     if (!instance.flushTimer) {
       instance.flushTimer = setTimeout(() => flushPending(tabId, win), IPC_BATCH_MS)
     }
