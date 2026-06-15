@@ -7,7 +7,7 @@ import {
   type PermissionPreset
 } from '@/stores/permission-presets-store'
 import { PROFILE_LIBRARY } from '@/config/permission-profile-library'
-import type { RuleBucket } from '@/lib/claude-permissions'
+import { validateRule, type RuleBucket } from '@/lib/claude-permissions'
 
 const BUCKETS: { key: RuleBucket; label: string; placeholder: string }[] = [
   { key: 'allow', label: 'Allow', placeholder: 'Bash(npm:*)' },
@@ -85,6 +85,7 @@ function PresetCard({ preset }: { preset: PermissionPreset }): React.ReactElemen
   const removePreset = usePermissionPresetsStore((s) => s.removePreset)
   const [open, setOpen] = useState(false)
   const [drafts, setDrafts] = useState<Record<RuleBucket, string>>({ allow: '', ask: '', deny: '' })
+  const [errors, setErrors] = useState<Record<RuleBucket, string | null>>({ allow: null, ask: null, deny: null })
   const [pickerOpen, setPickerOpen] = useState(false)
   const profileSourceId = useMemo(
     () => (PROFILE_LIBRARY.find((p) => p.templateId === preset.templateId) ? preset.templateId : ''),
@@ -103,9 +104,15 @@ function PresetCard({ preset }: { preset: PermissionPreset }): React.ReactElemen
   const addRule = (bucket: RuleBucket): void => {
     const value = drafts[bucket].trim()
     if (!value) return
+    const error = validateRule(bucket, value)
+    if (error) {
+      setErrors((e) => ({ ...e, [bucket]: error }))
+      return
+    }
     if (preset[bucket].includes(value)) return
     update(preset.id, { [bucket]: [...preset[bucket], value] })
     setDrafts((d) => ({ ...d, [bucket]: '' }))
+    setErrors((e) => ({ ...e, [bucket]: null }))
   }
   const removeRule = (bucket: RuleBucket, rule: string): void => {
     update(preset.id, { [bucket]: preset[bucket].filter((r) => r !== rule) })
@@ -228,7 +235,11 @@ function PresetCard({ preset }: { preset: PermissionPreset }): React.ReactElemen
                   <input
                     type="text"
                     value={drafts[b.key]}
-                    onChange={(e) => setDrafts((d) => ({ ...d, [b.key]: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setDrafts((d) => ({ ...d, [b.key]: value }))
+                      setErrors((er) => ({ ...er, [b.key]: null }))
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') addRule(b.key)
                     }}
@@ -244,6 +255,9 @@ function PresetCard({ preset }: { preset: PermissionPreset }): React.ReactElemen
                     <Plus size={12} />
                   </button>
                 </div>
+                {errors[b.key] && (
+                  <div className="mt-1 text-micro leading-snug text-rose-400">{errors[b.key]}</div>
+                )}
               </div>
             )
           })}

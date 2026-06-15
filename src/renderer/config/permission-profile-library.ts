@@ -30,7 +30,7 @@ export const PROFILE_LIBRARY: readonly PermissionProfile[] = [
     description: 'Sensible everyday — git, npm, edits free; push asks.',
     color: '#3b82f6',
     mode: 'default',
-    allow: ['Read', 'Edit', 'Write', 'Bash(npm:*)', 'Bash(git:*)', 'WebFetch(domain:*)', 'mcp__*'],
+    allow: ['Read', 'Edit', 'Write', 'Bash(npm:*)', 'Bash(git:*)', 'WebFetch(domain:*)'],
     ask: ['Bash(git push *)', 'Bash(rm *)', 'Bash(sudo *)'],
     deny: [...ENV_AND_SECRETS_DENY, 'Bash(curl *)']
   },
@@ -40,7 +40,7 @@ export const PROFILE_LIBRARY: readonly PermissionProfile[] = [
     description: 'Auto-accept edits. Broad shell allow with safety rails.',
     color: '#f59e0b',
     mode: 'acceptEdits',
-    allow: ['Read', 'Edit', 'Write', 'Bash(*)', 'WebFetch(domain:*)', 'mcp__*', 'Agent(*)'],
+    allow: ['Read', 'Edit', 'Write', 'Bash(*)', 'WebFetch(domain:*)', 'Agent(*)'],
     ask: ['Bash(git push *)', 'Bash(sudo *)'],
     deny: [...ENV_AND_SECRETS_DENY, 'Bash(curl *)', 'Bash(rm -rf *)']
   },
@@ -69,8 +69,7 @@ export const PROFILE_LIBRARY: readonly PermissionProfile[] = [
       'Bash(yarn:*)',
       'Bash(npx:*)',
       'Bash(git:*)',
-      'WebFetch(domain:*)',
-      'mcp__*'
+      'WebFetch(domain:*)'
     ],
     ask: ['Bash(git push *)', 'Bash(rm *)'],
     deny: [...ENV_AND_SECRETS_DENY, 'Bash(curl *)']
@@ -93,8 +92,7 @@ export const PROFILE_LIBRARY: readonly PermissionProfile[] = [
       'Bash(cargo:*)',
       'Bash(git:*)',
       'Bash(docker compose *)',
-      'Bash(psql *)',
-      'mcp__*'
+      'Bash(psql *)'
     ],
     ask: ['Bash(git push *)', 'Bash(rm *)', 'Bash(docker *)', 'Bash(sudo *)'],
     deny: [...ENV_AND_SECRETS_DENY, 'Bash(curl *)']
@@ -125,7 +123,7 @@ export const PROFILE_LIBRARY: readonly PermissionProfile[] = [
     description: 'Automated runs. Allow broadly; container-only.',
     color: '#ec4899',
     mode: 'acceptEdits',
-    allow: ['Read', 'Edit', 'Write', 'Bash', 'WebFetch(domain:*)', 'mcp__*', 'Agent(*)'],
+    allow: ['Read', 'Edit', 'Write', 'Bash', 'WebFetch(domain:*)', 'Agent(*)'],
     ask: [],
     deny: [...ENV_AND_SECRETS_DENY]
   }

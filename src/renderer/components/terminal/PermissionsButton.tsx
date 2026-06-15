@@ -9,6 +9,7 @@ import {
   matchesPreset,
   addRule,
   removeRule,
+  validateRule,
   type RuleBucket,
   type ClaudeSettings,
   type PermissionsView,
@@ -31,6 +32,7 @@ export function PermissionsButton({ projectPath }: Props): JSX.Element {
   const [settings, setSettings] = useState<ClaudeSettings>({})
   const [view, setView] = useState<PermissionsView>(DEFAULT_VIEW)
   const [drafts, setDrafts] = useState<Record<RuleBucket, string>>({ allow: '', ask: '', deny: '' })
+  const [errors, setErrors] = useState<Record<RuleBucket, string | null>>({ allow: null, ask: null, deny: null })
   const wrapperRef = useRef<HTMLDivElement>(null)
   const presets = usePermissionPresetsStore((s) => s.presets)
 
@@ -78,8 +80,14 @@ export function PermissionsButton({ projectPath }: Props): JSX.Element {
   const onAdd = (bucket: RuleBucket): void => {
     const value = drafts[bucket]
     if (!value.trim()) return
+    const error = validateRule(bucket, value)
+    if (error) {
+      setErrors((e) => ({ ...e, [bucket]: error }))
+      return
+    }
     void persist(addRule(settings, bucket, value))
     setDrafts((d) => ({ ...d, [bucket]: '' }))
+    setErrors((e) => ({ ...e, [bucket]: null }))
   }
 
   const onRemove = (bucket: RuleBucket, rule: string): void => {
@@ -185,7 +193,11 @@ export function PermissionsButton({ projectPath }: Props): JSX.Element {
                     <input
                       type="text"
                       value={drafts[b.key]}
-                      onChange={(e) => setDrafts((d) => ({ ...d, [b.key]: e.target.value }))}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setDrafts((d) => ({ ...d, [b.key]: value }))
+                        setErrors((er) => ({ ...er, [b.key]: null }))
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') onAdd(b.key)
                       }}
@@ -201,6 +213,9 @@ export function PermissionsButton({ projectPath }: Props): JSX.Element {
                       <Plus size={12} />
                     </button>
                   </div>
+                  {errors[b.key] && (
+                    <div className="mt-1 text-micro leading-snug text-rose-400">{errors[b.key]}</div>
+                  )}
                 </div>
               )
             })}

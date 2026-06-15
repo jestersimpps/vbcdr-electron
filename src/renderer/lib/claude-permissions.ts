@@ -55,9 +55,27 @@ export function isCustomized(view: PermissionsView): boolean {
   return view.mode !== 'default' || view.allow.length > 0 || view.ask.length > 0 || view.deny.length > 0
 }
 
+export function isMcpRule(rule: string): boolean {
+  return rule.startsWith('mcp__')
+}
+
+export function isAnchoredMcpRule(rule: string): boolean {
+  return /^mcp__[^_*]+(__|$)/.test(rule)
+}
+
+export function validateRule(bucket: RuleBucket, rule: string): string | null {
+  const trimmed = rule.trim()
+  if (!trimmed) return null
+  if (isMcpRule(trimmed) && bucket === 'allow' && !isAnchoredMcpRule(trimmed)) {
+    return 'Unanchored MCP wildcards (mcp__*) are not allowed in Allow. Anchor to a server, e.g. mcp__server__*.'
+  }
+  return null
+}
+
 export function addRule(settings: ClaudeSettings, bucket: RuleBucket, rule: string): ClaudeSettings {
   const trimmed = rule.trim()
   if (!trimmed) return settings
+  if (validateRule(bucket, trimmed)) return settings
   const permissions: ClaudePermissionsBlock = { ...(settings.permissions ?? {}) }
   const list = [...(permissions[bucket] ?? [])]
   if (list.includes(trimmed)) return settings
