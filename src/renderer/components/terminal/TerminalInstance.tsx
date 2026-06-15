@@ -13,6 +13,7 @@ import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import { playSound } from '@/lib/sound'
 import { findFileMatches } from '@/lib/terminal-output-tidy'
 import { isMeaningfulOutput, parseTokenCount, stripAnsi } from '@/lib/terminal-text'
+import { isTranscriptDriven } from '@/lib/transcript-driven-tabs'
 import { IMAGE_EXTENSIONS, relativeToCwd, resolveAgainstCwd, shellEscape } from '@/lib/terminal-paths'
 import { ImageThumbnail } from '@/components/terminal/ImageThumbnail'
 
@@ -270,7 +271,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
             if (extracted.length > 0) {
               useTerminalStore.getState().setOutput(projectId, extracted)
             }
-            if (latestTokens !== null) {
+            if (latestTokens !== null && !isTranscriptDriven(tabId)) {
               useTerminalStore.getState().setTokenUsage(tabId, latestTokens)
               window.api.tokenUsage.record(tabId, projectId, latestTokens)
             }

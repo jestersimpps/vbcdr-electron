@@ -203,6 +203,12 @@ const api = {
     record: (tabId: string, projectId: string, tokens: number) =>
       ipcRenderer.invoke('token-usage:record', tabId, projectId, tokens),
     resetTab: (tabId: string) => ipcRenderer.invoke('token-usage:reset-tab', tabId),
+    context: (cwd: string) =>
+      ipcRenderer.invoke('token-usage:context', cwd) as Promise<{
+        contextTokens: number
+        model: string | null
+        contextCap: number
+      } | null>,
     daily: (sinceIso: string | null) => ipcRenderer.invoke('token-usage:daily', sinceIso),
     events: (sinceIso: string | null) => ipcRenderer.invoke('token-usage:events', sinceIso)
   },

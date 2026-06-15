@@ -2,12 +2,16 @@ import { stripAnsi } from '@/lib/terminal-output-tidy'
 
 export { stripAnsi }
 
-export const TOKEN_RE = /(\d[\d,.]*)\s*tokens?/
+export const TOKEN_RE = /(\d[\d,]*\.?\d*)\s*([km])?\s*tokens?/i
 
 export function parseTokenCount(line: string): number | null {
   const m = TOKEN_RE.exec(line)
   if (!m) return null
-  return parseInt(m[1].replace(/[,.]/g, ''), 10)
+  const value = parseFloat(m[1].replace(/,/g, ''))
+  if (!Number.isFinite(value)) return null
+  const suffix = m[2]?.toLowerCase()
+  const mult = suffix === 'm' ? 1_000_000 : suffix === 'k' ? 1_000 : 1
+  return Math.round(value * mult)
 }
 
 export const MEANINGFUL_OUTPUT_MIN_CHARS = 2

@@ -7,6 +7,10 @@ import {
   type DailyTokenUsage,
   type TokenEvent
 } from '@main/services/token-usage-service'
+import {
+  readTranscriptUsage,
+  type TranscriptUsage
+} from '@main/services/transcript-usage-service'
 
 export function registerTokenUsageHandlers(): void {
   safeHandle(
@@ -19,6 +23,13 @@ export function registerTokenUsageHandlers(): void {
   safeHandle('token-usage:reset-tab', (_event, tabId: string): void => {
     resetTabTokenTracking(tabId)
   })
+
+  safeHandle(
+    'token-usage:context',
+    (_event, cwd: string): TranscriptUsage | null => {
+      return readTranscriptUsage(cwd)
+    }
+  )
 
   safeHandle(
     'token-usage:daily',

@@ -26,6 +26,7 @@ import { TaskQueuePanel } from './TaskQueuePanel'
 import { Sparkline } from './Sparkline'
 import { useQueueRunner } from '@/hooks/useQueueRunner'
 import { useTokenVelocity } from '@/hooks/useTokenVelocity'
+import { useContextUsage } from '@/hooks/useContextUsage'
 import { formatTokens, tokenBarFill } from '@/lib/token-display'
 
 const TERMINAL_THEME_OPTIONS = [
@@ -253,7 +254,13 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     if (ownerId) setActiveTab(ownerId, tabId)
   }, [ownerId, setActiveTab])
 
-  const tokenCap = useLayoutStore((s) => s.tokenCap)
+  const manualTokenCap = useLayoutStore((s) => s.tokenCap)
+  const { contextCap } = useContextUsage(
+    tokenVelocityTabId,
+    activeTab?.projectId ?? null,
+    activeTab?.initialCommand ? (activeTab?.cwd ?? null) : null
+  )
+  const tokenCap = contextCap ?? manualTokenCap
 
   useQueueRunner()
 
