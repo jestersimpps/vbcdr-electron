@@ -202,9 +202,10 @@ interface GitTreeProps {
   projectId?: string
   cwd?: string
   llmTabProjectId?: string
+  noRepoContent?: React.ReactNode
 }
 
-export function GitTree({ projectId, cwd, llmTabProjectId }: GitTreeProps = {}): React.ReactElement {
+export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent }: GitTreeProps = {}): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => {
     const id = s.activeProjectId
@@ -365,9 +366,11 @@ export function GitTree({ projectId, cwd, llmTabProjectId }: GitTreeProps = {}):
 
   if (!isRepo) {
     return (
-      <div className="flex h-full items-center justify-center text-xs text-zinc-600">
-        Not a git repository
-      </div>
+      noRepoContent ?? (
+        <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+          Not a git repository
+        </div>
+      )
     )
   }
 
