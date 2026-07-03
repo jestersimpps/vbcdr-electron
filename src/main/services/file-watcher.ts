@@ -31,50 +31,128 @@ function getExt(filePath: string): string {
 let watcher: FSWatcher | null = null
 let currentRoot: string | null = null
 let currentShowIgnored = false
+let currentMatcher: GitignoreMatcher | null = null
 const fileDebounce = new Map<string, NodeJS.Timeout>()
 let treeDebounce: NodeJS.Timeout | null = null
 
 const ALWAYS_IGNORE = ['.git', 'node_modules', '.DS_Store']
+const MAX_TREE_NODES = 30000
+const READDIR_CONCURRENCY = 16
 
-function loadGitignorePatterns(rootPath: string): Ignore {
-  const ig = ignore()
-  const gitignorePath = path.join(rootPath, '.gitignore')
-  try {
-    const content = fs.readFileSync(gitignorePath, 'utf-8')
-    ig.add(content)
-  } catch {
-    // no .gitignore
-  }
-  return ig
+function toPosix(rel: string): string {
+  return rel.split(path.sep).join('/')
 }
 
-export async function readTree(rootPath: string, showIgnored: boolean = false, maxDepth: number = 10): Promise<FileNode> {
+class GitignoreMatcher {
+  private readonly rootPath: string
+  private readonly dirIgnores = new Map<string, Ignore | null>()
+
+  constructor(rootPath: string) {
+    this.rootPath = rootPath
+  }
+
+  invalidateDir(dirAbs: string): void {
+    this.dirIgnores.delete(dirAbs)
+  }
+
+  private getDirIgnore(dirAbs: string): Ignore | null {
+    const cached = this.dirIgnores.get(dirAbs)
+    if (cached !== undefined) return cached
+    let ig: Ignore | null = null
+    try {
+      const content = fs.readFileSync(path.join(dirAbs, '.gitignore'), 'utf-8')
+      ig = ignore().add(content)
+    } catch {
+      ig = null
+    }
+    this.dirIgnores.set(dirAbs, ig)
+    return ig
+  }
+
+  ignores(fullPath: string, isDirectory: boolean): boolean {
+    const relToRoot = path.relative(this.rootPath, fullPath)
+    if (!relToRoot || relToRoot === '.' || relToRoot.startsWith('..') || path.isAbsolute(relToRoot)) {
+      return false
+    }
+    let base = this.rootPath
+    const segments = toPosix(relToRoot).split('/')
+    for (let i = 0; i < segments.length; i++) {
+      const ig = this.getDirIgnore(base)
+      if (ig) {
+        const rel = segments.slice(i).join('/')
+        if (ig.ignores(rel)) return true
+        if (isDirectory && ig.ignores(rel + '/')) return true
+      }
+      base = path.join(base, segments[i])
+    }
+    return false
+  }
+}
+
+function createLimiter(max: number): <T>(fn: () => Promise<T>) => Promise<T> {
+  let active = 0
+  const queue: Array<() => void> = []
+  const release = (): void => {
+    active--
+    const next = queue.shift()
+    if (next) next()
+  }
+  return <T>(fn: () => Promise<T>): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+      const run = (): void => {
+        active++
+        fn().then(resolve, reject).finally(release)
+      }
+      if (active < max) run()
+      else queue.push(run)
+    })
+}
+
+export async function readTree(
+  rootPath: string,
+  showIgnored: boolean = false,
+  maxDepth: number = 10,
+  maxNodes: number = MAX_TREE_NODES
+): Promise<FileNode> {
   const alwaysIg = ignore().add(ALWAYS_IGNORE)
-  const gitIg = loadGitignorePatterns(rootPath)
+  const matcher = currentMatcher && currentRoot === rootPath
+    ? currentMatcher
+    : new GitignoreMatcher(rootPath)
+  const limit = createLimiter(READDIR_CONCURRENCY)
+  const budget = { nodes: 0, truncated: false }
 
   async function walk(dirPath: string, depth: number): Promise<FileNode[]> {
     if (depth > maxDepth) return []
+    if (budget.nodes >= maxNodes) {
+      budget.truncated = true
+      return []
+    }
 
     let entries: fs.Dirent[]
     try {
-      entries = await fsp.readdir(dirPath, { withFileTypes: true })
+      entries = await limit(() => fsp.readdir(dirPath, { withFileTypes: true }))
     } catch {
       return []
     }
 
-    const childPromises: Array<Promise<FileNode | null>> = []
+    const dirPromises: Array<Promise<FileNode>> = []
+    const fileNodes: FileNode[] = []
     for (const entry of entries) {
-      const rel = path.relative(rootPath, path.join(dirPath, entry.name))
+      if (budget.nodes >= maxNodes) {
+        budget.truncated = true
+        break
+      }
+      const fullPath = path.join(dirPath, entry.name)
+      const rel = toPosix(path.relative(rootPath, fullPath))
       if (alwaysIg.ignores(rel)) continue
 
-      const isIgnored = gitIg.ignores(rel)
+      const isDir = entry.isDirectory()
+      const isIgnored = matcher.ignores(fullPath, isDir)
       if (isIgnored && !showIgnored) continue
 
-      const fullPath = path.join(dirPath, entry.name)
-      const isDir = entry.isDirectory()
-
+      budget.nodes++
       if (isDir) {
-        childPromises.push(
+        dirPromises.push(
           walk(fullPath, depth + 1).then((children) => ({
             name: entry.name,
             path: fullPath,
@@ -84,29 +162,29 @@ export async function readTree(rootPath: string, showIgnored: boolean = false, m
           }))
         )
       } else {
-        childPromises.push(
-          Promise.resolve({
-            name: entry.name,
-            path: fullPath,
-            isDirectory: false,
-            isGitignored: isIgnored || undefined
-          })
-        )
+        fileNodes.push({
+          name: entry.name,
+          path: fullPath,
+          isDirectory: false,
+          isGitignored: isIgnored || undefined
+        })
       }
     }
 
-    const nodes = (await Promise.all(childPromises)).filter((n): n is FileNode => n !== null)
+    const nodes = [...(await Promise.all(dirPromises)), ...fileNodes]
     return nodes.sort((a, b) => {
       if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
       return a.name.localeCompare(b.name)
     })
   }
 
+  const children = await walk(rootPath, 0)
   return {
     name: path.basename(rootPath),
     path: rootPath,
     isDirectory: true,
-    children: await walk(rootPath, 0)
+    children,
+    truncated: budget.truncated || undefined
   }
 }
 
@@ -114,19 +192,18 @@ export function startWatching(rootPath: string, win: BrowserWindow, showIgnored:
   stopWatching()
   currentRoot = rootPath
   currentShowIgnored = showIgnored
+  currentMatcher = new GitignoreMatcher(rootPath)
 
   const alwaysIg = ignore().add(ALWAYS_IGNORE)
-  const gitIg = loadGitignorePatterns(rootPath)
+  const matcher = currentMatcher
 
   watcher = watch(rootPath, {
     ignoreInitial: true,
-    ignored: (filePath: string) => {
+    ignored: (filePath: string, stats?: fs.Stats) => {
       const rel = path.relative(rootPath, filePath)
       if (!rel || rel === '.') return false
-      const firstSeg = rel.split(path.sep, 1)[0]
-      if (firstSeg === '.git' || firstSeg === 'node_modules' || firstSeg === '.DS_Store') return true
-      if (alwaysIg.ignores(rel)) return true
-      if (gitIg.ignores(rel)) return true
+      if (alwaysIg.ignores(toPosix(rel))) return true
+      if (matcher.ignores(filePath, stats?.isDirectory() ?? true)) return true
       return false
     },
     depth: 10,
@@ -134,24 +211,32 @@ export function startWatching(rootPath: string, win: BrowserWindow, showIgnored:
     usePolling: false
   })
 
+  const scheduleTreeRescan = (): void => {
+    if (treeDebounce) clearTimeout(treeDebounce)
+    treeDebounce = setTimeout(() => {
+      treeDebounce = null
+      if (win.isDestroyed() || !currentRoot) return
+      const root = currentRoot
+      const showIgnoredAtFire = currentShowIgnored
+      readTree(root, showIgnoredAtFire).then((tree) => {
+        if (win.isDestroyed() || currentRoot !== root) return
+        win.webContents.send('fs:tree-changed', tree)
+      }).catch(() => {})
+    }, 500)
+  }
+
   watcher.on('all', (event: string, filePath: string) => {
     if (win.isDestroyed() || !currentRoot) return
 
+    const isGitignoreFile = path.basename(filePath) === '.gitignore'
+    if (isGitignoreFile) matcher.invalidateDir(path.dirname(filePath))
+
     if (event === 'add' || event === 'unlink' || event === 'addDir' || event === 'unlinkDir') {
-      if (treeDebounce) clearTimeout(treeDebounce)
-      treeDebounce = setTimeout(() => {
-        treeDebounce = null
-        if (win.isDestroyed() || !currentRoot) return
-        const root = currentRoot
-        const showIgnoredAtFire = currentShowIgnored
-        readTree(root, showIgnoredAtFire).then((tree) => {
-          if (win.isDestroyed() || currentRoot !== root) return
-          win.webContents.send('fs:tree-changed', tree)
-        }).catch(() => {})
-      }, 500)
+      scheduleTreeRescan()
     }
 
     if (event === 'change') {
+      if (isGitignoreFile) scheduleTreeRescan()
       if (BINARY_EXTS.has(getExt(filePath))) return
       const existing = fileDebounce.get(filePath)
       if (existing) clearTimeout(existing)
@@ -209,5 +294,6 @@ export function stopWatching(): void {
     watcher.close()
     watcher = null
     currentRoot = null
+    currentMatcher = null
   }
 }

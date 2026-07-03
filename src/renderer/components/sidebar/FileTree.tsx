@@ -563,6 +563,11 @@ export function FileTree({
             externalActiveFilePath={externalActiveFilePath}
           />
         ))}
+        {tree.truncated && (
+          <div className="px-2 py-1.5 text-micro text-zinc-600">
+            Tree truncated — repo too large to show every file
+          </div>
+        )}
       </div>
       {contextMenu && (
         <FileContextMenu

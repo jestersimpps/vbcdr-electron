@@ -11,6 +11,7 @@ export interface FileNode {
   isDirectory: boolean
   isGitignored?: boolean
   children?: FileNode[]
+  truncated?: boolean
 }
 
 export interface TerminalTab {

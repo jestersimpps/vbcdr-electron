@@ -143,6 +143,51 @@ describe('readTree', () => {
     const tree = await readTree(path.join(root, 'does-not-exist'))
     expect(tree.children).toEqual([])
   })
+
+  it('respects nested .gitignore files (submodule-style)', async () => {
+    writeFile('.gitignore', 'rootonly.txt\n')
+    writeFile('rootonly.txt', '')
+    writeFile('sub/.gitignore', 'vendor/\n*.log\n')
+    writeFile('sub/vendor/big.js', '')
+    writeFile('sub/debug.log', '')
+    writeFile('sub/keep.js', '')
+
+    const { readTree } = await import('./file-watcher')
+    const tree = await readTree(root)
+    const sub = tree.children?.find((c) => c.name === 'sub')
+    const names = sub?.children?.map((c) => c.name).sort() ?? []
+    expect(names).toEqual(['.gitignore', 'keep.js'])
+    expect(tree.children?.some((c) => c.name === 'rootonly.txt')).toBe(false)
+  })
+
+  it('does not apply nested .gitignore patterns to sibling directories', async () => {
+    writeFile('sub/.gitignore', 'generated/\n')
+    writeFile('sub/generated/x.js', '')
+    writeFile('other/generated/y.js', '')
+
+    const { readTree } = await import('./file-watcher')
+    const tree = await readTree(root)
+    const sub = tree.children?.find((c) => c.name === 'sub')
+    expect(sub?.children?.some((c) => c.name === 'generated')).toBe(false)
+    const other = tree.children?.find((c) => c.name === 'other')
+    expect(other?.children?.some((c) => c.name === 'generated')).toBe(true)
+  })
+
+  it('caps the tree at maxNodes and flags the root as truncated', async () => {
+    for (let i = 0; i < 10; i++) writeFile(`f${i}.ts`, '')
+
+    const { readTree } = await import('./file-watcher')
+    const tree = await readTree(root, false, 10, 3)
+    expect(tree.truncated).toBe(true)
+    expect(tree.children?.length).toBe(3)
+  })
+
+  it('leaves truncated unset when the tree fits within maxNodes', async () => {
+    writeFile('a.ts', '')
+    const { readTree } = await import('./file-watcher')
+    const tree = await readTree(root)
+    expect(tree.truncated).toBeUndefined()
+  })
 })
 
 describe('readFileContents', () => {
@@ -313,6 +358,37 @@ describe('startWatching', () => {
     const ignored = watchers[0].ignored!
     expect(ignored(path.join(root, 'secret.env'))).toBe(true)
     expect(ignored(path.join(root, '.git', 'HEAD'))).toBe(true)
+  })
+
+  it('ignores paths matched by nested .gitignore files', async () => {
+    writeFile('sub/.gitignore', 'vendor/\n')
+    const { startWatching } = await import('./file-watcher')
+    const win = { isDestroyed: () => false, webContents: { send: vi.fn() } }
+    startWatching(root, win as never)
+
+    const ignored = watchers[0].ignored!
+    expect(ignored(path.join(root, 'sub', 'vendor', 'x.js'))).toBe(true)
+    expect(ignored(path.join(root, 'sub', 'keep.js'))).toBe(false)
+  })
+
+  it('picks up .gitignore edits and schedules a tree rescan', async () => {
+    const gitignorePath = writeFile('sub/.gitignore', 'vendor/\n')
+    const { startWatching } = await import('./file-watcher')
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    startWatching(root, win as never)
+
+    const watcher = watchers[0]
+    expect(watcher.ignored!(path.join(root, 'sub', 'vendor', 'x.js'))).toBe(true)
+
+    fs.writeFileSync(gitignorePath, '')
+    watcher.emit('change', gitignorePath)
+
+    expect(watcher.ignored!(path.join(root, 'sub', 'vendor', 'x.js'))).toBe(false)
+    await vi.advanceTimersByTimeAsync(600)
+    await vi.waitFor(() => {
+      expect(send.mock.calls.some((c) => c[0] === 'fs:tree-changed')).toBe(true)
+    })
   })
 
   it('replaces a previous watcher when called twice', async () => {
