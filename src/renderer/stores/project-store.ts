@@ -7,6 +7,7 @@ import { useGitStore } from './git-store'
 import { useQueueStore } from './queue-store'
 import { useSearchPrefsStore } from './search-prefs-store'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
+import { unloadProjectFromMonaco } from '@/services/monaco-project-loader'
 import type { Project } from '@/models/types'
 
 interface ProjectStore {
@@ -74,6 +75,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   },
 
   removeProject: async (id: string) => {
+    const removedPath = get().projects.find((p) => p.id === id)?.path
+    if (removedPath) unloadProjectFromMonaco(removedPath)
     const termStore = useTerminalStore.getState()
     const devStore = useDevTerminalStore.getState()
     const queueStore = useQueueStore.getState()

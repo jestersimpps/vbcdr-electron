@@ -34,6 +34,16 @@ interface GitStore {
   removeProjectState: (projectId: string) => void
 }
 
+const inFlightLoads = new Map<string, Promise<void>>()
+
+function dedupeLoad(key: string, run: () => Promise<void>): Promise<void> {
+  const existing = inFlightLoads.get(key)
+  if (existing) return existing
+  const promise = run().finally(() => inFlightLoads.delete(key))
+  inFlightLoads.set(key, promise)
+  return promise
+}
+
 export const useGitStore = create<GitStore>((set, get) => ({
   commitsPerProject: {},
   branchesPerProject: {},
@@ -52,49 +62,51 @@ export const useGitStore = create<GitStore>((set, get) => ({
   conflictsPerProject: {},
   conflictsDismissedPerProject: {},
 
-  loadGitData: async (projectId: string, cwd: string) => {
-    const isRepo = await window.api.git.isRepo(cwd)
-    if (!isRepo) {
-      set((s) => ({ isRepoPerProject: { ...s.isRepoPerProject, [projectId]: false } }))
-      return
-    }
+  loadGitData: (projectId: string, cwd: string) =>
+    dedupeLoad(`data:${projectId}:${cwd}`, async () => {
+      const isRepo = await window.api.git.isRepo(cwd)
+      if (!isRepo) {
+        set((s) => ({ isRepoPerProject: { ...s.isRepoPerProject, [projectId]: false } }))
+        return
+      }
 
-    const [commits, branches] = await Promise.all([
-      window.api.git.commits(cwd),
-      window.api.git.branches(cwd)
-    ])
+      const [commits, branches] = await Promise.all([
+        window.api.git.commits(cwd),
+        window.api.git.branches(cwd)
+      ])
 
-    set((s) => ({
-      isRepoPerProject: { ...s.isRepoPerProject, [projectId]: true },
-      commitsPerProject: { ...s.commitsPerProject, [projectId]: commits },
-      branchesPerProject: { ...s.branchesPerProject, [projectId]: branches }
-    }))
+      set((s) => ({
+        isRepoPerProject: { ...s.isRepoPerProject, [projectId]: true },
+        commitsPerProject: { ...s.commitsPerProject, [projectId]: commits },
+        branchesPerProject: { ...s.branchesPerProject, [projectId]: branches }
+      }))
 
-    window.api.git.registerFetch(projectId, cwd)
+      window.api.git.registerFetch(projectId, cwd)
 
-    if (commits.length > 0) {
-      const hashes = commits.map((c: GitCommit) => c.hash)
-      window.api.git.commitsFileCounts(cwd, hashes).then((counts) => {
-        set((s) => ({
-          commitFileCountsPerProject: { ...s.commitFileCountsPerProject, [projectId]: counts }
-        }))
-      })
-    }
+      if (commits.length > 0) {
+        const hashes = commits.map((c: GitCommit) => c.hash)
+        window.api.git.commitsFileCounts(cwd, hashes).then((counts) => {
+          set((s) => ({
+            commitFileCountsPerProject: { ...s.commitFileCountsPerProject, [projectId]: counts }
+          }))
+        })
+      }
 
-    void get().loadRangeFileCounts(projectId, cwd)
-  },
+      void get().loadRangeFileCounts(projectId, cwd)
+    }),
 
-  loadStatus: async (projectId: string, cwd: string) => {
-    const status = await window.api.git.status(cwd)
-    set((s) => ({
-      statusPerProject: { ...s.statusPerProject, [projectId]: status }
-    }))
+  loadStatus: (projectId: string, cwd: string) =>
+    dedupeLoad(`status:${projectId}:${cwd}`, async () => {
+      const status = await window.api.git.status(cwd)
+      set((s) => ({
+        statusPerProject: { ...s.statusPerProject, [projectId]: status }
+      }))
 
-    const hasConflicts = Object.values(status).some((s) => s === 'conflict')
-    if (hasConflicts) {
-      get().loadConflicts(projectId, cwd)
-    }
-  },
+      const hasConflicts = Object.values(status).some((s) => s === 'conflict')
+      if (hasConflicts) {
+        get().loadConflicts(projectId, cwd)
+      }
+    }),
 
   switchBranch: async (projectId: string, cwd: string, branchName: string) => {
     set({ switchingBranch: true })

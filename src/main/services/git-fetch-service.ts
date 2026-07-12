@@ -34,11 +34,12 @@ async function tick(): Promise<void> {
 }
 
 export function registerProject(projectId: string, cwd: string): void {
+  const alreadyRegistered = projects.get(projectId) === cwd
   projects.set(projectId, cwd)
   if (!intervalId) {
     intervalId = setInterval(() => { void tick() }, 60_000)
   }
-  void checkProject(projectId, cwd)
+  if (!alreadyRegistered) void checkProject(projectId, cwd)
 }
 
 export function unregisterProject(projectId: string): void {

@@ -14,7 +14,7 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { useUpdaterStore } from '@/stores/updater-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
-import { loadProjectIntoMonaco, unloadProjectFromMonaco } from '@/services/monaco-project-loader'
+import { loadProjectIntoMonaco } from '@/services/monaco-project-loader'
 import { applyThemeToAll } from '@/components/terminal/TerminalInstance'
 import type { CustomThemeUI } from '@/models/custom-theme'
 import type { FileNode } from '@/models/types'
@@ -112,7 +112,6 @@ export function App(): React.ReactElement {
     if (!cachedTree || cachedPath !== cwd) {
       fileTreeStore.loadTree(projectId, cwd, showIgnored)
     }
-    useGitStore.getState().loadStatus(projectId, cwd)
     window.api.fs.watch(cwd, showIgnored)
     window.api.git.watchRefs(projectId, cwd)
 
@@ -136,7 +135,6 @@ export function App(): React.ReactElement {
       unsubRefs()
       window.api.fs.unwatch()
       window.api.git.unwatchRefs(projectId)
-      unloadProjectFromMonaco(cwd)
     }
   }, [activeProjectId, activeProjectPath])
 

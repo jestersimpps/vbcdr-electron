@@ -15,8 +15,11 @@ interface LoadedProject {
   fileMtimes: Map<string, number>
 }
 
+const MAX_LOADED_PROJECTS = 3
+
 const loaded = new Map<string, LoadedProject>()
 const pendingScans = new Map<string, Promise<void>>()
+let appliedCompilerOptionsJson = ''
 
 function mapTarget(value: unknown): number | undefined {
   if (typeof value !== 'string') return undefined
@@ -119,9 +122,6 @@ function simpleHash(s: string): number {
 export async function loadProjectIntoMonaco(rootPath: string): Promise<void> {
   const existing = pendingScans.get(rootPath)
   if (existing) return existing
-  for (const otherPath of Array.from(loaded.keys())) {
-    if (otherPath !== rootPath) unloadProjectFromMonaco(otherPath)
-  }
   const scan = (async () => {
     try {
       const monaco = await getMonaco()
@@ -131,10 +131,19 @@ export async function loadProjectIntoMonaco(rootPath: string): Promise<void> {
         extraLibs: new Map(),
         fileMtimes: new Map()
       }
+      loaded.delete(rootPath)
       loaded.set(rootPath, project)
+      for (const otherPath of Array.from(loaded.keys())) {
+        if (loaded.size <= MAX_LOADED_PROJECTS) break
+        if (otherPath !== rootPath) unloadProjectFromMonaco(otherPath)
+      }
       const opts = translateCompilerOptions(result.compilerOptions)
-      monaco.languages.typescript.typescriptDefaults.setCompilerOptions(opts)
-      monaco.languages.typescript.javascriptDefaults.setCompilerOptions(opts)
+      const optsJson = JSON.stringify(opts)
+      if (optsJson !== appliedCompilerOptionsJson) {
+        appliedCompilerOptionsJson = optsJson
+        monaco.languages.typescript.typescriptDefaults.setCompilerOptions(opts)
+        monaco.languages.typescript.javascriptDefaults.setCompilerOptions(opts)
+      }
       applyExtraLibs(monaco, project, result.files)
     } catch (err) {
       console.error('[monaco-project-loader] scan failed:', err)
