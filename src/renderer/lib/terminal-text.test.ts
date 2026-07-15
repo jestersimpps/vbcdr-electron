@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseTokenCount } from './terminal-text'
+import { extractPromptCommand, parseTokenCount } from './terminal-text'
 
 describe('parseTokenCount', () => {
   it('parses plain integers', () => {
@@ -30,5 +30,22 @@ describe('parseTokenCount', () => {
   it('returns null when no token count present', () => {
     expect(parseTokenCount('Context left until auto-compact: 23%')).toBeNull()
     expect(parseTokenCount('just some text')).toBeNull()
+  })
+})
+
+describe('extractPromptCommand', () => {
+  it('strips common shell prompt markers', () => {
+    expect(extractPromptCommand('❯ npm run dev')).toBe('npm run dev')
+    expect(extractPromptCommand('~/Sites/app % git status')).toBe('git status')
+    expect(extractPromptCommand('bash-5.2$ ls -la')).toBe('ls -la')
+    expect(extractPromptCommand('root# whoami')).toBe('whoami')
+  })
+
+  it('returns the trimmed line when no prompt marker is present', () => {
+    expect(extractPromptCommand('  plain text  ')).toBe('plain text')
+  })
+
+  it('returns an empty string for a bare prompt', () => {
+    expect(extractPromptCommand('❯ ')).toBe('')
   })
 })

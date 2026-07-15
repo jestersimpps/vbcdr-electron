@@ -107,6 +107,15 @@ describe('pty-manager', () => {
       expect(mod.hasPty('t2')).toBe(false)
     })
 
+    it('records the spawn time, readable via getPtySpawnTime', async () => {
+      const mod = await importFresh()
+      vi.setSystemTime(1_700_000_000_000)
+      mod.createPty('t1', 'p1', '/cwd', makeWin() as never)
+
+      expect(mod.getPtySpawnTime('t1')).toBe(1_700_000_000_000)
+      expect(mod.getPtySpawnTime('unknown')).toBeNull()
+    })
+
     it('replays saved scrollback to the renderer on creation', async () => {
       const mod = await importFresh()
       mockLoadScrollback.mockReturnValueOnce('previous output')

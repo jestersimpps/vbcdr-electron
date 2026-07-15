@@ -1,9 +1,10 @@
 interface ImageThumbnailProps {
   src: string
   onDismiss: () => void
+  onUse?: () => void
 }
 
-export function ImageThumbnail({ src, onDismiss }: ImageThumbnailProps): React.ReactElement {
+export function ImageThumbnail({ src, onDismiss, onUse }: ImageThumbnailProps): React.ReactElement {
   return (
     <div
       style={{
@@ -11,7 +12,6 @@ export function ImageThumbnail({ src, onDismiss }: ImageThumbnailProps): React.R
         top: 8,
         right: 8,
         width: 140,
-        height: 100,
         borderRadius: 6,
         border: '1px solid rgba(255,255,255,0.15)',
         boxShadow: '0 4px 14px rgba(0,0,0,0.45)',
@@ -19,20 +19,48 @@ export function ImageThumbnail({ src, onDismiss }: ImageThumbnailProps): React.R
         animation: 'vbcdr-thumb-fade 220ms ease forwards',
         overflow: 'hidden',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        flexDirection: 'column'
       }}
     >
-      <img
-        src={src}
-        alt=""
+      <div
         style={{
-          maxWidth: '100%',
-          maxHeight: '100%',
-          objectFit: 'contain',
-          pointerEvents: 'none'
+          height: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden'
         }}
-      />
+      >
+        <img
+          src={src}
+          alt=""
+          style={{
+            maxWidth: '100%',
+            maxHeight: '100%',
+            objectFit: 'contain',
+            pointerEvents: 'none'
+          }}
+        />
+      </div>
+      {onUse && (
+        <button
+          type="button"
+          onClick={onUse}
+          style={{
+            width: '100%',
+            padding: '5px 0',
+            border: 'none',
+            borderTop: '1px solid rgba(255,255,255,0.15)',
+            background: '#2563eb',
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer'
+          }}
+        >
+          Use
+        </button>
+      )}
       <button
         type="button"
         aria-label="Dismiss image preview"

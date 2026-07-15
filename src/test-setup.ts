@@ -78,6 +78,7 @@ const api = {
   tokenUsage: {
     record: fn(async () => undefined),
     resetTab: fn(async () => undefined),
+    context: fn(async () => null),
     daily: fn(async () => []),
     events: fn(async () => [])
   }

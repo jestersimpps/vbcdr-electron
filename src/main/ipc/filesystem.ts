@@ -1,10 +1,11 @@
 import fs from 'fs'
 import fsp from 'fs/promises'
 import path from 'path'
-import { BrowserWindow, clipboard, shell } from 'electron'
+import { BrowserWindow, clipboard, dialog, shell } from 'electron'
 import Store from 'electron-store'
 import { readTree, readFileContents, startWatching, stopWatching } from '@main/services/file-watcher'
 import type { FileReadResult } from '@main/services/file-watcher'
+import { GitignoreMatcher, createLimiter } from '@main/services/fs-scan-utils'
 import type { FileNode, Project, SearchResult } from '@main/models/types'
 import { safeHandle } from '@main/ipc/safe-handle'
 
@@ -41,26 +42,62 @@ function isExcluded(relDir: string, excludes: string[]): boolean {
   return false
 }
 
-function searchFiles(
+const SEARCH_CONCURRENCY = 8
+const SEARCH_MAX_FILE_BYTES = 1024 * 512
+
+let searchGeneration = 0
+
+async function searchFiles(
   rootPath: string,
   query: string,
   maxResults: number = 100,
   excludeFolders: string[] = []
-): SearchResult[] {
+): Promise<SearchResult[]> {
+  const generation = ++searchGeneration
   const results: SearchResult[] = []
   const lowerQuery = query.toLowerCase()
   const excludes = excludeFolders.map(normalizeExclude).filter(Boolean)
+  const matcher = new GitignoreMatcher(rootPath)
+  const limit = createLimiter(SEARCH_CONCURRENCY)
 
-  function walk(dirPath: string): void {
-    if (results.length >= maxResults) return
+  const stale = (): boolean => generation !== searchGeneration || results.length >= maxResults
+
+  async function searchFileContents(fullPath: string, relativePath: string, name: string): Promise<void> {
+    try {
+      const stat = await limit(() => fsp.stat(fullPath))
+      if (stat.size > SEARCH_MAX_FILE_BYTES || stale()) return
+      const content = await limit(() => fsp.readFile(fullPath, 'utf-8'))
+      if (stale()) return
+      const lines = content.split('\n')
+      for (let i = 0; i < lines.length; i++) {
+        if (results.length >= maxResults) return
+        if (lines[i].toLowerCase().includes(lowerQuery)) {
+          results.push({
+            path: fullPath,
+            relativePath,
+            name,
+            type: 'content',
+            line: i + 1,
+            lineContent: lines[i].trim().substring(0, 200)
+          })
+        }
+      }
+    } catch {
+      // skip unreadable files
+    }
+  }
+
+  async function walk(dirPath: string): Promise<void> {
+    if (stale()) return
     let entries: fs.Dirent[]
     try {
-      entries = fs.readdirSync(dirPath, { withFileTypes: true })
+      entries = await limit(() => fsp.readdir(dirPath, { withFileTypes: true }))
     } catch {
       return
     }
+    const filePromises: Promise<void>[] = []
     for (const entry of entries) {
-      if (results.length >= maxResults) return
+      if (stale()) break
       if (ALWAYS_IGNORE.has(entry.name)) continue
       const fullPath = path.join(dirPath, entry.name)
       const relativePath = path.relative(rootPath, fullPath)
@@ -68,46 +105,28 @@ function searchFiles(
 
       if (entry.isDirectory()) {
         if (isExcluded(relPosix, excludes)) continue
-        walk(fullPath)
+        if (matcher.ignores(fullPath, true)) continue
+        await Promise.all(filePromises.splice(0))
+        await walk(fullPath)
         continue
       }
 
-      const nameMatch = entry.name.toLowerCase().includes(lowerQuery)
-      const ext = path.extname(entry.name).slice(1).toLowerCase()
-      const isBinary = BINARY_EXTS.has(ext)
+      if (matcher.ignores(fullPath, false)) continue
 
-      if (nameMatch) {
+      if (entry.name.toLowerCase().includes(lowerQuery)) {
         results.push({ path: fullPath, relativePath, name: entry.name, type: 'name' })
       }
 
-      if (!isBinary) {
-        try {
-          const stat = fs.statSync(fullPath)
-          if (stat.size > 1024 * 512) continue
-          const content = fs.readFileSync(fullPath, 'utf-8')
-          const lines = content.split('\n')
-          for (let i = 0; i < lines.length; i++) {
-            if (results.length >= maxResults) return
-            if (lines[i].toLowerCase().includes(lowerQuery)) {
-              results.push({
-                path: fullPath,
-                relativePath,
-                name: entry.name,
-                type: 'content',
-                line: i + 1,
-                lineContent: lines[i].trim().substring(0, 200)
-              })
-            }
-          }
-        } catch {
-          // skip unreadable files
-        }
+      const ext = path.extname(entry.name).slice(1).toLowerCase()
+      if (!BINARY_EXTS.has(ext)) {
+        filePromises.push(searchFileContents(fullPath, relativePath, entry.name))
       }
     }
+    await Promise.all(filePromises)
   }
 
-  walk(rootPath)
-  return results
+  await walk(rootPath)
+  return results.slice(0, maxResults)
 }
 
 export function registerFilesystemHandlers(): void {
@@ -197,7 +216,7 @@ export function registerFilesystemHandlers(): void {
     return newPath
   })
 
-  safeHandle('fs:search', (_event, rootPath: string, query: string, excludeFolders?: string[]): SearchResult[] => {
+  safeHandle('fs:search', (_event, rootPath: string, query: string, excludeFolders?: string[]): Promise<SearchResult[]> => {
     const resolved = path.resolve(rootPath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
     return searchFiles(resolved, query, 100, Array.isArray(excludeFolders) ? excludeFolders : [])
@@ -207,7 +226,19 @@ export function registerFilesystemHandlers(): void {
     shell.showItemInFolder(path.resolve(filePath))
   })
 
+  safeHandle('fs:open-folder', (_event, folderPath: string): Promise<string> => {
+    return shell.openPath(path.resolve(folderPath))
+  })
+
   safeHandle('fs:copy-path', (_event, filePath: string): void => {
     clipboard.writeText(filePath)
+  })
+
+  safeHandle('fs:pick-folder', async (event): Promise<string | null> => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+    const result = await dialog.showOpenDialog(win, { properties: ['openDirectory'] })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
   })
 }

@@ -12,6 +12,7 @@ import { useEditorStore } from '@/stores/editor-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useUpdaterStore } from '@/stores/updater-store'
+import { useClipboardStore } from '@/stores/clipboard-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { loadProjectIntoMonaco } from '@/services/monaco-project-loader'
@@ -89,6 +90,10 @@ export function App(): React.ReactElement {
 
   useEffect(() => {
     return useUpdaterStore.getState().init()
+  }, [])
+
+  useEffect(() => {
+    return useClipboardStore.getState().init()
   }, [])
 
   useEffect(() => {

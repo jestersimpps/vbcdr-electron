@@ -13,6 +13,17 @@ vi.mock('@main/services/token-usage-service', () => ({
   getEvents: (...args: unknown[]) => getEvents(...args)
 }))
 
+const readTranscriptUsage = vi.fn(() => null)
+const getPtySpawnTime = vi.fn<(tabId: string) => number | null>(() => null)
+
+vi.mock('@main/services/transcript-usage-service', () => ({
+  readTranscriptUsage: (...args: unknown[]) => readTranscriptUsage(...(args as []))
+}))
+
+vi.mock('@main/services/pty-manager', () => ({
+  getPtySpawnTime: (...args: unknown[]) => getPtySpawnTime(...(args as [string]))
+}))
+
 let registry: IpcRegistry
 
 beforeEach(async () => {
@@ -23,6 +34,8 @@ beforeEach(async () => {
   resetTabTokenTracking.mockClear()
   getDailyUsage.mockReset().mockReturnValue([])
   getEvents.mockReset().mockReturnValue([])
+  readTranscriptUsage.mockReset().mockReturnValue(null)
+  getPtySpawnTime.mockReset().mockReturnValue(null)
   const { registerTokenUsageHandlers } = await import('./token-usage')
   registerTokenUsageHandlers()
 })
@@ -36,6 +49,18 @@ describe('token-usage ipc', () => {
   it('resets tab tracking via resetTabTokenTracking', async () => {
     await invoke(registry, 'token-usage:reset-tab', 'tab1')
     expect(resetTabTokenTracking).toHaveBeenCalledWith('tab1')
+  })
+
+  it('reads transcript usage scoped to the tab pty spawn time', async () => {
+    getPtySpawnTime.mockReturnValue(12345)
+    await invoke(registry, 'token-usage:context', '/some/cwd', 'tab1')
+    expect(getPtySpawnTime).toHaveBeenCalledWith('tab1')
+    expect(readTranscriptUsage).toHaveBeenCalledWith('/some/cwd', 12345)
+  })
+
+  it('reads transcript usage without spawn time when no tab is given', async () => {
+    await invoke(registry, 'token-usage:context', '/some/cwd')
+    expect(readTranscriptUsage).toHaveBeenCalledWith('/some/cwd', null)
   })
 
   it('reads daily usage via getDailyUsage with the provided sinceIso', async () => {

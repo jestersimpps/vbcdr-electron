@@ -8,6 +8,7 @@ const reset = (): void => {
     tabStatuses: {},
     outputBufferPerProject: {},
     tokenUsagePerTab: {},
+    lastCommandPerTab: {},
     lastActivityPerProject: {},
     attentionProjectIds: {},
     focusedTabId: null
@@ -75,6 +76,28 @@ describe('terminal-store', () => {
       useTerminalStore.getState().closeTab(id)
       expect(useTerminalStore.getState().tabStatuses[id]).toBeUndefined()
       expect(useTerminalStore.getState().tokenUsagePerTab[id]).toBeUndefined()
+    })
+
+    it('drops the lastCommandPerTab entry of the closed tab', () => {
+      const a = useTerminalStore.getState().createTab('p1', '/cwd')
+      const b = useTerminalStore.getState().createTab('p1', '/cwd')
+      useTerminalStore.getState().setLastCommand(a, 'npm test')
+      useTerminalStore.getState().setLastCommand(b, 'git status')
+      useTerminalStore.getState().closeTab(a)
+      const state = useTerminalStore.getState()
+      expect(state.lastCommandPerTab[a]).toBeUndefined()
+      expect(state.lastCommandPerTab[b]).toBe('git status')
+    })
+  })
+
+  describe('setLastCommand', () => {
+    it('stores the latest command per tab', () => {
+      useTerminalStore.getState().setLastCommand('t1', 'ls -la')
+      useTerminalStore.getState().setLastCommand('t1', 'npm run dev')
+      useTerminalStore.getState().setLastCommand('t2', 'pwd')
+      const state = useTerminalStore.getState()
+      expect(state.lastCommandPerTab.t1).toBe('npm run dev')
+      expect(state.lastCommandPerTab.t2).toBe('pwd')
     })
   })
 

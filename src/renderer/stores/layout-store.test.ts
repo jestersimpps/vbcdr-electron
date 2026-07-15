@@ -5,9 +5,11 @@ import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
 const resetStore = (): void => {
   useLayoutStore.setState({
     splitsPerProject: {},
+    gitCollapsedPerProject: {},
     tokenCap: DEFAULT_TOKEN_CAP,
     idleSoundEnabled: false,
     idleSoundId: DEFAULT_IDLE_SOUND_ID,
+    globalTerminalCwd: '',
     resetVersion: 0
   })
 }
@@ -39,6 +41,30 @@ describe('layout-store', () => {
     })
   })
 
+  describe('toggleGitCollapsed', () => {
+    it('toggles per project without affecting others', () => {
+      useLayoutStore.getState().toggleGitCollapsed('p1')
+      expect(useLayoutStore.getState().gitCollapsedPerProject.p1).toBe(true)
+      expect(useLayoutStore.getState().gitCollapsedPerProject.p2).toBeUndefined()
+
+      useLayoutStore.getState().toggleGitCollapsed('p1')
+      expect(useLayoutStore.getState().gitCollapsedPerProject.p1).toBe(false)
+    })
+  })
+
+  describe('setGlobalTerminalCwd', () => {
+    it('stores the trimmed path', () => {
+      useLayoutStore.getState().setGlobalTerminalCwd('  /Users/me/dev  ')
+      expect(useLayoutStore.getState().globalTerminalCwd).toBe('/Users/me/dev')
+    })
+
+    it('allows clearing back to empty', () => {
+      useLayoutStore.getState().setGlobalTerminalCwd('/x')
+      useLayoutStore.getState().setGlobalTerminalCwd('   ')
+      expect(useLayoutStore.getState().globalTerminalCwd).toBe('')
+    })
+  })
+
   describe('resetLayout', () => {
     it('clears project-specific split and bumps resetVersion', () => {
       useLayoutStore.getState().setSplit('p1', 50)
@@ -48,6 +74,15 @@ describe('layout-store', () => {
       expect(state.splitsPerProject.p1).toBeUndefined()
       expect(state.getSplit('p1')).toBe(DEFAULT_SPLIT)
       expect(state.resetVersion).toBe(before + 1)
+    })
+
+    it('clears the project git-collapse flag but leaves other projects alone', () => {
+      useLayoutStore.getState().toggleGitCollapsed('p1')
+      useLayoutStore.getState().toggleGitCollapsed('p2')
+      useLayoutStore.getState().resetLayout('p1')
+      const state = useLayoutStore.getState()
+      expect(state.gitCollapsedPerProject.p1).toBeUndefined()
+      expect(state.gitCollapsedPerProject.p2).toBe(true)
     })
   })
 

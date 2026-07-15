@@ -63,6 +63,8 @@ const api = {
     search: (rootPath: string, query: string, excludeFolders?: string[]) =>
       ipcRenderer.invoke('fs:search', rootPath, query, excludeFolders ?? []),
     showInFolder: (filePath: string) => ipcRenderer.invoke('fs:show-in-folder', filePath),
+    openFolder: (folderPath: string) => ipcRenderer.invoke('fs:open-folder', folderPath),
+    pickFolder: () => ipcRenderer.invoke('fs:pick-folder') as Promise<string | null>,
     copyPath: (filePath: string) => ipcRenderer.invoke('fs:copy-path', filePath),
     watch: (rootPath: string, showIgnored?: boolean) => ipcRenderer.invoke('fs:watch', rootPath, showIgnored ?? false),
     unwatch: () => ipcRenderer.invoke('fs:unwatch'),
@@ -110,6 +112,18 @@ const api = {
       ipcRenderer.on('terminal:exit', handler)
       return (): void => {
         ipcRenderer.removeListener('terminal:exit', handler)
+      }
+    }
+  },
+
+  clipboard: {
+    currentImage: () => ipcRenderer.invoke('clipboard:current-image') as Promise<string | null>,
+    onImage: (callback: (dataUrl: string | null) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, dataUrl: string | null) =>
+        callback(dataUrl)
+      ipcRenderer.on('clipboard:image', handler)
+      return (): void => {
+        ipcRenderer.removeListener('clipboard:image', handler)
       }
     }
   },
@@ -203,8 +217,8 @@ const api = {
     record: (tabId: string, projectId: string, tokens: number) =>
       ipcRenderer.invoke('token-usage:record', tabId, projectId, tokens),
     resetTab: (tabId: string) => ipcRenderer.invoke('token-usage:reset-tab', tabId),
-    context: (cwd: string) =>
-      ipcRenderer.invoke('token-usage:context', cwd) as Promise<{
+    context: (cwd: string, tabId?: string) =>
+      ipcRenderer.invoke('token-usage:context', cwd, tabId) as Promise<{
         contextTokens: number
         model: string | null
         contextCap: number
@@ -230,13 +244,58 @@ const api = {
   },
 
   tsproject: {
-    scan: (rootPath: string) => ipcRenderer.invoke('tsproject:scan', rootPath) as Promise<{
-      rootPath: string
-      tsconfigFound: boolean
-      compilerOptions: Record<string, unknown>
-      files: Record<string, string>
-      truncated: boolean
-    }>
+    scan: (rootPath: string, knownHashes?: Record<string, number>) =>
+      ipcRenderer.invoke('tsproject:scan', rootPath, knownHashes) as Promise<{
+        rootPath: string
+        tsconfigFound: boolean
+        compilerOptions: Record<string, unknown>
+        files: Record<string, string>
+        hashes: Record<string, number>
+        currentUris: string[]
+        truncated: boolean
+      }>
+  },
+
+  mcp: {
+    list: (projectPath: string | null) =>
+      ipcRenderer.invoke('mcp:list', projectPath) as Promise<
+        Array<{
+          name: string
+          scope: 'user' | 'project' | 'local'
+          config: {
+            type?: 'stdio' | 'http' | 'sse'
+            command?: string
+            args?: string[]
+            env?: Record<string, string>
+            url?: string
+            headers?: Record<string, string>
+          }
+          enabled: boolean
+        }>
+      >,
+    upsert: (
+      scope: 'user' | 'project' | 'local',
+      projectPath: string | null,
+      name: string,
+      config: Record<string, unknown>
+    ) => ipcRenderer.invoke('mcp:upsert', scope, projectPath, name, config) as Promise<void>,
+    remove: (scope: 'user' | 'project' | 'local', projectPath: string | null, name: string) =>
+      ipcRenderer.invoke('mcp:remove', scope, projectPath, name) as Promise<void>,
+    setEnabled: (projectPath: string, name: string, enabled: boolean) =>
+      ipcRenderer.invoke('mcp:set-enabled', projectPath, name, enabled) as Promise<void>,
+    login: (projectPath: string | null, name: string) =>
+      ipcRenderer.invoke('mcp:login', projectPath, name) as Promise<{ code: number; output: string }>,
+    logout: (projectPath: string | null, name: string) =>
+      ipcRenderer.invoke('mcp:logout', projectPath, name) as Promise<{ code: number; output: string }>,
+    status: (projectPath: string | null) =>
+      ipcRenderer.invoke('mcp:status', projectPath) as Promise<
+        Array<{
+          name: string
+          target: string
+          health: 'connected' | 'needs-auth' | 'failed'
+          detail: string
+        }>
+      >
   },
 
   skills: {

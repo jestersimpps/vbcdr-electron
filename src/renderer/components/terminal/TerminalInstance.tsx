@@ -6,14 +6,15 @@ import { SearchAddon } from '@xterm/addon-search'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { useThemeStore } from '@/stores/theme-store'
 import { useTerminalStore } from '@/stores/terminal-store'
+import { useClipboardStore } from '@/stores/clipboard-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import { playSound } from '@/lib/sound'
 import { findFileMatches } from '@/lib/terminal-output-tidy'
-import { isMeaningfulOutput, parseTokenCount, stripAnsi } from '@/lib/terminal-text'
-import { isTranscriptDriven } from '@/lib/transcript-driven-tabs'
+import { extractPromptCommand, isMeaningfulOutput, parseTokenCount, stripAnsi } from '@/lib/terminal-text'
+import { isTranscriptDriven, unmarkTranscriptDriven } from '@/lib/transcript-driven-tabs'
 import { IMAGE_EXTENSIONS, relativeToCwd, resolveAgainstCwd, shellEscape } from '@/lib/terminal-paths'
 import { ImageThumbnail } from '@/components/terminal/ImageThumbnail'
 
@@ -91,6 +92,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [thumbSrc, setThumbSrc] = useState<string | null>(null)
+  const pendingClipboardImage = useClipboardStore((s) => s.pendingImage)
   const dragCounter = useRef(0)
   const thumbTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -187,6 +189,17 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         if (isLlm) {
           const e = terminalsMap.get(tabId)
           if (e) e.suppressBusyUntil = Date.now() + 300
+        } else if (data === '\r') {
+          const buf = terminal.buffer.active
+          const cursorRow = buf.baseY + buf.cursorY
+          let startRow = cursorRow
+          while (startRow > 0 && buf.getLine(startRow)?.isWrapped) startRow--
+          let lineText = ''
+          for (let y = startRow; y <= cursorRow; y++) {
+            lineText += buf.getLine(y)?.translateToString(true) ?? ''
+          }
+          const command = extractPromptCommand(stripAnsi(lineText))
+          if (command) useTerminalStore.getState().setLastCommand(tabId, command)
         }
       })
 
@@ -505,7 +518,20 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           transition: 'outline 150ms ease, background-color 150ms ease'
         }}
       />
-      {thumbSrc && <ImageThumbnail src={thumbSrc} onDismiss={() => dismissThumbnailRef.current()} />}
+      {thumbSrc ? (
+        <ImageThumbnail src={thumbSrc} onDismiss={() => dismissThumbnailRef.current()} />
+      ) : initialCommand && pendingClipboardImage ? (
+        <ImageThumbnail
+          src={pendingClipboardImage}
+          onDismiss={() => useClipboardStore.getState().clearPending()}
+          onUse={() => {
+            window.api.terminal.pasteClipboardImage(tabId)
+            useClipboardStore.getState().clearPending()
+            setThumbSrc(pendingClipboardImage)
+            focusTerminal(tabId)
+          }}
+        />
+      ) : null}
     </div>
   )
 }
@@ -588,5 +614,6 @@ export function disposeTerminal(tabId: string): void {
     try { globalDataUnsub() } catch { /* ignore */ }
     globalDataUnsub = null
   }
+  unmarkTranscriptDriven(tabId)
   window.api.tokenUsage.resetTab(tabId)
 }

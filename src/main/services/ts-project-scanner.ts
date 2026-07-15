@@ -16,7 +16,78 @@ export interface TsProjectScanResult {
   tsconfigFound: boolean
   compilerOptions: Record<string, unknown>
   files: Record<string, string>
+  hashes: Record<string, number>
+  currentUris: string[]
   truncated: boolean
+}
+
+interface FileMeta {
+  mtimeMs: number
+  size: number
+  hash: number
+}
+
+interface ScanContext {
+  changed: Map<string, string>
+  hashes: Map<string, number>
+  currentUris: string[]
+  knownHashes: Record<string, number> | null
+  prevManifest: Map<string, FileMeta> | null
+  manifest: Map<string, FileMeta>
+  byteBudget: { used: number }
+}
+
+const MAX_CACHED_MANIFESTS = 3
+const manifestCache = new Map<string, Map<string, FileMeta>>()
+
+// must stay identical to simpleHash in src/renderer/services/monaco-project-loader.ts —
+// the renderer sends these hashes back as knownHashes on the next scan
+function simpleHash(s: string): number {
+  let h = 5381
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0
+  return h
+}
+
+async function collectFile(ctx: ScanContext, childAbs: string): Promise<void> {
+  let stat: fs.Stats
+  try {
+    stat = await fsp.stat(childAbs)
+  } catch {
+    return
+  }
+  if (stat.size > MAX_FILE_BYTES) return
+  const uri = `file://${childAbs}`
+  const prev = ctx.prevManifest?.get(childAbs)
+
+  if (prev && prev.mtimeMs === stat.mtimeMs && prev.size === stat.size) {
+    ctx.manifest.set(childAbs, prev)
+    ctx.currentUris.push(uri)
+    ctx.byteBudget.used += stat.size
+    if (ctx.knownHashes && ctx.knownHashes[uri] === prev.hash) return
+    let content: string
+    try {
+      content = await fsp.readFile(childAbs, 'utf-8')
+    } catch {
+      return
+    }
+    ctx.changed.set(uri, content)
+    ctx.hashes.set(uri, prev.hash)
+    return
+  }
+
+  let content: string
+  try {
+    content = await fsp.readFile(childAbs, 'utf-8')
+  } catch {
+    return
+  }
+  const hash = simpleHash(content)
+  ctx.manifest.set(childAbs, { mtimeMs: stat.mtimeMs, size: stat.size, hash })
+  ctx.currentUris.push(uri)
+  ctx.byteBudget.used += content.length
+  if (ctx.knownHashes && ctx.knownHashes[uri] === hash) return
+  ctx.changed.set(uri, content)
+  ctx.hashes.set(uri, hash)
 }
 
 interface RawTsconfig {
@@ -154,11 +225,10 @@ function shouldIncludePath(relPath: string, excludes: string[]): boolean {
 async function walkSources(
   rootPath: string,
   excludes: string[],
-  files: Map<string, string>,
-  byteBudget: { used: number }
+  ctx: ScanContext
 ): Promise<void> {
   async function walk(dirAbs: string, relDir: string): Promise<void> {
-    if (byteBudget.used >= MAX_TOTAL_BYTES) return
+    if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
     let entries: fs.Dirent[]
     try {
       entries = await fsp.readdir(dirAbs, { withFileTypes: true })
@@ -166,7 +236,7 @@ async function walkSources(
       return
     }
     for (const entry of entries) {
-      if (byteBudget.used >= MAX_TOTAL_BYTES) return
+      if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
       if (ALWAYS_SKIP.has(entry.name)) continue
       if (entry.name === 'node_modules') continue
       const childAbs = path.join(dirAbs, entry.name)
@@ -180,27 +250,13 @@ async function walkSources(
       const ext = entry.name.split('.').pop()?.toLowerCase() ?? ''
       const isDts = DTS_EXT_RE.test(entry.name)
       if (!isDts && !SOURCE_EXTS.has(ext)) continue
-      let stat: fs.Stats
-      try {
-        stat = await fsp.stat(childAbs)
-      } catch {
-        continue
-      }
-      if (stat.size > MAX_FILE_BYTES) continue
-      let content: string
-      try {
-        content = await fsp.readFile(childAbs, 'utf-8')
-      } catch {
-        continue
-      }
-      byteBudget.used += content.length
-      files.set(`file://${childAbs}`, content)
+      await collectFile(ctx, childAbs)
     }
   }
   await walk(rootPath, '')
 }
 
-async function collectTypesPackages(rootPath: string, files: Map<string, string>, byteBudget: { used: number }): Promise<void> {
+async function collectTypesPackages(rootPath: string, ctx: ScanContext): Promise<void> {
   const nm = path.join(rootPath, 'node_modules')
   let pkgJson: { dependencies?: Record<string, string>; devDependencies?: Record<string, string>; peerDependencies?: Record<string, string> }
   try {
@@ -219,24 +275,23 @@ async function collectTypesPackages(rootPath: string, files: Map<string, string>
     const typesEntries = await fsp.readdir(typesRoot, { withFileTypes: true })
     for (const entry of typesEntries) {
       if (!entry.isDirectory()) continue
-      if (byteBudget.used >= MAX_TOTAL_BYTES) return
-      await collectDtsInDir(path.join(typesRoot, entry.name), files, byteBudget)
+      if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
+      await collectDtsInDir(path.join(typesRoot, entry.name), ctx)
     }
   } catch {
     // no @types — fine
   }
 
   for (const dep of directDeps) {
-    if (byteBudget.used >= MAX_TOTAL_BYTES) return
-    await collectDepTypes(nm, dep, files, byteBudget)
+    if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
+    await collectDepTypes(nm, dep, ctx)
   }
 }
 
 async function collectDepTypes(
   nmPath: string,
   dep: string,
-  files: Map<string, string>,
-  byteBudget: { used: number }
+  ctx: ScanContext
 ): Promise<void> {
   const depPath = path.join(nmPath, dep)
   let pkg: { types?: string; typings?: string; exports?: Record<string, unknown> }
@@ -249,13 +304,13 @@ async function collectDepTypes(
   if (typesField) {
     const typesAbs = path.resolve(depPath, typesField)
     const typesDir = path.dirname(typesAbs)
-    await collectDtsInDir(typesDir, files, byteBudget)
+    await collectDtsInDir(typesDir, ctx)
     return
   }
   const fallbackIndex = path.join(depPath, 'index.d.ts')
   try {
     await fsp.access(fallbackIndex)
-    await collectDtsInDir(depPath, files, byteBudget, 0, 1)
+    await collectDtsInDir(depPath, ctx, 0, 1)
   } catch {
     // no types
   }
@@ -263,13 +318,12 @@ async function collectDepTypes(
 
 async function collectDtsInDir(
   dirAbs: string,
-  files: Map<string, string>,
-  byteBudget: { used: number },
+  ctx: ScanContext,
   depth: number = 0,
   maxDepth: number = 4
 ): Promise<void> {
   if (depth > maxDepth) return
-  if (byteBudget.used >= MAX_TOTAL_BYTES) return
+  if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
   let entries: fs.Dirent[]
   try {
     entries = await fsp.readdir(dirAbs, { withFileTypes: true })
@@ -277,34 +331,23 @@ async function collectDtsInDir(
     return
   }
   for (const entry of entries) {
-    if (byteBudget.used >= MAX_TOTAL_BYTES) return
+    if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
     if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue
     const childAbs = path.join(dirAbs, entry.name)
     if (entry.isDirectory()) {
-      await collectDtsInDir(childAbs, files, byteBudget, depth + 1, maxDepth)
+      await collectDtsInDir(childAbs, ctx, depth + 1, maxDepth)
       continue
     }
     if (!entry.isFile()) continue
     if (!DTS_EXT_RE.test(entry.name)) continue
-    let stat: fs.Stats
-    try {
-      stat = await fsp.stat(childAbs)
-    } catch {
-      continue
-    }
-    if (stat.size > MAX_FILE_BYTES) continue
-    let content: string
-    try {
-      content = await fsp.readFile(childAbs, 'utf-8')
-    } catch {
-      continue
-    }
-    byteBudget.used += content.length
-    files.set(`file://${childAbs}`, content)
+    await collectFile(ctx, childAbs)
   }
 }
 
-export async function scanTsProject(rootPath: string): Promise<TsProjectScanResult> {
+export async function scanTsProject(
+  rootPath: string,
+  knownHashes?: Record<string, number> | null
+): Promise<TsProjectScanResult> {
   const tsconfigPath = path.join(rootPath, 'tsconfig.json')
   let tsconfig: RawTsconfig | null = null
   try {
@@ -316,17 +359,33 @@ export async function scanTsProject(rootPath: string): Promise<TsProjectScanResu
 
   const compilerOptions = (tsconfig?.compilerOptions ?? {}) as Record<string, unknown>
   const excludes = (tsconfig?.exclude ?? []).map((e) => e.replace(/^\/+|\/+$/g, ''))
-  const byteBudget = { used: 0 }
-  const files = new Map<string, string>()
+  const ctx: ScanContext = {
+    changed: new Map(),
+    hashes: new Map(),
+    currentUris: [],
+    knownHashes: knownHashes ?? null,
+    prevManifest: manifestCache.get(rootPath) ?? null,
+    manifest: new Map(),
+    byteBudget: { used: 0 }
+  }
 
-  await walkSources(rootPath, excludes, files, byteBudget)
-  await collectTypesPackages(rootPath, files, byteBudget)
+  await walkSources(rootPath, excludes, ctx)
+  await collectTypesPackages(rootPath, ctx)
+
+  manifestCache.delete(rootPath)
+  manifestCache.set(rootPath, ctx.manifest)
+  if (manifestCache.size > MAX_CACHED_MANIFESTS) {
+    const oldest = manifestCache.keys().next().value
+    if (oldest !== undefined) manifestCache.delete(oldest)
+  }
 
   return {
     rootPath,
     tsconfigFound: tsconfig !== null,
     compilerOptions,
-    files: Object.fromEntries(files),
-    truncated: byteBudget.used >= MAX_TOTAL_BYTES
+    files: Object.fromEntries(ctx.changed),
+    hashes: Object.fromEntries(ctx.hashes),
+    currentUris: ctx.currentUris,
+    truncated: ctx.byteBudget.used >= MAX_TOTAL_BYTES
   }
 }

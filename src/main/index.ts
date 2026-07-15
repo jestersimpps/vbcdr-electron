@@ -3,11 +3,13 @@ import path from 'path'
 import { registerProjectHandlers } from '@main/ipc/projects'
 import { registerFilesystemHandlers } from '@main/ipc/filesystem'
 import { registerTerminalHandlers } from '@main/ipc/terminal'
+import { registerClipboardHandlers } from '@main/ipc/clipboard'
 import { registerGitHandlers } from '@main/ipc/git'
 import { registerClaudeConfigHandlers } from '@main/ipc/claude-config'
 import { registerClaudeExplainHandlers } from '@main/ipc/claude-explain'
 import { registerClaudeSessionsHandlers } from '@main/ipc/claude-sessions'
 import { registerSkillsHandlers } from '@main/ipc/skills'
+import { registerMcpHandlers } from '@main/ipc/mcp'
 import { registerActivityHandlers } from '@main/ipc/activity'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
 import { registerDevServerHandlers } from '@main/ipc/dev-servers'
@@ -18,6 +20,7 @@ import { compactTokenUsage, flushTokenUsage } from '@main/services/token-usage-s
 import { stopWatching } from '@main/services/file-watcher'
 import { registerUpdaterHandlers } from '@main/ipc/updater'
 import { initAutoUpdater, checkForUpdates, checkForUpdatesInteractive } from '@main/services/auto-updater'
+import { startClipboardWatcher, stopClipboardWatcher } from '@main/services/clipboard-watcher'
 import { stopAutoFetch } from '@main/services/git-fetch-service'
 import { stopAllRefsWatchers } from '@main/services/git-refs-watcher'
 
@@ -118,16 +121,20 @@ function createWindow(): void {
   mainWindow.on('closed', () => {
     mainWindow = null
   })
+
+  startClipboardWatcher(mainWindow)
 }
 
 registerProjectHandlers()
 registerFilesystemHandlers()
 registerTerminalHandlers()
+registerClipboardHandlers()
 registerGitHandlers()
 registerClaudeConfigHandlers()
 registerClaudeExplainHandlers()
 registerClaudeSessionsHandlers()
 registerSkillsHandlers()
+registerMcpHandlers()
 registerUpdaterHandlers()
 registerActivityHandlers()
 registerTokenUsageHandlers()
@@ -401,6 +408,7 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   killAll()
   stopWatching()
+  stopClipboardWatcher()
   stopAutoFetch()
   stopAllRefsWatchers()
   flushActivity()
@@ -411,6 +419,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   killAll()
   stopWatching()
+  stopClipboardWatcher()
   stopAutoFetch()
   stopAllRefsWatchers()
   flushActivity()

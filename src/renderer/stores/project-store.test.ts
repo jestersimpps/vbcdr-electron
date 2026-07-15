@@ -146,6 +146,18 @@ describe('project-store', () => {
       expect(s.settingsActive).toBe(false)
     })
 
+    it('showMcpPage activates the MCP page and clears the other pages', () => {
+      useProjectStore.getState().showSkillsPage()
+      useProjectStore.getState().showMcpPage()
+      const s = useProjectStore.getState()
+      expect(s.mcpPageActive).toBe(true)
+      expect(s.skillsPageActive).toBe(false)
+      expect(s.dashboardActive).toBe(false)
+
+      useProjectStore.getState().showDashboard()
+      expect(useProjectStore.getState().mcpPageActive).toBe(false)
+    })
+
     it('activeProject() returns matching project or undefined', () => {
       useProjectStore.setState({ projects: [project('a', 'A')], activeProjectId: 'a' })
       expect(useProjectStore.getState().activeProject()?.id).toBe('a')

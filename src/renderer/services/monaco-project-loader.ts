@@ -82,30 +82,28 @@ function disposeLibs(libs: LibHandles): void {
   try { libs.js.dispose() } catch { /* already disposed */ }
 }
 
-function applyExtraLibs(
-  monaco: Monaco,
-  project: LoadedProject,
+interface ScanDelta {
   files: Record<string, string>
-): void {
+  hashes: Record<string, number>
+  currentUris: string[]
+}
+
+function applyScanDelta(monaco: Monaco, project: LoadedProject, delta: ScanDelta): void {
   const ts = monaco.languages.typescript.typescriptDefaults
   const js = monaco.languages.typescript.javascriptDefaults
-  const seen = new Set<string>()
-  for (const [uri, content] of Object.entries(files)) {
-    seen.add(uri)
+  for (const [uri, content] of Object.entries(delta.files)) {
     const existing = project.extraLibs.get(uri)
-    const prevHash = project.fileMtimes.get(uri) ?? 0
-    const nextHash = simpleHash(content)
-    if (existing && prevHash === nextHash) continue
     if (existing) disposeLibs(existing)
     const handles: LibHandles = {
       ts: ts.addExtraLib(content, uri),
       js: js.addExtraLib(content, uri)
     }
     project.extraLibs.set(uri, handles)
-    project.fileMtimes.set(uri, nextHash)
+    project.fileMtimes.set(uri, delta.hashes[uri] ?? simpleHash(content))
   }
+  const current = new Set(delta.currentUris)
   for (const uri of Array.from(project.extraLibs.keys())) {
-    if (seen.has(uri)) continue
+    if (current.has(uri)) continue
     const handles = project.extraLibs.get(uri)
     if (handles) disposeLibs(handles)
     project.extraLibs.delete(uri)
@@ -125,7 +123,11 @@ export async function loadProjectIntoMonaco(rootPath: string): Promise<void> {
   const scan = (async () => {
     try {
       const monaco = await getMonaco()
-      const result = await window.api.tsproject.scan(rootPath)
+      const prior = loaded.get(rootPath)
+      const knownHashes = prior && prior.fileMtimes.size > 0
+        ? Object.fromEntries(prior.fileMtimes)
+        : undefined
+      const result = await window.api.tsproject.scan(rootPath, knownHashes)
       const project: LoadedProject = loaded.get(rootPath) ?? {
         rootPath,
         extraLibs: new Map(),
@@ -144,7 +146,7 @@ export async function loadProjectIntoMonaco(rootPath: string): Promise<void> {
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions(opts)
         monaco.languages.typescript.javascriptDefaults.setCompilerOptions(opts)
       }
-      applyExtraLibs(monaco, project, result.files)
+      applyScanDelta(monaco, project, result)
     } catch (err) {
       console.error('[monaco-project-loader] scan failed:', err)
     } finally {

@@ -14,6 +14,7 @@ interface TerminalStore {
   tabStatuses: Record<string, TabStatus>
   outputBufferPerProject: Record<string, string[]>
   tokenUsagePerTab: Record<string, number>
+  lastCommandPerTab: Record<string, string>
   lastActivityPerProject: Record<string, number>
   attentionProjectIds: Record<string, boolean>
   autoScrollPerTab: Record<string, boolean>
@@ -27,6 +28,7 @@ interface TerminalStore {
   reorderTabs: (projectId: string, fromIndex: number, toIndex: number) => void
   setOutput: (projectId: string, lines: string[]) => void
   setTokenUsage: (tabId: string, tokens: number) => void
+  setLastCommand: (tabId: string, command: string) => void
   setFocusedTabId: (tabId: string | null) => void
   markProjectAttention: (projectId: string) => void
   clearProjectAttention: (projectId: string) => void
@@ -41,6 +43,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   tabStatuses: {},
   outputBufferPerProject: {},
   tokenUsagePerTab: {},
+  lastCommandPerTab: {},
   lastActivityPerProject: {},
   attentionProjectIds: {},
   autoScrollPerTab: {},
@@ -80,12 +83,15 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       const tokenUsagePerTab = { ...state.tokenUsagePerTab }
       delete tokenUsagePerTab[tabId]
 
+      const lastCommandPerTab = { ...state.lastCommandPerTab }
+      delete lastCommandPerTab[tabId]
+
       const autoScrollPerTab = { ...state.autoScrollPerTab }
       delete autoScrollPerTab[tabId]
 
       const focusedTabId = state.focusedTabId === tabId ? null : state.focusedTabId
 
-      return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab, autoScrollPerTab, focusedTabId }
+      return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab, lastCommandPerTab, autoScrollPerTab, focusedTabId }
     })
   },
 
@@ -173,6 +179,12 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   setTokenUsage: (tabId: string, tokens: number) => {
     set((state) => ({
       tokenUsagePerTab: { ...state.tokenUsagePerTab, [tabId]: tokens }
+    }))
+  },
+
+  setLastCommand: (tabId: string, command: string) => {
+    set((state) => ({
+      lastCommandPerTab: { ...state.lastCommandPerTab, [tabId]: command }
     }))
   },
 

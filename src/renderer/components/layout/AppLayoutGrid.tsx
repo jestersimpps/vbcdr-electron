@@ -27,13 +27,14 @@ import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
 import { ClaudePage } from '@/components/claude/ClaudePage'
 import { SkillsPanel } from '@/components/skills/SkillsPanel'
 import { SkillsPage } from '@/components/skills/SkillsPage'
+import { McpPage } from '@/components/mcp/McpPage'
 import { Dashboard } from '@/components/dashboard/Dashboard'
 import { Statistics } from '@/components/statistics/Statistics'
 import { Usage } from '@/components/usage/Usage'
 import { Settings } from '@/components/settings/Settings'
 import { TerminalsPage } from '@/components/terminal/TerminalsPage'
 import { DevServersPage } from '@/components/dev-servers/DevServersPage'
-import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Server, Settings as SettingsIcon } from 'lucide-react'
+import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Server, Plug, Settings as SettingsIcon, GitBranch, PanelRightOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
 
@@ -127,6 +128,7 @@ export function AppLayoutGrid(): React.ReactElement {
   const settingsActive = useProjectStore((s) => s.settingsActive)
   const claudePageActive = useProjectStore((s) => s.claudePageActive)
   const skillsPageActive = useProjectStore((s) => s.skillsPageActive)
+  const mcpPageActive = useProjectStore((s) => s.mcpPageActive)
   const terminalsPageActive = useProjectStore((s) => s.terminalsPageActive)
   const devServersPageActive = useProjectStore((s) => s.devServersPageActive)
   const loadProjects = useProjectStore((s) => s.loadProjects)
@@ -140,9 +142,10 @@ export function AppLayoutGrid(): React.ReactElement {
   const showSettings = useProjectStore((s) => s.showSettings)
   const showClaudePage = useProjectStore((s) => s.showClaudePage)
   const showSkillsPage = useProjectStore((s) => s.showSkillsPage)
+  const showMcpPage = useProjectStore((s) => s.showMcpPage)
   const showTerminalsPage = useProjectStore((s) => s.showTerminalsPage)
   const showDevServersPage = useProjectStore((s) => s.showDevServersPage)
-  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || terminalsPageActive || devServersPageActive
+  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || mcpPageActive || terminalsPageActive || devServersPageActive
   const centerTab = useEditorStore(
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'terminals' : 'terminals')
   )
@@ -161,9 +164,11 @@ export function AppLayoutGrid(): React.ReactElement {
   const getSplit = useLayoutStore((s) => s.getSplit)
   const setSplit = useLayoutStore((s) => s.setSplit)
   const resetVersion = useLayoutStore((s) => s.resetVersion)
+  const toggleGitCollapsed = useLayoutStore((s) => s.toggleGitCollapsed)
 
   const projectId = activeProjectId ?? '__default__'
   const splitSize = getSplit(projectId)
+  const gitCollapsed = useLayoutStore((s) => !!s.gitCollapsedPerProject[projectId])
 
   useEffect(() => {
     loadProjects()
@@ -236,6 +241,16 @@ export function AppLayoutGrid(): React.ReactElement {
           <Wand2 size={12} />
           Skills
         </button>
+        {activeProjectPath && (
+          <button
+            onClick={() => window.api.fs.openFolder(activeProjectPath)}
+            className="ml-auto flex h-full items-center gap-1.5 px-3 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
+            title="Open project folder"
+          >
+            <FolderOpen size={12} />
+            Open project folder
+          </button>
+        )}
       </div>
       <div className="relative flex-1 min-h-0 overflow-hidden">
         <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'terminals' ? 'z-10' : 'z-0 invisible')}>
@@ -381,6 +396,18 @@ export function AppLayoutGrid(): React.ReactElement {
               <Wand2 size={18} />
             </button>
             <button
+              onClick={showMcpPage}
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                mcpPageActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="MCP Servers"
+            >
+              <Plug size={18} />
+            </button>
+            <button
               onClick={showTerminalsPage}
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded transition-colors',
@@ -449,25 +476,43 @@ export function AppLayoutGrid(): React.ReactElement {
           className="absolute inset-0"
           style={{ visibility: anyPageActive ? 'hidden' : 'visible' }}
         >
-          <PanelGroup
-            key={`${projectId}-${resetVersion}`}
-            direction="horizontal"
-            onLayout={(sizes) => {
-              if (sizes[0] !== undefined) setSplit(projectId, sizes[0])
-            }}
-          >
-            <Panel defaultSize={splitSize} minSize={20}>
-              <div className="h-full overflow-hidden">
+          {gitCollapsed ? (
+            <div className="flex h-full">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 {renderWorkspacePanel()}
               </div>
-            </Panel>
-            <PanelResizeHandle className="w-px bg-zinc-800 hover:bg-zinc-600 transition-colors" />
-            <Panel defaultSize={100 - splitSize} minSize={15}>
-              <div className="h-full overflow-hidden">
-                <GitTree />
+              <div className="flex w-8 shrink-0 flex-col items-center gap-1.5 border-l border-zinc-800 bg-zinc-900/50 py-2">
+                <button
+                  onClick={() => toggleGitCollapsed(projectId)}
+                  className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+                  title="Expand git panel"
+                >
+                  <PanelRightOpen size={14} />
+                </button>
+                <GitBranch size={13} className="text-zinc-600" />
               </div>
-            </Panel>
-          </PanelGroup>
+            </div>
+          ) : (
+            <PanelGroup
+              key={`${projectId}-${resetVersion}`}
+              direction="horizontal"
+              onLayout={(sizes) => {
+                if (sizes[0] !== undefined) setSplit(projectId, sizes[0])
+              }}
+            >
+              <Panel defaultSize={splitSize} minSize={20}>
+                <div className="h-full overflow-hidden">
+                  {renderWorkspacePanel()}
+                </div>
+              </Panel>
+              <PanelResizeHandle className="w-px bg-zinc-800 hover:bg-zinc-600 transition-colors" />
+              <Panel defaultSize={100 - splitSize} minSize={15}>
+                <div className="h-full overflow-hidden">
+                  <GitTree onCollapse={() => toggleGitCollapsed(projectId)} />
+                </div>
+              </Panel>
+            </PanelGroup>
+          )}
         </div>
         {dashboardActive && (
           <div className="absolute inset-0 z-10 overflow-auto">
@@ -497,6 +542,11 @@ export function AppLayoutGrid(): React.ReactElement {
         {skillsPageActive && (
           <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <SkillsPage />
+          </div>
+        )}
+        {mcpPageActive && (
+          <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
+            <McpPage />
           </div>
         )}
         {terminalsPageActive && (

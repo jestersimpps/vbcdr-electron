@@ -27,11 +27,14 @@ vi.mock('@main/services/file-watcher', () => ({
 }))
 
 const showItemInFolder = vi.fn()
+const openPath = vi.fn(async (_p: string) => '')
+const showOpenDialog = vi.fn(async (..._args: unknown[]) => ({ canceled: true, filePaths: [] as string[] }))
 
 vi.mock('electron', () => ({
   ipcMain: { handle: () => undefined },
   BrowserWindow: { fromWebContents: () => ({ id: 'win' }) },
-  shell: { showItemInFolder: (p: string) => showItemInFolder(p) }
+  shell: { showItemInFolder: (p: string) => showItemInFolder(p), openPath: (p: string) => openPath(p) },
+  dialog: { showOpenDialog: (...args: unknown[]) => showOpenDialog(...args) }
 }))
 
 let registry: IpcRegistry
@@ -43,13 +46,16 @@ beforeEach(async () => {
   vi.doMock('electron', () => ({
     ipcMain: makeIpcMainMock(registry),
     BrowserWindow: { fromWebContents: () => ({ id: 'win' }) },
-    shell: { showItemInFolder: (p: string) => showItemInFolder(p) }
+    shell: { showItemInFolder: (p: string) => showItemInFolder(p), openPath: (p: string) => openPath(p) },
+    dialog: { showOpenDialog: (...args: unknown[]) => showOpenDialog(...args) }
   }))
   readTree.mockClear()
   startWatching.mockClear()
   stopWatching.mockClear()
   readFileContents.mockClear()
   showItemInFolder.mockClear()
+  openPath.mockClear()
+  showOpenDialog.mockReset().mockResolvedValue({ canceled: true, filePaths: [] })
   const { registerFilesystemHandlers } = await import('./filesystem')
   registerFilesystemHandlers()
 })
@@ -166,6 +172,52 @@ describe('filesystem ipc', () => {
     it('rejects searches in paths outside any project root', async () => {
       await expect(invoke(registry, 'fs:search', '/elsewhere', 'q'))
         .rejects.toThrow(/outside project root/)
+    })
+
+    it('skips files and directories matched by .gitignore, including nested ones', async () => {
+      fs.writeFileSync(path.join(projectRoot, '.gitignore'), 'dist\n')
+      fs.mkdirSync(path.join(projectRoot, 'dist'))
+      fs.writeFileSync(path.join(projectRoot, 'dist', 'bundle.txt'), 'needle in ignored dir')
+      fs.mkdirSync(path.join(projectRoot, 'sub'))
+      fs.writeFileSync(path.join(projectRoot, 'sub', '.gitignore'), 'secret.txt\n')
+      fs.writeFileSync(path.join(projectRoot, 'sub', 'secret.txt'), 'needle in nested ignored file')
+      fs.writeFileSync(path.join(projectRoot, 'sub', 'visible.txt'), 'needle in visible file')
+
+      type SearchResult = { relativePath: string; type: 'name' | 'content' }
+      const results = await invoke<SearchResult[]>(registry, 'fs:search', projectRoot, 'needle')
+      const paths = results.map((r) => r.relativePath)
+      expect(paths).toEqual([path.join('sub', 'visible.txt')])
+    })
+
+    it('respects the excludeFolders argument', async () => {
+      fs.mkdirSync(path.join(projectRoot, 'skip-me'))
+      fs.writeFileSync(path.join(projectRoot, 'skip-me', 'a.txt'), 'needle here')
+      fs.writeFileSync(path.join(projectRoot, 'keep.txt'), 'needle there')
+
+      type SearchResult = { relativePath: string }
+      const results = await invoke<SearchResult[]>(registry, 'fs:search', projectRoot, 'needle', ['skip-me'])
+      expect(results.map((r) => r.relativePath)).toEqual(['keep.txt'])
+    })
+  })
+
+  describe('fs:open-folder', () => {
+    it('forwards to shell.openPath with a resolved path', async () => {
+      await invoke(registry, 'fs:open-folder', '/some/folder')
+      expect(openPath).toHaveBeenCalledWith(path.resolve('/some/folder'))
+    })
+  })
+
+  describe('fs:pick-folder', () => {
+    it('returns the selected directory', async () => {
+      showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: ['/picked/dir'] })
+      const result = await invoke<string | null>(registry, 'fs:pick-folder')
+      expect(result).toBe('/picked/dir')
+      expect(showOpenDialog).toHaveBeenCalledWith({ id: 'win' }, { properties: ['openDirectory'] })
+    })
+
+    it('returns null when the dialog is canceled', async () => {
+      const result = await invoke<string | null>(registry, 'fs:pick-folder')
+      expect(result).toBeNull()
     })
   })
 

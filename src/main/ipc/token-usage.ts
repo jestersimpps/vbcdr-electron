@@ -11,6 +11,7 @@ import {
   readTranscriptUsage,
   type TranscriptUsage
 } from '@main/services/transcript-usage-service'
+import { getPtySpawnTime } from '@main/services/pty-manager'
 
 export function registerTokenUsageHandlers(): void {
   safeHandle(
@@ -26,8 +27,9 @@ export function registerTokenUsageHandlers(): void {
 
   safeHandle(
     'token-usage:context',
-    (_event, cwd: string): TranscriptUsage | null => {
-      return readTranscriptUsage(cwd)
+    (_event, cwd: string, tabId?: string): TranscriptUsage | null => {
+      const sessionStartMs = tabId ? getPtySpawnTime(tabId) : null
+      return readTranscriptUsage(cwd, sessionStartMs)
     }
   )
 

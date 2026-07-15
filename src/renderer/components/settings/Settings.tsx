@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Palette, Sliders, Code, Shield, type LucideIcon } from 'lucide-react'
 import { PermissionPresetsSection } from '@/components/settings/PermissionPresetsSection'
 import { LlmStartupCommandSection } from '@/components/settings/LlmStartupCommandSection'
+import { GlobalTerminalFolderSection } from '@/components/settings/GlobalTerminalFolderSection'
 import { TokenCapSection } from '@/components/settings/TokenCapSection'
 import { SoundSection } from '@/components/settings/SoundSection'
 import { EditorSection } from '@/components/settings/EditorSection'
@@ -70,6 +71,7 @@ export function Settings(): React.ReactElement {
           <>
             <Section title="LLM">
               <LlmStartupCommandSection />
+              <GlobalTerminalFolderSection />
             </Section>
             <Section title="Limits">
               <TokenCapSection />

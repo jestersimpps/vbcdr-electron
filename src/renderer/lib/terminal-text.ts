@@ -14,6 +14,13 @@ export function parseTokenCount(line: string): number | null {
   return Math.round(value * mult)
 }
 
+const PROMPT_MARKER_RE = /[❯%$#>]\s+/
+
+export function extractPromptCommand(line: string): string {
+  const m = PROMPT_MARKER_RE.exec(line)
+  return (m ? line.slice(m.index + m[0].length) : line).trim()
+}
+
 export const MEANINGFUL_OUTPUT_MIN_CHARS = 2
 export const NON_CONTENT_CHARS_RE = /[\s​-‏‪-‮⁠﻿\x00-\x08\x0B-\x1F\x7F]/g
 

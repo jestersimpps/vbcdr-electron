@@ -141,6 +141,33 @@ export interface SearchResult {
 
 export type ClaudeSection = 'global' | 'hooks' | 'skills' | 'commands' | 'project'
 
+export type McpScope = 'user' | 'project' | 'local'
+
+export interface McpServerConfig {
+  type?: 'stdio' | 'http' | 'sse'
+  command?: string
+  args?: string[]
+  env?: Record<string, string>
+  url?: string
+  headers?: Record<string, string>
+}
+
+export interface McpServerEntry {
+  name: string
+  scope: McpScope
+  config: McpServerConfig
+  enabled: boolean
+}
+
+export type McpHealth = 'connected' | 'needs-auth' | 'failed'
+
+export interface McpStatusEntry {
+  name: string
+  target: string
+  health: McpHealth
+  detail: string
+}
+
 export interface ClaudeFileEntry {
   name: string
   path: string

@@ -19,6 +19,7 @@ interface PtyInstance {
   pendingChunks: string[]
   pendingBytes: number
   flushTimer: ReturnType<typeof setTimeout> | null
+  spawnedAt: number
 }
 
 const instances = new Map<string, PtyInstance>()
@@ -40,6 +41,10 @@ function flushPending(tabId: string, win: BrowserWindow): void {
 
 export function hasPty(tabId: string): boolean {
   return instances.has(tabId)
+}
+
+export function getPtySpawnTime(tabId: string): number | null {
+  return instances.get(tabId)?.spawnedAt ?? null
 }
 
 function defaultShell(): string {
@@ -144,7 +149,8 @@ export function createPty(
     projectId,
     pendingChunks: [],
     pendingBytes: 0,
-    flushTimer: null
+    flushTimer: null,
+    spawnedAt: Date.now()
   })
 
   proc.onData((data: string) => {

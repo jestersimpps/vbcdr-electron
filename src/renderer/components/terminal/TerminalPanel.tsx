@@ -16,7 +16,7 @@ import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
-import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History } from 'lucide-react'
+import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History, FolderOpen, FolderGit2 } from 'lucide-react'
 import { SessionHistoryModal } from './SessionHistoryModal'
 import { cn } from '@/lib/utils'
 import type { TerminalTab } from '@/models/types'
@@ -101,8 +101,14 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     return id ? s.projects.find((p) => p.id === id) : undefined
   })
 
+  const globalTerminalCwd = useLayoutStore((s) => s.globalTerminalCwd)
+  const setGlobalTerminalCwd = useLayoutStore((s) => s.setGlobalTerminalCwd)
   const ownerId = ownerOverride ? ownerOverride.id : global ? GLOBAL_TERMINAL_OWNER : activeProjectId
-  const ownerCwd = ownerOverride ? ownerOverride.cwd : (activeProject?.path ?? '')
+  const ownerCwd = ownerOverride
+    ? ownerOverride.cwd
+    : global && globalTerminalCwd
+      ? globalTerminalCwd
+      : (activeProject?.path ?? '')
   const hasOwner = !!ownerOverride || global || !!activeProject
   const isCustomOwner = !!ownerOverride || global
 
@@ -222,6 +228,21 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     createTab(ownerId!, ownerCwd, cmd)
   }
 
+  const openFolderTab = useCallback((folder: string): void => {
+    if (!ownerId) return
+    setGlobalTerminalCwd(folder)
+    createTab(ownerId, folder, useLayoutStore.getState().llmStartupCommand)
+  }, [ownerId, setGlobalTerminalCwd, createTab])
+
+  const handleOpenFolder = useCallback(async (): Promise<void> => {
+    const folder = await window.api.fs.pickFolder()
+    if (folder) openFolderTab(folder)
+  }, [openFolderTab])
+
+  const handleOpenProjectFolder = useCallback((): void => {
+    if (activeProject) openFolderTab(activeProject.path)
+  }, [activeProject, openFolderTab])
+
   const handleResume = (sessionId: string): void => {
     if (!hasOwner || !ownerId) return
     createTab(ownerId, ownerCwd, `claude --resume ${sessionId}`)
@@ -254,13 +275,12 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     if (ownerId) setActiveTab(ownerId, tabId)
   }, [ownerId, setActiveTab])
 
-  const manualTokenCap = useLayoutStore((s) => s.tokenCap)
-  const { contextCap } = useContextUsage(
+  const tokenCap = useLayoutStore((s) => s.tokenCap)
+  useContextUsage(
     tokenVelocityTabId,
     activeTab?.projectId ?? null,
     activeTab?.initialCommand ? (activeTab?.cwd ?? null) : null
   )
-  const tokenCap = contextCap ?? manualTokenCap
 
   useQueueRunner()
 
@@ -291,6 +311,26 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
         >
           <Plus size={14} />
         </button>
+        {global && (
+          <div className="flex shrink-0 items-center gap-0.5 pr-1">
+            <div className="mx-0.5 h-3.5 w-px bg-zinc-800" />
+            <button
+              onClick={handleOpenFolder}
+              className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+              title="Open folder…"
+            >
+              <FolderOpen size={14} />
+            </button>
+            <button
+              onClick={handleOpenProjectFolder}
+              disabled={!activeProject}
+              className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
+              title={activeProject ? `Open project folder (${activeProject.name})` : 'No active project'}
+            >
+              <FolderGit2 size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-1 border-b border-zinc-800 bg-zinc-900/80 px-2 py-1">
@@ -461,19 +501,22 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
         )}
       </div>
 
-      {activeTab?.initialCommand && tokenUsagePerTab[activeTab.id] != null && (() => {
+      {activeTab?.initialCommand && (() => {
         const tokens = tokenUsagePerTab[activeTab.id]
-        const pct = Math.min(tokens / tokenCap, 1)
+        const pending = tokens == null
+        const pct = pending ? 0 : Math.min(tokens / tokenCap, 1)
         const theme = getTerminalTheme(useThemeStore.getState().getTerminalThemeId())
-        const fill = tokenBarFill(pct, theme)
+        const fill = pending ? '#71717a' : tokenBarFill(pct, theme)
         return (
           <div className="flex items-center gap-2 border-b border-zinc-800 bg-zinc-900/60 px-2 py-0.5">
             <Zap size={10} className="shrink-0" style={{ color: `${fill}80` }} />
-            <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800">
-              <div
-                className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-                style={{ width: `${pct * 100}%`, backgroundColor: fill }}
-              />
+            <div className={cn('relative h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-800', pending && 'animate-pulse')}>
+              {!pending && (
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                  style={{ width: `${pct * 100}%`, backgroundColor: fill }}
+                />
+              )}
             </div>
             {velocityPerSample.length >= 2 && (
               <div
@@ -487,7 +530,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
               </div>
             )}
             <span className="shrink-0 text-micro tabular-nums" style={{ color: `${fill}aa` }}>
-              {formatTokens(tokens)} / {formatTokens(tokenCap)}
+              {pending ? '…' : formatTokens(tokens)} / {formatTokens(tokenCap)}
             </span>
           </div>
         )
@@ -539,8 +582,8 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
       <TaskQueuePanel tabId={activeTab?.initialCommand ? activeTabId : null} />
       {historyOpen && (global ? userHome : activeProject) && (
         <SessionHistoryModal
-          projectPath={global ? (userHome as string) : activeProject!.path}
-          projectName={global ? '~' : activeProject!.name}
+          projectPath={global ? (globalTerminalCwd || (userHome as string)) : activeProject!.path}
+          projectName={global ? (globalTerminalCwd.split('/').filter(Boolean).pop() ?? '~') : activeProject!.name}
           onClose={() => setHistoryOpen(false)}
           onResume={handleResume}
         />

@@ -15,6 +15,12 @@ vi.mock('@main/services/pty-manager', () => ({
   hasPty: (...args: unknown[]) => hasPty(...args)
 }))
 
+const suppressCurrentClipboardImage = vi.fn()
+
+vi.mock('@main/services/clipboard-watcher', () => ({
+  suppressCurrentClipboardImage: () => suppressCurrentClipboardImage()
+}))
+
 const fromWebContents = vi.fn(() => ({ id: 'win' } as unknown))
 const writeImage = vi.fn()
 const readImage = vi.fn(() => ({ isEmpty: () => true }))
@@ -45,6 +51,7 @@ beforeEach(async () => {
   hasPty.mockReset().mockReturnValue(false)
   fromWebContents.mockReset().mockReturnValue({ id: 'win' } as unknown)
   writeImage.mockClear()
+  suppressCurrentClipboardImage.mockClear()
   readImage.mockReset().mockReturnValue({ isEmpty: () => true })
   createFromPath.mockReset().mockReturnValue({ isEmpty: () => true })
 
@@ -79,6 +86,7 @@ describe('terminal ipc', () => {
     createFromPath.mockReturnValueOnce({ isEmpty: () => false })
     await invoke(registry, 'terminal:paste-image', 't1', '/file.png')
     expect(writeImage).toHaveBeenCalled()
+    expect(suppressCurrentClipboardImage).toHaveBeenCalled()
     expect(writePty).toHaveBeenCalledWith('t1', '\x16')
   })
 

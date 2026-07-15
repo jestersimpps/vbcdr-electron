@@ -5,7 +5,7 @@ import { useDiffViewStore } from '@/stores/diff-view-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
-import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, GitCommit as GitCommitIcon, Loader2, CloudDownload, CloudUpload, FileText, X } from 'lucide-react'
+import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, GitCommit as GitCommitIcon, Loader2, CloudDownload, CloudUpload, FileText, X, PanelRightClose } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 import { BranchSwitcher } from '@/components/git/BranchSwitcher'
 
@@ -203,9 +203,10 @@ interface GitTreeProps {
   cwd?: string
   llmTabProjectId?: string
   noRepoContent?: React.ReactNode
+  onCollapse?: () => void
 }
 
-export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent }: GitTreeProps = {}): React.ReactElement {
+export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent, onCollapse }: GitTreeProps = {}): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProject = useProjectStore((s) => {
     const id = s.activeProjectId
@@ -356,9 +357,20 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent }: GitT
     return maxCols * COL_WIDTH + 12
   }, [graphRows])
 
+  const collapseButton = onCollapse ? (
+    <button
+      onClick={onCollapse}
+      className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+      title="Collapse git panel"
+    >
+      <PanelRightClose size={12} />
+    </button>
+  ) : null
+
   if (!effectiveProjectId || !effectivePath) {
     return (
-      <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+      <div className="relative flex h-full items-center justify-center text-xs text-zinc-600">
+        {collapseButton && <div className="absolute right-1.5 top-1.5">{collapseButton}</div>}
         {projectId ? 'Loading…' : 'Select a project'}
       </div>
     )
@@ -367,7 +379,8 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent }: GitT
   if (!isRepo) {
     return (
       noRepoContent ?? (
-        <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+        <div className="relative flex h-full items-center justify-center text-xs text-zinc-600">
+          {collapseButton && <div className="absolute right-1.5 top-1.5">{collapseButton}</div>}
           Not a git repository
         </div>
       )
@@ -414,6 +427,7 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent }: GitT
           >
             <RefreshCw size={12} />
           </button>
+          {collapseButton}
         </div>
       </div>
 

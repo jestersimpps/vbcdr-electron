@@ -1,5 +1,6 @@
 import { BrowserWindow, nativeImage, clipboard } from 'electron'
 import { createPty, writePty, resizePty, killPty, hasPty } from '@main/services/pty-manager'
+import { suppressCurrentClipboardImage } from '@main/services/clipboard-watcher'
 import { safeHandle } from '@main/ipc/safe-handle'
 
 export function registerTerminalHandlers(): void {
@@ -31,6 +32,7 @@ export function registerTerminalHandlers(): void {
     const image = nativeImage.createFromPath(filePath)
     if (!image.isEmpty()) {
       clipboard.writeImage(image)
+      suppressCurrentClipboardImage()
       writePty(tabId, '\x16')
     }
   })
