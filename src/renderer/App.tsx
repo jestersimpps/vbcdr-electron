@@ -222,7 +222,7 @@ export function App(): React.ReactElement {
         }
         case 'new-claude-terminal':
           if (activeId && projectPath) {
-            const cmd = useLayoutStore.getState().llmStartupCommand
+            const cmd = useLayoutStore.getState().getLlmStartupCommand()
             terminalStore.createTab(activeId, projectPath, cmd)
           }
           break

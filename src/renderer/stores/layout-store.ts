@@ -1,6 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
+import {
+  DEFAULT_LLM_PROVIDER_ID,
+  isLlmProviderId,
+  providerIdForCommand,
+  resolveStartupCommand,
+  type LlmProviderId
+} from '@/config/llm-provider-registry'
 
 export const DEFAULT_SPLIT = 75
 
@@ -10,7 +17,8 @@ interface LayoutState {
   tokenCap: number
   idleSoundEnabled: boolean
   idleSoundId: string
-  llmStartupCommand: string
+  llmProviderId: LlmProviderId
+  llmCustomCommand: string
   globalTerminalCwd: string
   resetVersion: number
   getSplit: (projectId: string) => number
@@ -20,12 +28,26 @@ interface LayoutState {
   setTokenCap: (cap: number) => void
   setIdleSoundEnabled: (enabled: boolean) => void
   setIdleSoundId: (id: string) => void
-  setLlmStartupCommand: (cmd: string) => void
+  setLlmProviderId: (id: LlmProviderId) => void
+  setLlmCustomCommand: (cmd: string) => void
+  getLlmStartupCommand: () => string
   setGlobalTerminalCwd: (path: string) => void
 }
 
 export const DEFAULT_TOKEN_CAP = 160_000
 export const DEFAULT_LLM_STARTUP_COMMAND = 'claude'
+
+function upgradeLegacyProvider(persisted: unknown): Record<string, unknown> {
+  const state = { ...((persisted ?? {}) as Record<string, unknown>) }
+  const legacy = state.llmStartupCommand
+  delete state.llmStartupCommand
+  if (isLlmProviderId(state.llmProviderId)) return state
+  if (typeof legacy !== 'string' || !legacy.trim()) return state
+  const id = providerIdForCommand(legacy)
+  state.llmProviderId = id
+  if (id === 'custom') state.llmCustomCommand = legacy.trim()
+  return state
+}
 
 function clampSplit(size: number): number {
   if (!Number.isFinite(size)) return DEFAULT_SPLIT
@@ -42,7 +64,8 @@ export const useLayoutStore = create<LayoutState>()(
       tokenCap: DEFAULT_TOKEN_CAP,
       idleSoundEnabled: false,
       idleSoundId: DEFAULT_IDLE_SOUND_ID,
-      llmStartupCommand: DEFAULT_LLM_STARTUP_COMMAND,
+      llmProviderId: DEFAULT_LLM_PROVIDER_ID,
+      llmCustomCommand: '',
       globalTerminalCwd: '',
       resetVersion: 0,
 
@@ -77,9 +100,18 @@ export const useLayoutStore = create<LayoutState>()(
         set({ idleSoundId: id })
       },
 
-      setLlmStartupCommand: (cmd: string) => {
-        const trimmed = cmd.trim()
-        set({ llmStartupCommand: trimmed.length > 0 ? trimmed : DEFAULT_LLM_STARTUP_COMMAND })
+      setLlmProviderId: (id: LlmProviderId) => {
+        set({ llmProviderId: id })
+      },
+
+      setLlmCustomCommand: (cmd: string) => {
+        set({ llmCustomCommand: cmd.trim() })
+      },
+
+      getLlmStartupCommand: () => {
+        const { llmProviderId, llmCustomCommand } = get()
+        const resolved = resolveStartupCommand(llmProviderId, llmCustomCommand)
+        return resolved.length > 0 ? resolved : DEFAULT_LLM_STARTUP_COMMAND
       },
 
       setGlobalTerminalCwd: (path: string) => {
@@ -100,15 +132,30 @@ export const useLayoutStore = create<LayoutState>()(
     }),
     {
       name: 'vbcdr-layout',
+      version: 1,
+      migrate: (persisted: unknown) => upgradeLegacyProvider(persisted),
       partialize: (state) => ({
         splitsPerProject: state.splitsPerProject,
         gitCollapsedPerProject: state.gitCollapsedPerProject,
         tokenCap: state.tokenCap,
         idleSoundEnabled: state.idleSoundEnabled,
         idleSoundId: state.idleSoundId,
-        llmStartupCommand: state.llmStartupCommand,
+        llmProviderId: state.llmProviderId,
+        llmCustomCommand: state.llmCustomCommand,
         globalTerminalCwd: state.globalTerminalCwd
-      })
+      }),
+      merge: (persisted, current) => {
+        const incoming = upgradeLegacyProvider(persisted) as Partial<LayoutState>
+        return {
+          ...current,
+          ...incoming,
+          llmProviderId: isLlmProviderId(incoming.llmProviderId)
+            ? incoming.llmProviderId
+            : DEFAULT_LLM_PROVIDER_ID,
+          llmCustomCommand:
+            typeof incoming.llmCustomCommand === 'string' ? incoming.llmCustomCommand : ''
+        }
+      }
     }
   )
 )

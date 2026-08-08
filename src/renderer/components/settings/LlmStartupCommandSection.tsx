@@ -1,29 +1,56 @@
 import { useEffect, useState } from 'react'
-import { RotateCcw, Terminal } from 'lucide-react'
-import { useLayoutStore, DEFAULT_LLM_STARTUP_COMMAND } from '@/stores/layout-store'
+import { Terminal } from 'lucide-react'
+import { useLayoutStore } from '@/stores/layout-store'
+import {
+  SELECTABLE_LLM_PROVIDERS,
+  capabilitiesFor,
+  providerDefinition,
+  type LlmProviderId
+} from '@/config/llm-provider-registry'
 import { SectionCard, useAccent } from '@/components/settings/SettingsControls'
 
 export function LlmStartupCommandSection(): React.ReactElement {
-  const llmStartupCommand = useLayoutStore((s) => s.llmStartupCommand)
-  const setLlmStartupCommand = useLayoutStore((s) => s.setLlmStartupCommand)
+  const llmProviderId = useLayoutStore((s) => s.llmProviderId)
+  const llmCustomCommand = useLayoutStore((s) => s.llmCustomCommand)
+  const setLlmProviderId = useLayoutStore((s) => s.setLlmProviderId)
+  const setLlmCustomCommand = useLayoutStore((s) => s.setLlmCustomCommand)
   const accent = useAccent()
-  const [draft, setDraft] = useState<string>(llmStartupCommand)
+  const [draft, setDraft] = useState<string>(llmCustomCommand)
 
   useEffect(() => {
-    setDraft(llmStartupCommand)
-  }, [llmStartupCommand])
+    setDraft(llmCustomCommand)
+  }, [llmCustomCommand])
 
-  const commit = (raw: string): void => {
-    setLlmStartupCommand(raw)
-  }
+  const capabilities = capabilitiesFor(llmProviderId)
+  const command = providerDefinition(llmProviderId).command
 
   return (
     <SectionCard
-      title="LLM startup command"
-      description="Command run automatically in new LLM terminal tabs (e.g. claude, codex, gemini)."
+      title="LLM assistant"
+      description="Which coding assistant runs in new LLM terminal tabs."
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2 rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {SELECTABLE_LLM_PROVIDERS.map((provider) => {
+          const active = provider.id === llmProviderId
+          return (
+            <button
+              key={provider.id}
+              onClick={() => setLlmProviderId(provider.id as LlmProviderId)}
+              className="rounded border px-2.5 py-1.5 text-xs transition-colors"
+              style={{
+                borderColor: active ? accent : '#27272a',
+                backgroundColor: active ? `${accent}1a` : 'transparent',
+                color: active ? accent : '#a1a1aa'
+              }}
+            >
+              {provider.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {llmProviderId === 'custom' ? (
+        <div className="mt-2.5 flex items-center gap-2 rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1.5">
           <Terminal size={13} style={{ color: accent }} />
           <input
             type="text"
@@ -32,26 +59,24 @@ export function LlmStartupCommandSection(): React.ReactElement {
             autoCorrect="off"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            onBlur={(e) => commit(e.target.value)}
+            onBlur={(e) => setLlmCustomCommand(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') commit((e.target as HTMLInputElement).value)
+              if (e.key === 'Enter') setLlmCustomCommand((e.target as HTMLInputElement).value)
             }}
-            placeholder={DEFAULT_LLM_STARTUP_COMMAND}
+            placeholder="claude --resume"
             className="w-64 bg-transparent font-mono text-sm text-zinc-200 outline-none placeholder:text-zinc-600"
           />
         </div>
-        <button
-          onClick={() => {
-            setLlmStartupCommand(DEFAULT_LLM_STARTUP_COMMAND)
-            setDraft(DEFAULT_LLM_STARTUP_COMMAND)
-          }}
-          className="ml-1 flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-200"
-          title="Reset to default"
-        >
-          <RotateCcw size={11} />
-          Reset
-        </button>
-      </div>
+      ) : (
+        <p className="mt-2.5 font-mono text-xs text-zinc-500">Runs: {command}</p>
+      )}
+
+      {!capabilities.sessions && (
+        <p className="mt-2.5 text-xs text-zinc-500">
+          Session history, context usage, MCP, skills and permissions read Claude Code&apos;s files
+          and stay hidden for this assistant.
+        </p>
+      )}
     </SectionCard>
   )
 }

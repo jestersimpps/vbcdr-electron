@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useLayoutStore, DEFAULT_SPLIT, DEFAULT_TOKEN_CAP } from './layout-store'
 import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
+import { DEFAULT_LLM_PROVIDER_ID } from '@/config/llm-provider-registry'
 
 const resetStore = (): void => {
   useLayoutStore.setState({
@@ -9,9 +10,23 @@ const resetStore = (): void => {
     tokenCap: DEFAULT_TOKEN_CAP,
     idleSoundEnabled: false,
     idleSoundId: DEFAULT_IDLE_SOUND_ID,
+    llmProviderId: DEFAULT_LLM_PROVIDER_ID,
+    llmCustomCommand: '',
     globalTerminalCwd: '',
     resetVersion: 0
   })
+}
+
+async function importFresh(): Promise<typeof import('./layout-store')> {
+  vi.resetModules()
+  return import('./layout-store')
+}
+
+function seedPersisted(state: Record<string, unknown>, version?: number): void {
+  localStorage.setItem(
+    'vbcdr-layout',
+    JSON.stringify(version === undefined ? { state } : { state, version })
+  )
 }
 
 describe('layout-store', () => {
@@ -109,6 +124,103 @@ describe('layout-store', () => {
       const s = useLayoutStore.getState()
       expect(s.idleSoundEnabled).toBe(true)
       expect(s.idleSoundId).toBe('chirp')
+    })
+  })
+
+  describe('llm provider', () => {
+    it('defaults to claude', () => {
+      expect(useLayoutStore.getState().llmProviderId).toBe('claude')
+      expect(useLayoutStore.getState().getLlmStartupCommand()).toBe('claude')
+    })
+
+    it('resolves the command for the selected provider', () => {
+      useLayoutStore.getState().setLlmProviderId('codex')
+      expect(useLayoutStore.getState().getLlmStartupCommand()).toBe('codex')
+    })
+
+    it('resolves the custom command when custom is selected', () => {
+      useLayoutStore.getState().setLlmProviderId('custom')
+      useLayoutStore.getState().setLlmCustomCommand('  claude --resume  ')
+      expect(useLayoutStore.getState().llmCustomCommand).toBe('claude --resume')
+      expect(useLayoutStore.getState().getLlmStartupCommand()).toBe('claude --resume')
+    })
+
+    it('falls back to claude when custom is selected but blank', () => {
+      useLayoutStore.getState().setLlmProviderId('custom')
+      useLayoutStore.getState().setLlmCustomCommand('   ')
+      expect(useLayoutStore.getState().getLlmStartupCommand()).toBe('claude')
+    })
+  })
+
+  describe('persisted provider migration', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('defaults to claude when nothing is persisted', async () => {
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().llmProviderId).toBe('claude')
+    })
+
+    it('migrates a legacy claude command', async () => {
+      seedPersisted({ llmStartupCommand: 'claude' })
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().llmProviderId).toBe('claude')
+      expect(store.getState().llmCustomCommand).toBe('')
+    })
+
+    it('migrates a legacy codex command', async () => {
+      seedPersisted({ llmStartupCommand: 'codex' })
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().llmProviderId).toBe('codex')
+    })
+
+    it('migrates an unrecognised legacy command to custom, preserving it', async () => {
+      seedPersisted({ llmStartupCommand: 'gemini --yolo' })
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().llmProviderId).toBe('custom')
+      expect(store.getState().llmCustomCommand).toBe('gemini --yolo')
+      expect(store.getState().getLlmStartupCommand()).toBe('gemini --yolo')
+    })
+
+    it('migrates a flagged claude command to custom so flags survive', async () => {
+      seedPersisted({ llmStartupCommand: 'claude --resume' })
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().llmProviderId).toBe('custom')
+      expect(store.getState().getLlmStartupCommand()).toBe('claude --resume')
+    })
+
+    it('keeps unrelated persisted layout state during migration', async () => {
+      seedPersisted({ llmStartupCommand: 'codex', tokenCap: 12345 })
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().tokenCap).toBe(12345)
+    })
+
+    it('migrates a versionless payload, as written by pre-migration builds', async () => {
+      localStorage.setItem(
+        'vbcdr-layout',
+        JSON.stringify({ state: { llmStartupCommand: 'codex' } })
+      )
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().llmProviderId).toBe('codex')
+    })
+
+    it('prefers an explicit provider id over a stale legacy command', async () => {
+      seedPersisted({ llmProviderId: 'claude', llmStartupCommand: 'codex' }, 1)
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().llmProviderId).toBe('claude')
+    })
+
+    it('leaves already-migrated state untouched', async () => {
+      seedPersisted({ llmProviderId: 'codex', llmCustomCommand: '' }, 1)
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().llmProviderId).toBe('codex')
+    })
+
+    it('falls back to claude for a corrupt persisted provider id', async () => {
+      seedPersisted({ llmProviderId: 'nonsense' }, 1)
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().llmProviderId).toBe('claude')
     })
   })
 })

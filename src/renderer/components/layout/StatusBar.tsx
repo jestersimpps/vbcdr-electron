@@ -3,9 +3,11 @@ import { useProjectStore } from '@/stores/project-store'
 import { ThemePicker } from '@/components/theme/ThemePicker'
 import { VariantToggle } from '@/components/theme/VariantToggle'
 import { PermissionsButton } from '@/components/terminal/PermissionsButton'
+import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
 
 export function StatusBar(): React.ReactElement {
   const activeProject = useProjectStore((s) => s.activeProject)
+  const capabilities = useLlmCapabilities()
 
   const project = activeProject()
 
@@ -20,11 +22,13 @@ export function StatusBar(): React.ReactElement {
         )}
       </div>
 
-      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div className="pointer-events-auto">
-          <PermissionsButton projectPath={project?.path} />
+      {capabilities.permissions && (
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className="pointer-events-auto">
+            <PermissionsButton projectPath={project?.path} />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex shrink-0 items-center gap-1">
         <ThemePicker />

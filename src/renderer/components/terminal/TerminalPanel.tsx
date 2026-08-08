@@ -18,6 +18,7 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
 import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History, FolderOpen, FolderGit2 } from 'lucide-react'
 import { SessionHistoryModal } from './SessionHistoryModal'
+import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
 import { cn } from '@/lib/utils'
 import type { TerminalTab } from '@/models/types'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
@@ -158,6 +159,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
   )
   const projectTabIds = useMemo(() => projectTabs.map((t) => t.id), [projectTabs])
 
+  const llmCapabilities = useLlmCapabilities()
   const tokenVelocityTabId = activeTab?.initialCommand ? activeTabId : null
   const { velocityPerSample, tokensPerMinute } = useTokenVelocity(tokenVelocityTabId)
 
@@ -224,14 +226,14 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
 
   const handleNewTab = (): void => {
     if (!hasOwner) return
-    const cmd = useLayoutStore.getState().llmStartupCommand
+    const cmd = useLayoutStore.getState().getLlmStartupCommand()
     createTab(ownerId!, ownerCwd, cmd)
   }
 
   const openFolderTab = useCallback((folder: string): void => {
     if (!ownerId) return
     setGlobalTerminalCwd(folder)
-    createTab(ownerId, folder, useLayoutStore.getState().llmStartupCommand)
+    createTab(ownerId, folder, useLayoutStore.getState().getLlmStartupCommand())
   }, [ownerId, setGlobalTerminalCwd, createTab])
 
   const handleOpenFolder = useCallback(async (): Promise<void> => {
@@ -445,15 +447,17 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
         >
           <RotateCw size={16} />
         </button>
-        <button
-          onClick={() => setHistoryOpen(true)}
-          disabled={!hasOwner}
-          onMouseDown={(e) => e.preventDefault()}
-          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
-          title="Claude session history"
-        >
-          <History size={16} />
-        </button>
+        {llmCapabilities.sessions && (
+          <button
+            onClick={() => setHistoryOpen(true)}
+            disabled={!hasOwner}
+            onMouseDown={(e) => e.preventDefault()}
+            className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+            title="Claude session history"
+          >
+            <History size={16} />
+          </button>
+        )}
         <div className="mx-0.5 h-3.5 w-px bg-zinc-700" />
         {!isCustomOwner && (
           <>
@@ -501,7 +505,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
         )}
       </div>
 
-      {activeTab?.initialCommand && (() => {
+      {activeTab?.initialCommand && llmCapabilities.usage && (() => {
         const tokens = tokenUsagePerTab[activeTab.id]
         const pending = tokens == null
         const pct = pending ? 0 : Math.min(tokens / tokenCap, 1)
@@ -580,7 +584,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
       </div>
 
       <TaskQueuePanel tabId={activeTab?.initialCommand ? activeTabId : null} />
-      {historyOpen && (global ? userHome : activeProject) && (
+      {historyOpen && llmCapabilities.sessions && (global ? userHome : activeProject) && (
         <SessionHistoryModal
           projectPath={global ? (globalTerminalCwd || (userHome as string)) : activeProject!.path}
           projectName={global ? (globalTerminalCwd.split('/').filter(Boolean).pop() ?? '~') : activeProject!.name}

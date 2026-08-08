@@ -22,6 +22,7 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { StatusBar } from '@/components/layout/StatusBar'
 import { PanelErrorBoundary } from '@/components/layout/PanelErrorBoundary'
+import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
 import { ClaudeFileList } from '@/components/claude/ClaudeFileList'
 import { ClaudeEditor } from '@/components/claude/ClaudeEditor'
 import { ClaudePage } from '@/components/claude/ClaudePage'
@@ -145,6 +146,7 @@ export function AppLayoutGrid(): React.ReactElement {
   const showMcpPage = useProjectStore((s) => s.showMcpPage)
   const showTerminalsPage = useProjectStore((s) => s.showTerminalsPage)
   const showDevServersPage = useProjectStore((s) => s.showDevServersPage)
+  const llmCapabilities = useLlmCapabilities()
   const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || mcpPageActive || terminalsPageActive || devServersPageActive
   const centerTab = useEditorStore(
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'terminals' : 'terminals')
@@ -173,6 +175,28 @@ export function AppLayoutGrid(): React.ReactElement {
   useEffect(() => {
     loadProjects()
   }, [loadProjects])
+
+  useEffect(() => {
+    const stranded =
+      (claudePageActive && !llmCapabilities.configFiles) ||
+      (skillsPageActive && !llmCapabilities.skills) ||
+      (mcpPageActive && !llmCapabilities.mcp)
+    if (stranded) showDashboard()
+  }, [
+    claudePageActive,
+    skillsPageActive,
+    mcpPageActive,
+    llmCapabilities,
+    showDashboard
+  ])
+
+  useEffect(() => {
+    if (!activeProjectId) return
+    const strandedTab =
+      (centerTab === 'claude' && !llmCapabilities.configFiles) ||
+      (centerTab === 'skills' && !llmCapabilities.skills)
+    if (strandedTab) setCenterTab(activeProjectId, 'terminals')
+  }, [activeProjectId, centerTab, llmCapabilities, setCenterTab])
 
   const activeProjectPath = activeProjectId
     ? projects.find((p) => p.id === activeProjectId)?.path ?? null
@@ -217,30 +241,34 @@ export function AppLayoutGrid(): React.ReactElement {
           <GitCompareArrows size={12} />
           Diff
         </button>
-        <button
-          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'claude')}
-          className={cn(
-            'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
-            centerTab === 'claude'
-              ? 'border-b-2 border-zinc-400 text-zinc-200'
-              : 'text-zinc-500 hover:text-zinc-300'
-          )}
-        >
-          <Bot size={12} />
-          Claude
-        </button>
-        <button
-          onClick={() => activeProjectId && setCenterTab(activeProjectId, 'skills')}
-          className={cn(
-            'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
-            centerTab === 'skills'
-              ? 'border-b-2 border-zinc-400 text-zinc-200'
-              : 'text-zinc-500 hover:text-zinc-300'
-          )}
-        >
-          <Wand2 size={12} />
-          Skills
-        </button>
+        {llmCapabilities.configFiles && (
+          <button
+            onClick={() => activeProjectId && setCenterTab(activeProjectId, 'claude')}
+            className={cn(
+              'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
+              centerTab === 'claude'
+                ? 'border-b-2 border-zinc-400 text-zinc-200'
+                : 'text-zinc-500 hover:text-zinc-300'
+            )}
+          >
+            <Bot size={12} />
+            Claude
+          </button>
+        )}
+        {llmCapabilities.skills && (
+          <button
+            onClick={() => activeProjectId && setCenterTab(activeProjectId, 'skills')}
+            className={cn(
+              'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
+              centerTab === 'skills'
+                ? 'border-b-2 border-zinc-400 text-zinc-200'
+                : 'text-zinc-500 hover:text-zinc-300'
+            )}
+          >
+            <Wand2 size={12} />
+            Skills
+          </button>
+        )}
         {activeProjectPath && (
           <button
             onClick={() => window.api.fs.openFolder(activeProjectPath)}
@@ -371,42 +399,48 @@ export function AppLayoutGrid(): React.ReactElement {
             >
               <LayoutDashboard size={18} />
             </button>
-            <button
-              onClick={showClaudePage}
-              className={cn(
-                'flex h-10 w-10 items-center justify-center rounded transition-colors',
-                claudePageActive
-                  ? 'text-zinc-200 bg-zinc-800'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
-              )}
-              title="Claude"
-            >
-              <Bot size={18} />
-            </button>
-            <button
-              onClick={showSkillsPage}
-              className={cn(
-                'flex h-10 w-10 items-center justify-center rounded transition-colors',
-                skillsPageActive
-                  ? 'text-zinc-200 bg-zinc-800'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
-              )}
-              title="Skills"
-            >
-              <Wand2 size={18} />
-            </button>
-            <button
-              onClick={showMcpPage}
-              className={cn(
-                'flex h-10 w-10 items-center justify-center rounded transition-colors',
-                mcpPageActive
-                  ? 'text-zinc-200 bg-zinc-800'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
-              )}
-              title="MCP Servers"
-            >
-              <Plug size={18} />
-            </button>
+            {llmCapabilities.configFiles && (
+              <button
+                onClick={showClaudePage}
+                className={cn(
+                  'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                  claudePageActive
+                    ? 'text-zinc-200 bg-zinc-800'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+                )}
+                title="Claude"
+              >
+                <Bot size={18} />
+              </button>
+            )}
+            {llmCapabilities.skills && (
+              <button
+                onClick={showSkillsPage}
+                className={cn(
+                  'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                  skillsPageActive
+                    ? 'text-zinc-200 bg-zinc-800'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+                )}
+                title="Skills"
+              >
+                <Wand2 size={18} />
+              </button>
+            )}
+            {llmCapabilities.mcp && (
+              <button
+                onClick={showMcpPage}
+                className={cn(
+                  'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                  mcpPageActive
+                    ? 'text-zinc-200 bg-zinc-800'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+                )}
+                title="MCP Servers"
+              >
+                <Plug size={18} />
+              </button>
+            )}
             <button
               onClick={showTerminalsPage}
               className={cn(
@@ -534,17 +568,17 @@ export function AppLayoutGrid(): React.ReactElement {
             <Settings />
           </div>
         )}
-        {claudePageActive && (
+        {claudePageActive && llmCapabilities.configFiles && (
           <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <ClaudePage />
           </div>
         )}
-        {skillsPageActive && (
+        {skillsPageActive && llmCapabilities.skills && (
           <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <SkillsPage />
           </div>
         )}
-        {mcpPageActive && (
+        {mcpPageActive && llmCapabilities.mcp && (
           <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <McpPage />
           </div>
