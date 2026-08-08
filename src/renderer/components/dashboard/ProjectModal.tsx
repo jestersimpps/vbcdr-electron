@@ -5,6 +5,8 @@ import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
+import { clearContextCommandFor } from '@/config/llm-provider-registry'
+import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
 import { getTerminalInstance, disposeTerminal, searchTerminal, clearTerminalSearch, focusTerminal } from '@/components/terminal/TerminalInstance'
 import { ModalTerminal } from '@/components/dashboard/ModalTerminal'
 import { cn } from '@/lib/utils'
@@ -21,6 +23,9 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
+  const llmCapabilities = useLlmCapabilities()
+  const llmProviderId = useLayoutStore((s) => s.llmProviderId)
+  const clearContextCommand = clearContextCommandFor(llmProviderId)
   const createTab = useTerminalStore((s) => s.createTab)
   const closeTab = useTerminalStore((s) => s.closeTab)
   const replaceTab = useTerminalStore((s) => s.replaceTab)
@@ -63,7 +68,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
   }, [activeTabId])
 
   const handleNewTab = (): void => {
-    createTab(project.id, project.path, 'claude')
+    createTab(project.id, project.path, useLayoutStore.getState().getLlmStartupCommand())
   }
 
   const handleCloseTab = (tabId: string): void => {
@@ -217,14 +222,18 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
           >
             <ArrowDownToLine size={14} />
           </button>
-          <button
-            onClick={() => { if (activeTabId) window.api.terminal.write(activeTabId, '/clear\r') }}
-            disabled={!activeTabId}
-            className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
-            title="Clear context"
-          >
-            <Trash2 size={14} />
-          </button>
+          {clearContextCommand && (
+            <button
+              onClick={() => {
+                if (activeTabId) window.api.terminal.write(activeTabId, `${clearContextCommand}\r`)
+              }}
+              disabled={!activeTabId}
+              className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+              title="Clear context"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
           <button
             onClick={() => { if (activeTabId) window.api.terminal.pasteClipboardImage(activeTabId) }}
             disabled={!activeTabId}
@@ -238,7 +247,12 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
               if (!activeTabId) return
               window.api.terminal.kill(activeTabId)
               disposeTerminal(activeTabId)
-              replaceTab(activeTabId, project.id, project.path, 'claude')
+              replaceTab(
+                activeTabId,
+                project.id,
+                project.path,
+                useLayoutStore.getState().getLlmStartupCommand()
+              )
             }}
             disabled={!activeTabId}
             className="rounded p-0.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
@@ -248,7 +262,7 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
           </button>
         </div>
 
-        {activeTab?.initialCommand && tokenUsagePerTab[activeTab.id] != null && (() => {
+        {activeTab?.initialCommand && llmCapabilities.usage && tokenUsagePerTab[activeTab.id] != null && (() => {
           const tokens = tokenUsagePerTab[activeTab.id]
           const pct = Math.min(tokens / tokenCap, 1)
           const theme = getTerminalTheme(fullThemeId)

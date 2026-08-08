@@ -10,6 +10,8 @@ import { TIME_RANGES, rangeStartMs, type TimeRange } from '@/lib/sessions'
 import { cn } from '@/lib/utils'
 import { SegmentedToggle, SegmentedToggleItem } from '@/components/ui/ToolbarButton'
 import { Section, Kpi } from '@/components/ui/StatBlocks'
+import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
+import { providerDefinition } from '@/config/llm-provider-registry'
 
 interface DailyUsageRow {
   date: string
@@ -107,6 +109,8 @@ export function Usage(): React.ReactElement {
   const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
   const projects = useProjectStore((s) => s.projects)
   const tokenCap = useLayoutStore((s) => s.tokenCap)
+  const llmCapabilities = useLlmCapabilities()
+  const llmLabel = providerDefinition(useLayoutStore((s) => s.llmProviderId)).label
 
   const [range, setRange] = useState<TimeRange['key']>('week')
 
@@ -153,14 +157,14 @@ export function Usage(): React.ReactElement {
       .filter((t) => !!t.initialCommand)
       .map((t) => ({
         id: t.id,
-        title: t.title || 'Claude',
+        title: t.title || llmLabel,
         projectId: t.projectId,
         projectName: projectNameById[t.projectId] ?? '—',
         tokens: tokenUsagePerTab[t.id] ?? 0,
         isBusy: tabStatuses[t.id] === 'busy'
       }))
       .sort((a, b) => b.tokens - a.tokens)
-  }, [tabs, tabStatuses, tokenUsagePerTab, projectNameById])
+  }, [tabs, tabStatuses, tokenUsagePerTab, projectNameById, llmLabel])
 
   const liveTotalTokens = useMemo(() => claudeTabs.reduce((acc, t) => acc + t.tokens, 0), [claudeTabs])
   const busyCount = useMemo(() => claudeTabs.filter((t) => t.isBusy).length, [claudeTabs])
@@ -195,6 +199,12 @@ export function Usage(): React.ReactElement {
   return (
     <div className="min-h-full p-6 text-zinc-200">
       <div className="mx-auto max-w-6xl space-y-6">
+        {!llmCapabilities.usage && (
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-xs text-zinc-400">
+            Live token tracking reads Claude Code&apos;s transcripts, so it is paused for the
+            selected assistant. Historical totals below still reflect earlier Claude sessions.
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-lg font-semibold">Usage</h1>
           <SegmentedToggle>
@@ -210,6 +220,7 @@ export function Usage(): React.ReactElement {
           </SegmentedToggle>
         </div>
 
+        {llmCapabilities.usage && (
         <Section title="Live">
           <div className="grid grid-cols-4 gap-3">
             <Kpi icon={<Layers size={14} />} label="Active sessions" value={String(claudeTabs.length)} />
@@ -226,9 +237,9 @@ export function Usage(): React.ReactElement {
           {claudeTabs.length === 0 ? (
             <div className="rounded-lg border border-dashed border-zinc-800 p-12 text-center">
               <Gauge size={28} className="mx-auto text-zinc-700" />
-              <div className="mt-3 text-sm text-zinc-400">No active Claude sessions</div>
+              <div className="mt-3 text-sm text-zinc-400">No active {llmLabel} sessions</div>
               <div className="mt-1 text-xs text-zinc-600">
-                Open a Claude tab in any project to see live token usage and velocity here.
+                Open an LLM tab in any project to see live token usage and velocity here.
               </div>
             </div>
           ) : (
@@ -247,6 +258,7 @@ export function Usage(): React.ReactElement {
             </div>
           )}
         </Section>
+        )}
 
         <Section title="History">
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import type { TerminalTab } from '@/models/types'
+import { useLayoutStore } from '@/stores/layout-store'
 
 type TabStatus = 'idle' | 'busy'
 
@@ -221,6 +222,6 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       }
       if (liveCount > 0) return
     }
-    get().createTab(projectId, cwd, 'claude')
+    get().createTab(projectId, cwd, useLayoutStore.getState().getLlmStartupCommand())
   }
 }))

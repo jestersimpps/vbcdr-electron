@@ -29,6 +29,7 @@ import { MonacoErrorBoundary } from '@/components/editor/MonacoErrorBoundary'
 import { BinaryPreview, isPreviewableBinary } from '@/components/editor/BinaryPreview'
 import { detectLanguage } from '@/lib/language-detect'
 import { useDiffEditorModels } from '@/hooks/useDiffEditorModels'
+import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
 
 interface DiffPanelProps {
   projectId: string
@@ -182,6 +183,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
   const annotations = annotationEntry?.annotations ?? {}
   const generation = annotationEntry?.generation ?? { status: 'idle' as const }
   const tourState = annotationEntry?.tour ?? { status: 'idle' as const, index: 0 }
+  const llmCapabilities = useLlmCapabilities()
   const loadingLevel: ExplainLevel | null = generation.status === 'running' ? generation.level : null
   const explainError = generation.status === 'error' ? generation.error : null
   const tourPlaying = tourState.status === 'playing'
@@ -855,7 +857,7 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
                     <X size={11} />
                   </button>
                 </div>
-              ) : (
+              ) : !llmCapabilities.explainDiff ? null : (
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] uppercase tracking-wide text-zinc-500">Review</span>
                   <div className="flex items-center gap-0.5 rounded border border-zinc-800 bg-zinc-950 p-0.5">

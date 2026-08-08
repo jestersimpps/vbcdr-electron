@@ -15,6 +15,7 @@ export interface LlmProviderDefinition {
   id: LlmProviderId
   label: string
   command: string
+  clearContextCommand: string | null
   selectable: boolean
   capabilities: LlmProviderCapabilities
 }
@@ -35,6 +36,7 @@ export const LLM_PROVIDERS: Record<LlmProviderId, LlmProviderDefinition> = {
     id: 'claude',
     label: 'Claude Code',
     command: 'claude',
+    clearContextCommand: '/clear',
     selectable: true,
     capabilities: {
       sessions: true,
@@ -51,6 +53,7 @@ export const LLM_PROVIDERS: Record<LlmProviderId, LlmProviderDefinition> = {
     id: 'codex',
     label: 'Codex',
     command: 'codex',
+    clearContextCommand: null,
     selectable: true,
     capabilities: { ...NO_CAPABILITIES }
   },
@@ -58,6 +61,7 @@ export const LLM_PROVIDERS: Record<LlmProviderId, LlmProviderDefinition> = {
     id: 'custom',
     label: 'Other',
     command: '',
+    clearContextCommand: null,
     selectable: true,
     capabilities: { ...NO_CAPABILITIES }
   }
@@ -92,4 +96,9 @@ export function providerIdForCommand(command: string): LlmProviderId {
 
 export function capabilitiesFor(id: LlmProviderId): LlmProviderCapabilities {
   return providerDefinition(id).capabilities
+}
+
+export function clearContextCommandFor(id: LlmProviderId): string | null {
+  const provider = providerDefinition(id)
+  return provider.capabilities.clearContext ? provider.clearContextCommand : null
 }

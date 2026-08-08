@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   capabilitiesFor,
+  clearContextCommandFor,
   isLlmProviderId,
   providerIdForCommand,
   resolveStartupCommand,
@@ -67,6 +68,17 @@ describe('capabilitiesFor', () => {
 
   it('does not share capability objects between providers', () => {
     expect(capabilitiesFor('codex')).not.toBe(capabilitiesFor('custom'))
+  })
+})
+
+describe('clearContextCommandFor', () => {
+  it('returns the slash command for claude', () => {
+    expect(clearContextCommandFor('claude')).toBe('/clear')
+  })
+
+  it('returns null for providers without a known clear command', () => {
+    expect(clearContextCommandFor('codex')).toBeNull()
+    expect(clearContextCommandFor('custom')).toBeNull()
   })
 })
 

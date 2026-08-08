@@ -11,6 +11,7 @@ import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
+import { clearContextCommandFor } from '@/config/llm-provider-registry'
 import { useUpdaterStore } from '@/stores/updater-store'
 import { useClipboardStore } from '@/stores/clipboard-store'
 import { useGitStore } from '@/stores/git-store'
@@ -237,7 +238,8 @@ export function App(): React.ReactElement {
         }
         case 'clear-context': {
           const tabId = activeLlmTab?.id ?? activeTab?.id
-          if (tabId) window.api.terminal.write(tabId, '/clear\r')
+          const clearCommand = clearContextCommandFor(useLayoutStore.getState().llmProviderId)
+          if (tabId && clearCommand) window.api.terminal.write(tabId, `${clearCommand}\r`)
           break
         }
         case 'git-pull-rebase': {

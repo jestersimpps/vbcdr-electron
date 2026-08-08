@@ -19,6 +19,7 @@ import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, cle
 import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History, FolderOpen, FolderGit2 } from 'lucide-react'
 import { SessionHistoryModal } from './SessionHistoryModal'
 import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
+import { clearContextCommandFor } from '@/config/llm-provider-registry'
 import { cn } from '@/lib/utils'
 import type { TerminalTab } from '@/models/types'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
@@ -160,6 +161,8 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
   const projectTabIds = useMemo(() => projectTabs.map((t) => t.id), [projectTabs])
 
   const llmCapabilities = useLlmCapabilities()
+  const llmProviderId = useLayoutStore((s) => s.llmProviderId)
+  const clearContextCommand = clearContextCommandFor(llmProviderId)
   const tokenVelocityTabId = activeTab?.initialCommand ? activeTabId : null
   const { velocityPerSample, tokensPerMinute } = useTokenVelocity(tokenVelocityTabId)
 
@@ -281,7 +284,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
   useContextUsage(
     tokenVelocityTabId,
     activeTab?.projectId ?? null,
-    activeTab?.initialCommand ? (activeTab?.cwd ?? null) : null
+    activeTab?.initialCommand && llmCapabilities.usage ? (activeTab?.cwd ?? null) : null
   )
 
   useQueueRunner()
@@ -419,26 +422,28 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
         >
           <ImagePlus size={16} />
         </button>
-        <button
-          onClick={() => {
-            if (!activeTabId) return
-            window.api.terminal.write(activeTabId, '/clear\r')
-            focusTerminal(activeTabId)
-          }}
-          disabled={!activeTabId}
-          onMouseDown={(e) => e.preventDefault()}
-          className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
-          title="Clear context"
-        >
-          <Trash2 size={16} />
-        </button>
+        {clearContextCommand && (
+          <button
+            onClick={() => {
+              if (!activeTabId) return
+              window.api.terminal.write(activeTabId, `${clearContextCommand}\r`)
+              focusTerminal(activeTabId)
+            }}
+            disabled={!activeTabId}
+            onMouseDown={(e) => e.preventDefault()}
+            className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+            title="Clear context"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
         <button
           onClick={() => {
             if (!activeTabId || !ownerId) return
             const tabCwd = activeTab?.cwd ?? ownerCwd
             window.api.terminal.kill(activeTabId)
             disposeTerminal(activeTabId)
-            replaceTab(activeTabId, ownerId, tabCwd, 'claude')
+            replaceTab(activeTabId, ownerId, tabCwd, useLayoutStore.getState().getLlmStartupCommand())
           }}
           disabled={!activeTabId}
           onMouseDown={(e) => e.preventDefault()}
@@ -453,7 +458,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
             disabled={!hasOwner}
             onMouseDown={(e) => e.preventDefault()}
             className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
-            title="Claude session history"
+            title="Session history"
           >
             <History size={16} />
           </button>

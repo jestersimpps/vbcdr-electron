@@ -4,6 +4,8 @@ import { useGitStore } from '@/stores/git-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
+import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
+import { providerDefinition } from '@/config/llm-provider-registry'
 import { useLayoutStore } from '@/stores/layout-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import type { Project, GitBranch, TerminalTab } from '@/models/types'
@@ -46,6 +48,8 @@ export function ProjectCard({ project, onOpenModal }: ProjectCardProps): React.R
   const { llmTabs, devTabs } = useProjectTabs(project.id)
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
+  const llmCapabilities = useLlmCapabilities()
+  const llmLabel = providerDefinition(useLayoutStore((s) => s.llmProviderId)).label
   const lastCommandPerTab = useTerminalStore((s) => s.lastCommandPerTab)
   const setActiveTab = useTerminalStore((s) => s.setActiveTab)
   const themeId = useThemeStore((s) => s.getFullThemeId())
@@ -76,7 +80,7 @@ export function ProjectCard({ project, onOpenModal }: ProjectCardProps): React.R
               claudeStatus === 'idle' && 'bg-emerald-400',
               claudeStatus === 'none' && 'bg-zinc-600'
             )}
-            title={claudeStatus === 'busy' ? 'Claude is working' : claudeStatus === 'idle' ? 'Claude idle' : 'No Claude session'}
+            title={claudeStatus === 'busy' ? `${llmLabel} is working` : claudeStatus === 'idle' ? `${llmLabel} idle` : `No ${llmLabel} session`}
           />
           <span className="truncate font-medium text-zinc-200">{project.name}</span>
           {currentBranch && (
@@ -144,17 +148,19 @@ export function ProjectCard({ project, onOpenModal }: ProjectCardProps): React.R
                   </span>
                   <ChevronRight size={10} className="ml-auto shrink-0 text-zinc-700 opacity-0 transition-opacity group-hover/row:opacity-100" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-zinc-800">
-                    <div
-                      className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
-                      style={{ width: `${pct * 100}%`, backgroundColor: fill }}
-                    />
+                {llmCapabilities.usage && (
+                  <div className="flex items-center gap-2">
+                    <div className="relative h-1 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                        style={{ width: `${pct * 100}%`, backgroundColor: fill }}
+                      />
+                    </div>
+                    <span className="shrink-0 tabular-nums text-micro" style={{ color: tokens != null ? `${fill}aa` : undefined }}>
+                      {tokens != null ? formatTokens(tokens) : '—'}
+                    </span>
                   </div>
-                  <span className="shrink-0 tabular-nums text-micro" style={{ color: tokens != null ? `${fill}aa` : undefined }}>
-                    {tokens != null ? formatTokens(tokens) : '—'}
-                  </span>
-                </div>
+                )}
               </div>
             )
           })}

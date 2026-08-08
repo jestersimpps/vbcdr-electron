@@ -8,6 +8,7 @@ import { useThemeStore } from '@/stores/theme-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useClipboardStore } from '@/stores/clipboard-store'
 import { useLayoutStore } from '@/stores/layout-store'
+import { capabilitiesFor } from '@/config/llm-provider-registry'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
@@ -284,7 +285,8 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
             if (extracted.length > 0) {
               useTerminalStore.getState().setOutput(projectId, extracted)
             }
-            if (latestTokens !== null && !isTranscriptDriven(tabId)) {
+            const usageSupported = capabilitiesFor(useLayoutStore.getState().llmProviderId).usage
+            if (latestTokens !== null && usageSupported && !isTranscriptDriven(tabId)) {
               useTerminalStore.getState().setTokenUsage(tabId, latestTokens)
               window.api.tokenUsage.record(tabId, projectId, latestTokens)
             }

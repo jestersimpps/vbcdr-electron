@@ -28,6 +28,8 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
+import { useLayoutStore } from '@/stores/layout-store'
+import { capabilitiesFor, clearContextCommandFor, providerDefinition } from '@/config/llm-provider-registry'
 import { useQueueStore } from '@/stores/queue-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
@@ -85,6 +87,7 @@ export function CommandPalette(): React.ReactElement | null {
   const [selectedIdx, setSelectedIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const paletteLlmLabel = providerDefinition(useLayoutStore((s) => s.llmProviderId)).label
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -221,17 +224,22 @@ export function CommandPalette(): React.ReactElement | null {
       const activeTabId = useTerminalStore.getState().activeTabPerProject[activeProjectId] ?? null
       const activeTab = terminalTabs.find((t) => t.id === activeTabId)
       const editorActive = useEditorStore.getState().statePerProject[activeProjectId]?.activeFilePath ?? null
+      const llmProviderId = useLayoutStore.getState().llmProviderId
+      const llmLabel = providerDefinition(llmProviderId).label
+      const clearContextCommand = clearContextCommandFor(llmProviderId)
 
       list.push(
         {
           id: 'action:new-llm-terminal',
-          label: 'New Claude Code terminal',
+          label: `New ${llmLabel} terminal`,
           hint: 'opens a new LLM tab',
           group: 'Terminal',
           icon: <Sparkles size={14} />,
           run: () => {
             if (!project) return
-            useTerminalStore.getState().createTab(activeProjectId, project.path, 'claude')
+            useTerminalStore
+              .getState()
+              .createTab(activeProjectId, project.path, useLayoutStore.getState().getLlmStartupCommand())
           }
         },
         {
@@ -253,19 +261,30 @@ export function CommandPalette(): React.ReactElement | null {
             if (!project || !activeTabId || !activeTab?.initialCommand) return
             window.api.terminal.kill(activeTabId)
             disposeTerminal(activeTabId)
-            useTerminalStore.getState().replaceTab(activeTabId, activeProjectId, project.path, 'claude')
+            useTerminalStore
+              .getState()
+              .replaceTab(
+                activeTabId,
+                activeProjectId,
+                project.path,
+                useLayoutStore.getState().getLlmStartupCommand()
+              )
           }
         },
-        {
-          id: 'action:clear-context',
-          label: 'Clear LLM context (/clear)',
-          group: 'Terminal',
-          icon: <Trash2 size={14} />,
-          run: () => {
-            if (!activeTabId) return
-            window.api.terminal.write(activeTabId, '/clear\r')
-          }
-        },
+        ...(clearContextCommand
+          ? [
+              {
+                id: 'action:clear-context',
+                label: `Clear LLM context (${clearContextCommand})`,
+                group: 'Terminal',
+                icon: <Trash2 size={14} />,
+                run: (): void => {
+                  if (!activeTabId) return
+                  window.api.terminal.write(activeTabId, `${clearContextCommand}\r`)
+                }
+              }
+            ]
+          : []),
         {
           id: 'action:paste-screenshot',
           label: 'Paste screenshot to terminal',
@@ -306,13 +325,17 @@ export function CommandPalette(): React.ReactElement | null {
           icon: <Code size={14} />,
           run: () => useEditorStore.getState().setCenterTab(activeProjectId, 'editor')
         },
-        {
-          id: 'action:center-claude',
-          label: 'Show Claude config',
-          group: 'Editor',
-          icon: <Settings size={14} />,
-          run: () => useEditorStore.getState().setCenterTab(activeProjectId, 'claude')
-        }
+        ...(capabilitiesFor(llmProviderId).configFiles
+          ? [
+              {
+                id: 'action:center-claude',
+                label: 'Show Claude config',
+                group: 'Editor',
+                icon: <Settings size={14} />,
+                run: (): void => useEditorStore.getState().setCenterTab(activeProjectId, 'claude')
+              }
+            ]
+          : [])
       )
 
       list.push(
@@ -547,7 +570,7 @@ export function CommandPalette(): React.ReactElement | null {
             setSelectedIdx(0)
           }}
           onKeyDown={handleKeyDown}
-          placeholder={mode === 'files' ? 'Search files...' : 'Type a prompt for Claude, or search commands / files / projects...'}
+          placeholder={mode === 'files' ? 'Search files...' : `Type a prompt for ${paletteLlmLabel}, or search commands / files / projects...`}
           className="w-full border-b border-zinc-800 bg-transparent px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
         />
         <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-1">

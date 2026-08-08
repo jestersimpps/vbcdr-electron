@@ -89,7 +89,7 @@ export function SessionHistoryModal({
         <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2.5">
           <div className="flex items-center gap-2 text-sm text-zinc-200">
             <History size={14} className="text-zinc-400" />
-            <span className="font-medium">Claude sessions</span>
+            <span className="font-medium">Sessions</span>
             <span className="text-zinc-500">·</span>
             <span className="text-zinc-400">{projectName}</span>
           </div>

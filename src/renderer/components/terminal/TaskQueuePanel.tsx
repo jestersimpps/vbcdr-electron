@@ -3,6 +3,8 @@ import { GitCommit, ListTodo, Pause, Play, X } from 'lucide-react'
 import { useQueueStore, type QueueItem } from '@/stores/queue-store'
 import { cn } from '@/lib/utils'
 import { ToolbarButton } from '@/components/ui/ToolbarButton'
+import { useLayoutStore } from '@/stores/layout-store'
+import { clearContextCommandFor } from '@/config/llm-provider-registry'
 
 interface TaskQueuePanelProps {
   tabId: string | null
@@ -14,6 +16,7 @@ export function TaskQueuePanel({ tabId }: TaskQueuePanelProps): React.ReactEleme
   const items = useQueueStore((s) => (tabId ? s.itemsPerTab[tabId] ?? EMPTY_ITEMS : EMPTY_ITEMS))
   const autoRun = useQueueStore((s) => (tabId ? s.autoRunPerTab[tabId] ?? true : true))
   const addItem = useQueueStore((s) => s.addItem)
+  const clearContextCommand = clearContextCommandFor(useLayoutStore((s) => s.llmProviderId))
   const updateItem = useQueueStore((s) => s.updateItem)
   const removeItem = useQueueStore((s) => s.removeItem)
   const setAutoRun = useQueueStore((s) => s.setAutoRun)
@@ -111,16 +114,18 @@ export function TaskQueuePanel({ tabId }: TaskQueuePanelProps): React.ReactEleme
           {autoRun ? <Pause size={10} /> : <Play size={10} />}
           Auto
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => {
-            addItem(tabId, '/commit')
-            addItem(tabId, '/clear')
-          }}
-          title="Queue /commit then /clear"
-        >
-          <GitCommit size={11} />
-          Commit & Clear
-        </ToolbarButton>
+        {clearContextCommand && (
+          <ToolbarButton
+            onClick={() => {
+              addItem(tabId, '/commit')
+              addItem(tabId, clearContextCommand)
+            }}
+            title={`Queue /commit then ${clearContextCommand}`}
+          >
+            <GitCommit size={11} />
+            Commit & Clear
+          </ToolbarButton>
+        )}
         <div className="relative flex-1">
           <ListTodo
             size={12}
