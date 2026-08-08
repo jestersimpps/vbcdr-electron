@@ -25,7 +25,7 @@ export function GlobalTerminalFolderSection(): React.ReactElement {
   return (
     <SectionCard
       title="LLM terminal default folder"
-      description="New tabs on the Claude terminal page start in this folder. Leave empty to use the active project."
+      description="New tabs on the LLM terminal page start in this folder. Leave empty to use the active project."
     >
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1.5">

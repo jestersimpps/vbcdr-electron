@@ -36,7 +36,7 @@ export function TokenCapSection(): React.ReactElement {
   return (
     <SectionCard
       title="Token Cap"
-      description="Maximum tokens used to calculate the Claude progress bar (per terminal tab)."
+      description="Maximum tokens used to calculate the context progress bar (per terminal tab)."
     >
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1.5">
