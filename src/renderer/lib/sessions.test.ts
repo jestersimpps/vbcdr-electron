@@ -70,7 +70,8 @@ describe('buildSessions', () => {
       hash: `${id}-${i}`,
       timestamp: t,
       authorEmail: 'a@b.c',
-      authorName: 'A'
+      authorName: 'A',
+      message: `commit ${i}`
     }))
   })
 
@@ -266,8 +267,8 @@ describe('integration: buildSessions + mergeSessions + clipSessionsToRange', () 
         projectId: 'p',
         projectName: 'P',
         commits: [
-          { hash: 'a', timestamp: t0, authorEmail: 'x', authorName: 'x' },
-          { hash: 'b', timestamp: t0 + 10 * MIN, authorEmail: 'x', authorName: 'x' }
+          { hash: 'a', timestamp: t0, authorEmail: 'x', authorName: 'x', message: 'a' },
+          { hash: 'b', timestamp: t0 + 10 * MIN, authorEmail: 'x', authorName: 'x', message: 'b' }
         ]
       }
     ]

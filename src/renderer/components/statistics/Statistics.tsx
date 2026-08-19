@@ -147,6 +147,7 @@ export function Statistics(): React.ReactElement {
   useEffect(() => {
     const mapped: TimeRange['key'] =
       historyWindow === 'today' ? 'today'
+      : historyWindow === 'last7' ? 'week'
       : historyWindow === 'week' ? 'week'
       : historyWindow === 'month' ? 'month'
       : historyWindow === 'year' ? 'ytd'

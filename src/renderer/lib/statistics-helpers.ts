@@ -1,7 +1,7 @@
 import type { Session } from '@/lib/sessions'
 import type { StatsCommit } from '@/models/types'
 
-export type HistoryWindow = 'today' | 'week' | 'month' | 'year' | 'custom'
+export type HistoryWindow = 'today' | 'last7' | 'week' | 'month' | 'year' | 'custom'
 export type HistoryMetric = 'hours' | 'commits'
 export type HistoryView = 'heatmap' | 'timeline'
 
@@ -40,6 +40,11 @@ export function historyRange(w: HistoryWindow, customFromMs: number | null, cust
     return { start: Math.min(start, end), end, windowEnd: endDay + 86_400_000 - 1 }
   }
   if (w === 'today') return { start: today.getTime(), end: endOfToday, windowEnd: endOfToday }
+  if (w === 'last7') {
+    const d = new Date(today)
+    d.setDate(d.getDate() - 6)
+    return { start: d.getTime(), end: endOfToday, windowEnd: endOfToday }
+  }
   if (w === 'week') {
     const d = new Date(today)
     const dow = (d.getDay() + 6) % 7

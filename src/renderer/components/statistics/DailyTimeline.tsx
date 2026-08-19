@@ -7,10 +7,28 @@ interface DailyTimelineProps {
   range: HistoryRange
   colorForProject: Record<string, string>
   emptyColor: string
+  showEmptyDays?: boolean
 }
 
-export function DailyTimeline({ sessions, range, colorForProject, emptyColor }: DailyTimelineProps): React.ReactElement {
-  const rows = useMemo(() => buildDayRows(sessions, range), [sessions, range])
+export function DailyTimeline({ sessions, range, colorForProject, emptyColor, showEmptyDays = false }: DailyTimelineProps): React.ReactElement {
+  const rows = useMemo(() => {
+    const built = buildDayRows(sessions, range)
+    if (!showEmptyDays) return built
+
+    const startOfDay = (ms: number): number => {
+      const d = new Date(ms)
+      d.setHours(0, 0, 0, 0)
+      return d.getTime()
+    }
+    const byDay = new Map(built.map((r) => [r.dateMs, r]))
+    const out: typeof built = []
+    for (let day = startOfDay(range.end); day >= startOfDay(range.start); day -= 86_400_000) {
+      out.push(
+        byDay.get(day) ?? { dateMs: day, blocks: [], totalMs: 0, byProject: new Map<string, number>() }
+      )
+    }
+    return out
+  }, [sessions, range, showEmptyDays])
   const projectLegend = useMemo(() => {
     const map = new Map<string, { projectId: string; projectName: string; ms: number }>()
     for (const r of rows) {

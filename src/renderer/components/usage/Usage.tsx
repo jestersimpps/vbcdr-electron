@@ -8,10 +8,13 @@ import { useSecondsTick, useTokenVelocity } from '@/hooks/useTokenVelocity'
 import { Sparkline } from '@/components/terminal/Sparkline'
 import { TIME_RANGES, rangeStartMs, type TimeRange } from '@/lib/sessions'
 import { cn } from '@/lib/utils'
+import { formatTokens } from '@/lib/token-display'
 import { SegmentedToggle, SegmentedToggleItem } from '@/components/ui/ToolbarButton'
 import { Section, Kpi } from '@/components/ui/StatBlocks'
 import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
 import { providerDefinition } from '@/config/llm-provider-registry'
+import { getChartPalette } from '@/config/chart-palette'
+import { useThemeStore } from '@/stores/theme-store'
 
 interface DailyUsageRow {
   date: string
@@ -24,12 +27,6 @@ interface ArchivedProjectInfo {
   name: string
   path: string
   archivedAt: number
-}
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return String(n)
 }
 
 interface TabRowProps {
@@ -318,6 +315,9 @@ interface ChartBucket {
 }
 
 function UsageChart({ range, rangeLabel }: UsageChartProps): React.ReactElement {
+  const themeId = useThemeStore((s) => s.getFullThemeId())
+  const palette = useMemo(() => getChartPalette(themeId), [themeId])
+  const areaColor = palette.colors[2] ?? palette.colors[0] ?? '#7ee787'
   const [events, setEvents] = useState<TokenEvent[]>([])
 
   useEffect(() => {
@@ -367,27 +367,27 @@ function UsageChart({ range, rangeLabel }: UsageChartProps): React.ReactElement 
         <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="usageFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#7ee787" stopOpacity={0.5} />
-              <stop offset="100%" stopColor="#7ee787" stopOpacity={0.05} />
+              <stop offset="0%" stopColor={areaColor} stopOpacity={0.5} />
+              <stop offset="100%" stopColor={areaColor} stopOpacity={0.05} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+          <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
           <XAxis
             dataKey="label"
-            stroke="#71717a"
+            stroke={palette.axis}
             tick={{ fontSize: 10 }}
             interval="preserveStartEnd"
           />
           <YAxis
-            stroke="#71717a"
+            stroke={palette.axis}
             tick={{ fontSize: 10 }}
             tickFormatter={(v) => formatTokens(v as number)}
             width={48}
           />
           <Tooltip
             contentStyle={{
-              background: '#18181b',
-              border: '1px solid #3f3f46',
+              background: palette.tooltipBg,
+              border: `1px solid ${palette.tooltipBorder}`,
               fontSize: 12,
               borderRadius: 6
             }}
@@ -403,7 +403,7 @@ function UsageChart({ range, rangeLabel }: UsageChartProps): React.ReactElement 
           <Area
             type="monotone"
             dataKey="total"
-            stroke="#7ee787"
+            stroke={areaColor}
             strokeWidth={1.5}
             fill="url(#usageFill)"
             isAnimationActive={false}

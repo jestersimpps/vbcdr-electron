@@ -22,6 +22,7 @@ const SOURCE_OPTIONS: { key: SessionSource; label: string }[] = [
 
 const HISTORY_WINDOWS: { key: HistoryWindow; label: string }[] = [
   { key: 'today', label: 'Today' },
+  { key: 'last7', label: 'Last 7 days' },
   { key: 'week', label: 'This week' },
   { key: 'month', label: 'This month' },
   { key: 'year', label: 'This year' },

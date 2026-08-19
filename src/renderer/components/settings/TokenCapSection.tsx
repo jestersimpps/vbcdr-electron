@@ -3,6 +3,7 @@ import { RotateCcw, Zap } from 'lucide-react'
 import { useLayoutStore, DEFAULT_TOKEN_CAP } from '@/stores/layout-store'
 import { SectionCard, useAccent } from '@/components/settings/SettingsControls'
 import { cn } from '@/lib/utils'
+import { formatTokens } from '@/lib/token-display'
 
 const TOKEN_CAP_PRESETS: { label: string; value: number }[] = [
   { label: '100k', value: 100_000 },
@@ -10,12 +11,6 @@ const TOKEN_CAP_PRESETS: { label: string; value: number }[] = [
   { label: '200k', value: 200_000 },
   { label: '1M', value: 1_000_000 }
 ]
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}k`
-  return String(n)
-}
 
 export function TokenCapSection(): React.ReactElement {
   const tokenCap = useLayoutStore((s) => s.tokenCap)
