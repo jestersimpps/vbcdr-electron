@@ -26,15 +26,16 @@ import {
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useEditorStore } from '@/stores/editor-store'
-import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { capabilitiesFor, clearContextCommandFor, providerDefinition } from '@/config/llm-provider-registry'
 import { useQueueStore } from '@/stores/queue-store'
 import { useThemeStore } from '@/stores/theme-store'
+import { useTutorialStore } from '@/stores/tutorial-store'
 import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
-import { disposeTerminal } from '@/components/terminal/TerminalInstance'
-import type { FileNode } from '@/models/types'
+import { fuzzyMatch } from '@/lib/fuzzy'
+import { flattenTree } from '@/lib/flatten-tree'
+import { dispatchAppAction } from '@/lib/app-actions'
 import { cn } from '@/lib/utils'
 
 interface PaletteItem {
@@ -47,36 +48,6 @@ interface PaletteItem {
 }
 
 const MAX_FILE_RESULTS = 30
-
-function flattenTree(node: FileNode | undefined, out: { path: string; name: string }[] = []): { path: string; name: string }[] {
-  if (!node) return out
-  if (!node.isDirectory) out.push({ path: node.path, name: node.name })
-  if (node.children) {
-    for (const child of node.children) flattenTree(child, out)
-  }
-  return out
-}
-
-function fuzzyMatch(query: string, target: string): { score: number; matched: boolean } {
-  if (!query) return { score: 0, matched: true }
-  const q = query.toLowerCase()
-  const t = target.toLowerCase()
-  if (t.includes(q)) {
-    const idx = t.indexOf(q)
-    return { score: 1000 - idx - (target.length - query.length) * 0.1, matched: true }
-  }
-  let qi = 0
-  let score = 0
-  let lastMatch = -2
-  for (let i = 0; i < t.length && qi < q.length; i++) {
-    if (t[i] === q[qi]) {
-      score += i - lastMatch === 1 ? 5 : 1
-      lastMatch = i
-      qi++
-    }
-  }
-  return qi === q.length ? { score, matched: true } : { score: 0, matched: false }
-}
 
 type PaletteMode = 'all' | 'files'
 
@@ -108,8 +79,17 @@ export function CommandPalette(): React.ReactElement | null {
       }
     }
     const handleOpenEvent = (e: Event): void => {
-      const detail = (e as CustomEvent<{ mode: PaletteMode }>).detail
+      const detail = (e as CustomEvent<{ mode?: PaletteMode; open?: boolean }>).detail
+      if (detail?.open === false) {
+        setOpen(false)
+        return
+      }
       const nextMode: PaletteMode = detail?.mode === 'files' ? 'files' : 'all'
+      if (detail?.open === true) {
+        setMode(nextMode)
+        setOpen(true)
+        return
+      }
       setOpen((prev) => {
         if (prev && mode === nextMode) return false
         setMode(nextMode)
@@ -221,9 +201,6 @@ export function CommandPalette(): React.ReactElement | null {
         })
       }
 
-      const activeTabId = useTerminalStore.getState().activeTabPerProject[activeProjectId] ?? null
-      const activeTab = terminalTabs.find((t) => t.id === activeTabId)
-      const editorActive = useEditorStore.getState().statePerProject[activeProjectId]?.activeFilePath ?? null
       const llmProviderId = useLayoutStore.getState().llmProviderId
       const llmLabel = providerDefinition(llmProviderId).label
       const clearContextCommand = clearContextCommandFor(llmProviderId)
@@ -235,41 +212,21 @@ export function CommandPalette(): React.ReactElement | null {
           hint: 'opens a new LLM tab',
           group: 'Terminal',
           icon: <Sparkles size={14} />,
-          run: () => {
-            if (!project) return
-            useTerminalStore
-              .getState()
-              .createTab(activeProjectId, project.path, useLayoutStore.getState().getLlmStartupCommand())
-          }
+          run: () => dispatchAppAction({ action: 'new-claude-terminal' })
         },
         {
           id: 'action:new-shell',
           label: 'New shell terminal',
           group: 'Terminal',
           icon: <Plus size={14} />,
-          run: () => {
-            if (!project) return
-            useTerminalStore.getState().createTab(activeProjectId, project.path)
-          }
+          run: () => dispatchAppAction({ action: 'new-shell-terminal' })
         },
         {
           id: 'action:restart-llm',
           label: 'Restart active LLM terminal',
           group: 'Terminal',
           icon: <RotateCw size={14} />,
-          run: () => {
-            if (!project || !activeTabId || !activeTab?.initialCommand) return
-            window.api.terminal.kill(activeTabId)
-            disposeTerminal(activeTabId)
-            useTerminalStore
-              .getState()
-              .replaceTab(
-                activeTabId,
-                activeProjectId,
-                project.path,
-                useLayoutStore.getState().getLlmStartupCommand()
-              )
-          }
+          run: () => dispatchAppAction({ action: 'restart-claude' })
         },
         ...(clearContextCommand
           ? [
@@ -279,8 +236,7 @@ export function CommandPalette(): React.ReactElement | null {
                 group: 'Terminal',
                 icon: <Trash2 size={14} />,
                 run: (): void => {
-                  if (!activeTabId) return
-                  window.api.terminal.write(activeTabId, `${clearContextCommand}\r`)
+                  dispatchAppAction({ action: 'clear-context' })
                 }
               }
             ]
@@ -290,10 +246,7 @@ export function CommandPalette(): React.ReactElement | null {
           label: 'Paste screenshot to terminal',
           group: 'Terminal',
           icon: <ImagePlus size={14} />,
-          run: () => {
-            if (!activeTabId) return
-            window.api.terminal.pasteClipboardImage(activeTabId)
-          }
+          run: () => dispatchAppAction({ action: 'paste-screenshot' })
         }
       )
 
@@ -303,27 +256,21 @@ export function CommandPalette(): React.ReactElement | null {
           label: 'Save current file',
           group: 'Editor',
           icon: <Save size={14} />,
-          run: () => {
-            if (!editorActive) return
-            void useEditorStore.getState().saveFile(activeProjectId, editorActive)
-          }
+          run: () => dispatchAppAction({ action: 'save-file' })
         },
         {
           id: 'action:close-file',
           label: 'Close current file tab',
           group: 'Editor',
           icon: <X size={14} />,
-          run: () => {
-            if (!editorActive) return
-            useEditorStore.getState().closeFile(activeProjectId, editorActive)
-          }
+          run: () => dispatchAppAction({ action: 'close-file-tab' })
         },
         {
           id: 'action:center-editor',
           label: 'Show editor',
           group: 'Editor',
           icon: <Code size={14} />,
-          run: () => useEditorStore.getState().setCenterTab(activeProjectId, 'editor')
+          run: () => dispatchAppAction({ action: 'center-tab-editor' })
         },
         ...(capabilitiesFor(llmProviderId).configFiles
           ? [
@@ -332,7 +279,9 @@ export function CommandPalette(): React.ReactElement | null {
                 label: 'Show Claude config',
                 group: 'Editor',
                 icon: <Settings size={14} />,
-                run: (): void => useEditorStore.getState().setCenterTab(activeProjectId, 'claude')
+                run: (): void => {
+                  dispatchAppAction({ action: 'center-tab-claude' })
+                }
               }
             ]
           : [])
@@ -344,19 +293,14 @@ export function CommandPalette(): React.ReactElement | null {
           label: 'Reload file tree',
           group: 'Project',
           icon: <RefreshCw size={14} />,
-          run: () => {
-            if (!project) return
-            void useFileTreeStore.getState().loadTree(activeProjectId, project.path)
-          }
+          run: () => dispatchAppAction({ action: 'reload-tree' })
         },
         {
           id: 'action:close-project',
           label: 'Close current project',
           group: 'Project',
           icon: <X size={14} />,
-          run: () => {
-            void useProjectStore.getState().removeProject(activeProjectId)
-          }
+          run: () => dispatchAppAction({ action: 'close-project' })
         }
       )
 
@@ -382,46 +326,35 @@ export function CommandPalette(): React.ReactElement | null {
         label: 'New project (open folder)',
         group: 'Project',
         icon: <Folder size={14} />,
-        run: () => {
-          void useProjectStore.getState().addProject()
-        }
+        run: () => dispatchAppAction({ action: 'new-project' })
       },
       {
         id: 'action:toggle-variant',
         label: 'Toggle dark / light mode',
         group: 'Theme',
         icon: useThemeStore.getState().variant === 'dark' ? <Sun size={14} /> : <Moon size={14} />,
-        run: () => useThemeStore.getState().toggleVariant()
+        run: () => dispatchAppAction({ action: 'toggle-variant' })
       },
       {
         id: 'action:toggle-minimap',
         label: 'Toggle editor minimap',
         group: 'Editor',
         icon: <Eye size={14} />,
-        run: () => {
-          const s = useEditorPrefsStore.getState()
-          s.setMinimapEnabled(!s.minimapEnabled)
-        }
+        run: () => dispatchAppAction({ action: 'toggle-minimap' })
       },
       {
         id: 'action:toggle-autosave',
         label: 'Toggle autosave',
         group: 'Editor',
         icon: <Save size={14} />,
-        run: () => {
-          const s = useEditorPrefsStore.getState()
-          s.setAutosaveEnabled(!s.autosaveEnabled)
-        }
+        run: () => dispatchAppAction({ action: 'toggle-autosave' })
       },
       {
         id: 'action:toggle-format-on-save',
         label: 'Toggle format on save',
         group: 'Editor',
         icon: <Save size={14} />,
-        run: () => {
-          const s = useEditorPrefsStore.getState()
-          s.setFormatOnSave(!s.formatOnSave)
-        }
+        run: () => dispatchAppAction({ action: 'toggle-format-on-save' })
       }
     )
 
@@ -432,6 +365,13 @@ export function CommandPalette(): React.ReactElement | null {
         group: 'Go to',
         icon: <ArrowRight size={14} />,
         run: () => useProjectStore.getState().showDashboard()
+      },
+      {
+        id: 'nav:tutorial',
+        label: 'Start interactive tutorial',
+        group: 'Go to',
+        icon: <ArrowRight size={14} />,
+        run: () => useTutorialStore.getState().startTutorial()
       },
       {
         id: 'nav:statistics',
