@@ -35,7 +35,10 @@ import { Usage } from '@/components/usage/Usage'
 import { Settings } from '@/components/settings/Settings'
 import { TerminalsPage } from '@/components/terminal/TerminalsPage'
 import { DevServersPage } from '@/components/dev-servers/DevServersPage'
-import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Server, Plug, Settings as SettingsIcon, GitBranch, PanelRightOpen, PanelLeftOpen } from 'lucide-react'
+import { VoicePage } from '@/components/voice/VoicePage'
+import { isFeatureEnabled } from '@/config/feature-flags'
+import { useTutorialStore } from '@/stores/tutorial-store'
+import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Server, Plug, Settings as SettingsIcon, GitBranch, PanelRightOpen, PanelLeftOpen, Mic, HelpCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
 
@@ -132,6 +135,7 @@ export function AppLayoutGrid(): React.ReactElement {
   const mcpPageActive = useProjectStore((s) => s.mcpPageActive)
   const terminalsPageActive = useProjectStore((s) => s.terminalsPageActive)
   const devServersPageActive = useProjectStore((s) => s.devServersPageActive)
+  const voicePageActive = useProjectStore((s) => s.voicePageActive)
   const loadProjects = useProjectStore((s) => s.loadProjects)
   const addProject = useProjectStore((s) => s.addProject)
   const removeProject = useProjectStore((s) => s.removeProject)
@@ -139,6 +143,7 @@ export function AppLayoutGrid(): React.ReactElement {
   const reorderProjects = useProjectStore((s) => s.reorderProjects)
   const showDashboard = useProjectStore((s) => s.showDashboard)
   const showStatistics = useProjectStore((s) => s.showStatistics)
+  const startTutorial = useTutorialStore((s) => s.startTutorial)
   const showUsage = useProjectStore((s) => s.showUsage)
   const showSettings = useProjectStore((s) => s.showSettings)
   const showClaudePage = useProjectStore((s) => s.showClaudePage)
@@ -146,8 +151,10 @@ export function AppLayoutGrid(): React.ReactElement {
   const showMcpPage = useProjectStore((s) => s.showMcpPage)
   const showTerminalsPage = useProjectStore((s) => s.showTerminalsPage)
   const showDevServersPage = useProjectStore((s) => s.showDevServersPage)
+  const showVoicePage = useProjectStore((s) => s.showVoicePage)
   const llmCapabilities = useLlmCapabilities()
-  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || mcpPageActive || terminalsPageActive || devServersPageActive
+  const voiceEnabled = isFeatureEnabled('voiceControl')
+  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || mcpPageActive || terminalsPageActive || devServersPageActive || (voicePageActive && voiceEnabled)
   const centerTab = useEditorStore(
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'terminals' : 'terminals')
   )
@@ -209,6 +216,7 @@ export function AppLayoutGrid(): React.ReactElement {
       <div className="flex h-9 shrink-0 items-center border-b border-zinc-800 bg-zinc-900/50">
         <button
           onClick={() => activeProjectId && setCenterTab(activeProjectId, 'terminals')}
+          data-tour="tab-terminals"
           className={cn(
             'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
             centerTab === 'terminals'
@@ -221,6 +229,7 @@ export function AppLayoutGrid(): React.ReactElement {
         </button>
         <button
           onClick={() => activeProjectId && setCenterTab(activeProjectId, 'editor')}
+          data-tour="tab-editor"
           className={cn(
             'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
             centerTab === 'editor'
@@ -233,6 +242,7 @@ export function AppLayoutGrid(): React.ReactElement {
         </button>
         <button
           onClick={() => activeProjectId && setCenterTab(activeProjectId, 'diff')}
+          data-tour="tab-diff"
           className={cn(
             'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
             centerTab === 'diff'
@@ -246,6 +256,7 @@ export function AppLayoutGrid(): React.ReactElement {
         {llmCapabilities.configFiles && (
           <button
             onClick={() => activeProjectId && setCenterTab(activeProjectId, 'claude')}
+            data-tour="tab-claude"
             className={cn(
               'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
               centerTab === 'claude'
@@ -260,6 +271,7 @@ export function AppLayoutGrid(): React.ReactElement {
         {llmCapabilities.skills && (
           <button
             onClick={() => activeProjectId && setCenterTab(activeProjectId, 'skills')}
+            data-tour="tab-skills"
             className={cn(
               'flex h-full items-center gap-1.5 px-3 text-xs font-medium transition-colors',
               centerTab === 'skills'
@@ -274,6 +286,7 @@ export function AppLayoutGrid(): React.ReactElement {
         {activeProjectPath && (
           <button
             onClick={() => window.api.fs.openFolder(activeProjectPath)}
+            data-tour="open-project-folder"
             className="ml-auto flex h-full items-center gap-1.5 px-3 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-300"
             title="Open project folder"
           >
@@ -290,6 +303,7 @@ export function AppLayoutGrid(): React.ReactElement {
                 <div className="flex w-8 shrink-0 flex-col items-center gap-1.5 border-r border-zinc-800 bg-zinc-900/50 py-2">
                   <button
                     onClick={() => toggleDevTerminalsCollapsed(projectId)}
+                    data-tour="devterms-expand"
                     className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
                     title="Expand dev terminals"
                   >
@@ -376,7 +390,7 @@ export function AppLayoutGrid(): React.ReactElement {
           className="flex items-center gap-0.5 h-full flex-1 min-w-0"
           style={TITLEBAR_NO_DRAG_STYLE}
         >
-          <div className="flex items-center h-full min-w-0 flex-1">
+          <div className="flex items-center h-full min-w-0 flex-1" data-tour="project-tabs">
             <DndContext sensors={projectTabSensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
               <SortableContext items={projects.map((p) => p.id)} strategy={horizontalListSortingStrategy}>
                 {projects.map((project) => (
@@ -396,6 +410,7 @@ export function AppLayoutGrid(): React.ReactElement {
           </div>
           <button
             onClick={addProject}
+            data-tour="add-project"
             className="flex items-center justify-center h-full px-2 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
             title="Add project"
           >
@@ -409,6 +424,7 @@ export function AppLayoutGrid(): React.ReactElement {
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={showDashboard}
+              data-tour="nav-dashboard"
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded transition-colors',
                 dashboardActive
@@ -422,6 +438,7 @@ export function AppLayoutGrid(): React.ReactElement {
             {llmCapabilities.configFiles && (
               <button
                 onClick={showClaudePage}
+                data-tour="nav-claude"
                 className={cn(
                   'flex h-10 w-10 items-center justify-center rounded transition-colors',
                   claudePageActive
@@ -436,6 +453,7 @@ export function AppLayoutGrid(): React.ReactElement {
             {llmCapabilities.skills && (
               <button
                 onClick={showSkillsPage}
+                data-tour="nav-skills"
                 className={cn(
                   'flex h-10 w-10 items-center justify-center rounded transition-colors',
                   skillsPageActive
@@ -450,6 +468,7 @@ export function AppLayoutGrid(): React.ReactElement {
             {llmCapabilities.mcp && (
               <button
                 onClick={showMcpPage}
+                data-tour="nav-mcp"
                 className={cn(
                   'flex h-10 w-10 items-center justify-center rounded transition-colors',
                   mcpPageActive
@@ -463,6 +482,7 @@ export function AppLayoutGrid(): React.ReactElement {
             )}
             <button
               onClick={showTerminalsPage}
+              data-tour="nav-terminals"
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded transition-colors',
                 terminalsPageActive
@@ -475,6 +495,7 @@ export function AppLayoutGrid(): React.ReactElement {
             </button>
             <button
               onClick={showDevServersPage}
+              data-tour="nav-devservers"
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded transition-colors',
                 devServersPageActive
@@ -485,10 +506,34 @@ export function AppLayoutGrid(): React.ReactElement {
             >
               <Server size={18} />
             </button>
+            {voiceEnabled && (
+              <button
+                onClick={showVoicePage}
+                data-tour="nav-voice"
+                className={cn(
+                  'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                  voicePageActive
+                    ? 'text-zinc-200 bg-zinc-800'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+                )}
+                title="Voice"
+              >
+                <Mic size={18} />
+              </button>
+            )}
           </div>
           <div className="flex flex-col items-center gap-1">
             <button
+              onClick={startTutorial}
+              data-tour="nav-tutorial"
+              className="flex h-10 w-10 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-800/60 hover:text-zinc-300"
+              title="Interactive tutorial"
+            >
+              <HelpCircle size={18} />
+            </button>
+            <button
               onClick={showStatistics}
+              data-tour="nav-statistics"
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded transition-colors',
                 statisticsActive
@@ -501,6 +546,7 @@ export function AppLayoutGrid(): React.ReactElement {
             </button>
             <button
               onClick={showUsage}
+              data-tour="nav-usage"
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded transition-colors',
                 usageActive
@@ -513,6 +559,7 @@ export function AppLayoutGrid(): React.ReactElement {
             </button>
             <button
               onClick={showSettings}
+              data-tour="nav-settings"
               className={cn(
                 'flex h-10 w-10 items-center justify-center rounded transition-colors',
                 settingsActive
@@ -538,6 +585,7 @@ export function AppLayoutGrid(): React.ReactElement {
               <div className="flex w-8 shrink-0 flex-col items-center gap-1.5 border-l border-zinc-800 bg-zinc-900/50 py-2">
                 <button
                   onClick={() => toggleGitCollapsed(projectId)}
+                  data-tour="git-expand"
                   className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
                   title="Expand git panel"
                 >
@@ -569,7 +617,7 @@ export function AppLayoutGrid(): React.ReactElement {
           )}
         </div>
         {dashboardActive && (
-          <div className="absolute inset-0 z-10 overflow-auto">
+          <div className="absolute inset-0 z-10 overflow-hidden">
             <Dashboard />
           </div>
         )}
@@ -611,6 +659,11 @@ export function AppLayoutGrid(): React.ReactElement {
         {devServersPageActive && (
           <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <DevServersPage />
+          </div>
+        )}
+        {voicePageActive && voiceEnabled && (
+          <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
+            <VoicePage />
           </div>
         )}
         </div>
