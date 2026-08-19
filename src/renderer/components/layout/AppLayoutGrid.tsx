@@ -35,7 +35,7 @@ import { Usage } from '@/components/usage/Usage'
 import { Settings } from '@/components/settings/Settings'
 import { TerminalsPage } from '@/components/terminal/TerminalsPage'
 import { DevServersPage } from '@/components/dev-servers/DevServersPage'
-import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Server, Plug, Settings as SettingsIcon, GitBranch, PanelRightOpen } from 'lucide-react'
+import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Server, Plug, Settings as SettingsIcon, GitBranch, PanelRightOpen, PanelLeftOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
 
@@ -167,10 +167,12 @@ export function AppLayoutGrid(): React.ReactElement {
   const setSplit = useLayoutStore((s) => s.setSplit)
   const resetVersion = useLayoutStore((s) => s.resetVersion)
   const toggleGitCollapsed = useLayoutStore((s) => s.toggleGitCollapsed)
+  const toggleDevTerminalsCollapsed = useLayoutStore((s) => s.toggleDevTerminalsCollapsed)
 
   const projectId = activeProjectId ?? '__default__'
   const splitSize = getSplit(projectId)
   const gitCollapsed = useLayoutStore((s) => !!s.gitCollapsedPerProject[projectId])
+  const devTerminalsCollapsed = useLayoutStore((s) => !!s.devTerminalsCollapsedPerProject[projectId])
 
   useEffect(() => {
     loadProjects()
@@ -283,15 +285,33 @@ export function AppLayoutGrid(): React.ReactElement {
       <div className="relative flex-1 min-h-0 overflow-hidden">
         <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'terminals' ? 'z-10' : 'z-0 invisible')}>
           <PanelErrorBoundary label="Terminals">
-            <PanelGroup direction="horizontal">
-              <Panel defaultSize={35} minSize={15}>
-                <DevTerminalsPanel />
-              </Panel>
-              <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
-              <Panel defaultSize={65} minSize={20}>
-                <TerminalPanel />
-              </Panel>
-            </PanelGroup>
+            {devTerminalsCollapsed ? (
+              <div className="flex h-full">
+                <div className="flex w-8 shrink-0 flex-col items-center gap-1.5 border-r border-zinc-800 bg-zinc-900/50 py-2">
+                  <button
+                    onClick={() => toggleDevTerminalsCollapsed(projectId)}
+                    className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+                    title="Expand dev terminals"
+                  >
+                    <PanelLeftOpen size={14} />
+                  </button>
+                  <TerminalSquare size={13} className="text-zinc-600" />
+                </div>
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <TerminalPanel />
+                </div>
+              </div>
+            ) : (
+              <PanelGroup direction="horizontal">
+                <Panel defaultSize={35} minSize={15}>
+                  <DevTerminalsPanel onCollapse={() => toggleDevTerminalsCollapsed(projectId)} />
+                </Panel>
+                <PanelResizeHandle className="w-1 bg-zinc-800 hover:bg-zinc-700 transition-colors" />
+                <Panel defaultSize={65} minSize={20}>
+                  <TerminalPanel />
+                </Panel>
+              </PanelGroup>
+            )}
           </PanelErrorBoundary>
         </div>
         <div className={cn('absolute inset-0 bg-zinc-950', centerTab === 'editor' ? 'z-10' : 'z-0 invisible')}>

@@ -14,6 +14,7 @@ export const DEFAULT_SPLIT = 75
 interface LayoutState {
   splitsPerProject: Record<string, number>
   gitCollapsedPerProject: Record<string, boolean>
+  devTerminalsCollapsedPerProject: Record<string, boolean>
   tokenCap: number
   idleSoundEnabled: boolean
   idleSoundId: string
@@ -24,6 +25,8 @@ interface LayoutState {
   getSplit: (projectId: string) => number
   setSplit: (projectId: string, size: number) => void
   toggleGitCollapsed: (projectId: string) => void
+  setDevTerminalsCollapsed: (projectId: string, collapsed: boolean) => void
+  toggleDevTerminalsCollapsed: (projectId: string) => void
   resetLayout: (projectId: string) => void
   setTokenCap: (cap: number) => void
   setIdleSoundEnabled: (enabled: boolean) => void
@@ -61,6 +64,7 @@ export const useLayoutStore = create<LayoutState>()(
     (set, get) => ({
       splitsPerProject: {},
       gitCollapsedPerProject: {},
+      devTerminalsCollapsedPerProject: {},
       tokenCap: DEFAULT_TOKEN_CAP,
       idleSoundEnabled: false,
       idleSoundId: DEFAULT_IDLE_SOUND_ID,
@@ -85,6 +89,19 @@ export const useLayoutStore = create<LayoutState>()(
         set({
           gitCollapsedPerProject: { ...current, [projectId]: !current[projectId] }
         })
+      },
+
+      setDevTerminalsCollapsed: (projectId: string, collapsed: boolean) => {
+        const current = get().devTerminalsCollapsedPerProject
+        if (!!current[projectId] === collapsed) return
+        set({
+          devTerminalsCollapsedPerProject: { ...current, [projectId]: collapsed }
+        })
+      },
+
+      toggleDevTerminalsCollapsed: (projectId: string) => {
+        const current = get().devTerminalsCollapsedPerProject
+        get().setDevTerminalsCollapsed(projectId, !current[projectId])
       },
 
       setTokenCap: (cap: number) => {
@@ -123,9 +140,12 @@ export const useLayoutStore = create<LayoutState>()(
         delete spp[projectId]
         const gcp = { ...get().gitCollapsedPerProject }
         delete gcp[projectId]
+        const dtcp = { ...get().devTerminalsCollapsedPerProject }
+        delete dtcp[projectId]
         set({
           splitsPerProject: spp,
           gitCollapsedPerProject: gcp,
+          devTerminalsCollapsedPerProject: dtcp,
           resetVersion: get().resetVersion + 1
         })
       }
@@ -137,6 +157,7 @@ export const useLayoutStore = create<LayoutState>()(
       partialize: (state) => ({
         splitsPerProject: state.splitsPerProject,
         gitCollapsedPerProject: state.gitCollapsedPerProject,
+        devTerminalsCollapsedPerProject: state.devTerminalsCollapsedPerProject,
         tokenCap: state.tokenCap,
         idleSoundEnabled: state.idleSoundEnabled,
         idleSoundId: state.idleSoundId,

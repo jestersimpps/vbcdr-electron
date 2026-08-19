@@ -3,14 +3,18 @@ import { useDevTerminalStore } from '@/stores/dev-terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { TerminalInstance, disposeTerminal, focusTerminal } from '@/components/terminal/TerminalInstance'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, PanelLeftClose } from 'lucide-react'
 
 function getGridLayout(count: number): { cols: number; rows: number[] } {
   const n = Math.max(1, count)
   return { cols: 1, rows: Array.from({ length: n }, () => 1) }
 }
 
-export function DevTerminalsPanel(): React.ReactElement {
+interface DevTerminalsPanelProps {
+  onCollapse?: () => void
+}
+
+export function DevTerminalsPanel({ onCollapse }: DevTerminalsPanelProps = {}): React.ReactElement {
   const activeProject = useProjectStore((s) => {
     const id = s.activeProjectId
     return id ? s.projects.find((p) => p.id === id) : undefined
@@ -59,9 +63,23 @@ export function DevTerminalsPanel(): React.ReactElement {
     teardownInFlight.current.delete(tabId)
   }
 
+  const collapseButton = onCollapse ? (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        onCollapse()
+      }}
+      className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+      title="Collapse dev terminals"
+    >
+      <PanelLeftClose size={12} />
+    </button>
+  ) : null
+
   if (!activeProject) {
     return (
-      <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+      <div className="relative flex h-full items-center justify-center text-xs text-zinc-600">
+        {collapseButton && <div className="absolute right-1.5 top-1.5">{collapseButton}</div>}
         Select a project first
       </div>
     )
@@ -74,7 +92,8 @@ export function DevTerminalsPanel(): React.ReactElement {
     <div className="flex h-full flex-col">
       <div className="relative flex-1" style={{ minHeight: 0 }}>
         {projectTabs.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+          <div className="relative flex h-full items-center justify-center text-xs text-zinc-600">
+            {collapseButton && <div className="absolute right-1.5 top-1.5">{collapseButton}</div>}
             Initializing terminals...
           </div>
         ) : (
@@ -142,6 +161,7 @@ export function DevTerminalsPanel(): React.ReactElement {
                           >
                             <X size={12} />
                           </button>
+                          {isFirst && collapseButton}
                         </div>
                       </div>
                       <div className="flex-1" style={{ minHeight: 0 }}>

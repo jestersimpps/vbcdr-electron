@@ -7,6 +7,7 @@ const resetStore = (): void => {
   useLayoutStore.setState({
     splitsPerProject: {},
     gitCollapsedPerProject: {},
+    devTerminalsCollapsedPerProject: {},
     tokenCap: DEFAULT_TOKEN_CAP,
     idleSoundEnabled: false,
     idleSoundId: DEFAULT_IDLE_SOUND_ID,
@@ -67,6 +68,17 @@ describe('layout-store', () => {
     })
   })
 
+  describe('toggleDevTerminalsCollapsed', () => {
+    it('toggles per project without affecting others', () => {
+      useLayoutStore.getState().toggleDevTerminalsCollapsed('p1')
+      expect(useLayoutStore.getState().devTerminalsCollapsedPerProject.p1).toBe(true)
+      expect(useLayoutStore.getState().devTerminalsCollapsedPerProject.p2).toBeUndefined()
+
+      useLayoutStore.getState().toggleDevTerminalsCollapsed('p1')
+      expect(useLayoutStore.getState().devTerminalsCollapsedPerProject.p1).toBe(false)
+    })
+  })
+
   describe('setGlobalTerminalCwd', () => {
     it('stores the trimmed path', () => {
       useLayoutStore.getState().setGlobalTerminalCwd('  /Users/me/dev  ')
@@ -98,6 +110,15 @@ describe('layout-store', () => {
       const state = useLayoutStore.getState()
       expect(state.gitCollapsedPerProject.p1).toBeUndefined()
       expect(state.gitCollapsedPerProject.p2).toBe(true)
+    })
+
+    it('clears the project dev-terminals-collapse flag but leaves other projects alone', () => {
+      useLayoutStore.getState().toggleDevTerminalsCollapsed('p1')
+      useLayoutStore.getState().toggleDevTerminalsCollapsed('p2')
+      useLayoutStore.getState().resetLayout('p1')
+      const state = useLayoutStore.getState()
+      expect(state.devTerminalsCollapsedPerProject.p1).toBeUndefined()
+      expect(state.devTerminalsCollapsedPerProject.p2).toBe(true)
     })
   })
 
