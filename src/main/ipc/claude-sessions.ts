@@ -3,6 +3,7 @@ import path from 'path'
 import os from 'os'
 import readline from 'readline'
 import { safeHandle } from '@main/ipc/safe-handle'
+import { claudeProjectDir } from '@main/services/claude-paths'
 
 export interface ClaudeSessionSummary {
   id: string
@@ -12,12 +13,8 @@ export interface ClaudeSessionSummary {
   firstUserTimestamp: string | null
 }
 
-function projectSlug(projectPath: string): string {
-  return path.resolve(projectPath).replace(/\//g, '-')
-}
-
 function sessionsDirFor(projectPath: string): string {
-  return path.join(os.homedir(), '.claude', 'projects', projectSlug(projectPath))
+  return claudeProjectDir(projectPath)
 }
 
 async function summarize(filePath: string): Promise<{
