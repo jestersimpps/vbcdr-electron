@@ -107,6 +107,7 @@ export function PermissionsButton({ projectPath }: Props): JSX.Element {
   return (
     <div ref={wrapperRef} className="relative">
       <button
+        data-tour="permissions"
         onClick={() => setOpen((v) => !v)}
         onMouseDown={(e) => e.preventDefault()}
         disabled={disabled}

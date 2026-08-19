@@ -5,17 +5,9 @@ import os from 'os'
 
 const execFileAsync = promisify(execFile)
 
-export interface DevServer {
-  pid: number
-  port: number
-  command: string
-  process: string
-  cwd: string | null
-  user: string
-  startedAt: number | null
-  cpu: number | null
-  memoryMB: number | null
-}
+import type { DevServer } from '@main/models/types'
+
+export type { DevServer }
 
 interface ListenRow {
   pid: number

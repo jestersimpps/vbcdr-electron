@@ -234,6 +234,18 @@ export function registerFilesystemHandlers(): void {
     clipboard.writeText(filePath)
   })
 
+  safeHandle(
+    'fs:save-text',
+    async (event, defaultFileName: string, content: string): Promise<string | null> => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return null
+      const result = await dialog.showSaveDialog(win, { defaultPath: defaultFileName })
+      if (result.canceled || !result.filePath) return null
+      await fsp.writeFile(result.filePath, content, 'utf-8')
+      return result.filePath
+    }
+  )
+
   safeHandle('fs:pick-folder', async (event): Promise<string | null> => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return null

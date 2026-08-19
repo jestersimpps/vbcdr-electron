@@ -15,6 +15,7 @@ export function VariantToggle(): React.ReactElement | null {
 
   return (
     <button
+      data-tour="variant-toggle"
       onClick={toggleVariant}
       className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
       title={`Switch to ${variant === 'dark' ? 'light' : 'dark'} mode`}

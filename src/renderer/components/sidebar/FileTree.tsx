@@ -501,6 +501,7 @@ export function FileTree({
           <button
             onClick={() => setShowSearch(true)}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+            data-tour="filetree-search"
             title="Search files"
           >
             <Search size={12} />
@@ -508,6 +509,7 @@ export function FileTree({
           <button
             onClick={() => handleNewFile(rootPath)}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+            data-tour="filetree-newfile"
             title="New file"
           >
             <FilePlus size={12} />
@@ -522,6 +524,7 @@ export function FileTree({
           <button
             onClick={() => toggleShowIgnored(treeKey, rootPath)}
             className={`rounded p-1 hover:bg-zinc-800 ${showIgnored ? 'text-zinc-300' : 'text-zinc-500 hover:text-zinc-300'}`}
+            data-tour="filetree-ignored"
             title={showIgnored ? 'Hide ignored files' : 'Show ignored files'}
           >
             {showIgnored ? <Eye size={12} /> : <EyeOff size={12} />}

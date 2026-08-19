@@ -70,6 +70,7 @@ export function DevTerminalsPanel({ onCollapse }: DevTerminalsPanelProps = {}): 
         onCollapse()
       }}
       className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+      data-tour="devterms-collapse"
       title="Collapse dev terminals"
     >
       <PanelLeftClose size={12} />

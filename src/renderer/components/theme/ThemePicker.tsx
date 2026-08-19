@@ -32,6 +32,7 @@ export function ThemePicker(): React.ReactElement {
   return (
     <div className="relative">
       <button
+        data-tour="theme-picker"
         ref={buttonRef}
         onClick={() => isOpen ? setIsOpen(false) : openMenu()}
         className="flex shrink-0 items-center gap-1.5 rounded px-1.5 py-0.5 transition-colors hover:bg-zinc-800 hover:text-zinc-200"

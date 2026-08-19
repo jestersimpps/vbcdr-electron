@@ -30,10 +30,12 @@ vi.mock('electron-updater', () => ({ autoUpdater }))
 
 const send = vi.fn()
 const showMessageBox = vi.fn(async () => ({ response: 0, checkboxChecked: false }))
+let online = true
 
 vi.mock('electron', () => ({
   BrowserWindow: { getAllWindows: () => [{ webContents: { send }, isDestroyed: () => false }] },
-  dialog: { showMessageBox: (opts: unknown) => showMessageBox(opts) }
+  dialog: { showMessageBox: (opts: unknown) => showMessageBox(opts) },
+  net: { isOnline: () => online }
 }))
 
 let mod: typeof import('./auto-updater')
@@ -47,6 +49,7 @@ beforeEach(async () => {
   checkForUpdates.mockResolvedValue(null)
   quitAndInstall.mockClear()
   currentVersion = { version: '1.0.0' }
+  online = true
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = false
   autoUpdater.logger = undefined
@@ -147,6 +150,93 @@ describe('auto-updater', () => {
       checkForUpdates.mockResolvedValueOnce(null)
       await mod.checkForUpdatesInteractive()
       expect(showMessageBox).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('offline handling', () => {
+    it('skips the network call entirely while offline', () => {
+      online = false
+      mod.checkForUpdates()
+      expect(checkForUpdates).not.toHaveBeenCalled()
+    })
+
+    it('keeps the hourly timer alive across an offline stretch', () => {
+      vi.useFakeTimers()
+      online = false
+      mod.startUpdateChecks()
+      vi.advanceTimersByTime(2 * 60 * 60 * 1000)
+      expect(checkForUpdates).not.toHaveBeenCalled()
+      online = true
+      vi.advanceTimersByTime(60 * 60 * 1000)
+      expect(checkForUpdates).toHaveBeenCalledTimes(1)
+      mod.stopUpdateChecks()
+      vi.useRealTimers()
+    })
+
+    it('does not surface a red banner for network errors', () => {
+      mod.initAutoUpdater()
+      send.mockClear()
+      autoUpdater.emit('error', new Error('getaddrinfo ENOTFOUND github.com'))
+      expect(mod.getUpdateStatus()).toEqual({ state: 'idle' })
+      const states = send.mock.calls.map((c) => (c[1] as { state: string }).state)
+      expect(states).not.toContain('error')
+    })
+
+    it('still surfaces genuine update errors', () => {
+      mod.initAutoUpdater()
+      autoUpdater.emit('error', new Error('signature verification failed'))
+      expect(mod.getUpdateStatus()).toEqual({
+        state: 'error',
+        error: 'signature verification failed'
+      })
+    })
+
+    it('tells the user plainly when they invoke the menu check while offline', async () => {
+      online = false
+      await mod.checkForUpdatesInteractive()
+      expect(checkForUpdates).not.toHaveBeenCalled()
+      expect(showMessageBox).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'No Connection'
+      }))
+    })
+  })
+
+  describe('startUpdateChecks', () => {
+    it('checks immediately and then once per hour', () => {
+      vi.useFakeTimers()
+      mod.startUpdateChecks()
+      expect(checkForUpdates).toHaveBeenCalledTimes(1)
+      vi.advanceTimersByTime(60 * 60 * 1000)
+      expect(checkForUpdates).toHaveBeenCalledTimes(2)
+      vi.advanceTimersByTime(60 * 60 * 1000)
+      expect(checkForUpdates).toHaveBeenCalledTimes(3)
+      mod.stopUpdateChecks()
+      vi.useRealTimers()
+    })
+
+    it('ignores a second start while a timer is already running', () => {
+      vi.useFakeTimers()
+      mod.startUpdateChecks()
+      mod.startUpdateChecks()
+      expect(checkForUpdates).toHaveBeenCalledTimes(1)
+      vi.advanceTimersByTime(60 * 60 * 1000)
+      expect(checkForUpdates).toHaveBeenCalledTimes(2)
+      mod.stopUpdateChecks()
+      vi.useRealTimers()
+    })
+  })
+
+  describe('stopUpdateChecks', () => {
+    it('stops further checks and allows a restart', () => {
+      vi.useFakeTimers()
+      mod.startUpdateChecks()
+      mod.stopUpdateChecks()
+      vi.advanceTimersByTime(3 * 60 * 60 * 1000)
+      expect(checkForUpdates).toHaveBeenCalledTimes(1)
+      mod.startUpdateChecks()
+      expect(checkForUpdates).toHaveBeenCalledTimes(2)
+      mod.stopUpdateChecks()
+      vi.useRealTimers()
     })
   })
 

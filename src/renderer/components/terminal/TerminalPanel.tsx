@@ -312,6 +312,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
           onClick={handleNewTab}
           disabled={!hasOwner}
           className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
+          data-tour="terminal-newtab"
           title="New tab"
         >
           <Plus size={14} />
@@ -418,6 +419,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
           disabled={!activeTabId}
           onMouseDown={(e) => e.preventDefault()}
           className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+          data-tour="terminal-screenshot"
           title="Paste screenshot from clipboard"
         >
           <ImagePlus size={16} />
@@ -432,6 +434,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
             disabled={!activeTabId}
             onMouseDown={(e) => e.preventDefault()}
             className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+            data-tour="terminal-clearcontext"
             title="Clear context"
           >
             <Trash2 size={16} />
@@ -458,6 +461,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
             disabled={!hasOwner}
             onMouseDown={(e) => e.preventDefault()}
             className="rounded p-1.5 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-30"
+            data-tour="terminal-history"
             title="Session history"
           >
             <History size={16} />

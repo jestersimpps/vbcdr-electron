@@ -2,18 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ExternalLink, RefreshCw, Server, Skull, X, FolderOpen, Filter } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { cn } from '@/lib/utils'
+import type { DevServer } from '../../../main/models/types'
 
-interface DevServer {
-  pid: number
-  port: number
-  command: string
-  process: string
-  cwd: string | null
-  user: string
-  startedAt: number | null
-  cpu: number | null
-  memoryMB: number | null
-}
 
 const REFRESH_MS = 3000
 
