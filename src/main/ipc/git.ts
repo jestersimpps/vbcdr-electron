@@ -5,7 +5,6 @@ import {
   getBranches,
   getStatus,
   getFileAtHead,
-  getFileAtRef,
   revertFile,
   getFileBytesAtHead,
   getFileBytesAtRef,
@@ -62,13 +61,6 @@ export function registerGitHandlers(): void {
     'git:file-at-head',
     async (_event, cwd: string, filePath: string): Promise<string | null> => {
       return getFileAtHead(cwd, filePath)
-    }
-  )
-
-  safeHandle(
-    'git:file-at-ref',
-    async (_event, cwd: string, ref: string, filePath: string): Promise<string | null> => {
-      return getFileAtRef(cwd, ref, filePath)
     }
   )
 

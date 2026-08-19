@@ -7,7 +7,7 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
 import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, GitCommit as GitCommitIcon, Loader2, CloudDownload, CloudUpload, FileText, X, PanelRightClose } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
-import { BranchSwitcher } from '@/components/git/BranchSwitcher'
+import { BranchSwitcher, BranchPanel } from '@/components/git/BranchSwitcher'
 
 const LANE_COLORS = [
   '#4ade80',
@@ -202,7 +202,7 @@ interface GitTreeProps {
   projectId?: string
   cwd?: string
   llmTabProjectId?: string
-  noRepoContent?: React.ReactNode
+  noRepoContent?: React.ReactElement
   onCollapse?: () => void
 }
 
@@ -246,6 +246,12 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent, onColl
   const setCenterTab = useEditorStore((s) => s.setCenterTab)
   const statusMap = useGitStore((s) => effectiveProjectId ? s.statusPerProject[effectiveProjectId] : undefined)
   const { loadGitData } = useGitStore()
+
+  const [showBranches, setShowBranches] = useState(false)
+
+  useEffect(() => {
+    setShowBranches(false)
+  }, [effectiveProjectId])
 
   const [commitOpen, setCommitOpen] = useState(false)
   const [commitMessage, setCommitMessage] = useState('')
@@ -361,6 +367,7 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent, onColl
     <button
       onClick={onCollapse}
       className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+      data-tour="git-collapse"
       title="Collapse git panel"
     >
       <PanelRightClose size={12} />
@@ -393,7 +400,12 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent, onColl
         <div className="flex min-w-0 items-center gap-1.5">
           <GitBranchIcon size={13} className="shrink-0 text-zinc-500" />
           <span className="shrink-0 text-meta text-zinc-400">Git</span>
-          <BranchSwitcher projectId={effectiveProjectId} cwd={effectivePath} />
+          <BranchSwitcher
+            projectId={effectiveProjectId}
+            cwd={effectivePath}
+            isOpen={showBranches}
+            onToggle={() => setShowBranches((v) => !v)}
+          />
           {drift?.diverged && (
             <button
               onClick={handleRebase}
@@ -446,6 +458,10 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent, onColl
         </div>
       )}
 
+      {showBranches ? (
+        <BranchPanel projectId={effectiveProjectId} cwd={effectivePath} onClose={() => setShowBranches(false)} />
+      ) : (
+        <>
       {incomingCount > 0 && (
         <div className={`border-b border-zinc-800 ${isIncomingSelected ? 'bg-blue-500/15' : 'bg-blue-500/5'}`}>
           <div className={`flex h-8 items-center ${isIncomingSelected ? '' : 'hover:bg-blue-500/10'}`}>
@@ -534,7 +550,8 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent, onColl
                       setCommitOpen(false)
                     }
                   }}
-                  placeholder="Commit message — empty for LLM commit"
+                  data-tour="git-commit-input"
+        placeholder="Commit message — empty for LLM commit"
                   disabled={committing}
                   autoFocus
                   className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1 text-meta text-zinc-200 placeholder-zinc-600 outline-none focus:border-zinc-700"
@@ -656,6 +673,8 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent, onColl
           <div className="p-4 text-center text-xs text-zinc-600">No commits yet</div>
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }
