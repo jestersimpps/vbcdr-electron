@@ -41,6 +41,27 @@ describe('token-usage-service', () => {
       expect(events.every((e) => e.p === 'p1')).toBe(true)
     })
 
+    it('tags codex events and splits daily totals per provider', () => {
+      mod.recordTokenSnapshot('tab1', 'p1', 100)
+      mod.recordTokenSnapshot('tab2', 'p1', 400, 'codex')
+      mod.flushTokenUsage()
+
+      const events = mod.getEvents(null)
+      expect(events.find((e) => e.d === 100)?.v).toBeUndefined()
+      expect(events.find((e) => e.d === 400)?.v).toBe('codex')
+
+      const daily = mod.getDailyUsage(null)
+      expect(daily).toHaveLength(1)
+      expect(daily[0].total).toBe(500)
+      expect(daily[0].perProvider).toEqual({ claude: 100, codex: 400 })
+    })
+
+    it('counts untagged legacy events as claude', () => {
+      mod.recordTokenSnapshot('tab1', 'p1', 250)
+      mod.flushTokenUsage()
+      expect(mod.getDailyUsage(null)[0].perProvider).toEqual({ claude: 250, codex: 0 })
+    })
+
     it('skips invalid inputs (empty ids, NaN, negative)', () => {
       mod.recordTokenSnapshot('', 'p1', 50)
       mod.recordTokenSnapshot('tab1', '', 50)

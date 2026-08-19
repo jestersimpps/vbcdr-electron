@@ -35,9 +35,9 @@ describe('useContextUsage', () => {
     renderHook(() => useContextUsage('t1', 'p1', '/cwd'))
     await flush()
 
-    expect(window.api.tokenUsage.context).toHaveBeenCalledWith('/cwd', 't1')
+    expect(window.api.tokenUsage.context).toHaveBeenCalledWith('/cwd', 't1', 'claude')
     expect(useTerminalStore.getState().tokenUsagePerTab.t1).toBe(1234)
-    expect(window.api.tokenUsage.record).toHaveBeenCalledWith('t1', 'p1', 1234)
+    expect(window.api.tokenUsage.record).toHaveBeenCalledWith('t1', 'p1', 1234, 'claude')
     expect(isTranscriptDriven('t1')).toBe(true)
   })
 

@@ -55,7 +55,9 @@ export const LLM_PROVIDERS: Record<LlmProviderId, LlmProviderDefinition> = {
     command: 'codex',
     clearContextCommand: null,
     selectable: true,
-    capabilities: { ...NO_CAPABILITIES }
+    // usage reads Codex's own rollout JSONL (~/.codex/sessions/**), which carries
+    // token_count events with a cumulative total plus the model's context window.
+    capabilities: { ...NO_CAPABILITIES, usage: true }
   },
   custom: {
     id: 'custom',

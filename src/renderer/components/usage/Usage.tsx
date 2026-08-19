@@ -201,8 +201,8 @@ export function Usage(): React.ReactElement {
       <div className="mx-auto max-w-6xl space-y-6">
         {!llmCapabilities.usage && (
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-xs text-zinc-400">
-            Live token tracking reads Claude Code&apos;s transcripts, so it is paused for the
-            selected assistant. Historical totals below still reflect earlier Claude sessions.
+            Live token tracking reads the assistant&apos;s own session logs, so it is paused for
+            the selected assistant. Historical totals below still reflect earlier tracked sessions.
           </div>
         )}
         <div className="flex flex-wrap items-center gap-3">

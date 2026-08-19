@@ -2,16 +2,26 @@ import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
 
+export type TokenProvider = 'claude' | 'codex'
+
 export interface TokenEvent {
   t: number
   p: string
   d: number
+  v?: TokenProvider
 }
 
 export interface DailyTokenUsage {
   date: string
   total: number
   perProject: Record<string, number>
+  perProvider: Record<TokenProvider, number>
+}
+
+const DEFAULT_PROVIDER: TokenProvider = 'claude'
+
+function providerOf(ev: TokenEvent): TokenProvider {
+  return ev.v === 'codex' ? 'codex' : DEFAULT_PROVIDER
 }
 
 const RETENTION_DAYS = 365
@@ -43,13 +53,19 @@ function ensureDir(): void {
   fs.mkdirSync(tokenDir(), { recursive: true })
 }
 
-export function recordTokenSnapshot(tabId: string, projectId: string, tokens: number): void {
+export function recordTokenSnapshot(
+  tabId: string,
+  projectId: string,
+  tokens: number,
+  provider: TokenProvider = DEFAULT_PROVIDER
+): void {
   if (!projectId || !tabId || !Number.isFinite(tokens) || tokens < 0) return
   const prev = lastTokensByTab.get(tabId) ?? 0
   const delta = tokens - prev
   lastTokensByTab.set(tabId, tokens)
   if (delta <= 0) return
   const ev: TokenEvent = { t: Date.now(), p: projectId, d: delta }
+  if (provider === 'codex') ev.v = 'codex'
   pendingLines.push(JSON.stringify(ev) + '\n')
   if (pendingLines.length > PENDING_LINES_CAP) {
     pendingLines.splice(0, pendingLines.length - PENDING_LINES_CAP)
@@ -183,11 +199,12 @@ export function getDailyUsage(sinceIso: string | null): DailyTokenUsage[] {
     const date = formatDate(new Date(ev.t))
     let row = byDate.get(date)
     if (!row) {
-      row = { date, total: 0, perProject: {} }
+      row = { date, total: 0, perProject: {}, perProvider: { claude: 0, codex: 0 } }
       byDate.set(date, row)
     }
     row.total += ev.d
     row.perProject[ev.p] = (row.perProject[ev.p] ?? 0) + ev.d
+    row.perProvider[providerOf(ev)] += ev.d
   }
   return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date))
 }

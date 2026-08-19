@@ -214,11 +214,11 @@ const api = {
   },
 
   tokenUsage: {
-    record: (tabId: string, projectId: string, tokens: number) =>
-      ipcRenderer.invoke('token-usage:record', tabId, projectId, tokens),
+    record: (tabId: string, projectId: string, tokens: number, provider?: 'claude' | 'codex') =>
+      ipcRenderer.invoke('token-usage:record', tabId, projectId, tokens, provider),
     resetTab: (tabId: string) => ipcRenderer.invoke('token-usage:reset-tab', tabId),
-    context: (cwd: string, tabId?: string) =>
-      ipcRenderer.invoke('token-usage:context', cwd, tabId) as Promise<{
+    context: (cwd: string, tabId?: string, provider?: 'claude' | 'codex') =>
+      ipcRenderer.invoke('token-usage:context', cwd, tabId, provider) as Promise<{
         contextTokens: number
         model: string | null
         contextCap: number

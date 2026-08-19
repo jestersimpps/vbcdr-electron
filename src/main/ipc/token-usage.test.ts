@@ -43,7 +43,7 @@ beforeEach(async () => {
 describe('token-usage ipc', () => {
   it('records a snapshot via recordTokenSnapshot', async () => {
     await invoke(registry, 'token-usage:record', 'tab1', 'p1', 1000)
-    expect(recordTokenSnapshot).toHaveBeenCalledWith('tab1', 'p1', 1000)
+    expect(recordTokenSnapshot).toHaveBeenCalledWith('tab1', 'p1', 1000, undefined)
   })
 
   it('resets tab tracking via resetTabTokenTracking', async () => {

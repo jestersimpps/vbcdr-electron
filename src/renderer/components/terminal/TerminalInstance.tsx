@@ -285,10 +285,12 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
             if (extracted.length > 0) {
               useTerminalStore.getState().setOutput(projectId, extracted)
             }
-            const usageSupported = capabilitiesFor(useLayoutStore.getState().llmProviderId).usage
+            const providerId = useLayoutStore.getState().llmProviderId
+            const usageSupported = capabilitiesFor(providerId).usage
             if (latestTokens !== null && usageSupported && !isTranscriptDriven(tabId)) {
+              const provider = providerId === 'codex' ? 'codex' : 'claude'
               useTerminalStore.getState().setTokenUsage(tabId, latestTokens)
-              window.api.tokenUsage.record(tabId, projectId, latestTokens)
+              window.api.tokenUsage.record(tabId, projectId, latestTokens, provider)
             }
           }, BUFFER_SCAN_DEBOUNCE_MS)
         }

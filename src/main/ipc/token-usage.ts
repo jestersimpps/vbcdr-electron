@@ -5,19 +5,27 @@ import {
   getDailyUsage,
   getEvents,
   type DailyTokenUsage,
-  type TokenEvent
+  type TokenEvent,
+  type TokenProvider
 } from '@main/services/token-usage-service'
 import {
   readTranscriptUsage,
   type TranscriptUsage
 } from '@main/services/transcript-usage-service'
+import { readCodexUsage } from '@main/services/codex-usage-service'
 import { getPtySpawnTime } from '@main/services/pty-manager'
 
 export function registerTokenUsageHandlers(): void {
   safeHandle(
     'token-usage:record',
-    (_event, tabId: string, projectId: string, tokens: number): void => {
-      recordTokenSnapshot(tabId, projectId, tokens)
+    (
+      _event,
+      tabId: string,
+      projectId: string,
+      tokens: number,
+      provider?: TokenProvider
+    ): void => {
+      recordTokenSnapshot(tabId, projectId, tokens, provider)
     }
   )
 
@@ -27,8 +35,9 @@ export function registerTokenUsageHandlers(): void {
 
   safeHandle(
     'token-usage:context',
-    (_event, cwd: string, tabId?: string): TranscriptUsage | null => {
+    (_event, cwd: string, tabId?: string, provider?: TokenProvider): TranscriptUsage | null => {
       const sessionStartMs = tabId ? getPtySpawnTime(tabId) : null
+      if (provider === 'codex') return readCodexUsage(cwd, sessionStartMs)
       return readTranscriptUsage(cwd, sessionStartMs)
     }
   )
