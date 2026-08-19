@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import type { DevServer } from '../main/models/types'
 
 const api = {
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
@@ -55,6 +56,8 @@ const api = {
     readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
     readImageAsDataUrl: (filePath: string) => ipcRenderer.invoke('fs:read-image-data-url', filePath) as Promise<string | null>,
     writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:write-file', filePath, content),
+    saveText: (defaultFileName: string, content: string) =>
+      ipcRenderer.invoke('fs:save-text', defaultFileName, content) as Promise<string | null>,
     deleteFile: (filePath: string) => ipcRenderer.invoke('fs:delete-file', filePath),
     createFile: (filePath: string) => ipcRenderer.invoke('fs:create-file', filePath),
     createFolder: (folderPath: string) => ipcRenderer.invoke('fs:create-folder', folderPath),
@@ -134,7 +137,6 @@ const api = {
     branches: (cwd: string) => ipcRenderer.invoke('git:branches', cwd),
     status: (cwd: string) => ipcRenderer.invoke('git:status', cwd),
     fileAtHead: (cwd: string, filePath: string) => ipcRenderer.invoke('git:file-at-head', cwd, filePath),
-    fileAtRef: (cwd: string, ref: string, filePath: string) => ipcRenderer.invoke('git:file-at-ref', cwd, ref, filePath),
     revertFile: (cwd: string, filePath: string) => ipcRenderer.invoke('git:revert-file', cwd, filePath),
     fileBytesAtHead: (cwd: string, filePath: string) => ipcRenderer.invoke('git:file-bytes-at-head', cwd, filePath),
     fileBytesAtRef: (cwd: string, ref: string, filePath: string) => ipcRenderer.invoke('git:file-bytes-at-ref', cwd, ref, filePath),
@@ -204,6 +206,11 @@ const api = {
     }
   },
 
+  sessionSummary: {
+    list: (projectPaths: string[], sinceIso: string | null) =>
+      ipcRenderer.invoke('session-summary:list', projectPaths, sinceIso)
+  },
+
   activity: {
     record: (projectId: string, kind: 'i' | 'o') =>
       ipcRenderer.invoke('activity:record', projectId, kind),
@@ -228,15 +235,7 @@ const api = {
   },
 
   devServers: {
-    list: () => ipcRenderer.invoke('dev-servers:list') as Promise<Array<{
-      pid: number
-      port: number
-      command: string
-      process: string
-      cwd: string | null
-      user: string
-      startedAt: number | null
-    }>>,
+    list: () => ipcRenderer.invoke('dev-servers:list') as Promise<DevServer[]>,
     kill: (pid: number, force?: boolean) =>
       ipcRenderer.invoke('dev-servers:kill', pid, force ?? false) as Promise<boolean>,
     open: (port: number) =>
@@ -311,6 +310,37 @@ const api = {
       ipcRenderer.on('skills:output', handler)
       return (): void => {
         ipcRenderer.removeListener('skills:output', handler)
+      }
+    }
+  },
+
+  voiceAgent: {
+    start: (cwd: string, command: string, preamble: string, readyPatternSource?: string) =>
+      ipcRenderer.invoke(
+        'voice-agent:start',
+        cwd,
+        command,
+        preamble,
+        readyPatternSource
+      ) as Promise<boolean>,
+    send: (text: string) => ipcRenderer.invoke('voice-agent:send', text) as Promise<boolean>,
+    stop: () => ipcRenderer.invoke('voice-agent:stop') as Promise<boolean>,
+    status: () => ipcRenderer.invoke('voice-agent:status') as Promise<string>,
+    onData: (callback: (chunk: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, chunk: string) => callback(chunk)
+      ipcRenderer.on('voice-agent:data', handler)
+      return (): void => {
+        ipcRenderer.removeListener('voice-agent:data', handler)
+      }
+    },
+    onStatus: (callback: (payload: { status: string; detail?: string }) => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        payload: { status: string; detail?: string }
+      ) => callback(payload)
+      ipcRenderer.on('voice-agent:status', handler)
+      return (): void => {
+        ipcRenderer.removeListener('voice-agent:status', handler)
       }
     }
   }

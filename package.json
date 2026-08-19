@@ -33,7 +33,13 @@
     "files": [
       "out/**/*",
       "node_modules/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/onnxruntime-web/**",
+      "!node_modules/onnxruntime-node/**",
+      "!node_modules/@ricky0123/vad-web/**",
+      "!node_modules/@huggingface/transformers/**",
+      "!node_modules/sharp/**",
+      "!node_modules/@img/**"
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
@@ -91,7 +97,9 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@electron/rebuild": "^3.7.1",
+    "@huggingface/transformers": "^4.2.0",
     "@monaco-editor/react": "^4.7.0",
+    "@ricky0123/vad-web": "^0.0.30",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.16.0",
     "@xterm/addon-unicode11": "^0.9.0",

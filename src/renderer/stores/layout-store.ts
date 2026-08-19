@@ -6,6 +6,7 @@ import {
   isLlmProviderId,
   providerIdForCommand,
   resolveStartupCommand,
+  supportsVoiceAgent,
   type LlmProviderId
 } from '@/config/llm-provider-registry'
 
@@ -24,9 +25,22 @@ interface LayoutState {
   resetVersion: number
   getSplit: (projectId: string) => number
   setSplit: (projectId: string, size: number) => void
+  setGitCollapsed: (projectId: string, collapsed: boolean) => void
   toggleGitCollapsed: (projectId: string) => void
   setDevTerminalsCollapsed: (projectId: string, collapsed: boolean) => void
   toggleDevTerminalsCollapsed: (projectId: string) => void
+  voiceEnabled: boolean
+  voiceAgentProviderId: LlmProviderId | null
+  voiceAgentCustomCommand: string
+  voiceVadSilenceMs: number
+  voiceConfirmDestructive: boolean
+  setVoiceEnabled: (enabled: boolean) => void
+  setVoiceAgentProviderId: (id: LlmProviderId | null) => void
+  setVoiceAgentCustomCommand: (cmd: string) => void
+  setVoiceVadSilenceMs: (ms: number) => void
+  setVoiceConfirmDestructive: (enabled: boolean) => void
+  getVoiceAgentProviderId: () => LlmProviderId
+  getVoiceAgentCommand: () => string
   resetLayout: (projectId: string) => void
   setTokenCap: (cap: number) => void
   setIdleSoundEnabled: (enabled: boolean) => void
@@ -59,6 +73,15 @@ function clampSplit(size: number): number {
   return size
 }
 
+export const DEFAULT_VAD_SILENCE_MS = 700
+
+export function clampVadSilence(ms: unknown): number {
+  if (typeof ms !== 'number' || !Number.isFinite(ms)) return DEFAULT_VAD_SILENCE_MS
+  if (ms < 300) return 300
+  if (ms > 2000) return 2000
+  return Math.round(ms)
+}
+
 export const useLayoutStore = create<LayoutState>()(
   persist(
     (set, get) => ({
@@ -72,6 +95,34 @@ export const useLayoutStore = create<LayoutState>()(
       llmCustomCommand: '',
       globalTerminalCwd: '',
       resetVersion: 0,
+      voiceEnabled: false,
+      voiceAgentProviderId: null,
+      voiceAgentCustomCommand: '',
+      voiceVadSilenceMs: DEFAULT_VAD_SILENCE_MS,
+      voiceConfirmDestructive: true,
+
+      setVoiceEnabled: (enabled: boolean) => set({ voiceEnabled: enabled }),
+
+      setVoiceAgentProviderId: (id: LlmProviderId | null) => set({ voiceAgentProviderId: id }),
+
+      setVoiceAgentCustomCommand: (cmd: string) => set({ voiceAgentCustomCommand: cmd.trim() }),
+
+      setVoiceVadSilenceMs: (ms: number) => set({ voiceVadSilenceMs: clampVadSilence(ms) }),
+
+      setVoiceConfirmDestructive: (enabled: boolean) => set({ voiceConfirmDestructive: enabled }),
+
+      getVoiceAgentProviderId: () => {
+        const { voiceAgentProviderId, llmProviderId } = get()
+        const candidate = voiceAgentProviderId ?? llmProviderId
+        return supportsVoiceAgent(candidate) ? candidate : DEFAULT_LLM_PROVIDER_ID
+      },
+
+      getVoiceAgentCommand: () => {
+        const id = get().getVoiceAgentProviderId()
+        const custom =
+          id === 'custom' ? get().voiceAgentCustomCommand || get().llmCustomCommand : ''
+        return resolveStartupCommand(id, custom)
+      },
 
       getSplit: (projectId: string) => {
         return get().splitsPerProject[projectId] ?? DEFAULT_SPLIT
@@ -84,11 +135,17 @@ export const useLayoutStore = create<LayoutState>()(
         })
       },
 
+      setGitCollapsed: (projectId: string, collapsed: boolean) => {
+        const current = get().gitCollapsedPerProject
+        if (!!current[projectId] === collapsed) return
+        set({
+          gitCollapsedPerProject: { ...current, [projectId]: collapsed }
+        })
+      },
+
       toggleGitCollapsed: (projectId: string) => {
         const current = get().gitCollapsedPerProject
-        set({
-          gitCollapsedPerProject: { ...current, [projectId]: !current[projectId] }
-        })
+        get().setGitCollapsed(projectId, !current[projectId])
       },
 
       setDevTerminalsCollapsed: (projectId: string, collapsed: boolean) => {
@@ -163,7 +220,12 @@ export const useLayoutStore = create<LayoutState>()(
         idleSoundId: state.idleSoundId,
         llmProviderId: state.llmProviderId,
         llmCustomCommand: state.llmCustomCommand,
-        globalTerminalCwd: state.globalTerminalCwd
+        globalTerminalCwd: state.globalTerminalCwd,
+        voiceEnabled: state.voiceEnabled,
+        voiceAgentProviderId: state.voiceAgentProviderId,
+        voiceAgentCustomCommand: state.voiceAgentCustomCommand,
+        voiceVadSilenceMs: state.voiceVadSilenceMs,
+        voiceConfirmDestructive: state.voiceConfirmDestructive
       }),
       merge: (persisted, current) => {
         const incoming = upgradeLegacyProvider(persisted) as Partial<LayoutState>
@@ -174,7 +236,23 @@ export const useLayoutStore = create<LayoutState>()(
             ? incoming.llmProviderId
             : DEFAULT_LLM_PROVIDER_ID,
           llmCustomCommand:
-            typeof incoming.llmCustomCommand === 'string' ? incoming.llmCustomCommand : ''
+            typeof incoming.llmCustomCommand === 'string' ? incoming.llmCustomCommand : '',
+          voiceEnabled: typeof incoming.voiceEnabled === 'boolean' ? incoming.voiceEnabled : false,
+          voiceAgentProviderId:
+            incoming.voiceAgentProviderId === null ||
+            (isLlmProviderId(incoming.voiceAgentProviderId) &&
+              supportsVoiceAgent(incoming.voiceAgentProviderId))
+              ? (incoming.voiceAgentProviderId ?? null)
+              : null,
+          voiceAgentCustomCommand:
+            typeof incoming.voiceAgentCustomCommand === 'string'
+              ? incoming.voiceAgentCustomCommand
+              : '',
+          voiceVadSilenceMs: clampVadSilence(incoming.voiceVadSilenceMs),
+          voiceConfirmDestructive:
+            typeof incoming.voiceConfirmDestructive === 'boolean'
+              ? incoming.voiceConfirmDestructive
+              : true
         }
       }
     }

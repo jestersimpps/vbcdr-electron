@@ -82,6 +82,7 @@ export interface StatsCommit {
   timestamp: number
   authorEmail: string
   authorName: string
+  message: string
 }
 
 export interface LanguageTally {
@@ -195,4 +196,16 @@ export const DEVICE_CONFIGS: Record<DeviceMode, DeviceConfig> = {
     userAgent:
       'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
   }
+}
+
+export interface DevServer {
+  pid: number
+  port: number
+  command: string
+  process: string
+  cwd: string | null
+  user: string
+  startedAt: number | null
+  cpu: number | null
+  memoryMB: number | null
 }

@@ -11,15 +11,19 @@ import { registerClaudeSessionsHandlers } from '@main/ipc/claude-sessions'
 import { registerSkillsHandlers } from '@main/ipc/skills'
 import { registerMcpHandlers } from '@main/ipc/mcp'
 import { registerActivityHandlers } from '@main/ipc/activity'
+import { registerSessionSummaryHandlers } from '@main/ipc/session-summary'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
 import { registerDevServerHandlers } from '@main/ipc/dev-servers'
 import { registerTsProjectHandlers } from '@main/ipc/ts-project'
+import { registerVoiceAgentHandlers } from '@main/ipc/voice-agent'
+import { stopVoiceAgent } from '@main/services/voice-agent'
+import { isFeatureEnabled } from '@main/models/feature-flags'
 import { killAll, killOrphanedPtys } from '@main/services/pty-manager'
 import { compactActivity, flushActivity } from '@main/services/activity-service'
 import { compactTokenUsage, flushTokenUsage } from '@main/services/token-usage-service'
 import { stopWatching } from '@main/services/file-watcher'
 import { registerUpdaterHandlers } from '@main/ipc/updater'
-import { initAutoUpdater, checkForUpdates, checkForUpdatesInteractive } from '@main/services/auto-updater'
+import { initAutoUpdater, startUpdateChecks, stopUpdateChecks, checkForUpdatesInteractive } from '@main/services/auto-updater'
 import { startClipboardWatcher, stopClipboardWatcher } from '@main/services/clipboard-watcher'
 import { stopAutoFetch } from '@main/services/git-fetch-service'
 import { stopAllRefsWatchers } from '@main/services/git-refs-watcher'
@@ -137,9 +141,11 @@ registerSkillsHandlers()
 registerMcpHandlers()
 registerUpdaterHandlers()
 registerActivityHandlers()
+registerSessionSummaryHandlers()
 registerTokenUsageHandlers()
 registerDevServerHandlers()
 registerTsProjectHandlers()
+if (isFeatureEnabled('voiceControl')) registerVoiceAgentHandlers()
 
 function buildMenu(): Electron.MenuItemConstructorOptions[] {
   const isMac = process.platform === 'darwin'
@@ -388,7 +394,7 @@ app.whenReady().then(() => {
     callback(false)
   })
 
-  if (process.platform === 'darwin') {
+  if (process.platform === 'darwin' && isFeatureEnabled('voiceControl')) {
     systemPreferences.askForMediaAccess('microphone').catch(() => {})
   }
 
@@ -397,7 +403,7 @@ app.whenReady().then(() => {
 
   initAutoUpdater()
   if (!process.env.ELECTRON_RENDERER_URL) {
-    setTimeout(() => checkForUpdates(), 5000)
+    setTimeout(() => startUpdateChecks(), 5000)
   }
 
   app.on('activate', () => {
@@ -406,6 +412,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  stopUpdateChecks()
   killAll()
   stopWatching()
   stopClipboardWatcher()
@@ -413,6 +420,7 @@ app.on('window-all-closed', () => {
   stopAllRefsWatchers()
   flushActivity()
   flushTokenUsage()
+  stopVoiceAgent()
   if (process.platform !== 'darwin') app.quit()
 })
 
@@ -424,4 +432,5 @@ app.on('before-quit', () => {
   stopAllRefsWatchers()
   flushActivity()
   flushTokenUsage()
+  stopVoiceAgent()
 })

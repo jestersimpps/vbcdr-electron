@@ -43,6 +43,7 @@ export interface StatsCommit {
   timestamp: number
   authorEmail: string
   authorName: string
+  message: string
 }
 
 export interface LanguageTally {

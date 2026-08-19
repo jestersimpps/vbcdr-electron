@@ -3,6 +3,7 @@ import { useProjectStore } from '@/stores/project-store'
 import { ThemePicker } from '@/components/theme/ThemePicker'
 import { VariantToggle } from '@/components/theme/VariantToggle'
 import { PermissionsButton } from '@/components/terminal/PermissionsButton'
+import { MicIndicator } from '@/components/voice/MicIndicator'
 import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
 
 export function StatusBar(): React.ReactElement {
@@ -31,6 +32,7 @@ export function StatusBar(): React.ReactElement {
       )}
 
       <div className="flex shrink-0 items-center gap-1">
+        <MicIndicator />
         <ThemePicker />
         <VariantToggle />
       </div>

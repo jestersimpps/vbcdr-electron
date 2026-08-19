@@ -18,6 +18,8 @@ export interface LlmProviderDefinition {
   clearContextCommand: string | null
   selectable: boolean
   capabilities: LlmProviderCapabilities
+  voiceAgent: boolean
+  readyPattern?: RegExp
 }
 
 const NO_CAPABILITIES: LlmProviderCapabilities = {
@@ -38,6 +40,8 @@ export const LLM_PROVIDERS: Record<LlmProviderId, LlmProviderDefinition> = {
     command: 'claude',
     clearContextCommand: '/clear',
     selectable: true,
+    voiceAgent: true,
+    readyPattern: /(Welcome to Claude Code|╭|>\s*$)/,
     capabilities: {
       sessions: true,
       usage: true,
@@ -55,6 +59,12 @@ export const LLM_PROVIDERS: Record<LlmProviderId, LlmProviderDefinition> = {
     command: 'codex',
     clearContextCommand: null,
     selectable: true,
+    // Verified 2026-08-09 against codex 0.147.0: it prints "Welcome to Codex" on
+    // start. voiceAgent stays false until an AUTHENTICATED session proves it will
+    // hold the one-line-JSON contract — the CLI installs and runs, but `codex login
+    // status` reports "Not logged in" here, so the contract is still unproven.
+    voiceAgent: false,
+    readyPattern: /Welcome to Codex/,
     // usage reads Codex's own rollout JSONL (~/.codex/sessions/**), which carries
     // token_count events with a cumulative total plus the model's context window.
     capabilities: { ...NO_CAPABILITIES, usage: true }
@@ -65,6 +75,7 @@ export const LLM_PROVIDERS: Record<LlmProviderId, LlmProviderDefinition> = {
     command: '',
     clearContextCommand: null,
     selectable: true,
+    voiceAgent: true,
     capabilities: { ...NO_CAPABILITIES }
   }
 }
@@ -98,6 +109,14 @@ export function providerIdForCommand(command: string): LlmProviderId {
 
 export function capabilitiesFor(id: LlmProviderId): LlmProviderCapabilities {
   return providerDefinition(id).capabilities
+}
+
+export const VOICE_AGENT_PROVIDERS: LlmProviderDefinition[] = SELECTABLE_LLM_PROVIDERS.filter(
+  (p) => p.voiceAgent
+)
+
+export function supportsVoiceAgent(id: LlmProviderId): boolean {
+  return providerDefinition(id).voiceAgent
 }
 
 export function clearContextCommandFor(id: LlmProviderId): string | null {
