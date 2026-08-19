@@ -4,6 +4,7 @@ import path from 'path'
 import fs from 'fs'
 import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, GitOpResult, StatsCommit, LanguageTally } from '@main/models/types'
 import { EXT_TO_LANGUAGE } from '@main/services/language-map'
+import { gitEnv } from '@main/services/git-env'
 
 const execFile = promisify(execFileCb)
 const SEPARATOR = '<<SEP>>'
@@ -15,13 +16,7 @@ async function runGit(cwd: string, args: string[], timeout: number = 5000, maxBu
     encoding: 'utf-8',
     timeout,
     maxBuffer,
-    env: {
-      ...process.env,
-      GIT_TERMINAL_PROMPT: '0',
-      GIT_CONFIG_COUNT: '1',
-      GIT_CONFIG_KEY_0: 'credential.helper',
-      GIT_CONFIG_VALUE_0: ''
-    }
+    env: gitEnv()
   })
   return stdout.trim()
 }
@@ -32,13 +27,7 @@ async function runGitBuffer(cwd: string, args: string[], timeout: number = 10000
     encoding: 'buffer',
     timeout,
     maxBuffer,
-    env: {
-      ...process.env,
-      GIT_TERMINAL_PROMPT: '0',
-      GIT_CONFIG_COUNT: '1',
-      GIT_CONFIG_KEY_0: 'credential.helper',
-      GIT_CONFIG_VALUE_0: ''
-    }
+    env: gitEnv()
   })
   return stdout as Buffer
 }
@@ -127,17 +116,6 @@ export async function getFileAtHead(cwd: string, absolutePath: string): Promise<
     const relativePath = path.relative(cwd, absolutePath)
     if (relativePath.startsWith('..')) return null
     const buf = await runGitBuffer(cwd, ['show', `HEAD:${relativePath}`])
-    return buf.toString('utf-8')
-  } catch {
-    return null
-  }
-}
-
-export async function getFileAtRef(cwd: string, ref: string, absolutePath: string): Promise<string | null> {
-  try {
-    const relativePath = path.relative(cwd, absolutePath)
-    if (relativePath.startsWith('..')) return null
-    const buf = await runGitBuffer(cwd, ['show', `${ref}:${relativePath}`])
     return buf.toString('utf-8')
   } catch {
     return null
@@ -409,13 +387,7 @@ export async function getStatus(cwd: string): Promise<Record<string, GitFileStat
       encoding: 'utf-8',
       timeout: 5000,
       maxBuffer: 10 * 1024 * 1024,
-      env: {
-        ...process.env,
-        GIT_TERMINAL_PROMPT: '0',
-        GIT_CONFIG_COUNT: '1',
-        GIT_CONFIG_KEY_0: 'credential.helper',
-        GIT_CONFIG_VALUE_0: ''
-      }
+      env: gitEnv()
     })
     if (!raw) return {}
 
@@ -646,7 +618,7 @@ export async function getFirstChangedLine(cwd: string, absolutePath: string): Pr
   }
 }
 
-const STATS_FORMAT = ['%H', '%at', '%ae', '%an'].join('<<SEP>>')
+const STATS_FORMAT = ['%H', '%at', '%ae', '%an', '%s'].join('<<SEP>>')
 
 export async function getCommitsSince(cwd: string, sinceIso: string | null): Promise<StatsCommit[]> {
   try {
@@ -656,12 +628,13 @@ export async function getCommitsSince(cwd: string, sinceIso: string | null): Pro
     if (!raw) return []
 
     return raw.split('\n').map((line) => {
-      const [hash, tsRaw, authorEmail, authorName] = line.split('<<SEP>>')
+      const [hash, tsRaw, authorEmail, authorName, message] = line.split('<<SEP>>')
       return {
         hash,
         timestamp: parseInt(tsRaw, 10) * 1000,
         authorEmail: authorEmail ?? '',
-        authorName: authorName ?? ''
+        authorName: authorName ?? '',
+        message: message ?? ''
       }
     })
   } catch {
@@ -682,7 +655,8 @@ async function isTracked(cwd: string, relativePath: string): Promise<boolean> {
     await execFile('git', ['ls-files', '--error-unmatch', '--', relativePath], {
       cwd,
       encoding: 'utf-8',
-      timeout: 5000
+      timeout: 5000,
+      env: gitEnv()
     })
     return true
   } catch {

@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { spawn } from 'child_process'
 import { safeHandle } from '@main/ipc/safe-handle'
+import { gitEnv } from '@main/services/git-env'
 
 export type DiffSource =
   | { kind: 'working' }
@@ -19,7 +20,7 @@ function diffArgs(source: DiffSource): string[] {
 
 function runGit(cwd: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawn('git', args, { cwd })
+    const proc = spawn('git', args, { cwd, env: gitEnv() })
     let stdout = ''
     let stderr = ''
     proc.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf-8') })

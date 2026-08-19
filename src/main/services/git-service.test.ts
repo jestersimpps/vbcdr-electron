@@ -294,13 +294,14 @@ describe('getFirstChangedLine', () => {
 describe('getCommitsSince', () => {
   it('parses stats commits with millisecond timestamps', async () => {
     const ts = 1_700_000_000
-    setOutputs(`abc${SEP}${ts}${SEP}jo@x${SEP}Jo`)
+    setOutputs(`abc${SEP}${ts}${SEP}jo@x${SEP}Jo${SEP}Add the thing`)
     const commits = await mod.getCommitsSince('/p', null)
     expect(commits).toEqual([{
       hash: 'abc',
       timestamp: ts * 1000,
       authorEmail: 'jo@x',
-      authorName: 'Jo'
+      authorName: 'Jo',
+      message: 'Add the thing'
     }])
   })
 

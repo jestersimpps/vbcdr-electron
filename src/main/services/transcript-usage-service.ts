@@ -1,6 +1,6 @@
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
+import { claudeProjectDir } from '@main/services/claude-paths'
 
 export interface TranscriptUsage {
   contextTokens: number
@@ -12,14 +12,6 @@ const DEFAULT_CAP = 200_000
 const MAX_CANDIDATE_FILES = 5
 const BIRTH_SLACK_MS = 15_000
 const CAP_FLOOR_MAX_ENTRIES = 200
-
-function projectsDir(): string {
-  return path.join(os.homedir(), '.claude', 'projects')
-}
-
-function slugifyCwd(cwd: string): string {
-  return cwd.replace(/[^a-zA-Z0-9]/g, '-')
-}
 
 export function contextCapForModel(model: string | null): number {
   if (!model) return DEFAULT_CAP
@@ -132,7 +124,7 @@ function resolveContextCap(file: string, model: string | null, contextTokens: nu
 
 export function readTranscriptUsage(cwd: string, sessionStartMs?: number | null): TranscriptUsage | null {
   if (!cwd) return null
-  const dir = path.join(projectsDir(), slugifyCwd(cwd))
+  const dir = claudeProjectDir(cwd)
   const files = listTranscripts(dir)
   if (files.length === 0) return null
 
