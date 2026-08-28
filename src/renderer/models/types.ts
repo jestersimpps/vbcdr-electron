@@ -36,6 +36,8 @@ export interface GitBranch {
   name: string
   current: boolean
   remote: boolean
+  date: string
+  isoDate: string
 }
 
 export interface StatsCommit {

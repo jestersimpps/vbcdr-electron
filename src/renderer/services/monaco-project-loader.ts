@@ -1,6 +1,6 @@
 import { loader } from '@monaco-editor/react'
 import type { Monaco } from '@monaco-editor/react'
-import type { languages } from 'monaco-editor'
+import type { typescript } from 'monaco-editor'
 
 type Disposable = { dispose(): void }
 
@@ -57,7 +57,7 @@ function mapJsx(value: unknown): number | undefined {
   return enums[value.toLowerCase()]
 }
 
-function translateCompilerOptions(raw: Record<string, unknown>): languages.typescript.CompilerOptions {
+function translateCompilerOptions(raw: Record<string, unknown>): typescript.CompilerOptions {
   const out: Record<string, unknown> = { ...raw }
   const t = mapTarget(raw.target); if (t !== undefined) out.target = t
   const m = mapModule(raw.module); if (m !== undefined) out.module = m
@@ -70,7 +70,7 @@ function translateCompilerOptions(raw: Record<string, unknown>): languages.types
   out.allowSyntheticDefaultImports = out.allowSyntheticDefaultImports ?? true
   out.resolveJsonModule = out.resolveJsonModule ?? true
   out.isolatedModules = out.isolatedModules ?? true
-  return out as languages.typescript.CompilerOptions
+  return out as typescript.CompilerOptions
 }
 
 async function getMonaco(): Promise<Monaco> {

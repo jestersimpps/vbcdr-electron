@@ -74,18 +74,27 @@ export async function getCommits(cwd: string, maxCount: number = 50): Promise<Gi
 
 export async function getBranches(cwd: string): Promise<GitBranch[]> {
   try {
-    const raw = await runGit(cwd, ['branch', '-a', '--no-color'])
+    const [currentBranch, raw] = await Promise.all([
+      runGit(cwd, ['branch', '--show-current']).catch(() => ''),
+      runGit(cwd, [
+        'for-each-ref',
+        `--format=%(refname)${SEPARATOR}%(committerdate:relative)${SEPARATOR}%(committerdate:iso-strict)`,
+        '--sort=-committerdate',
+        'refs/heads',
+        'refs/remotes'
+      ])
+    ])
     if (!raw) return []
 
     return raw
       .split('\n')
-      .filter((line) => !line.includes('HEAD ->'))
+      .filter((line) => line.trim() && !line.includes('refs/remotes/origin/HEAD'))
       .map((line) => {
-        const current = line.startsWith('*')
-        const name = line.replace(/^\*?\s+/, '').trim()
-        const isRemote = name.startsWith('remotes/')
-        const displayName = isRemote ? name.replace(/^remotes\//, '') : name
-        return { name: displayName, current, remote: isRemote }
+        const [refname, relativeDate, isoDate] = line.split(SEPARATOR)
+        const isRemote = refname.startsWith('refs/remotes/')
+        const name = refname.replace(/^refs\/(heads|remotes)\//, '')
+        const current = !isRemote && name === currentBranch
+        return { name, current, remote: isRemote, date: relativeDate, isoDate }
       })
   } catch {
     return []

@@ -361,7 +361,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         requestAnimationFrame(refit)
         setTimeout(refit, 100)
         setTimeout(refit, 500)
-        if (typeof document !== 'undefined' && (document as Document & { fonts?: FontFaceSet }).fonts?.ready) {
+        if (typeof document !== 'undefined' && (document as Document & { fonts?: FontFaceSet }).fonts) {
           (document as Document & { fonts: FontFaceSet }).fonts.ready.then(refit).catch(() => { /* ignore */ })
         }
       }

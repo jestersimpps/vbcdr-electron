@@ -55,9 +55,10 @@ function primaryRank(branch: GitBranch): number {
   return index === -1 ? PRIMARY_BRANCHES.length : index
 }
 
-function byPrimaryFirst(a: GitBranch, b: GitBranch): number {
+function byPrimaryThenDate(a: GitBranch, b: GitBranch): number {
   const rankDiff = primaryRank(a) - primaryRank(b)
-  return rankDiff !== 0 ? rankDiff : a.name.localeCompare(b.name)
+  if (rankDiff !== 0) return rankDiff
+  return b.isoDate.localeCompare(a.isoDate)
 }
 
 interface BranchPanelProps {
@@ -93,14 +94,14 @@ export function BranchPanel({ projectId, cwd, onClose }: BranchPanelProps): Reac
   }, [])
 
   const localBranches = useMemo(
-    () => branches.filter((b) => !b.remote).slice().sort(byPrimaryFirst),
+    () => branches.filter((b) => !b.remote).slice().sort(byPrimaryThenDate),
     [branches]
   )
   const remoteBranches = useMemo(() => {
     const localNames = new Set(localBranches.map((b) => b.name))
     return branches
       .filter((b) => b.remote && !localNames.has(b.name.replace(/^[^/]+\//, '')))
-      .sort(byPrimaryFirst)
+      .sort(byPrimaryThenDate)
   }, [branches, localBranches])
 
   const needle = filter.trim().toLowerCase()
@@ -243,6 +244,9 @@ function BranchRow({ branch, isCurrent, disabled, onSelect, onCreateFrom }: Bran
         </span>
       )}
       <span className={`min-w-0 flex-1 truncate ${branch.remote ? 'text-zinc-400' : ''}`}>{shortName}</span>
+      {branch.date && (
+        <span className="shrink-0 text-micro text-zinc-600">{branch.date}</span>
+      )}
       {isCurrent && <Check size={11} className="shrink-0" />}
       {isPrimary(branch) && onCreateFrom && <span className="w-5 shrink-0" aria-hidden />}
     </button>

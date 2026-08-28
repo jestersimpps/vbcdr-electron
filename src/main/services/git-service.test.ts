@@ -103,18 +103,21 @@ describe('getCommits', () => {
 })
 
 describe('getBranches', () => {
-  it('parses branch listing, marks current, and strips remotes/ prefix', async () => {
-    setOutputs([
-      '* main',
-      '  feature/login',
-      '  remotes/origin/HEAD -> origin/main',
-      '  remotes/origin/main'
-    ].join('\n'))
+  it('parses for-each-ref output, marks current, strips refs/ prefix, and carries dates', async () => {
+    setOutputs(
+      'main',
+      [
+        ['refs/heads/main', '2 hours ago', '2026-08-27T10:00:00+02:00'].join(SEP),
+        ['refs/heads/feature/login', '3 days ago', '2026-08-24T10:00:00+02:00'].join(SEP),
+        ['refs/remotes/origin/HEAD', '3 days ago', '2026-08-24T10:00:00+02:00'].join(SEP),
+        ['refs/remotes/origin/main', '2 hours ago', '2026-08-27T10:00:00+02:00'].join(SEP)
+      ].join('\n')
+    )
     const branches = await mod.getBranches('/p')
     expect(branches).toEqual([
-      { name: 'main', current: true, remote: false },
-      { name: 'feature/login', current: false, remote: false },
-      { name: 'origin/main', current: false, remote: true }
+      { name: 'main', current: true, remote: false, date: '2 hours ago', isoDate: '2026-08-27T10:00:00+02:00' },
+      { name: 'feature/login', current: false, remote: false, date: '3 days ago', isoDate: '2026-08-24T10:00:00+02:00' },
+      { name: 'origin/main', current: false, remote: true, date: '2 hours ago', isoDate: '2026-08-27T10:00:00+02:00' }
     ])
   })
 

@@ -63,9 +63,9 @@ describe('buildStateSnapshot', () => {
     useGitStore.setState({
       branchesPerProject: {
         p1: [
-          { name: 'master', current: true, remote: false },
-          { name: 'feature/voice', current: false, remote: false },
-          { name: 'origin/master', current: false, remote: true }
+          { name: 'master', current: true, remote: false, date: '', isoDate: '' },
+          { name: 'feature/voice', current: false, remote: false, date: '', isoDate: '' },
+          { name: 'origin/master', current: false, remote: true, date: '', isoDate: '' }
         ]
       }
     })
