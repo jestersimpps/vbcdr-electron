@@ -73,3 +73,55 @@
 :root.synthwave-light .hover\:text-red-400:hover { color: #d4266e; }
 
 :root.synthwave-light .focus\:ring-zinc-600:focus { --tw-ring-color: #6930c3; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.synthwave-light {
+  --vb-bg-primary: #f8f0ff;
+  --vb-bg-primary-rgb: 248, 240, 255;
+  --vb-bg-secondary: #f2e0ff;
+  --vb-bg-secondary-rgb: 242, 224, 255;
+  --vb-bg-elevated: #e8ccf8;
+  --vb-bg-elevated-rgb: 232, 204, 248;
+  --vb-bg-subtle: #ddbcf0;
+  --vb-bg-subtle-rgb: 221, 188, 240;
+  --vb-text-1: #0e0820;
+  --vb-text-1-rgb: 14, 8, 32;
+  --vb-text-2: #c9156d;
+  --vb-text-2-rgb: 201, 21, 109;
+  --vb-text-3: #8840b0;
+  --vb-text-3-rgb: 136, 64, 176;
+  --vb-border-1: #c9156d40;
+  --vb-border-2: #6930c360;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.synthwave-light .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.synthwave-light .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.synthwave-light .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.synthwave-light .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.synthwave-light .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.synthwave-light .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.synthwave-light .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.synthwave-light .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.synthwave-light .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.synthwave-light .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.synthwave-light .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.synthwave-light .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.synthwave-light .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.synthwave-light .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.synthwave-light .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.synthwave-light .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.synthwave-light .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.synthwave-light .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.synthwave-light .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.synthwave-light .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.synthwave-light .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.synthwave-light .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.synthwave-light .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.synthwave-light .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.synthwave-light .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.synthwave-light .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.synthwave-light .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.synthwave-light .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.synthwave-light .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.synthwave-light .border-zinc-400 { border-color: var(--vb-border-2); }

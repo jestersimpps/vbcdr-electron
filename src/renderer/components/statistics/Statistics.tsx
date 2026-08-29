@@ -515,7 +515,7 @@ export function Statistics(): React.ReactElement {
     <div className="min-h-full p-6 text-zinc-200">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-lg font-semibold">Statistics</h1>
+          <h1 className="text-title font-semibold">Statistics</h1>
           {loading && <span className="text-xs text-zinc-500">Loading…</span>}
         </div>
 

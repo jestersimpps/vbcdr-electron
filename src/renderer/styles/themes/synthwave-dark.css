@@ -120,3 +120,60 @@
 :root.synthwave-dark .hover\:text-red-400:hover { color: #ff6ba0; }
 
 :root.synthwave-dark .focus\:ring-zinc-600:focus { --tw-ring-color: #b362ff; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.synthwave-dark {
+  --vb-bg-primary: #0a0a1a;
+  --vb-bg-primary-rgb: 10, 10, 26;
+  --vb-bg-secondary: #140828;
+  --vb-bg-secondary-rgb: 20, 8, 40;
+  --vb-bg-elevated: #1e0e3a;
+  --vb-bg-elevated-rgb: 30, 14, 58;
+  --vb-bg-subtle: #1e0e3a;
+  --vb-bg-subtle-rgb: 30, 14, 58;
+  --vb-text-1: #f0e0ff;
+  --vb-text-1-rgb: 240, 224, 255;
+  --vb-text-2: #b362ff;
+  --vb-text-2-rgb: 179, 98, 255;
+  --vb-text-3: #ffcc00;
+  --vb-text-3-rgb: 255, 204, 0;
+  --vb-border-1: #b362ff40;
+  --vb-border-2: #ff297560;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.synthwave-dark .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.synthwave-dark .bg-zinc-700 { background-color: var(--vb-bg-subtle); }
+:root.synthwave-dark .bg-zinc-700\/30 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.30); }
+:root.synthwave-dark .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.synthwave-dark .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.synthwave-dark .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.synthwave-dark .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.synthwave-dark .bg-zinc-800\/70 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.70); }
+:root.synthwave-dark .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.synthwave-dark .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.synthwave-dark .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.synthwave-dark .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.synthwave-dark .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.synthwave-dark .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.synthwave-dark .border-zinc-600 { border-color: var(--vb-border-2); }
+:root.synthwave-dark .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.synthwave-dark .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.synthwave-dark .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.synthwave-dark .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.synthwave-dark .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.synthwave-dark .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.synthwave-dark .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.synthwave-dark .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.synthwave-dark .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.synthwave-dark .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.synthwave-dark .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.synthwave-dark .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.synthwave-dark .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.synthwave-dark .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.synthwave-dark .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.synthwave-dark .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.synthwave-dark .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.synthwave-dark .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.synthwave-dark .text-zinc-100 { color: var(--vb-text-1); }
+:root.synthwave-dark .border-zinc-400 { border-color: var(--vb-border-2); }

@@ -120,3 +120,60 @@
 :root.cyberpunk-dark .hover\:text-red-400:hover { color: #ff44cc; }
 
 :root.cyberpunk-dark .focus\:ring-zinc-600:focus { --tw-ring-color: #00ffd5; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.cyberpunk-dark {
+  --vb-bg-primary: #0c0c14;
+  --vb-bg-primary-rgb: 12, 12, 20;
+  --vb-bg-secondary: #0e0e1c;
+  --vb-bg-secondary-rgb: 14, 14, 28;
+  --vb-bg-elevated: #18162a;
+  --vb-bg-elevated-rgb: 24, 22, 42;
+  --vb-bg-subtle: #18162a;
+  --vb-bg-subtle-rgb: 24, 22, 42;
+  --vb-text-1: #e0ffe0;
+  --vb-text-1-rgb: 224, 255, 224;
+  --vb-text-2: #e8ff00;
+  --vb-text-2-rgb: 232, 255, 0;
+  --vb-text-3: #ff6b00;
+  --vb-text-3-rgb: 255, 107, 0;
+  --vb-border-1: #e8ff0030;
+  --vb-border-2: #ff00aa40;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.cyberpunk-dark .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.cyberpunk-dark .bg-zinc-700 { background-color: var(--vb-bg-subtle); }
+:root.cyberpunk-dark .bg-zinc-700\/30 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.30); }
+:root.cyberpunk-dark .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.cyberpunk-dark .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.cyberpunk-dark .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.cyberpunk-dark .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.cyberpunk-dark .bg-zinc-800\/70 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.70); }
+:root.cyberpunk-dark .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.cyberpunk-dark .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.cyberpunk-dark .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.cyberpunk-dark .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.cyberpunk-dark .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.cyberpunk-dark .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.cyberpunk-dark .border-zinc-600 { border-color: var(--vb-border-2); }
+:root.cyberpunk-dark .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.cyberpunk-dark .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.cyberpunk-dark .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.cyberpunk-dark .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.cyberpunk-dark .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.cyberpunk-dark .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.cyberpunk-dark .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.cyberpunk-dark .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.cyberpunk-dark .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.cyberpunk-dark .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.cyberpunk-dark .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.cyberpunk-dark .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.cyberpunk-dark .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.cyberpunk-dark .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.cyberpunk-dark .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.cyberpunk-dark .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.cyberpunk-dark .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.cyberpunk-dark .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.cyberpunk-dark .text-zinc-100 { color: var(--vb-text-1); }
+:root.cyberpunk-dark .border-zinc-400 { border-color: var(--vb-border-2); }

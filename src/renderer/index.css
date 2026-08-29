@@ -63,6 +63,16 @@ body {
   font-size: 14px;
   line-height: 1.5;
 }
+@utility text-title {
+  font-size: 18px;
+  line-height: 1.35;
+  letter-spacing: -0.011em;
+}
+@utility text-display {
+  font-size: 23px;
+  line-height: 1.25;
+  letter-spacing: -0.018em;
+}
 
 .xterm {
   position: relative;

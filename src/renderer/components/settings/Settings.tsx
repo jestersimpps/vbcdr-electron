@@ -41,7 +41,7 @@ export function Settings(): React.ReactElement {
     <div className="min-h-full w-full p-6 text-zinc-200">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-lg font-semibold">Settings</h1>
+          <h1 className="text-title font-semibold">Settings</h1>
         </div>
 
         <div className="flex flex-wrap gap-1 border-b border-zinc-800">

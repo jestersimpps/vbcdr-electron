@@ -120,3 +120,60 @@
 :root.psychedelic-dark .hover\:text-red-400:hover { color: #ff6eb4; }
 
 :root.psychedelic-dark .focus\:ring-zinc-600:focus { --tw-ring-color: #bf5af2; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.psychedelic-dark {
+  --vb-bg-primary: #08060e;
+  --vb-bg-primary-rgb: 8, 6, 14;
+  --vb-bg-secondary: #100a1e;
+  --vb-bg-secondary-rgb: 16, 10, 30;
+  --vb-bg-elevated: #1a1235;
+  --vb-bg-elevated-rgb: 26, 18, 53;
+  --vb-bg-subtle: #1a1235;
+  --vb-bg-subtle-rgb: 26, 18, 53;
+  --vb-text-1: #ffffff;
+  --vb-text-1-rgb: 255, 255, 255;
+  --vb-text-2: #39ff14;
+  --vb-text-2-rgb: 57, 255, 20;
+  --vb-text-3: #ff2d95;
+  --vb-text-3-rgb: 255, 45, 149;
+  --vb-border-1: #39ff1450;
+  --vb-border-2: #ff2d9560;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.psychedelic-dark .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.psychedelic-dark .bg-zinc-700 { background-color: var(--vb-bg-subtle); }
+:root.psychedelic-dark .bg-zinc-700\/30 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.30); }
+:root.psychedelic-dark .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.psychedelic-dark .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.psychedelic-dark .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.psychedelic-dark .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.psychedelic-dark .bg-zinc-800\/70 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.70); }
+:root.psychedelic-dark .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.psychedelic-dark .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.psychedelic-dark .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.psychedelic-dark .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.psychedelic-dark .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.psychedelic-dark .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.psychedelic-dark .border-zinc-600 { border-color: var(--vb-border-2); }
+:root.psychedelic-dark .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.psychedelic-dark .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.psychedelic-dark .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.psychedelic-dark .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.psychedelic-dark .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.psychedelic-dark .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.psychedelic-dark .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.psychedelic-dark .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.psychedelic-dark .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.psychedelic-dark .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.psychedelic-dark .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.psychedelic-dark .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.psychedelic-dark .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.psychedelic-dark .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.psychedelic-dark .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.psychedelic-dark .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.psychedelic-dark .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.psychedelic-dark .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.psychedelic-dark .text-zinc-100 { color: var(--vb-text-1); }
+:root.psychedelic-dark .border-zinc-400 { border-color: var(--vb-border-2); }

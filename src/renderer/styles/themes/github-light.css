@@ -148,3 +148,60 @@
 :root.github-light .text-teal-400\/70 { color: rgba(11, 107, 117, 0.70); }
 :root.github-light .text-violet-400\/70 { color: rgba(102, 57, 186, 0.70); }
 :root.github-light .text-yellow-400 { color: #7d4e00; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.github-light {
+  --vb-bg-primary: #ffffff;
+  --vb-bg-primary-rgb: 255, 255, 255;
+  --vb-bg-secondary: #f6f8fa;
+  --vb-bg-secondary-rgb: 246, 248, 250;
+  --vb-bg-elevated: #eaeef2;
+  --vb-bg-elevated-rgb: 234, 238, 242;
+  --vb-bg-subtle: #d0d8e0;
+  --vb-bg-subtle-rgb: 208, 216, 224;
+  --vb-text-1: #0d1117;
+  --vb-text-1-rgb: 13, 17, 23;
+  --vb-text-2: #3a4450;
+  --vb-text-2-rgb: 58, 68, 80;
+  --vb-text-3: #5a646e;
+  --vb-text-3-rgb: 90, 100, 110;
+  --vb-border-1: #c8d0d8;
+  --vb-border-1-rgb: 200, 208, 216;
+  --vb-border-2: #a8b4be;
+  --vb-border-2-rgb: 168, 180, 190;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.github-light .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.github-light .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.github-light .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.github-light .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.github-light .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.github-light .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.github-light .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.github-light .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.github-light .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.github-light .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.github-light .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.github-light .border-zinc-800\/40 { border-color: rgba(var(--vb-border-1-rgb), 0.40); }
+:root.github-light .border-zinc-800\/50 { border-color: rgba(var(--vb-border-1-rgb), 0.50); }
+:root.github-light .border-zinc-800\/60 { border-color: rgba(var(--vb-border-1-rgb), 0.60); }
+:root.github-light .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.github-light .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.github-light .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.github-light .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.github-light .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.github-light .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.github-light .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.github-light .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.github-light .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.github-light .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.github-light .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.github-light .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.github-light .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.github-light .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.github-light .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.github-light .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.github-light .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.github-light .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.github-light .border-zinc-400 { border-color: var(--vb-border-2); }

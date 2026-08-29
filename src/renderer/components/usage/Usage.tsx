@@ -203,7 +203,7 @@ export function Usage(): React.ReactElement {
           </div>
         )}
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-lg font-semibold">Usage</h1>
+          <h1 className="text-title font-semibold">Usage</h1>
           <SegmentedToggle>
             {TIME_RANGES.map((r) => (
               <SegmentedToggleItem

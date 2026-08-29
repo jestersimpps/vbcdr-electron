@@ -148,3 +148,33 @@
 :root.custom-light .text-teal-400\/70 { color: rgba(14, 116, 144, 0.70); }
 :root.custom-light .text-violet-400\/70 { color: rgba(109, 40, 217, 0.70); }
 :root.custom-light .text-yellow-400 { color: #a16207; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.custom-light {
+  --vb-bg-primary: var(--ct-bg-primary);
+  --vb-bg-secondary: var(--ct-bg-secondary);
+  --vb-bg-elevated: var(--ct-bg-elevated);
+  --vb-bg-subtle: var(--ct-bg-subtle);
+  --vb-text-1: var(--ct-text-1);
+  --vb-text-2: var(--ct-text-2);
+  --vb-text-3: var(--ct-text-3);
+  --vb-border-1: var(--ct-border-1);
+  --vb-border-2: var(--ct-border-2);
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.custom-light .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.custom-light .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.custom-light .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.custom-light .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.custom-light .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.custom-light .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.custom-light .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.custom-light .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.custom-light .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.custom-light .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.custom-light .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.custom-light .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.custom-light .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.custom-light .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.custom-light .border-zinc-400 { border-color: var(--vb-border-2); }

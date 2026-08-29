@@ -147,3 +147,60 @@
 :root.onedark-pro-light .text-teal-400\/70 { color: rgba(15, 107, 120, 0.70); }
 :root.onedark-pro-light .text-violet-400\/70 { color: rgba(113, 57, 168, 0.70); }
 :root.onedark-pro-light .text-yellow-400 { color: #8a5f00; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.onedark-pro-light {
+  --vb-bg-primary: #ffffff;
+  --vb-bg-primary-rgb: 255, 255, 255;
+  --vb-bg-secondary: #f5f5f5;
+  --vb-bg-secondary-rgb: 245, 245, 245;
+  --vb-bg-elevated: #ebebeb;
+  --vb-bg-elevated-rgb: 235, 235, 235;
+  --vb-bg-subtle: #d8d8d8;
+  --vb-bg-subtle-rgb: 216, 216, 216;
+  --vb-text-1: #2c2e34;
+  --vb-text-1-rgb: 44, 46, 52;
+  --vb-text-2: #48505c;
+  --vb-text-2-rgb: 72, 80, 92;
+  --vb-text-3: #6c7280;
+  --vb-text-3-rgb: 108, 114, 128;
+  --vb-border-1: #d0d0d0;
+  --vb-border-1-rgb: 208, 208, 208;
+  --vb-border-2: #b8b8b8;
+  --vb-border-2-rgb: 184, 184, 184;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.onedark-pro-light .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.onedark-pro-light .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.onedark-pro-light .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.onedark-pro-light .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.onedark-pro-light .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.onedark-pro-light .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.onedark-pro-light .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.onedark-pro-light .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.onedark-pro-light .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.onedark-pro-light .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.onedark-pro-light .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.onedark-pro-light .border-zinc-800\/40 { border-color: rgba(var(--vb-border-1-rgb), 0.40); }
+:root.onedark-pro-light .border-zinc-800\/50 { border-color: rgba(var(--vb-border-1-rgb), 0.50); }
+:root.onedark-pro-light .border-zinc-800\/60 { border-color: rgba(var(--vb-border-1-rgb), 0.60); }
+:root.onedark-pro-light .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.onedark-pro-light .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.onedark-pro-light .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.onedark-pro-light .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.onedark-pro-light .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.onedark-pro-light .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.onedark-pro-light .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.onedark-pro-light .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.onedark-pro-light .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.onedark-pro-light .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.onedark-pro-light .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.onedark-pro-light .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.onedark-pro-light .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.onedark-pro-light .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.onedark-pro-light .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.onedark-pro-light .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.onedark-pro-light .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.onedark-pro-light .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.onedark-pro-light .border-zinc-400 { border-color: var(--vb-border-2); }

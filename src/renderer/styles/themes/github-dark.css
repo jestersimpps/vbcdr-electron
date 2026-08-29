@@ -93,3 +93,66 @@
 :root.github-dark .hover\:text-zinc-300:hover {
   color: #b1bac4;
 }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.github-dark {
+  --vb-bg-primary: #09090b;
+  --vb-bg-primary-rgb: 9, 9, 11;
+  --vb-bg-secondary: #161b22;
+  --vb-bg-secondary-rgb: 22, 27, 34;
+  --vb-bg-elevated: #21262d;
+  --vb-bg-elevated-rgb: 33, 38, 45;
+  --vb-bg-subtle: #21262d;
+  --vb-bg-subtle-rgb: 33, 38, 45;
+  --vb-text-1: #e6edf3;
+  --vb-text-1-rgb: 230, 237, 243;
+  --vb-text-2: #b1bac4;
+  --vb-text-2-rgb: 177, 186, 196;
+  --vb-text-3: #6e7681;
+  --vb-text-3-rgb: 110, 118, 129;
+  --vb-border-1: #30363d;
+  --vb-border-1-rgb: 48, 54, 61;
+  --vb-border-2: #484f58;
+  --vb-border-2-rgb: 72, 79, 88;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.github-dark .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.github-dark .bg-zinc-700 { background-color: var(--vb-bg-subtle); }
+:root.github-dark .bg-zinc-700\/30 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.30); }
+:root.github-dark .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.github-dark .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.github-dark .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.github-dark .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.github-dark .bg-zinc-800\/70 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.70); }
+:root.github-dark .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.github-dark .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.github-dark .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.github-dark .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.github-dark .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.github-dark .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.github-dark .border-zinc-600 { border-color: var(--vb-border-2); }
+:root.github-dark .border-zinc-600\/40 { border-color: rgba(var(--vb-border-2-rgb), 0.40); }
+:root.github-dark .border-zinc-800\/40 { border-color: rgba(var(--vb-border-1-rgb), 0.40); }
+:root.github-dark .border-zinc-800\/50 { border-color: rgba(var(--vb-border-1-rgb), 0.50); }
+:root.github-dark .border-zinc-800\/60 { border-color: rgba(var(--vb-border-1-rgb), 0.60); }
+:root.github-dark .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.github-dark .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.github-dark .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.github-dark .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.github-dark .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.github-dark .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.github-dark .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.github-dark .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.github-dark .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.github-dark .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.github-dark .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.github-dark .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.github-dark .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.github-dark .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.github-dark .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.github-dark .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.github-dark .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.github-dark .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.github-dark .text-zinc-100 { color: var(--vb-text-1); }
+:root.github-dark .border-zinc-400 { border-color: var(--vb-border-2); }

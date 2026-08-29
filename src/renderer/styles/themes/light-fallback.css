@@ -202,3 +202,66 @@
 :root.light-fallback .text-teal-400\/70 { color: rgba(14, 116, 144, 0.70); }
 :root.light-fallback .text-violet-400\/70 { color: rgba(109, 40, 217, 0.70); }
 :root.light-fallback .text-yellow-400 { color: #a16207; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.light {
+  --vb-bg-primary: #ffffff;
+  --vb-bg-primary-rgb: 255, 255, 255;
+  --vb-bg-secondary: #f4f4f5;
+  --vb-bg-secondary-rgb: 244, 244, 245;
+  --vb-bg-elevated: #e4e4e7;
+  --vb-bg-elevated-rgb: 228, 228, 231;
+  --vb-bg-subtle: #e4e4e7;
+  --vb-bg-subtle-rgb: 228, 228, 231;
+  --vb-text-1: #18181b;
+  --vb-text-1-rgb: 24, 24, 27;
+  --vb-text-2: #3f3f46;
+  --vb-text-2-rgb: 63, 63, 70;
+  --vb-text-3: #52525b;
+  --vb-text-3-rgb: 82, 82, 91;
+  --vb-border-1: #e4e4e7;
+  --vb-border-1-rgb: 228, 228, 231;
+  --vb-border-2: #d4d4d8;
+  --vb-border-2-rgb: 212, 212, 216;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.light .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.light .bg-zinc-700 { background-color: var(--vb-bg-subtle); }
+:root.light .bg-zinc-700\/30 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.30); }
+:root.light .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.light .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.light .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.light .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.light .bg-zinc-800\/70 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.70); }
+:root.light .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.light .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.light .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.light .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.light .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.light .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.light .border-zinc-600 { border-color: var(--vb-border-2); }
+:root.light .border-zinc-600\/40 { border-color: rgba(var(--vb-border-2-rgb), 0.40); }
+:root.light .border-zinc-800\/40 { border-color: rgba(var(--vb-border-1-rgb), 0.40); }
+:root.light .border-zinc-800\/50 { border-color: rgba(var(--vb-border-1-rgb), 0.50); }
+:root.light .border-zinc-800\/60 { border-color: rgba(var(--vb-border-1-rgb), 0.60); }
+:root.light .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.light .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.light .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.light .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.light .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.light .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.light .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.light .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.light .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.light .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.light .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.light .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.light .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.light .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.light .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.light .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.light .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.light .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.light .text-zinc-600 { color: var(--vb-text-3); }
+:root.light .border-zinc-400 { border-color: var(--vb-border-2); }

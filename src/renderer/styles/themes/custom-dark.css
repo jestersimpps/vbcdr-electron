@@ -93,3 +93,36 @@
 :root.custom-dark .hover\:text-zinc-300:hover {
   color: var(--ct-text-2);
 }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.custom-dark {
+  --vb-bg-primary: var(--ct-bg-primary);
+  --vb-bg-secondary: var(--ct-bg-secondary);
+  --vb-bg-elevated: var(--ct-bg-elevated);
+  --vb-bg-subtle: var(--ct-bg-subtle);
+  --vb-text-1: var(--ct-text-1);
+  --vb-text-2: var(--ct-text-2);
+  --vb-text-3: var(--ct-text-3);
+  --vb-border-1: var(--ct-border-1);
+  --vb-border-2: var(--ct-border-2);
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.custom-dark .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.custom-dark .bg-zinc-700 { background-color: var(--vb-bg-subtle); }
+:root.custom-dark .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.custom-dark .border-zinc-600 { border-color: var(--vb-border-2); }
+:root.custom-dark .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.custom-dark .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.custom-dark .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.custom-dark .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.custom-dark .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.custom-dark .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.custom-dark .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.custom-dark .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.custom-dark .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.custom-dark .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.custom-dark .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.custom-dark .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.custom-dark .text-zinc-100 { color: var(--vb-text-1); }
+:root.custom-dark .border-zinc-400 { border-color: var(--vb-border-2); }

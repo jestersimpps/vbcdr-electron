@@ -147,3 +147,60 @@
 :root.material-light .text-teal-400\/70 { color: rgba(0, 105, 92, 0.70); }
 :root.material-light .text-violet-400\/70 { color: rgba(106, 27, 154, 0.70); }
 :root.material-light .text-yellow-400 { color: #8d6e00; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.material-light {
+  --vb-bg-primary: #ffffff;
+  --vb-bg-primary-rgb: 255, 255, 255;
+  --vb-bg-secondary: #f8f8f8;
+  --vb-bg-secondary-rgb: 248, 248, 248;
+  --vb-bg-elevated: #f0f0f0;
+  --vb-bg-elevated-rgb: 240, 240, 240;
+  --vb-bg-subtle: #e4e4e4;
+  --vb-bg-subtle-rgb: 228, 228, 228;
+  --vb-text-1: #1a1a1a;
+  --vb-text-1-rgb: 26, 26, 26;
+  --vb-text-2: #3d3d3d;
+  --vb-text-2-rgb: 61, 61, 61;
+  --vb-text-3: #666666;
+  --vb-text-3-rgb: 102, 102, 102;
+  --vb-border-1: #d8d8d8;
+  --vb-border-1-rgb: 216, 216, 216;
+  --vb-border-2: #c4c4c4;
+  --vb-border-2-rgb: 196, 196, 196;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.material-light .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.material-light .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.material-light .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.material-light .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.material-light .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.material-light .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.material-light .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.material-light .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.material-light .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.material-light .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.material-light .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.material-light .border-zinc-800\/40 { border-color: rgba(var(--vb-border-1-rgb), 0.40); }
+:root.material-light .border-zinc-800\/50 { border-color: rgba(var(--vb-border-1-rgb), 0.50); }
+:root.material-light .border-zinc-800\/60 { border-color: rgba(var(--vb-border-1-rgb), 0.60); }
+:root.material-light .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.material-light .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.material-light .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.material-light .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.material-light .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.material-light .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.material-light .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.material-light .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.material-light .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.material-light .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.material-light .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.material-light .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.material-light .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.material-light .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.material-light .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.material-light .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.material-light .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.material-light .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.material-light .border-zinc-400 { border-color: var(--vb-border-2); }

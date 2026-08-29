@@ -46,3 +46,60 @@
 :root.tokyo-night-dark .hover\:text-zinc-200:hover { color: #c0caf5; }
 :root.tokyo-night-dark .hover\:text-zinc-300:hover { color: #a9b1d6; }
 :root.tokyo-night-dark .hover\:text-zinc-400:hover { color: #787c99; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.tokyo-night-dark {
+  --vb-bg-primary: #1a1b26;
+  --vb-bg-primary-rgb: 26, 27, 38;
+  --vb-bg-secondary: #24283b;
+  --vb-bg-secondary-rgb: 36, 40, 59;
+  --vb-bg-elevated: #32364a;
+  --vb-bg-elevated-rgb: 50, 54, 74;
+  --vb-bg-subtle: #3b4261;
+  --vb-bg-subtle-rgb: 59, 66, 97;
+  --vb-text-1: #c0caf5;
+  --vb-text-1-rgb: 192, 202, 245;
+  --vb-text-2: #a9b1d6;
+  --vb-text-2-rgb: 169, 177, 214;
+  --vb-text-3: #787c99;
+  --vb-text-3-rgb: 120, 124, 153;
+  --vb-border-1: #3b4261;
+  --vb-border-1-rgb: 59, 66, 97;
+  --vb-border-2: #565f89;
+  --vb-border-2-rgb: 86, 95, 137;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.tokyo-night-dark .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.tokyo-night-dark .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.tokyo-night-dark .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.tokyo-night-dark .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.tokyo-night-dark .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.tokyo-night-dark .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.tokyo-night-dark .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.tokyo-night-dark .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.tokyo-night-dark .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.tokyo-night-dark .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.tokyo-night-dark .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.tokyo-night-dark .border-zinc-800\/40 { border-color: rgba(var(--vb-border-1-rgb), 0.40); }
+:root.tokyo-night-dark .border-zinc-800\/50 { border-color: rgba(var(--vb-border-1-rgb), 0.50); }
+:root.tokyo-night-dark .border-zinc-800\/60 { border-color: rgba(var(--vb-border-1-rgb), 0.60); }
+:root.tokyo-night-dark .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.tokyo-night-dark .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.tokyo-night-dark .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.tokyo-night-dark .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.tokyo-night-dark .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.tokyo-night-dark .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.tokyo-night-dark .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.tokyo-night-dark .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.tokyo-night-dark .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.tokyo-night-dark .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.tokyo-night-dark .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.tokyo-night-dark .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.tokyo-night-dark .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.tokyo-night-dark .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.tokyo-night-dark .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.tokyo-night-dark .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.tokyo-night-dark .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.tokyo-night-dark .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.tokyo-night-dark .border-zinc-400 { border-color: var(--vb-border-2); }

@@ -147,3 +147,60 @@
 :root.catppuccin-light .text-teal-400\/70 { color: rgba(31, 111, 122, 0.70); }
 :root.catppuccin-light .text-violet-400\/70 { color: rgba(122, 63, 160, 0.70); }
 :root.catppuccin-light .text-yellow-400 { color: #8a5a1e; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.catppuccin-light {
+  --vb-bg-primary: #f5f7fc;
+  --vb-bg-primary-rgb: 245, 247, 252;
+  --vb-bg-secondary: #eff2fa;
+  --vb-bg-secondary-rgb: 239, 242, 250;
+  --vb-bg-elevated: #e6eaf4;
+  --vb-bg-elevated-rgb: 230, 234, 244;
+  --vb-bg-subtle: #d5daea;
+  --vb-bg-subtle-rgb: 213, 218, 234;
+  --vb-text-1: #3b3e54;
+  --vb-text-1-rgb: 59, 62, 84;
+  --vb-text-2: #484c66;
+  --vb-text-2-rgb: 72, 76, 102;
+  --vb-text-3: #636682;
+  --vb-text-3-rgb: 99, 102, 130;
+  --vb-border-1: #c4c8d8;
+  --vb-border-1-rgb: 196, 200, 216;
+  --vb-border-2: #b0b4c8;
+  --vb-border-2-rgb: 176, 180, 200;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.catppuccin-light .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.catppuccin-light .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.catppuccin-light .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.catppuccin-light .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.catppuccin-light .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.catppuccin-light .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.catppuccin-light .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.catppuccin-light .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.catppuccin-light .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.catppuccin-light .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.catppuccin-light .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.catppuccin-light .border-zinc-800\/40 { border-color: rgba(var(--vb-border-1-rgb), 0.40); }
+:root.catppuccin-light .border-zinc-800\/50 { border-color: rgba(var(--vb-border-1-rgb), 0.50); }
+:root.catppuccin-light .border-zinc-800\/60 { border-color: rgba(var(--vb-border-1-rgb), 0.60); }
+:root.catppuccin-light .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.catppuccin-light .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.catppuccin-light .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.catppuccin-light .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.catppuccin-light .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.catppuccin-light .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.catppuccin-light .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.catppuccin-light .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.catppuccin-light .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.catppuccin-light .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.catppuccin-light .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.catppuccin-light .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.catppuccin-light .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.catppuccin-light .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.catppuccin-light .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.catppuccin-light .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.catppuccin-light .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.catppuccin-light .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.catppuccin-light .border-zinc-400 { border-color: var(--vb-border-2); }

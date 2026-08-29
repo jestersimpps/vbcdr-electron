@@ -147,3 +147,60 @@
 :root.gruvbox-light .text-teal-400\/70 { color: rgba(66, 123, 88, 0.70); }
 :root.gruvbox-light .text-violet-400\/70 { color: rgba(143, 63, 113, 0.70); }
 :root.gruvbox-light .text-yellow-400 { color: #8f5a00; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.gruvbox-light {
+  --vb-bg-primary: #fdf8e0;
+  --vb-bg-primary-rgb: 253, 248, 224;
+  --vb-bg-secondary: #faf4d4;
+  --vb-bg-secondary-rgb: 250, 244, 212;
+  --vb-bg-elevated: #f4e8bc;
+  --vb-bg-elevated-rgb: 244, 232, 188;
+  --vb-bg-subtle: #ecdca8;
+  --vb-bg-subtle-rgb: 236, 220, 168;
+  --vb-text-1: #282420;
+  --vb-text-1-rgb: 40, 36, 32;
+  --vb-text-2: #443c38;
+  --vb-text-2-rgb: 68, 60, 56;
+  --vb-text-3: #625a52;
+  --vb-text-3-rgb: 98, 90, 82;
+  --vb-border-1: #e4d090;
+  --vb-border-1-rgb: 228, 208, 144;
+  --vb-border-2: #d4bc78;
+  --vb-border-2-rgb: 212, 188, 120;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.gruvbox-light .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.gruvbox-light .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.gruvbox-light .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.gruvbox-light .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.gruvbox-light .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.gruvbox-light .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.gruvbox-light .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.gruvbox-light .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.gruvbox-light .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.gruvbox-light .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.gruvbox-light .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.gruvbox-light .border-zinc-800\/40 { border-color: rgba(var(--vb-border-1-rgb), 0.40); }
+:root.gruvbox-light .border-zinc-800\/50 { border-color: rgba(var(--vb-border-1-rgb), 0.50); }
+:root.gruvbox-light .border-zinc-800\/60 { border-color: rgba(var(--vb-border-1-rgb), 0.60); }
+:root.gruvbox-light .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.gruvbox-light .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.gruvbox-light .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.gruvbox-light .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.gruvbox-light .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.gruvbox-light .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.gruvbox-light .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.gruvbox-light .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.gruvbox-light .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.gruvbox-light .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.gruvbox-light .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.gruvbox-light .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.gruvbox-light .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.gruvbox-light .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.gruvbox-light .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.gruvbox-light .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.gruvbox-light .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.gruvbox-light .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.gruvbox-light .border-zinc-400 { border-color: var(--vb-border-2); }

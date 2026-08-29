@@ -391,7 +391,7 @@ export function McpPage(): React.ReactElement {
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/60 px-4">
         <div className="flex items-center gap-2">
           <Plug size={16} className="text-zinc-400" />
-          <h1 className="text-sm font-semibold">MCP Servers</h1>
+          <h1 className="text-title font-semibold">MCP Servers</h1>
           {servers && (
             <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-micro text-zinc-400">{servers.length}</span>
           )}

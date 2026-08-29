@@ -46,3 +46,60 @@
 :root.material-dark .hover\:text-zinc-200:hover { color: #eeffff; }
 :root.material-dark .hover\:text-zinc-300:hover { color: #b2ccd6; }
 :root.material-dark .hover\:text-zinc-400:hover { color: #8796b0; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.material-dark {
+  --vb-bg-primary: #1e1e1e;
+  --vb-bg-primary-rgb: 30, 30, 30;
+  --vb-bg-secondary: #263238;
+  --vb-bg-secondary-rgb: 38, 50, 56;
+  --vb-bg-elevated: #2e3c43;
+  --vb-bg-elevated-rgb: 46, 60, 67;
+  --vb-bg-subtle: #37474f;
+  --vb-bg-subtle-rgb: 55, 71, 79;
+  --vb-text-1: #eeffff;
+  --vb-text-1-rgb: 238, 255, 255;
+  --vb-text-2: #b2ccd6;
+  --vb-text-2-rgb: 178, 204, 214;
+  --vb-text-3: #8796b0;
+  --vb-text-3-rgb: 135, 150, 176;
+  --vb-border-1: #37474f;
+  --vb-border-1-rgb: 55, 71, 79;
+  --vb-border-2: #546e7a;
+  --vb-border-2-rgb: 84, 110, 122;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.material-dark .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.material-dark .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.material-dark .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.material-dark .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.material-dark .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.material-dark .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.material-dark .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.material-dark .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.material-dark .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.material-dark .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.material-dark .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.material-dark .border-zinc-800\/40 { border-color: rgba(var(--vb-border-1-rgb), 0.40); }
+:root.material-dark .border-zinc-800\/50 { border-color: rgba(var(--vb-border-1-rgb), 0.50); }
+:root.material-dark .border-zinc-800\/60 { border-color: rgba(var(--vb-border-1-rgb), 0.60); }
+:root.material-dark .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.material-dark .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.material-dark .hover\:bg-zinc-700:hover { background-color: var(--vb-bg-subtle); }
+:root.material-dark .hover\:bg-zinc-800:hover { background-color: var(--vb-bg-elevated); }
+:root.material-dark .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
+:root.material-dark .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.material-dark .hover\:bg-zinc-800\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
+:root.material-dark .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.material-dark .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.material-dark .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.material-dark .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.material-dark .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.material-dark .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.material-dark .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.material-dark .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.material-dark .hover\:text-zinc-200:hover { color: var(--vb-text-2); }
+:root.material-dark .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
+:root.material-dark .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.material-dark .border-zinc-400 { border-color: var(--vb-border-2); }

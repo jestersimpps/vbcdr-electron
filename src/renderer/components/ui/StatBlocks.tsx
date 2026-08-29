@@ -26,7 +26,7 @@ export function Kpi({ icon, label, value, sub }: KpiProps): React.ReactElement {
         {icon}
         {label}
       </div>
-      <div className="mt-1 text-xl font-semibold text-zinc-100 truncate" title={value}>{value}</div>
+      <div className="mt-1 text-display font-semibold text-zinc-100 truncate" title={value}>{value}</div>
       {sub && <div className="mt-0.5 text-micro text-zinc-500">{sub}</div>}
     </div>
   )

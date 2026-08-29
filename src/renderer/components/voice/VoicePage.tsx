@@ -16,7 +16,7 @@ export function VoicePage(): React.ReactElement {
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-zinc-950">
       <div className="w-80 shrink-0 overflow-y-auto border-r border-zinc-800 p-4">
-        <h1 className="mb-4 text-sm font-semibold text-zinc-200">Voice control</h1>
+        <h1 className="mb-4 text-title font-semibold text-zinc-200">Voice control</h1>
         <VoiceSettings />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
