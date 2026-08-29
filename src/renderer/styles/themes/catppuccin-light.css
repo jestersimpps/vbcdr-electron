@@ -46,3 +46,104 @@
 :root.catppuccin-light .hover\:text-zinc-200:hover { color: #3b3e54; }
 :root.catppuccin-light .hover\:text-zinc-300:hover { color: #484c66; }
 :root.catppuccin-light .hover\:text-zinc-400:hover { color: #565972; }
+
+/* --- accent remap for AA contrast on light backgrounds --- */
+:root.catppuccin-light .bg-amber-400 { background-color: #8a5a1e; }
+:root.catppuccin-light .bg-amber-500\/10 { background-color: rgba(138, 90, 30, 0.10); }
+:root.catppuccin-light .bg-amber-500\/15 { background-color: rgba(138, 90, 30, 0.15); }
+:root.catppuccin-light .bg-amber-500\/20 { background-color: rgba(138, 90, 30, 0.20); }
+:root.catppuccin-light .bg-amber-500\/25 { background-color: rgba(138, 90, 30, 0.25); }
+:root.catppuccin-light .bg-amber-500\/70 { background-color: rgba(138, 90, 30, 0.70); }
+:root.catppuccin-light .bg-amber-600 { background-color: #8a5a1e; }
+:root.catppuccin-light .bg-amber-950\/50 { background-color: rgba(138, 90, 30, 0.10); }
+:root.catppuccin-light .bg-amber-950\/60 { background-color: rgba(138, 90, 30, 0.10); }
+:root.catppuccin-light .bg-amber-950\/80 { background-color: rgba(138, 90, 30, 0.10); }
+:root.catppuccin-light .bg-blue-400\/10 { background-color: rgba(58, 91, 160, 0.10); }
+:root.catppuccin-light .bg-blue-500 { background-color: #3a5ba0; }
+:root.catppuccin-light .bg-blue-500\/10 { background-color: rgba(58, 91, 160, 0.10); }
+:root.catppuccin-light .bg-blue-500\/15 { background-color: rgba(58, 91, 160, 0.15); }
+:root.catppuccin-light .bg-blue-500\/25 { background-color: rgba(58, 91, 160, 0.25); }
+:root.catppuccin-light .bg-blue-500\/5 { background-color: rgba(58, 91, 160, 0.05); }
+:root.catppuccin-light .bg-blue-600 { background-color: #3a5ba0; }
+:root.catppuccin-light .bg-emerald-400 { background-color: #2f6f4f; }
+:root.catppuccin-light .bg-emerald-500 { background-color: #2f6f4f; }
+:root.catppuccin-light .bg-emerald-500\/10 { background-color: rgba(47, 111, 79, 0.10); }
+:root.catppuccin-light .bg-emerald-500\/15 { background-color: rgba(47, 111, 79, 0.15); }
+:root.catppuccin-light .bg-emerald-500\/20 { background-color: rgba(47, 111, 79, 0.20); }
+:root.catppuccin-light .bg-emerald-500\/25 { background-color: rgba(47, 111, 79, 0.25); }
+:root.catppuccin-light .bg-emerald-500\/30 { background-color: rgba(47, 111, 79, 0.30); }
+:root.catppuccin-light .bg-emerald-500\/5 { background-color: rgba(47, 111, 79, 0.05); }
+:root.catppuccin-light .bg-emerald-500\/70 { background-color: rgba(47, 111, 79, 0.70); }
+:root.catppuccin-light .bg-emerald-600 { background-color: #2f6f4f; }
+:root.catppuccin-light .bg-emerald-900\/50 { background-color: rgba(47, 111, 79, 0.10); }
+:root.catppuccin-light .bg-emerald-950 { background-color: rgba(47, 111, 79, 0.10); }
+:root.catppuccin-light .bg-emerald-950\/80 { background-color: rgba(47, 111, 79, 0.10); }
+:root.catppuccin-light .bg-green-400 { background-color: #2f6f4f; }
+:root.catppuccin-light .bg-green-400\/10 { background-color: rgba(47, 111, 79, 0.10); }
+:root.catppuccin-light .bg-green-400\/15 { background-color: rgba(47, 111, 79, 0.15); }
+:root.catppuccin-light .bg-green-400\/25 { background-color: rgba(47, 111, 79, 0.25); }
+:root.catppuccin-light .bg-green-400\/30 { background-color: rgba(47, 111, 79, 0.30); }
+:root.catppuccin-light .bg-green-600 { background-color: #2f6f4f; }
+:root.catppuccin-light .bg-indigo-500 { background-color: #3a5ba0; }
+:root.catppuccin-light .bg-indigo-600 { background-color: #3a5ba0; }
+:root.catppuccin-light .bg-purple-500\/15 { background-color: rgba(122, 63, 160, 0.15); }
+:root.catppuccin-light .bg-red-400 { background-color: #b02a37; }
+:root.catppuccin-light .bg-red-500 { background-color: #b02a37; }
+:root.catppuccin-light .bg-red-500\/10 { background-color: rgba(176, 42, 55, 0.10); }
+:root.catppuccin-light .bg-red-500\/20 { background-color: rgba(176, 42, 55, 0.20); }
+:root.catppuccin-light .bg-red-600 { background-color: #b02a37; }
+:root.catppuccin-light .bg-red-950\/30 { background-color: rgba(176, 42, 55, 0.10); }
+:root.catppuccin-light .bg-red-950\/40 { background-color: rgba(176, 42, 55, 0.10); }
+:root.catppuccin-light .bg-red-950\/60 { background-color: rgba(176, 42, 55, 0.10); }
+:root.catppuccin-light .bg-red-950\/80 { background-color: rgba(176, 42, 55, 0.10); }
+:root.catppuccin-light .bg-sky-400\/10 { background-color: rgba(31, 111, 122, 0.10); }
+:root.catppuccin-light .bg-sky-500\/70 { background-color: rgba(31, 111, 122, 0.70); }
+:root.catppuccin-light .bg-sky-950\/60 { background-color: rgba(31, 111, 122, 0.10); }
+:root.catppuccin-light .bg-yellow-500\/10 { background-color: rgba(138, 90, 30, 0.10); }
+:root.catppuccin-light .bg-yellow-500\/15 { background-color: rgba(138, 90, 30, 0.15); }
+:root.catppuccin-light .bg-yellow-500\/25 { background-color: rgba(138, 90, 30, 0.25); }
+:root.catppuccin-light .bg-yellow-500\/5 { background-color: rgba(138, 90, 30, 0.05); }
+:root.catppuccin-light .border-amber-500\/30 { border-color: rgba(138, 90, 30, 0.30); }
+:root.catppuccin-light .border-amber-500\/40 { border-color: rgba(138, 90, 30, 0.40); }
+:root.catppuccin-light .border-blue-400\/40 { border-color: rgba(58, 91, 160, 0.40); }
+:root.catppuccin-light .border-blue-500 { border-color: #3a5ba0; }
+:root.catppuccin-light .border-blue-500\/60 { border-color: rgba(58, 91, 160, 0.60); }
+:root.catppuccin-light .border-emerald-400 { border-color: #2f6f4f; }
+:root.catppuccin-light .border-emerald-500\/20 { border-color: rgba(47, 111, 79, 0.20); }
+:root.catppuccin-light .border-emerald-500\/40 { border-color: rgba(47, 111, 79, 0.40); }
+:root.catppuccin-light .border-emerald-500\/50 { border-color: rgba(47, 111, 79, 0.50); }
+:root.catppuccin-light .border-emerald-900 { border-color: #2f6f4f; }
+:root.catppuccin-light .border-purple-500\/25 { border-color: rgba(122, 63, 160, 0.25); }
+:root.catppuccin-light .border-red-500\/30 { border-color: rgba(176, 42, 55, 0.30); }
+:root.catppuccin-light .border-red-700 { border-color: #b02a37; }
+:root.catppuccin-light .border-red-900\/60 { border-color: rgba(176, 42, 55, 0.60); }
+:root.catppuccin-light .text-amber-200 { color: #8a5a1e; }
+:root.catppuccin-light .text-amber-200\/80 { color: rgba(138, 90, 30, 0.80); }
+:root.catppuccin-light .text-amber-300 { color: #8a5a1e; }
+:root.catppuccin-light .text-amber-400 { color: #8a5a1e; }
+:root.catppuccin-light .text-amber-400\/80 { color: rgba(138, 90, 30, 0.80); }
+:root.catppuccin-light .text-amber-500 { color: #8a5a1e; }
+:root.catppuccin-light .text-amber-500\/80 { color: rgba(138, 90, 30, 0.80); }
+:root.catppuccin-light .text-blue-200 { color: #3a5ba0; }
+:root.catppuccin-light .text-blue-300 { color: #3a5ba0; }
+:root.catppuccin-light .text-blue-400 { color: #3a5ba0; }
+:root.catppuccin-light .text-blue-600 { color: #3a5ba0; }
+:root.catppuccin-light .text-emerald-200 { color: #2f6f4f; }
+:root.catppuccin-light .text-emerald-300 { color: #2f6f4f; }
+:root.catppuccin-light .text-emerald-400 { color: #2f6f4f; }
+:root.catppuccin-light .text-emerald-400\/80 { color: rgba(47, 111, 79, 0.80); }
+:root.catppuccin-light .text-green-400 { color: #2f6f4f; }
+:root.catppuccin-light .text-green-500 { color: #2f6f4f; }
+:root.catppuccin-light .text-purple-400 { color: #7a3fa0; }
+:root.catppuccin-light .text-red-200 { color: #b02a37; }
+:root.catppuccin-light .text-red-300 { color: #b02a37; }
+:root.catppuccin-light .text-red-400 { color: #b02a37; }
+:root.catppuccin-light .text-red-500 { color: #b02a37; }
+:root.catppuccin-light .text-rose-300 { color: #b02a37; }
+:root.catppuccin-light .text-rose-400 { color: #b02a37; }
+:root.catppuccin-light .text-sky-400 { color: #1f6f7a; }
+:root.catppuccin-light .text-sky-400\/70 { color: rgba(31, 111, 122, 0.70); }
+:root.catppuccin-light .text-sky-400\/80 { color: rgba(31, 111, 122, 0.80); }
+:root.catppuccin-light .text-teal-400\/70 { color: rgba(31, 111, 122, 0.70); }
+:root.catppuccin-light .text-violet-400\/70 { color: rgba(122, 63, 160, 0.70); }
+:root.catppuccin-light .text-yellow-400 { color: #8a5a1e; }

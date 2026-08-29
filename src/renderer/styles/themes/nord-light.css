@@ -46,3 +46,104 @@
 :root.nord-light .hover\:text-zinc-200:hover { color: #2e3440; }
 :root.nord-light .hover\:text-zinc-300:hover { color: #3b4252; }
 :root.nord-light .hover\:text-zinc-400:hover { color: #4c566a; }
+
+/* --- accent remap for AA contrast on light backgrounds --- */
+:root.nord-light .bg-amber-400 { background-color: #7a5a1e; }
+:root.nord-light .bg-amber-500\/10 { background-color: rgba(122, 90, 30, 0.10); }
+:root.nord-light .bg-amber-500\/15 { background-color: rgba(122, 90, 30, 0.15); }
+:root.nord-light .bg-amber-500\/20 { background-color: rgba(122, 90, 30, 0.20); }
+:root.nord-light .bg-amber-500\/25 { background-color: rgba(122, 90, 30, 0.25); }
+:root.nord-light .bg-amber-500\/70 { background-color: rgba(122, 90, 30, 0.70); }
+:root.nord-light .bg-amber-600 { background-color: #7a5a1e; }
+:root.nord-light .bg-amber-950\/50 { background-color: rgba(122, 90, 30, 0.10); }
+:root.nord-light .bg-amber-950\/60 { background-color: rgba(122, 90, 30, 0.10); }
+:root.nord-light .bg-amber-950\/80 { background-color: rgba(122, 90, 30, 0.10); }
+:root.nord-light .bg-blue-400\/10 { background-color: rgba(63, 91, 125, 0.10); }
+:root.nord-light .bg-blue-500 { background-color: #3f5b7d; }
+:root.nord-light .bg-blue-500\/10 { background-color: rgba(63, 91, 125, 0.10); }
+:root.nord-light .bg-blue-500\/15 { background-color: rgba(63, 91, 125, 0.15); }
+:root.nord-light .bg-blue-500\/25 { background-color: rgba(63, 91, 125, 0.25); }
+:root.nord-light .bg-blue-500\/5 { background-color: rgba(63, 91, 125, 0.05); }
+:root.nord-light .bg-blue-600 { background-color: #3f5b7d; }
+:root.nord-light .bg-emerald-400 { background-color: #4a6b3d; }
+:root.nord-light .bg-emerald-500 { background-color: #4a6b3d; }
+:root.nord-light .bg-emerald-500\/10 { background-color: rgba(74, 107, 61, 0.10); }
+:root.nord-light .bg-emerald-500\/15 { background-color: rgba(74, 107, 61, 0.15); }
+:root.nord-light .bg-emerald-500\/20 { background-color: rgba(74, 107, 61, 0.20); }
+:root.nord-light .bg-emerald-500\/25 { background-color: rgba(74, 107, 61, 0.25); }
+:root.nord-light .bg-emerald-500\/30 { background-color: rgba(74, 107, 61, 0.30); }
+:root.nord-light .bg-emerald-500\/5 { background-color: rgba(74, 107, 61, 0.05); }
+:root.nord-light .bg-emerald-500\/70 { background-color: rgba(74, 107, 61, 0.70); }
+:root.nord-light .bg-emerald-600 { background-color: #4a6b3d; }
+:root.nord-light .bg-emerald-900\/50 { background-color: rgba(74, 107, 61, 0.10); }
+:root.nord-light .bg-emerald-950 { background-color: rgba(74, 107, 61, 0.10); }
+:root.nord-light .bg-emerald-950\/80 { background-color: rgba(74, 107, 61, 0.10); }
+:root.nord-light .bg-green-400 { background-color: #4a6b3d; }
+:root.nord-light .bg-green-400\/10 { background-color: rgba(74, 107, 61, 0.10); }
+:root.nord-light .bg-green-400\/15 { background-color: rgba(74, 107, 61, 0.15); }
+:root.nord-light .bg-green-400\/25 { background-color: rgba(74, 107, 61, 0.25); }
+:root.nord-light .bg-green-400\/30 { background-color: rgba(74, 107, 61, 0.30); }
+:root.nord-light .bg-green-600 { background-color: #4a6b3d; }
+:root.nord-light .bg-indigo-500 { background-color: #3f5b7d; }
+:root.nord-light .bg-indigo-600 { background-color: #3f5b7d; }
+:root.nord-light .bg-purple-500\/15 { background-color: rgba(106, 76, 122, 0.15); }
+:root.nord-light .bg-red-400 { background-color: #a3282f; }
+:root.nord-light .bg-red-500 { background-color: #a3282f; }
+:root.nord-light .bg-red-500\/10 { background-color: rgba(163, 40, 47, 0.10); }
+:root.nord-light .bg-red-500\/20 { background-color: rgba(163, 40, 47, 0.20); }
+:root.nord-light .bg-red-600 { background-color: #a3282f; }
+:root.nord-light .bg-red-950\/30 { background-color: rgba(163, 40, 47, 0.10); }
+:root.nord-light .bg-red-950\/40 { background-color: rgba(163, 40, 47, 0.10); }
+:root.nord-light .bg-red-950\/60 { background-color: rgba(163, 40, 47, 0.10); }
+:root.nord-light .bg-red-950\/80 { background-color: rgba(163, 40, 47, 0.10); }
+:root.nord-light .bg-sky-400\/10 { background-color: rgba(44, 107, 115, 0.10); }
+:root.nord-light .bg-sky-500\/70 { background-color: rgba(44, 107, 115, 0.70); }
+:root.nord-light .bg-sky-950\/60 { background-color: rgba(44, 107, 115, 0.10); }
+:root.nord-light .bg-yellow-500\/10 { background-color: rgba(122, 90, 30, 0.10); }
+:root.nord-light .bg-yellow-500\/15 { background-color: rgba(122, 90, 30, 0.15); }
+:root.nord-light .bg-yellow-500\/25 { background-color: rgba(122, 90, 30, 0.25); }
+:root.nord-light .bg-yellow-500\/5 { background-color: rgba(122, 90, 30, 0.05); }
+:root.nord-light .border-amber-500\/30 { border-color: rgba(122, 90, 30, 0.30); }
+:root.nord-light .border-amber-500\/40 { border-color: rgba(122, 90, 30, 0.40); }
+:root.nord-light .border-blue-400\/40 { border-color: rgba(63, 91, 125, 0.40); }
+:root.nord-light .border-blue-500 { border-color: #3f5b7d; }
+:root.nord-light .border-blue-500\/60 { border-color: rgba(63, 91, 125, 0.60); }
+:root.nord-light .border-emerald-400 { border-color: #4a6b3d; }
+:root.nord-light .border-emerald-500\/20 { border-color: rgba(74, 107, 61, 0.20); }
+:root.nord-light .border-emerald-500\/40 { border-color: rgba(74, 107, 61, 0.40); }
+:root.nord-light .border-emerald-500\/50 { border-color: rgba(74, 107, 61, 0.50); }
+:root.nord-light .border-emerald-900 { border-color: #4a6b3d; }
+:root.nord-light .border-purple-500\/25 { border-color: rgba(106, 76, 122, 0.25); }
+:root.nord-light .border-red-500\/30 { border-color: rgba(163, 40, 47, 0.30); }
+:root.nord-light .border-red-700 { border-color: #a3282f; }
+:root.nord-light .border-red-900\/60 { border-color: rgba(163, 40, 47, 0.60); }
+:root.nord-light .text-amber-200 { color: #7a5a1e; }
+:root.nord-light .text-amber-200\/80 { color: rgba(122, 90, 30, 0.80); }
+:root.nord-light .text-amber-300 { color: #7a5a1e; }
+:root.nord-light .text-amber-400 { color: #7a5a1e; }
+:root.nord-light .text-amber-400\/80 { color: rgba(122, 90, 30, 0.80); }
+:root.nord-light .text-amber-500 { color: #7a5a1e; }
+:root.nord-light .text-amber-500\/80 { color: rgba(122, 90, 30, 0.80); }
+:root.nord-light .text-blue-200 { color: #3f5b7d; }
+:root.nord-light .text-blue-300 { color: #3f5b7d; }
+:root.nord-light .text-blue-400 { color: #3f5b7d; }
+:root.nord-light .text-blue-600 { color: #3f5b7d; }
+:root.nord-light .text-emerald-200 { color: #4a6b3d; }
+:root.nord-light .text-emerald-300 { color: #4a6b3d; }
+:root.nord-light .text-emerald-400 { color: #4a6b3d; }
+:root.nord-light .text-emerald-400\/80 { color: rgba(74, 107, 61, 0.80); }
+:root.nord-light .text-green-400 { color: #4a6b3d; }
+:root.nord-light .text-green-500 { color: #4a6b3d; }
+:root.nord-light .text-purple-400 { color: #6a4c7a; }
+:root.nord-light .text-red-200 { color: #a3282f; }
+:root.nord-light .text-red-300 { color: #a3282f; }
+:root.nord-light .text-red-400 { color: #a3282f; }
+:root.nord-light .text-red-500 { color: #a3282f; }
+:root.nord-light .text-rose-300 { color: #a3282f; }
+:root.nord-light .text-rose-400 { color: #a3282f; }
+:root.nord-light .text-sky-400 { color: #2c6b73; }
+:root.nord-light .text-sky-400\/70 { color: rgba(44, 107, 115, 0.70); }
+:root.nord-light .text-sky-400\/80 { color: rgba(44, 107, 115, 0.80); }
+:root.nord-light .text-teal-400\/70 { color: rgba(44, 107, 115, 0.70); }
+:root.nord-light .text-violet-400\/70 { color: rgba(106, 76, 122, 0.70); }
+:root.nord-light .text-yellow-400 { color: #7a5a1e; }

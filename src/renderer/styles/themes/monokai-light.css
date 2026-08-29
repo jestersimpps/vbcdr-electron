@@ -46,3 +46,104 @@
 :root.monokai-light .hover\:text-zinc-200:hover { color: #1a1b14; }
 :root.monokai-light .hover\:text-zinc-300:hover { color: #35362a; }
 :root.monokai-light .hover\:text-zinc-400:hover { color: #49483e; }
+
+/* --- accent remap for AA contrast on light backgrounds --- */
+:root.monokai-light .bg-amber-400 { background-color: #8a5c00; }
+:root.monokai-light .bg-amber-500\/10 { background-color: rgba(138, 92, 0, 0.10); }
+:root.monokai-light .bg-amber-500\/15 { background-color: rgba(138, 92, 0, 0.15); }
+:root.monokai-light .bg-amber-500\/20 { background-color: rgba(138, 92, 0, 0.20); }
+:root.monokai-light .bg-amber-500\/25 { background-color: rgba(138, 92, 0, 0.25); }
+:root.monokai-light .bg-amber-500\/70 { background-color: rgba(138, 92, 0, 0.70); }
+:root.monokai-light .bg-amber-600 { background-color: #8a5c00; }
+:root.monokai-light .bg-amber-950\/50 { background-color: rgba(138, 92, 0, 0.10); }
+:root.monokai-light .bg-amber-950\/60 { background-color: rgba(138, 92, 0, 0.10); }
+:root.monokai-light .bg-amber-950\/80 { background-color: rgba(138, 92, 0, 0.10); }
+:root.monokai-light .bg-blue-400\/10 { background-color: rgba(26, 110, 168, 0.10); }
+:root.monokai-light .bg-blue-500 { background-color: #1a6ea8; }
+:root.monokai-light .bg-blue-500\/10 { background-color: rgba(26, 110, 168, 0.10); }
+:root.monokai-light .bg-blue-500\/15 { background-color: rgba(26, 110, 168, 0.15); }
+:root.monokai-light .bg-blue-500\/25 { background-color: rgba(26, 110, 168, 0.25); }
+:root.monokai-light .bg-blue-500\/5 { background-color: rgba(26, 110, 168, 0.05); }
+:root.monokai-light .bg-blue-600 { background-color: #1a6ea8; }
+:root.monokai-light .bg-emerald-400 { background-color: #4f7a12; }
+:root.monokai-light .bg-emerald-500 { background-color: #4f7a12; }
+:root.monokai-light .bg-emerald-500\/10 { background-color: rgba(79, 122, 18, 0.10); }
+:root.monokai-light .bg-emerald-500\/15 { background-color: rgba(79, 122, 18, 0.15); }
+:root.monokai-light .bg-emerald-500\/20 { background-color: rgba(79, 122, 18, 0.20); }
+:root.monokai-light .bg-emerald-500\/25 { background-color: rgba(79, 122, 18, 0.25); }
+:root.monokai-light .bg-emerald-500\/30 { background-color: rgba(79, 122, 18, 0.30); }
+:root.monokai-light .bg-emerald-500\/5 { background-color: rgba(79, 122, 18, 0.05); }
+:root.monokai-light .bg-emerald-500\/70 { background-color: rgba(79, 122, 18, 0.70); }
+:root.monokai-light .bg-emerald-600 { background-color: #4f7a12; }
+:root.monokai-light .bg-emerald-900\/50 { background-color: rgba(79, 122, 18, 0.10); }
+:root.monokai-light .bg-emerald-950 { background-color: rgba(79, 122, 18, 0.10); }
+:root.monokai-light .bg-emerald-950\/80 { background-color: rgba(79, 122, 18, 0.10); }
+:root.monokai-light .bg-green-400 { background-color: #4f7a12; }
+:root.monokai-light .bg-green-400\/10 { background-color: rgba(79, 122, 18, 0.10); }
+:root.monokai-light .bg-green-400\/15 { background-color: rgba(79, 122, 18, 0.15); }
+:root.monokai-light .bg-green-400\/25 { background-color: rgba(79, 122, 18, 0.25); }
+:root.monokai-light .bg-green-400\/30 { background-color: rgba(79, 122, 18, 0.30); }
+:root.monokai-light .bg-green-600 { background-color: #4f7a12; }
+:root.monokai-light .bg-indigo-500 { background-color: #1a6ea8; }
+:root.monokai-light .bg-indigo-600 { background-color: #1a6ea8; }
+:root.monokai-light .bg-purple-500\/15 { background-color: rgba(114, 57, 168, 0.15); }
+:root.monokai-light .bg-red-400 { background-color: #b3143c; }
+:root.monokai-light .bg-red-500 { background-color: #b3143c; }
+:root.monokai-light .bg-red-500\/10 { background-color: rgba(179, 20, 60, 0.10); }
+:root.monokai-light .bg-red-500\/20 { background-color: rgba(179, 20, 60, 0.20); }
+:root.monokai-light .bg-red-600 { background-color: #b3143c; }
+:root.monokai-light .bg-red-950\/30 { background-color: rgba(179, 20, 60, 0.10); }
+:root.monokai-light .bg-red-950\/40 { background-color: rgba(179, 20, 60, 0.10); }
+:root.monokai-light .bg-red-950\/60 { background-color: rgba(179, 20, 60, 0.10); }
+:root.monokai-light .bg-red-950\/80 { background-color: rgba(179, 20, 60, 0.10); }
+:root.monokai-light .bg-sky-400\/10 { background-color: rgba(15, 111, 120, 0.10); }
+:root.monokai-light .bg-sky-500\/70 { background-color: rgba(15, 111, 120, 0.70); }
+:root.monokai-light .bg-sky-950\/60 { background-color: rgba(15, 111, 120, 0.10); }
+:root.monokai-light .bg-yellow-500\/10 { background-color: rgba(138, 92, 0, 0.10); }
+:root.monokai-light .bg-yellow-500\/15 { background-color: rgba(138, 92, 0, 0.15); }
+:root.monokai-light .bg-yellow-500\/25 { background-color: rgba(138, 92, 0, 0.25); }
+:root.monokai-light .bg-yellow-500\/5 { background-color: rgba(138, 92, 0, 0.05); }
+:root.monokai-light .border-amber-500\/30 { border-color: rgba(138, 92, 0, 0.30); }
+:root.monokai-light .border-amber-500\/40 { border-color: rgba(138, 92, 0, 0.40); }
+:root.monokai-light .border-blue-400\/40 { border-color: rgba(26, 110, 168, 0.40); }
+:root.monokai-light .border-blue-500 { border-color: #1a6ea8; }
+:root.monokai-light .border-blue-500\/60 { border-color: rgba(26, 110, 168, 0.60); }
+:root.monokai-light .border-emerald-400 { border-color: #4f7a12; }
+:root.monokai-light .border-emerald-500\/20 { border-color: rgba(79, 122, 18, 0.20); }
+:root.monokai-light .border-emerald-500\/40 { border-color: rgba(79, 122, 18, 0.40); }
+:root.monokai-light .border-emerald-500\/50 { border-color: rgba(79, 122, 18, 0.50); }
+:root.monokai-light .border-emerald-900 { border-color: #4f7a12; }
+:root.monokai-light .border-purple-500\/25 { border-color: rgba(114, 57, 168, 0.25); }
+:root.monokai-light .border-red-500\/30 { border-color: rgba(179, 20, 60, 0.30); }
+:root.monokai-light .border-red-700 { border-color: #b3143c; }
+:root.monokai-light .border-red-900\/60 { border-color: rgba(179, 20, 60, 0.60); }
+:root.monokai-light .text-amber-200 { color: #8a5c00; }
+:root.monokai-light .text-amber-200\/80 { color: rgba(138, 92, 0, 0.80); }
+:root.monokai-light .text-amber-300 { color: #8a5c00; }
+:root.monokai-light .text-amber-400 { color: #8a5c00; }
+:root.monokai-light .text-amber-400\/80 { color: rgba(138, 92, 0, 0.80); }
+:root.monokai-light .text-amber-500 { color: #8a5c00; }
+:root.monokai-light .text-amber-500\/80 { color: rgba(138, 92, 0, 0.80); }
+:root.monokai-light .text-blue-200 { color: #1a6ea8; }
+:root.monokai-light .text-blue-300 { color: #1a6ea8; }
+:root.monokai-light .text-blue-400 { color: #1a6ea8; }
+:root.monokai-light .text-blue-600 { color: #1a6ea8; }
+:root.monokai-light .text-emerald-200 { color: #4f7a12; }
+:root.monokai-light .text-emerald-300 { color: #4f7a12; }
+:root.monokai-light .text-emerald-400 { color: #4f7a12; }
+:root.monokai-light .text-emerald-400\/80 { color: rgba(79, 122, 18, 0.80); }
+:root.monokai-light .text-green-400 { color: #4f7a12; }
+:root.monokai-light .text-green-500 { color: #4f7a12; }
+:root.monokai-light .text-purple-400 { color: #7239a8; }
+:root.monokai-light .text-red-200 { color: #b3143c; }
+:root.monokai-light .text-red-300 { color: #b3143c; }
+:root.monokai-light .text-red-400 { color: #b3143c; }
+:root.monokai-light .text-red-500 { color: #b3143c; }
+:root.monokai-light .text-rose-300 { color: #b3143c; }
+:root.monokai-light .text-rose-400 { color: #b3143c; }
+:root.monokai-light .text-sky-400 { color: #0f6f78; }
+:root.monokai-light .text-sky-400\/70 { color: rgba(15, 111, 120, 0.70); }
+:root.monokai-light .text-sky-400\/80 { color: rgba(15, 111, 120, 0.80); }
+:root.monokai-light .text-teal-400\/70 { color: rgba(15, 111, 120, 0.70); }
+:root.monokai-light .text-violet-400\/70 { color: rgba(114, 57, 168, 0.70); }
+:root.monokai-light .text-yellow-400 { color: #8a5c00; }

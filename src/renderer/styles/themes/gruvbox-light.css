@@ -46,3 +46,104 @@
 :root.gruvbox-light .hover\:text-zinc-200:hover { color: #282420; }
 :root.gruvbox-light .hover\:text-zinc-300:hover { color: #443c38; }
 :root.gruvbox-light .hover\:text-zinc-400:hover { color: #504945; }
+
+/* --- accent remap for AA contrast on light backgrounds --- */
+:root.gruvbox-light .bg-amber-400 { background-color: #8f5a00; }
+:root.gruvbox-light .bg-amber-500\/10 { background-color: rgba(143, 90, 0, 0.10); }
+:root.gruvbox-light .bg-amber-500\/15 { background-color: rgba(143, 90, 0, 0.15); }
+:root.gruvbox-light .bg-amber-500\/20 { background-color: rgba(143, 90, 0, 0.20); }
+:root.gruvbox-light .bg-amber-500\/25 { background-color: rgba(143, 90, 0, 0.25); }
+:root.gruvbox-light .bg-amber-500\/70 { background-color: rgba(143, 90, 0, 0.70); }
+:root.gruvbox-light .bg-amber-600 { background-color: #8f5a00; }
+:root.gruvbox-light .bg-amber-950\/50 { background-color: rgba(143, 90, 0, 0.10); }
+:root.gruvbox-light .bg-amber-950\/60 { background-color: rgba(143, 90, 0, 0.10); }
+:root.gruvbox-light .bg-amber-950\/80 { background-color: rgba(143, 90, 0, 0.10); }
+:root.gruvbox-light .bg-blue-400\/10 { background-color: rgba(7, 102, 120, 0.10); }
+:root.gruvbox-light .bg-blue-500 { background-color: #076678; }
+:root.gruvbox-light .bg-blue-500\/10 { background-color: rgba(7, 102, 120, 0.10); }
+:root.gruvbox-light .bg-blue-500\/15 { background-color: rgba(7, 102, 120, 0.15); }
+:root.gruvbox-light .bg-blue-500\/25 { background-color: rgba(7, 102, 120, 0.25); }
+:root.gruvbox-light .bg-blue-500\/5 { background-color: rgba(7, 102, 120, 0.05); }
+:root.gruvbox-light .bg-blue-600 { background-color: #076678; }
+:root.gruvbox-light .bg-emerald-400 { background-color: #4f6a08; }
+:root.gruvbox-light .bg-emerald-500 { background-color: #4f6a08; }
+:root.gruvbox-light .bg-emerald-500\/10 { background-color: rgba(79, 106, 8, 0.10); }
+:root.gruvbox-light .bg-emerald-500\/15 { background-color: rgba(79, 106, 8, 0.15); }
+:root.gruvbox-light .bg-emerald-500\/20 { background-color: rgba(79, 106, 8, 0.20); }
+:root.gruvbox-light .bg-emerald-500\/25 { background-color: rgba(79, 106, 8, 0.25); }
+:root.gruvbox-light .bg-emerald-500\/30 { background-color: rgba(79, 106, 8, 0.30); }
+:root.gruvbox-light .bg-emerald-500\/5 { background-color: rgba(79, 106, 8, 0.05); }
+:root.gruvbox-light .bg-emerald-500\/70 { background-color: rgba(79, 106, 8, 0.70); }
+:root.gruvbox-light .bg-emerald-600 { background-color: #4f6a08; }
+:root.gruvbox-light .bg-emerald-900\/50 { background-color: rgba(79, 106, 8, 0.10); }
+:root.gruvbox-light .bg-emerald-950 { background-color: rgba(79, 106, 8, 0.10); }
+:root.gruvbox-light .bg-emerald-950\/80 { background-color: rgba(79, 106, 8, 0.10); }
+:root.gruvbox-light .bg-green-400 { background-color: #4f6a08; }
+:root.gruvbox-light .bg-green-400\/10 { background-color: rgba(79, 106, 8, 0.10); }
+:root.gruvbox-light .bg-green-400\/15 { background-color: rgba(79, 106, 8, 0.15); }
+:root.gruvbox-light .bg-green-400\/25 { background-color: rgba(79, 106, 8, 0.25); }
+:root.gruvbox-light .bg-green-400\/30 { background-color: rgba(79, 106, 8, 0.30); }
+:root.gruvbox-light .bg-green-600 { background-color: #4f6a08; }
+:root.gruvbox-light .bg-indigo-500 { background-color: #076678; }
+:root.gruvbox-light .bg-indigo-600 { background-color: #076678; }
+:root.gruvbox-light .bg-purple-500\/15 { background-color: rgba(143, 63, 113, 0.15); }
+:root.gruvbox-light .bg-red-400 { background-color: #9d0006; }
+:root.gruvbox-light .bg-red-500 { background-color: #9d0006; }
+:root.gruvbox-light .bg-red-500\/10 { background-color: rgba(157, 0, 6, 0.10); }
+:root.gruvbox-light .bg-red-500\/20 { background-color: rgba(157, 0, 6, 0.20); }
+:root.gruvbox-light .bg-red-600 { background-color: #9d0006; }
+:root.gruvbox-light .bg-red-950\/30 { background-color: rgba(157, 0, 6, 0.10); }
+:root.gruvbox-light .bg-red-950\/40 { background-color: rgba(157, 0, 6, 0.10); }
+:root.gruvbox-light .bg-red-950\/60 { background-color: rgba(157, 0, 6, 0.10); }
+:root.gruvbox-light .bg-red-950\/80 { background-color: rgba(157, 0, 6, 0.10); }
+:root.gruvbox-light .bg-sky-400\/10 { background-color: rgba(66, 123, 88, 0.10); }
+:root.gruvbox-light .bg-sky-500\/70 { background-color: rgba(66, 123, 88, 0.70); }
+:root.gruvbox-light .bg-sky-950\/60 { background-color: rgba(66, 123, 88, 0.10); }
+:root.gruvbox-light .bg-yellow-500\/10 { background-color: rgba(143, 90, 0, 0.10); }
+:root.gruvbox-light .bg-yellow-500\/15 { background-color: rgba(143, 90, 0, 0.15); }
+:root.gruvbox-light .bg-yellow-500\/25 { background-color: rgba(143, 90, 0, 0.25); }
+:root.gruvbox-light .bg-yellow-500\/5 { background-color: rgba(143, 90, 0, 0.05); }
+:root.gruvbox-light .border-amber-500\/30 { border-color: rgba(143, 90, 0, 0.30); }
+:root.gruvbox-light .border-amber-500\/40 { border-color: rgba(143, 90, 0, 0.40); }
+:root.gruvbox-light .border-blue-400\/40 { border-color: rgba(7, 102, 120, 0.40); }
+:root.gruvbox-light .border-blue-500 { border-color: #076678; }
+:root.gruvbox-light .border-blue-500\/60 { border-color: rgba(7, 102, 120, 0.60); }
+:root.gruvbox-light .border-emerald-400 { border-color: #4f6a08; }
+:root.gruvbox-light .border-emerald-500\/20 { border-color: rgba(79, 106, 8, 0.20); }
+:root.gruvbox-light .border-emerald-500\/40 { border-color: rgba(79, 106, 8, 0.40); }
+:root.gruvbox-light .border-emerald-500\/50 { border-color: rgba(79, 106, 8, 0.50); }
+:root.gruvbox-light .border-emerald-900 { border-color: #4f6a08; }
+:root.gruvbox-light .border-purple-500\/25 { border-color: rgba(143, 63, 113, 0.25); }
+:root.gruvbox-light .border-red-500\/30 { border-color: rgba(157, 0, 6, 0.30); }
+:root.gruvbox-light .border-red-700 { border-color: #9d0006; }
+:root.gruvbox-light .border-red-900\/60 { border-color: rgba(157, 0, 6, 0.60); }
+:root.gruvbox-light .text-amber-200 { color: #8f5a00; }
+:root.gruvbox-light .text-amber-200\/80 { color: rgba(143, 90, 0, 0.80); }
+:root.gruvbox-light .text-amber-300 { color: #8f5a00; }
+:root.gruvbox-light .text-amber-400 { color: #8f5a00; }
+:root.gruvbox-light .text-amber-400\/80 { color: rgba(143, 90, 0, 0.80); }
+:root.gruvbox-light .text-amber-500 { color: #8f5a00; }
+:root.gruvbox-light .text-amber-500\/80 { color: rgba(143, 90, 0, 0.80); }
+:root.gruvbox-light .text-blue-200 { color: #076678; }
+:root.gruvbox-light .text-blue-300 { color: #076678; }
+:root.gruvbox-light .text-blue-400 { color: #076678; }
+:root.gruvbox-light .text-blue-600 { color: #076678; }
+:root.gruvbox-light .text-emerald-200 { color: #4f6a08; }
+:root.gruvbox-light .text-emerald-300 { color: #4f6a08; }
+:root.gruvbox-light .text-emerald-400 { color: #4f6a08; }
+:root.gruvbox-light .text-emerald-400\/80 { color: rgba(79, 106, 8, 0.80); }
+:root.gruvbox-light .text-green-400 { color: #4f6a08; }
+:root.gruvbox-light .text-green-500 { color: #4f6a08; }
+:root.gruvbox-light .text-purple-400 { color: #8f3f71; }
+:root.gruvbox-light .text-red-200 { color: #9d0006; }
+:root.gruvbox-light .text-red-300 { color: #9d0006; }
+:root.gruvbox-light .text-red-400 { color: #9d0006; }
+:root.gruvbox-light .text-red-500 { color: #9d0006; }
+:root.gruvbox-light .text-rose-300 { color: #9d0006; }
+:root.gruvbox-light .text-rose-400 { color: #9d0006; }
+:root.gruvbox-light .text-sky-400 { color: #427b58; }
+:root.gruvbox-light .text-sky-400\/70 { color: rgba(66, 123, 88, 0.70); }
+:root.gruvbox-light .text-sky-400\/80 { color: rgba(66, 123, 88, 0.80); }
+:root.gruvbox-light .text-teal-400\/70 { color: rgba(66, 123, 88, 0.70); }
+:root.gruvbox-light .text-violet-400\/70 { color: rgba(143, 63, 113, 0.70); }
+:root.gruvbox-light .text-yellow-400 { color: #8f5a00; }
