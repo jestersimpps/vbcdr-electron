@@ -104,11 +104,17 @@ export function CommandPalette(): React.ReactElement | null {
     }
   }, [mode])
 
+  const restoreFocusRef = useRef<HTMLElement | null>(null)
+
   useEffect(() => {
     if (open) {
+      restoreFocusRef.current = document.activeElement as HTMLElement | null
       setQuery('')
       setSelectedIdx(0)
       setTimeout(() => inputRef.current?.focus(), 0)
+    } else {
+      restoreFocusRef.current?.focus?.()
+      restoreFocusRef.current = null
     }
   }, [open, mode])
 
@@ -500,10 +506,27 @@ export function CommandPalette(): React.ReactElement | null {
         if (e.target === e.currentTarget) close()
       }}
     >
-      <div className="w-[640px] max-w-[90vw] overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Command palette"
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.preventDefault()
+            close()
+          }
+        }}
+        className="w-[640px] max-w-[90vw] overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl"
+      >
         <input
           ref={inputRef}
           type="text"
+          role="combobox"
+          aria-expanded={filtered.length > 0}
+          aria-controls="command-palette-list"
+          aria-activedescendant={filtered.length > 0 ? `command-palette-item-${selectedIdx}` : undefined}
+          aria-autocomplete="list"
+          aria-label="Search commands, files and projects"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
@@ -513,7 +536,16 @@ export function CommandPalette(): React.ReactElement | null {
           placeholder={mode === 'files' ? 'Search files...' : `Type a prompt for ${paletteLlmLabel}, or search commands / files / projects...`}
           className="w-full border-b border-zinc-800 bg-transparent px-4 py-3 text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
         />
-        <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-1">
+        <div
+          ref={listRef}
+          id="command-palette-list"
+          role="listbox"
+          aria-label="Results"
+          className="max-h-[50vh] overflow-y-auto py-1"
+        >
+          <div aria-live="polite" className="sr-only">
+            {filtered.length === 0 ? 'No matches' : `${filtered.length} results`}
+          </div>
           {filtered.length === 0 && (
             <div className="px-4 py-6 text-center text-xs text-zinc-500">No matches</div>
           )}
@@ -529,6 +561,9 @@ export function CommandPalette(): React.ReactElement | null {
                 )}
                 <div
                   data-idx={idx}
+                  id={`command-palette-item-${idx}`}
+                  role="option"
+                  aria-selected={selectedIdx === idx}
                   onMouseEnter={() => setSelectedIdx(idx)}
                   onMouseDown={(e) => {
                     e.preventDefault()

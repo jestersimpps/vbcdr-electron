@@ -53,6 +53,7 @@ export function EditorSection(): React.ReactElement {
             </div>
           </div>
           <select
+            aria-label="Default diff view"
             value={defaultDiffView}
             onChange={(e) => setDefaultDiffView(e.target.value as 'split' | 'inline')}
             className="cursor-pointer rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1 text-xs text-zinc-200 outline-none"
@@ -75,6 +76,7 @@ export function EditorSection(): React.ReactElement {
               <span className="tabular-nums text-zinc-400">{autosaveDelayMs}ms</span>
             </div>
             <input
+              aria-label="Autosave delay in milliseconds"
               type="range"
               min={250}
               max={5000}
@@ -92,6 +94,7 @@ export function EditorSection(): React.ReactElement {
             <span className="tabular-nums text-zinc-400">{fontSize}px</span>
           </div>
           <input
+            aria-label="Editor font size in pixels"
             type="range"
             min={8}
             max={32}

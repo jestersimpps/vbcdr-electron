@@ -29,6 +29,7 @@ export function SoundSection(): React.ReactElement {
           <div className="flex items-center gap-2 rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1">
             <Volume2 size={13} style={{ color: idleSoundEnabled ? accent : '#71717a' }} />
             <select
+              aria-label="Idle notification sound"
               value={idleSoundId}
               onChange={(e) => setIdleSoundId(e.target.value)}
               className="cursor-pointer bg-transparent text-xs text-zinc-200 outline-none"

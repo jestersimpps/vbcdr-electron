@@ -53,7 +53,7 @@ export function UpdateBanner(): React.ReactElement | null {
         >
           Restart & Update
         </button>
-        <button onClick={dismiss} className="ml-1 hover:bg-white/20 rounded p-0.5">
+        <button onClick={dismiss} aria-label="Dismiss update notification" title="Dismiss" className="ml-1 hover:bg-white/20 rounded p-0.5">
           <X size={12} />
         </button>
       </div>

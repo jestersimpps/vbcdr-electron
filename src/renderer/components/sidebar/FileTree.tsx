@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, memo } from 'react'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
@@ -82,7 +82,7 @@ function InlineInput({
   )
 }
 
-function TreeNode({
+function TreeNodeBase({
   node,
   depth,
   projectId,
@@ -149,11 +149,22 @@ function TreeNode({
           isActive ? 'bg-zinc-800/70' : ''
         } ${statusColor || (isActive ? 'text-zinc-200' : 'text-zinc-400')}`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
+        role="treeitem"
+        tabIndex={0}
+        aria-label={node.name}
+        aria-current={isActive}
         onClick={() =>
           onFileClick
             ? onFileClick(node.path)
             : openFile(projectId, node.path, node.name, cwd, fileStatus)
         }
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            if (onFileClick) onFileClick(node.path)
+            else openFile(projectId, node.path, node.name, cwd, fileStatus)
+          }
+        }}
         onContextMenu={(e) => onContextMenu(e, node)}
       >
         <File size={14} className="shrink-0 text-zinc-600" />
@@ -174,7 +185,17 @@ function TreeNode({
       <div
         className={`flex cursor-pointer items-center gap-1.5 rounded-sm px-1 py-0.5 text-body ${ignoredStyle} ${statusColor || 'text-zinc-300'} hover:bg-zinc-800/50`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
+        role="treeitem"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        aria-label={node.name}
         onClick={() => toggleExpanded(treeStateKey, node.path)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            toggleExpanded(treeStateKey, node.path)
+          }
+        }}
         onContextMenu={(e) => onContextMenu(e, node)}
       >
         {isExpanded ? (
@@ -219,6 +240,8 @@ function TreeNode({
     </div>
   )
 }
+
+const TreeNode = memo(TreeNodeBase)
 
 function FileSearch({ projectId, cwd }: { projectId: string; cwd: string }): React.ReactElement {
   const [query, setQuery] = useState('')
@@ -372,7 +395,7 @@ export function FileTree({
     }
   }, [tree, projectId, isOverride])
 
-  const handleContextMenu = (e: React.MouseEvent, node: FileNode): void => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, node: FileNode): void => {
     e.preventDefault()
     e.stopPropagation()
     setContextMenu({
@@ -382,11 +405,17 @@ export function FileTree({
       name: node.name,
       isDirectory: node.isDirectory
     })
-  }
+  }, [])
 
   const handleDelete = (filePath: string, name: string, isDirectory: boolean): void => {
     setDeleteConfirm({ path: filePath, name, isDirectory })
   }
+
+  const handleRenameCancel = useCallback((): void => {
+    setInlineError(null)
+    setRenamingPath(null)
+    setInlineInput(null)
+  }, [])
 
   const confirmDelete = async (): Promise<void> => {
     if (!deleteConfirm || !rootPath) return
@@ -538,7 +567,7 @@ export function FileTree({
           </button>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-1">
+      <div className="flex-1 overflow-y-auto p-1" role="tree" aria-label="File explorer">
         {inlineInput && inlineInput.parentPath === rootPath && (
           <InlineInput
             type={inlineInput.type}
@@ -561,7 +590,7 @@ export function FileTree({
             inlineError={inlineError}
             renamingPath={renamingPath}
             onRenameSubmit={renamingPath ? handleRenameSubmit : handleInlineSubmit}
-            onRenameCancel={() => { setInlineError(null); setRenamingPath(null); setInlineInput(null) }}
+            onRenameCancel={handleRenameCancel}
             onFileClick={onFileClick}
             externalActiveFilePath={externalActiveFilePath}
           />

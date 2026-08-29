@@ -81,6 +81,7 @@ export function SessionSettingsPopover({
                 <span>Gap</span>
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <input
+                    aria-label="Gap in minutes"
                     type="number"
                     min={1}
                     max={240}
@@ -97,6 +98,7 @@ export function SessionSettingsPopover({
                 <span>Lead-in</span>
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <input
+                    aria-label="Lead-in minutes"
                     type="number"
                     min={0}
                     max={120}
@@ -113,6 +115,7 @@ export function SessionSettingsPopover({
                 <span>Idle</span>
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <input
+                    aria-label="Idle timeout in minutes"
                     type="number"
                     min={1}
                     max={60}
@@ -129,6 +132,7 @@ export function SessionSettingsPopover({
                 <span title="Hide terminal sessions shorter than this">Min session</span>
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <input
+                    aria-label="Minimum session length in minutes"
                     type="number"
                     min={0}
                     max={60}

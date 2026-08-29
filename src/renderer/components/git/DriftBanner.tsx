@@ -50,6 +50,8 @@ export function DriftBanner(): React.ReactElement | null {
         </button>
       )}
       <button
+        aria-label="Dismiss branch drift notice"
+        title="Dismiss"
         onClick={() => dismissDrift(activeProjectId)}
         className="ml-1 rounded p-0.5 hover:bg-white/20"
       >

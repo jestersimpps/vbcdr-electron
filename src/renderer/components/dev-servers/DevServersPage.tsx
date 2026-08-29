@@ -225,7 +225,7 @@ export function DevServersPage(): React.ReactElement {
                   <FolderOpen size={11} />
                   {groupName}
                 </div>
-                <div className="overflow-hidden rounded-lg border border-zinc-800">
+                <div className="overflow-x-auto rounded-lg border border-zinc-800">
                   <table className="w-full table-fixed text-xs">
                     <colgroup>
                       <col className="w-[80px]" />

@@ -175,6 +175,7 @@ export function HistoricalWorkCard({
         <div className="mb-3 flex flex-wrap items-center gap-2 text-meta text-zinc-400">
           <span>From</span>
           <input
+            aria-label="From date"
             type="date"
             value={fromMs !== null ? formatDateInput(fromMs) : ''}
             max={toMs !== null ? formatDateInput(toMs) : undefined}
@@ -183,6 +184,7 @@ export function HistoricalWorkCard({
           />
           <span>to</span>
           <input
+            aria-label="To date"
             type="date"
             value={toMs !== null ? formatDateInput(toMs) : ''}
             min={fromMs !== null ? formatDateInput(fromMs) : undefined}

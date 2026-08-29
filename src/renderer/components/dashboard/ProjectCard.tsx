@@ -69,7 +69,16 @@ export function ProjectCard({ project, onOpenModal }: ProjectCardProps): React.R
   return (
     <div
       className="group relative flex h-full min-h-0 w-full min-w-0 cursor-pointer flex-col overflow-hidden border border-zinc-800 bg-zinc-900/30 text-left transition-colors hover:border-zinc-700"
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${project.name}`}
       onClick={onOpenModal}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpenModal()
+        }
+      }}
     >
       <div className="flex h-9 shrink-0 items-center justify-between gap-1 border-b border-zinc-800 bg-zinc-900/50 px-2">
         <div className="flex min-w-0 items-center gap-1.5 text-xs">

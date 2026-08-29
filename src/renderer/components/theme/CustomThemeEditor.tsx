@@ -45,6 +45,7 @@ function ColorSwatch({ label, value, onChange }: ColorSwatchProps): React.ReactE
       >
         <input
           ref={colorRef}
+          aria-label={`${label} color picker`}
           type="color"
           value={isValidHex(value) ? value : '#888888'}
           onChange={handleColorChange}
@@ -52,6 +53,7 @@ function ColorSwatch({ label, value, onChange }: ColorSwatchProps): React.ReactE
         />
       </div>
       <input
+        aria-label={`${label} hex value`}
         type="text"
         value={inputVal}
         onChange={handleTextChange}
@@ -146,10 +148,12 @@ export function CustomThemeEditor({ onClose }: CustomThemeEditorProps): React.Re
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl w-[420px] max-h-[80vh] flex flex-col">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl w-[420px] max-w-[92vw] max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
           <span className="text-sm font-medium text-zinc-200">Custom Theme</span>
           <button
+            aria-label="Close theme editor"
+            title="Close"
             onClick={onClose}
             className="text-zinc-500 hover:text-zinc-300 transition-colors"
           >

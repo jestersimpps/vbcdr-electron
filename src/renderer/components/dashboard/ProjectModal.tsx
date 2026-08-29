@@ -121,6 +121,8 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
               Open Workspace
             </button>
             <button
+              aria-label="Close project"
+              title="Close"
               onClick={onClose}
               className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
             >

@@ -637,7 +637,16 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent, onColl
                 key={row.commit.hash}
                 className={`flex cursor-pointer items-center pr-2 ${baseClass}`}
                 style={{ height: isUnpushed ? ROW_HEIGHT - 4 : ROW_HEIGHT }}
+                role="button"
+                tabIndex={0}
+                aria-label={`Show diff for commit ${row.commit.message}`}
                 onClick={() => handleCommitClick(row.commit)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleCommitClick(row.commit)
+                  }
+                }}
                 title="Show diff for this commit"
               >
                 <div className="min-w-0 flex-1 overflow-hidden">

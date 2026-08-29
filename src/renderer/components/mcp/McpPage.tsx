@@ -429,7 +429,7 @@ export function McpPage(): React.ReactElement {
         {error && (
           <div className="mb-3 flex items-center justify-between rounded border border-red-900/60 bg-red-950/40 px-3 py-2 text-xs text-red-300">
             <span>{error}</span>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200">
+            <button onClick={() => setError(null)} aria-label="Dismiss error" title="Dismiss" className="text-red-400 hover:text-red-200">
               <X size={12} />
             </button>
           </div>
@@ -680,7 +680,7 @@ export function McpPage(): React.ReactElement {
               <span className="text-sm font-semibold text-zinc-200">
                 {form.editing ? `Edit ${form.editing.name}` : 'Add MCP server'}
               </span>
-              <button onClick={() => setForm(null)} className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300">
+              <button onClick={() => setForm(null)} aria-label="Close form" title="Close" className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300">
                 <X size={14} />
               </button>
             </div>

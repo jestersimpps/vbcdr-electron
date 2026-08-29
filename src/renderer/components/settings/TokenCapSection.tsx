@@ -37,6 +37,7 @@ export function TokenCapSection(): React.ReactElement {
         <div className="flex items-center gap-2 rounded border border-zinc-800 bg-zinc-900/80 px-2 py-1.5">
           <Zap size={13} style={{ color: accent }} />
           <input
+            aria-label="Token cap"
             type="number"
             min={1}
             step={1000}

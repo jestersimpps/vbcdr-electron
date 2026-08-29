@@ -688,7 +688,17 @@ export function DiffPanel({ projectId, cwd }: DiffPanelProps): React.ReactElemen
             : 'border-l-transparent hover:bg-zinc-800/40'
         }`}
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
+        role="button"
+        tabIndex={0}
+        aria-label={file.name}
+        aria-current={isSelected}
         onClick={() => setSelectedPath(file.absolutePath)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setSelectedPath(file.absolutePath)
+          }
+        }}
         onContextMenu={(e) => handleContextMenu(e, file.absolutePath, file.name, false)}
         title={file.relativePath}
       >

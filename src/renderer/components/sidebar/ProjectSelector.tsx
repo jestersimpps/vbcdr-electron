@@ -19,6 +19,8 @@ export function ProjectSelector(): React.ReactElement {
         </span>
         <button
           onClick={addProject}
+          aria-label="Add project"
+          title="Add project"
           className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
         >
           <Plus size={14} />
@@ -34,7 +36,16 @@ export function ProjectSelector(): React.ReactElement {
               ? 'bg-zinc-800 text-zinc-100'
               : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300'
           )}
+          role="button"
+          tabIndex={0}
+          aria-current={activeProjectId === project.id}
           onClick={() => setActiveProject(project.id)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setActiveProject(project.id)
+            }
+          }}
         >
           <FolderOpen size={14} className="shrink-0" />
           <span className="truncate">{project.name}</span>
@@ -43,7 +54,9 @@ export function ProjectSelector(): React.ReactElement {
               e.stopPropagation()
               removeProject(project.id)
             }}
-            className="ml-auto hidden rounded p-0.5 text-zinc-600 hover:text-red-400 group-hover:block"
+            aria-label={`Remove project ${project.name}`}
+            title={`Remove project ${project.name}`}
+            className="ml-auto hidden rounded p-0.5 text-zinc-600 hover:text-red-400 group-hover:block focus-visible:block"
           >
             <Trash2 size={12} />
           </button>

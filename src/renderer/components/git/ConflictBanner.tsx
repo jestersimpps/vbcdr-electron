@@ -53,6 +53,8 @@ export function ConflictBanner(): React.ReactElement | null {
         Ask Claude
       </button>
       <button
+        aria-label="Dismiss conflict notice"
+        title="Dismiss"
         onClick={() => dismissConflicts(activeProjectId)}
         className="ml-1 rounded p-0.5 hover:bg-white/20"
       >
