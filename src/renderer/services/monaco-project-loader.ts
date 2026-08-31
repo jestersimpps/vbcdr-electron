@@ -4,15 +4,13 @@ import type { typescript } from 'monaco-editor'
 
 type Disposable = { dispose(): void }
 
-interface LibHandles {
-  ts: Disposable
-  js: Disposable
-}
+type LibHandle = Disposable
 
 interface LoadedProject {
   rootPath: string
-  extraLibs: Map<string, LibHandles>
+  extraLibs: Map<string, LibHandle>
   fileMtimes: Map<string, number>
+  tsconfigFound: boolean
 }
 
 const MAX_LOADED_PROJECTS = 3
@@ -20,6 +18,55 @@ const MAX_LOADED_PROJECTS = 3
 const loaded = new Map<string, LoadedProject>()
 const pendingScans = new Map<string, Promise<void>>()
 let appliedCompilerOptionsJson = ''
+let semanticValidationEnabled = true
+
+export const EXTRA_LIB_BATCH_SIZE = 50
+
+const diagnosticCodesToIgnore = [
+  2306, 2503, 2580, 2611, 2683, 2686, 2792,
+  6133, 6196, 7016, 7026, 7031, 8006
+]
+
+export function applyDiagnosticsOptions(monaco: Monaco): void {
+  const diagnosticsOptions = {
+    noSemanticValidation: !semanticValidationEnabled,
+    noSyntaxValidation: false,
+    noSuggestionDiagnostics: true,
+    diagnosticCodesToIgnore
+  }
+  monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions)
+  monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(diagnosticsOptions)
+}
+
+// Deliberately not exported: callers must go through recomputeSemanticValidation
+// so the "every loaded project needs a tsconfig" rule below cannot be bypassed.
+function setSemanticValidation(monaco: Monaco, enabled: boolean): void {
+  if (semanticValidationEnabled === enabled) return
+  semanticValidationEnabled = enabled
+  applyDiagnosticsOptions(monaco)
+}
+
+/**
+ * Monaco's typescript defaults are global — one worker program for the whole app —
+ * but up to MAX_LOADED_PROJECTS projects contribute extra libs to it at once. So
+ * semantic validation may only be enabled when EVERY loaded project has a tsconfig:
+ * one tsconfig-less project (no `paths`, no `baseUrl`) makes almost every import in
+ * its files unresolvable, and type-checking those is the storm we are avoiding.
+ *
+ * Recomputed on load only, never on unload, so the flag fails toward "off" — leaving
+ * validation off a little longer costs nothing, while turning it back on with a large
+ * tsconfig-less project still registered costs the main thread.
+ */
+function recomputeSemanticValidation(monaco: Monaco): void {
+  let enabled = true
+  for (const project of Array.from(loaded.values())) {
+    if (!project.tsconfigFound) {
+      enabled = false
+      break
+    }
+  }
+  setSemanticValidation(monaco, enabled)
+}
 
 function mapTarget(value: unknown): number | undefined {
   if (typeof value !== 'string') return undefined
@@ -77,9 +124,8 @@ async function getMonaco(): Promise<Monaco> {
   return loader.init()
 }
 
-function disposeLibs(libs: LibHandles): void {
-  try { libs.ts.dispose() } catch { /* already disposed */ }
-  try { libs.js.dispose() } catch { /* already disposed */ }
+function disposeLib(handle: LibHandle): void {
+  try { handle.dispose() } catch { /* already disposed */ }
 }
 
 interface ScanDelta {
@@ -88,24 +134,29 @@ interface ScanDelta {
   currentUris: string[]
 }
 
-function applyScanDelta(monaco: Monaco, project: LoadedProject, delta: ScanDelta): void {
+async function applyScanDelta(monaco: Monaco, project: LoadedProject, delta: ScanDelta): Promise<void> {
   const ts = monaco.languages.typescript.typescriptDefaults
-  const js = monaco.languages.typescript.javascriptDefaults
-  for (const [uri, content] of Object.entries(delta.files)) {
-    const existing = project.extraLibs.get(uri)
-    if (existing) disposeLibs(existing)
-    const handles: LibHandles = {
-      ts: ts.addExtraLib(content, uri),
-      js: js.addExtraLib(content, uri)
+  const files = Object.entries(delta.files)
+  for (let start = 0; start < files.length; start += EXTRA_LIB_BATCH_SIZE) {
+    const batch = files.slice(start, start + EXTRA_LIB_BATCH_SIZE)
+    for (const [uri, content] of batch) {
+      const existing = project.extraLibs.get(uri)
+      if (existing) disposeLib(existing)
+      // allowJs makes TypeScript defaults sufficient for JS-family files too.
+      const handle = ts.addExtraLib(content, uri)
+      project.extraLibs.set(uri, handle)
+      project.fileMtimes.set(uri, delta.hashes[uri] ?? simpleHash(content))
     }
-    project.extraLibs.set(uri, handles)
-    project.fileMtimes.set(uri, delta.hashes[uri] ?? simpleHash(content))
+    if (start + EXTRA_LIB_BATCH_SIZE < files.length) {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      if (loaded.get(project.rootPath) !== project) return
+    }
   }
   const current = new Set(delta.currentUris)
   for (const uri of Array.from(project.extraLibs.keys())) {
     if (current.has(uri)) continue
-    const handles = project.extraLibs.get(uri)
-    if (handles) disposeLibs(handles)
+    const handle = project.extraLibs.get(uri)
+    if (handle) disposeLib(handle)
     project.extraLibs.delete(uri)
     project.fileMtimes.delete(uri)
   }
@@ -131,8 +182,10 @@ export async function loadProjectIntoMonaco(rootPath: string): Promise<void> {
       const project: LoadedProject = loaded.get(rootPath) ?? {
         rootPath,
         extraLibs: new Map(),
-        fileMtimes: new Map()
+        fileMtimes: new Map(),
+        tsconfigFound: result.tsconfigFound
       }
+      project.tsconfigFound = result.tsconfigFound
       loaded.delete(rootPath)
       loaded.set(rootPath, project)
       for (const otherPath of Array.from(loaded.keys())) {
@@ -146,7 +199,8 @@ export async function loadProjectIntoMonaco(rootPath: string): Promise<void> {
         monaco.languages.typescript.typescriptDefaults.setCompilerOptions(opts)
         monaco.languages.typescript.javascriptDefaults.setCompilerOptions(opts)
       }
-      applyScanDelta(monaco, project, result)
+      recomputeSemanticValidation(monaco)
+      await applyScanDelta(monaco, project, result)
     } catch (err) {
       console.error('[monaco-project-loader] scan failed:', err)
     } finally {
@@ -163,14 +217,11 @@ export async function updateFileInMonaco(rootPath: string, absolutePath: string,
   const uri = `file://${absolutePath}`
   const monaco = await getMonaco()
   const ts = monaco.languages.typescript.typescriptDefaults
-  const js = monaco.languages.typescript.javascriptDefaults
   const existing = project.extraLibs.get(uri)
-  if (existing) disposeLibs(existing)
-  const handles: LibHandles = {
-    ts: ts.addExtraLib(content, uri),
-    js: js.addExtraLib(content, uri)
-  }
-  project.extraLibs.set(uri, handles)
+  if (existing) disposeLib(existing)
+  // allowJs makes TypeScript defaults sufficient for JS-family files too.
+  const handle = ts.addExtraLib(content, uri)
+  project.extraLibs.set(uri, handle)
   project.fileMtimes.set(uri, simpleHash(content))
 }
 
@@ -180,7 +231,7 @@ export async function removeFileFromMonaco(rootPath: string, absolutePath: strin
   const uri = `file://${absolutePath}`
   const existing = project.extraLibs.get(uri)
   if (!existing) return
-  disposeLibs(existing)
+  disposeLib(existing)
   project.extraLibs.delete(uri)
   project.fileMtimes.delete(uri)
 }
@@ -188,8 +239,18 @@ export async function removeFileFromMonaco(rootPath: string, absolutePath: strin
 export function unloadProjectFromMonaco(rootPath: string): void {
   const project = loaded.get(rootPath)
   if (!project) return
-  for (const handles of project.extraLibs.values()) disposeLibs(handles)
+  for (const handle of project.extraLibs.values()) disposeLib(handle)
   project.extraLibs.clear()
   project.fileMtimes.clear()
   loaded.delete(rootPath)
+}
+
+export function __resetMonacoLoaderStateForTests(): void {
+  for (const project of Array.from(loaded.values())) {
+    for (const handle of Array.from(project.extraLibs.values())) disposeLib(handle)
+  }
+  loaded.clear()
+  pendingScans.clear()
+  appliedCompilerOptionsJson = ''
+  semanticValidationEnabled = true
 }

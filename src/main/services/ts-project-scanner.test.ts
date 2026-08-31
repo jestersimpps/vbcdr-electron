@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { scanTsProject } from './ts-project-scanner'
+import { MAX_FILES, scanTsProject } from './ts-project-scanner'
 
 let root = ''
 
@@ -58,5 +58,50 @@ describe('scanTsProject', () => {
     const second = await scanTsProject(root, first.hashes)
     expect(second.currentUris).toHaveLength(1)
     expect(second.currentUris[0]).toBe(`file://${path.join(root, 'a.ts')}`)
+  })
+
+  it('caps the scan at MAX_FILES files', async () => {
+    for (let i = 0; i < MAX_FILES + 10; i++) {
+      fs.writeFileSync(path.join(root, `file-${i}.ts`), `export const value${i} = ${i}\n`)
+    }
+
+    const result = await scanTsProject(root)
+
+    expect(result.currentUris).toHaveLength(MAX_FILES)
+    expect(result.truncated).toBe(true)
+  })
+
+  it('does not truncate a project with fewer than MAX_FILES files', async () => {
+    const result = await scanTsProject(root)
+
+    expect(result.currentUris.length).toBeLessThan(MAX_FILES)
+    expect(result.truncated).toBe(false)
+  })
+
+  it('still enforces the byte cap independently of the file cap', async () => {
+    const content = 'x'.repeat(250 * 1024)
+    for (let i = 0; i < 55; i++) {
+      fs.writeFileSync(path.join(root, `large-${i}.ts`), content)
+    }
+
+    const result = await scanTsProject(root)
+
+    expect(result.truncated).toBe(true)
+    expect(result.currentUris.length).toBeLessThan(100)
+    expect(result.currentUris.length).toBeLessThan(MAX_FILES)
+  })
+
+  it('skips oversized files without consuming file-count slots', async () => {
+    fs.rmSync(path.join(root, 'a.ts'))
+    fs.rmSync(path.join(root, 'b.ts'))
+    fs.writeFileSync(path.join(root, 'oversized.ts'), 'x'.repeat(256 * 1024 + 1))
+    for (let i = 0; i < MAX_FILES; i++) {
+      fs.writeFileSync(path.join(root, `small-${i}.ts`), `export const value${i} = ${i}\n`)
+    }
+
+    const result = await scanTsProject(root)
+
+    expect(result.currentUris).toHaveLength(MAX_FILES)
+    expect(result.currentUris).not.toContain(`file://${path.join(root, 'oversized.ts')}`)
   })
 })

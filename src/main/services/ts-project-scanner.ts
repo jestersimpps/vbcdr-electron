@@ -6,6 +6,7 @@ const SOURCE_EXTS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'])
 const DTS_EXT_RE = /\.d\.[cm]?ts$/
 const MAX_FILE_BYTES = 256 * 1024
 const MAX_TOTAL_BYTES = 12 * 1024 * 1024
+export const MAX_FILES = 400
 const ALWAYS_SKIP = new Set([
   '.git', 'dist', 'build', 'out', '.next', '.turbo', '.vercel', 'coverage',
   '.cache', '.parcel-cache', '.svelte-kit', '.nuxt', '.output', 'tmp', 'temp'
@@ -40,6 +41,10 @@ interface ScanContext {
 const MAX_CACHED_MANIFESTS = 3
 const manifestCache = new Map<string, Map<string, FileMeta>>()
 
+function budgetExhausted(ctx: ScanContext): boolean {
+  return ctx.byteBudget.used >= MAX_TOTAL_BYTES || ctx.manifest.size >= MAX_FILES
+}
+
 // must stay identical to simpleHash in src/renderer/services/monaco-project-loader.ts —
 // the renderer sends these hashes back as knownHashes on the next scan
 function simpleHash(s: string): number {
@@ -49,6 +54,7 @@ function simpleHash(s: string): number {
 }
 
 async function collectFile(ctx: ScanContext, childAbs: string): Promise<void> {
+  if (budgetExhausted(ctx)) return
   let stat: fs.Stats
   try {
     stat = await fsp.stat(childAbs)
@@ -228,7 +234,7 @@ async function walkSources(
   ctx: ScanContext
 ): Promise<void> {
   async function walk(dirAbs: string, relDir: string): Promise<void> {
-    if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
+    if (budgetExhausted(ctx)) return
     let entries: fs.Dirent[]
     try {
       entries = await fsp.readdir(dirAbs, { withFileTypes: true })
@@ -236,7 +242,7 @@ async function walkSources(
       return
     }
     for (const entry of entries) {
-      if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
+      if (budgetExhausted(ctx)) return
       if (ALWAYS_SKIP.has(entry.name)) continue
       if (entry.name === 'node_modules') continue
       const childAbs = path.join(dirAbs, entry.name)
@@ -275,7 +281,7 @@ async function collectTypesPackages(rootPath: string, ctx: ScanContext): Promise
     const typesEntries = await fsp.readdir(typesRoot, { withFileTypes: true })
     for (const entry of typesEntries) {
       if (!entry.isDirectory()) continue
-      if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
+      if (budgetExhausted(ctx)) return
       await collectDtsInDir(path.join(typesRoot, entry.name), ctx)
     }
   } catch {
@@ -283,7 +289,7 @@ async function collectTypesPackages(rootPath: string, ctx: ScanContext): Promise
   }
 
   for (const dep of directDeps) {
-    if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
+    if (budgetExhausted(ctx)) return
     await collectDepTypes(nm, dep, ctx)
   }
 }
@@ -323,7 +329,7 @@ async function collectDtsInDir(
   maxDepth: number = 4
 ): Promise<void> {
   if (depth > maxDepth) return
-  if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
+  if (budgetExhausted(ctx)) return
   let entries: fs.Dirent[]
   try {
     entries = await fsp.readdir(dirAbs, { withFileTypes: true })
@@ -331,7 +337,7 @@ async function collectDtsInDir(
     return
   }
   for (const entry of entries) {
-    if (ctx.byteBudget.used >= MAX_TOTAL_BYTES) return
+    if (budgetExhausted(ctx)) return
     if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue
     const childAbs = path.join(dirAbs, entry.name)
     if (entry.isDirectory()) {
@@ -386,6 +392,6 @@ export async function scanTsProject(
     files: Object.fromEntries(ctx.changed),
     hashes: Object.fromEntries(ctx.hashes),
     currentUris: ctx.currentUris,
-    truncated: ctx.byteBudget.used >= MAX_TOTAL_BYTES
+    truncated: budgetExhausted(ctx)
   }
 }

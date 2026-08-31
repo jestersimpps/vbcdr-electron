@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { loader } from '@monaco-editor/react'
 import type { editor } from 'monaco-editor'
 import { registerMonacoThemes } from '@/config/monaco-theme-registry'
+import { applyDiagnosticsOptions } from '@/services/monaco-project-loader'
 
 export function MonacoAnchor(): React.ReactElement {
   const hostRef = useRef<HTMLDivElement | null>(null)
@@ -14,18 +15,7 @@ export function MonacoAnchor(): React.ReactElement {
       .then((monaco) => {
         if (cancelled || !hostRef.current || editorRef.current) return
         registerMonacoThemes(monaco)
-
-        const diagnosticsOptions = {
-          noSemanticValidation: false,
-          noSyntaxValidation: false,
-          noSuggestionDiagnostics: true,
-          diagnosticCodesToIgnore: [
-            2306, 2503, 2580, 2611, 2683, 2686, 2792,
-            6133, 6196, 7016, 7026, 7031, 8006
-          ]
-        }
-        monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions)
-        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(diagnosticsOptions)
+        applyDiagnosticsOptions(monaco)
 
         editorRef.current = monaco.editor.create(hostRef.current, {
           value: '',
