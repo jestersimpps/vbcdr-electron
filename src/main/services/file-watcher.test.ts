@@ -8,36 +8,54 @@ vi.mock('electron', () => ({
 }))
 
 interface FakeWatcher {
-  ignored?: (filePath: string) => boolean
-  emit: (event: string, filePath: string) => void
+  root: string
+  emit: (eventType: string, filename: string | null) => void
+  emitError: (err: Error) => void
   close: ReturnType<typeof vi.fn>
 }
 
 const watchers: FakeWatcher[] = []
+let recursiveWatchThrows = false
 
-vi.mock('chokidar', () => ({
-  watch: vi.fn((_root: string, opts: { ignored?: (p: string) => boolean }) => {
-    let allCb: ((event: string, filePath: string) => void) | null = null
-    const watcher: FakeWatcher = {
-      ignored: opts.ignored,
-      emit: (event, filePath) => allCb?.(event, filePath),
-      close: vi.fn()
+// startWatching uses ONE recursive fs.watch rather than a watcher per directory,
+// so the mock stands in for that single watch and records how it was configured.
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>()
+  return {
+    ...actual,
+    default: {
+      ...actual,
+      watch: (root: string, opts: { recursive?: boolean }) => {
+        if (recursiveWatchThrows) throw new Error('recursive watch unsupported')
+        expect(opts?.recursive).toBe(true)
+        let changeCb: ((e: string, f: string | null) => void) | null = null
+        let errorCb: ((e: Error) => void) | null = null
+        const close = vi.fn()
+        watchers.push({
+          root,
+          emit: (eventType, filename) => changeCb?.(eventType, filename),
+          emitError: (err) => errorCb?.(err),
+          close
+        })
+        return {
+          on(event: string, cb: (...args: never[]) => void) {
+            if (event === 'change') changeCb = cb as never
+            if (event === 'error') errorCb = cb as never
+            return this
+          },
+          close
+        }
+      }
     }
-    watchers.push(watcher)
-    return {
-      on: (event: string, cb: (event: string, filePath: string) => void) => {
-        if (event === 'all') allCb = cb
-      },
-      close: watcher.close
-    }
-  })
-}))
+  }
+})
 
 let root: string
 
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'fw-'))
   watchers.length = 0
+  recursiveWatchThrows = false
 })
 
 afterEach(async () => {
@@ -236,7 +254,7 @@ describe('stopWatching', () => {
     expect(() => stopWatching()).not.toThrow()
   })
 
-  it('closes the active chokidar watcher', async () => {
+  it('closes the active recursive watcher', async () => {
     const { startWatching, stopWatching } = await import('./file-watcher')
     const win = { isDestroyed: () => false, webContents: { send: vi.fn() } }
     startWatching(root, win as never)
@@ -255,25 +273,53 @@ describe('startWatching', () => {
     vi.useRealTimers()
   })
 
-  it('debounces tree changes and emits a single fs:tree-changed event', async () => {
+  it('opens exactly ONE recursive watcher for the whole project', async () => {
+    writeDir('a/b/c')
+    writeDir('d/e/f')
+    const { startWatching } = await import('./file-watcher')
+    const win = { isDestroyed: () => false, webContents: { send: vi.fn() } }
+    startWatching(root, win as never)
+
+    // The bug this guards: one descriptor per directory exhausts the fd limit
+    // on a large repo (5,606 directories measured) and floods the main process
+    // with EMFILE rejections.
+    expect(watchers).toHaveLength(1)
+    expect(watchers[0].root).toBe(root)
+  })
+
+  it('debounces rename events into a single fs:tree-changed event', async () => {
     writeFile('a.ts', '')
     const { startWatching } = await import('./file-watcher')
     const send = vi.fn()
     const win = { isDestroyed: () => false, webContents: { send } }
     startWatching(root, win as never)
 
-    const watcher = watchers[0]
-    watcher.emit('add', path.join(root, 'a.ts'))
-    watcher.emit('add', path.join(root, 'a.ts'))
+    watchers[0].emit('rename', 'a.ts')
+    watchers[0].emit('rename', 'a.ts')
     expect(send).not.toHaveBeenCalled()
 
-    await vi.advanceTimersByTimeAsync(200)
+    await vi.advanceTimersByTimeAsync(600)
     await vi.waitFor(() => {
       expect(send.mock.calls.some((c) => c[0] === 'fs:tree-changed')).toBe(true)
     })
     const treeCalls = send.mock.calls.filter((c) => c[0] === 'fs:tree-changed')
     expect(treeCalls).toHaveLength(1)
     expect(treeCalls[0][1]).toMatchObject({ path: root, isDirectory: true })
+  })
+
+  it('rescans the tree when fs.watch reports no filename', async () => {
+    writeFile('a.ts', '')
+    const { startWatching } = await import('./file-watcher')
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    startWatching(root, win as never)
+
+    watchers[0].emit('rename', null)
+
+    await vi.advanceTimersByTimeAsync(600)
+    await vi.waitFor(() => {
+      expect(send.mock.calls.some((c) => c[0] === 'fs:tree-changed')).toBe(true)
+    })
   })
 
   it('reads the changed text file and sends fs:file-changed after the file debounce', async () => {
@@ -284,7 +330,7 @@ describe('startWatching', () => {
     startWatching(root, win as never)
 
     fs.writeFileSync(filePath, 'updated')
-    watchers[0].emit('change', filePath)
+    watchers[0].emit('change', 'a.ts')
 
     vi.advanceTimersByTime(150)
     const fileCalls = send.mock.calls.filter((c) => c[0] === 'fs:file-changed')
@@ -293,13 +339,13 @@ describe('startWatching', () => {
   })
 
   it('skips file content reads for binary extensions on change events', async () => {
-    const filePath = writeFile('pic.png', '')
+    writeFile('pic.png', '')
     const { startWatching } = await import('./file-watcher')
     const send = vi.fn()
     const win = { isDestroyed: () => false, webContents: { send } }
     startWatching(root, win as never)
 
-    watchers[0].emit('change', filePath)
+    watchers[0].emit('change', 'pic.png')
     vi.advanceTimersByTime(200)
 
     expect(send.mock.calls.some((c) => c[0] === 'fs:file-changed')).toBe(false)
@@ -312,10 +358,28 @@ describe('startWatching', () => {
     const win = { isDestroyed: () => false, webContents: { send } }
     startWatching(root, win as never)
 
-    watchers[0].emit('change', filePath)
+    watchers[0].emit('change', 'temp.ts')
     fs.rmSync(filePath)
     expect(() => vi.advanceTimersByTime(200)).not.toThrow()
     expect(send.mock.calls.some((c) => c[0] === 'fs:file-changed')).toBe(false)
+  })
+
+  it('ignores events for .git, node_modules and gitignored paths', async () => {
+    writeFile('.gitignore', 'secret.env\n')
+    writeFile('secret.env', 'shh')
+    const { startWatching } = await import('./file-watcher')
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    startWatching(root, win as never)
+
+    watchers[0].emit('change', path.join('.git', 'index'))
+    watchers[0].emit('change', path.join('node_modules', 'x.js'))
+    watchers[0].emit('change', path.join('deep', 'node_modules', 'y.js'))
+    watchers[0].emit('change', 'secret.env')
+    watchers[0].emit('rename', path.join('.git', 'refs', 'heads', 'main'))
+
+    await vi.advanceTimersByTimeAsync(700)
+    expect(send).not.toHaveBeenCalled()
   })
 
   it('stops emitting once the window is destroyed', async () => {
@@ -327,48 +391,29 @@ describe('startWatching', () => {
     startWatching(root, win as never)
 
     destroyed = true
-    watchers[0].emit('add', path.join(root, 'a.ts'))
-    await vi.advanceTimersByTimeAsync(200)
+    watchers[0].emit('rename', 'a.ts')
+    await vi.advanceTimersByTimeAsync(600)
     await Promise.resolve()
     expect(send).not.toHaveBeenCalled()
   })
 
-  it('configures chokidar to ignore .git, node_modules and gitignored paths', async () => {
-    writeFile('.gitignore', 'secret.env\n')
-    const { startWatching } = await import('./file-watcher')
-    const send = vi.fn()
-    const win = { isDestroyed: () => false, webContents: { send } }
-    startWatching(root, win as never)
-
-    const ignored = watchers[0].ignored!
-    expect(ignored(path.join(root, '.git', 'HEAD'))).toBe(true)
-    expect(ignored(path.join(root, 'node_modules', 'x.js'))).toBe(true)
-    expect(ignored(path.join(root, 'secret.env'))).toBe(true)
-    expect(ignored(path.join(root, 'src', 'main.ts'))).toBe(false)
-    expect(ignored(root)).toBe(false)
-  })
-
-  it('excludes gitignored paths from the watcher even when showIgnored=true', async () => {
-    writeFile('.gitignore', 'secret.env\n')
-    const { startWatching } = await import('./file-watcher')
-    const send = vi.fn()
-    const win = { isDestroyed: () => false, webContents: { send } }
-    startWatching(root, win as never, true)
-
-    const ignored = watchers[0].ignored!
-    expect(ignored(path.join(root, 'secret.env'))).toBe(true)
-    expect(ignored(path.join(root, '.git', 'HEAD'))).toBe(true)
-  })
-
-  it('ignores paths matched by nested .gitignore files', async () => {
-    writeFile('sub/.gitignore', 'vendor/\n')
+  it('survives a watcher error instead of leaving an unhandled rejection', async () => {
     const { startWatching } = await import('./file-watcher')
     const win = { isDestroyed: () => false, webContents: { send: vi.fn() } }
     startWatching(root, win as never)
 
-    const ignored = watchers[0].ignored!
-    expect(ignored(path.join(root, 'sub', 'vendor', 'x.js'))).toBe(true)
-    expect(ignored(path.join(root, 'sub', 'keep.js'))).toBe(false)
+    const emfile = Object.assign(new Error('EMFILE: too many open files, watch'), { code: 'EMFILE' })
+    expect(() => watchers[0].emitError(emfile)).not.toThrow()
+    expect(watchers[0].close).toHaveBeenCalled()
+  })
+
+  it('degrades gracefully when recursive watching is unsupported', async () => {
+    recursiveWatchThrows = true
+    const { startWatching } = await import('./file-watcher')
+    const win = { isDestroyed: () => false, webContents: { send: vi.fn() } }
+
+    expect(() => startWatching(root, win as never)).not.toThrow()
+    expect(watchers).toHaveLength(0)
   })
 
   it('picks up .gitignore edits and schedules a tree rescan', async () => {
@@ -378,14 +423,10 @@ describe('startWatching', () => {
     const win = { isDestroyed: () => false, webContents: { send } }
     startWatching(root, win as never)
 
-    const watcher = watchers[0]
-    expect(watcher.ignored!(path.join(root, 'sub', 'vendor', 'x.js'))).toBe(true)
-
     fs.writeFileSync(gitignorePath, '')
-    watcher.emit('change', gitignorePath)
+    watchers[0].emit('change', path.join('sub', '.gitignore'))
 
-    expect(watcher.ignored!(path.join(root, 'sub', 'vendor', 'x.js'))).toBe(false)
-    await vi.advanceTimersByTimeAsync(600)
+    await vi.advanceTimersByTimeAsync(700)
     await vi.waitFor(() => {
       expect(send.mock.calls.some((c) => c[0] === 'fs:tree-changed')).toBe(true)
     })
@@ -399,5 +440,45 @@ describe('startWatching', () => {
 
     expect(watchers).toHaveLength(2)
     expect(watchers[0].close).toHaveBeenCalled()
+  })
+})
+
+describe('isIgnoredPath', () => {
+  it('ignores the always-ignore list at any depth', async () => {
+    const { isIgnoredPath } = await import('./file-watcher')
+    const { GitignoreMatcher } = await import('./fs-scan-utils')
+    const m = new GitignoreMatcher(root)
+
+    expect(isIgnoredPath(root, m, path.join(root, '.git', 'HEAD'), false)).toBe(true)
+    expect(isIgnoredPath(root, m, path.join(root, 'node_modules', 'x.js'), false)).toBe(true)
+    expect(isIgnoredPath(root, m, path.join(root, 'a', 'b', 'node_modules', 'x.js'), false)).toBe(true)
+    expect(isIgnoredPath(root, m, path.join(root, '.DS_Store'), false)).toBe(true)
+    expect(isIgnoredPath(root, m, path.join(root, 'src', 'main.ts'), false)).toBe(false)
+  })
+
+  it('never ignores the root itself', async () => {
+    const { isIgnoredPath } = await import('./file-watcher')
+    const { GitignoreMatcher } = await import('./fs-scan-utils')
+    expect(isIgnoredPath(root, new GitignoreMatcher(root), root, true)).toBe(false)
+  })
+
+  it('ignores paths outside the root', async () => {
+    const { isIgnoredPath } = await import('./file-watcher')
+    const { GitignoreMatcher } = await import('./fs-scan-utils')
+    const m = new GitignoreMatcher(root)
+    expect(isIgnoredPath(root, m, path.join(root, '..', 'elsewhere.ts'), false)).toBe(true)
+  })
+
+  it('respects root and nested .gitignore files', async () => {
+    writeFile('.gitignore', 'secret.env\n')
+    writeFile('sub/.gitignore', 'vendor/\n')
+    const { isIgnoredPath } = await import('./file-watcher')
+    const { GitignoreMatcher } = await import('./fs-scan-utils')
+    const m = new GitignoreMatcher(root)
+
+    expect(isIgnoredPath(root, m, path.join(root, 'secret.env'), false)).toBe(true)
+    expect(isIgnoredPath(root, m, path.join(root, 'sub', 'vendor'), true)).toBe(true)
+    expect(isIgnoredPath(root, m, path.join(root, 'sub', 'keep.js'), false)).toBe(false)
+    expect(isIgnoredPath(root, m, path.join(root, 'other', 'vendor'), true)).toBe(false)
   })
 })

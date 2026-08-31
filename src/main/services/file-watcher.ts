@@ -1,4 +1,3 @@
-import { watch, type FSWatcher } from 'chokidar'
 import { BrowserWindow } from 'electron'
 import fs from 'fs'
 import fsp from 'fs/promises'
@@ -29,7 +28,7 @@ function getExt(filePath: string): string {
   return path.extname(filePath).slice(1).toLowerCase()
 }
 
-let watcher: FSWatcher | null = null
+let watcher: fs.FSWatcher | null = null
 let currentRoot: string | null = null
 let currentShowIgnored = false
 let currentMatcher: GitignoreMatcher | null = null
@@ -120,28 +119,49 @@ export async function readTree(
   }
 }
 
+/**
+ * Decides whether a path is outside the watched set. Kept as a standalone,
+ * side-effect-free function because it is the whole ignore contract (always-ignore
+ * list + root and nested .gitignore files) and is worth testing directly.
+ */
+export function isIgnoredPath(
+  rootPath: string,
+  matcher: GitignoreMatcher,
+  filePath: string,
+  isDirectory: boolean
+): boolean {
+  const rel = path.relative(rootPath, filePath)
+  if (!rel || rel === '.') return false
+  if (rel.startsWith('..') || path.isAbsolute(rel)) return true
+  // A recursive watcher hands us deep paths inside .git/node_modules constantly,
+  // and those are by far the highest-volume events in a real repo, so check every
+  // segment rather than only the entry name.
+  for (const segment of toPosix(rel).split('/')) {
+    if (ALWAYS_IGNORE.includes(segment)) return true
+  }
+  if (matcher.ignores(filePath, isDirectory)) return true
+  return false
+}
+
+/**
+ * ONE recursive fs.watch for the whole project, not one watcher per directory.
+ *
+ * chokidar opens a descriptor per directory. On a large monorepo that is
+ * thousands of them (measured: 5,606 directories in a real repo, against a
+ * soft limit of 256), which floods the main process with EMFILE rejections
+ * and starves the event loop - a 12s wait measured at 84s. A single recursive
+ * watch is backed by FSEvents on macOS and costs one descriptor for the tree.
+ *
+ * The trade-off is coarser events: fs.watch reports only 'rename' (created,
+ * deleted or moved) and 'change' (contents), with no directory/file
+ * distinction, so 'rename' always schedules a debounced tree rescan.
+ */
 export function startWatching(rootPath: string, win: BrowserWindow, showIgnored: boolean = false): void {
   stopWatching()
   currentRoot = rootPath
   currentShowIgnored = showIgnored
   currentMatcher = new GitignoreMatcher(rootPath)
-
-  const alwaysIg = ignore().add(ALWAYS_IGNORE)
   const matcher = currentMatcher
-
-  watcher = watch(rootPath, {
-    ignoreInitial: true,
-    ignored: (filePath: string, stats?: fs.Stats) => {
-      const rel = path.relative(rootPath, filePath)
-      if (!rel || rel === '.') return false
-      if (alwaysIg.ignores(toPosix(rel))) return true
-      if (matcher.ignores(filePath, stats?.isDirectory() ?? true)) return true
-      return false
-    },
-    depth: 10,
-    persistent: true,
-    usePolling: false
-  })
 
   const scheduleTreeRescan = (): void => {
     if (treeDebounce) clearTimeout(treeDebounce)
@@ -157,36 +177,68 @@ export function startWatching(rootPath: string, win: BrowserWindow, showIgnored:
     }, 500)
   }
 
-  watcher.on('all', (event: string, filePath: string) => {
+  const handleChangedFile = (filePath: string): void => {
+    if (BINARY_EXTS.has(getExt(filePath))) return
+    const existing = fileDebounce.get(filePath)
+    if (existing) clearTimeout(existing)
+    fileDebounce.set(
+      filePath,
+      setTimeout(() => {
+        fileDebounce.delete(filePath)
+        if (win.isDestroyed()) return
+        try {
+          const content = fs.readFileSync(filePath, 'utf-8')
+          win.webContents.send('fs:file-changed', filePath, content)
+        } catch {
+          // file may be temporarily locked, or already gone, during a write
+        }
+      }, 150)
+    )
+  }
+
+  const onEvent = (eventType: string, filePath: string): void => {
     if (win.isDestroyed() || !currentRoot) return
 
     const isGitignoreFile = path.basename(filePath) === '.gitignore'
     if (isGitignoreFile) matcher.invalidateDir(path.dirname(filePath))
 
-    if (event === 'add' || event === 'unlink' || event === 'addDir' || event === 'unlinkDir') {
-      scheduleTreeRescan()
+    // The path may already be gone, so never stat to decide what it was:
+    // filter only when it is ignored whether treated as a file or a directory.
+    if (isIgnoredPath(rootPath, matcher, filePath, false) &&
+        isIgnoredPath(rootPath, matcher, filePath, true)) {
+      return
     }
 
-    if (event === 'change') {
-      if (isGitignoreFile) scheduleTreeRescan()
-      if (BINARY_EXTS.has(getExt(filePath))) return
-      const existing = fileDebounce.get(filePath)
-      if (existing) clearTimeout(existing)
-      fileDebounce.set(
-        filePath,
-        setTimeout(() => {
-          fileDebounce.delete(filePath)
-          if (win.isDestroyed()) return
-          try {
-            const content = fs.readFileSync(filePath, 'utf-8')
-            win.webContents.send('fs:file-changed', filePath, content)
-          } catch {
-            // file may be temporarily locked during write
-          }
-        }, 150)
-      )
+    if (eventType === 'rename') {
+      scheduleTreeRescan()
+      return
     }
-  })
+    if (eventType === 'change') {
+      if (isGitignoreFile) scheduleTreeRescan()
+      handleChangedFile(filePath)
+    }
+  }
+
+  try {
+    const w = fs.watch(rootPath, { recursive: true, persistent: true })
+    // Without this, an EMFILE/ENOSPC from the watcher becomes an unhandled
+    // rejection on the main process - 916 of them in one observed session.
+    w.on('error', () => { stopWatching() })
+    w.on('change', (eventType, filename) => {
+      if (!filename) {
+        scheduleTreeRescan()
+        return
+      }
+      const rel = typeof filename === 'string' ? filename : filename.toString('utf-8')
+      onEvent(String(eventType), path.resolve(rootPath, rel))
+    })
+    watcher = w
+  } catch {
+    // Recursive watching unsupported on this platform/filesystem: degrade to no
+    // live updates rather than opening a descriptor per directory. The tree can
+    // still be refreshed manually.
+    watcher = null
+  }
 }
 
 export function readFileContents(filePath: string): FileReadResult {
