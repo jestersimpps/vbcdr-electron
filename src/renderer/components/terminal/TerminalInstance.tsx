@@ -307,6 +307,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
         terminal.open(el)
 
+
+        terminal.registerLinkProvider
+
         terminal.registerLinkProvider({
           provideLinks: (lineNumber, callback) => {
             const buf = terminal.buffer.active
@@ -352,6 +355,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           }, 500)
         }
 
+        // Deliberately unguarded: this runs a bounded handful of times while the
+        // terminal is first becoming visible (RAF, +100ms, +500ms, font load) and
+        // is not a loop source. Skipping a fit here can leave a terminal unsized.
         const refit = (): void => {
           try {
             if (el.clientWidth === 0 || el.clientHeight === 0) return
@@ -379,6 +385,15 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       try {
         if (!el.contains(terminal.element ?? null)) return
         if (el.clientWidth === 0 || el.clientHeight === 0) return
+        // fitAddon.fit() resizes xterm's viewport, which the ResizeObserver below
+        // observes as a resize of `el`. Calling it unconditionally therefore makes
+        // the observer retrigger itself every 150ms for the lifetime of the tab -
+        // and since hidden tabs keep their layout (visibility: hidden), every
+        // terminal in every open project loops at once. Measured before this
+        // guard: 19.5s of "Recalculate style" in a 70s profile, main thread
+        // saturated, visible flicker. proposeDimensions() is a pure calculation,
+        // so asking first costs nothing and breaks the cycle.
+        if (!shouldRefit(fitAddon.proposeDimensions(), terminal)) return
         const buf = terminal.buffer.active
         const atBottom = buf.baseY - buf.viewportY <= 1
         fitAddon.fit()
@@ -538,6 +553,24 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       ) : null}
     </div>
   )
+}
+
+/**
+ * Whether a fit would actually change the terminal grid.
+ *
+ * Extracted and exported because it is the guard that breaks a ResizeObserver
+ * feedback loop: fit() mutates the DOM, the observer sees that mutation, and
+ * without this check it schedules another fit indefinitely.
+ */
+export function shouldRefit(
+  proposed: { cols?: number; rows?: number } | undefined,
+  current: { cols: number; rows: number }
+): boolean {
+  if (!proposed) return false
+  const { cols, rows } = proposed
+  if (!cols || !rows) return false
+  if (!Number.isFinite(cols) || !Number.isFinite(rows)) return false
+  return cols !== current.cols || rows !== current.rows
 }
 
 export function getTerminalInstance(tabId: string): TerminalEntry | undefined {
