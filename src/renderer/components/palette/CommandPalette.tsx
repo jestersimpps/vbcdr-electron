@@ -35,6 +35,7 @@ import { useTutorialStore } from '@/stores/tutorial-store'
 import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
 import { fuzzyMatch } from '@/lib/fuzzy'
 import { flattenTree } from '@/lib/flatten-tree'
+import type { FlatFile } from '@/lib/flatten-tree'
 import { dispatchAppAction } from '@/lib/app-actions'
 import { cn } from '@/lib/utils'
 
@@ -48,6 +49,11 @@ interface PaletteItem {
 }
 
 const MAX_FILE_RESULTS = 30
+
+// Stable singletons: returning a fresh [] from the guarded memos above would
+// defeat their own memoization for every downstream dependency.
+const EMPTY_FILES: FlatFile[] = []
+const EMPTY_ITEMS: PaletteItem[] = []
 
 type PaletteMode = 'all' | 'files'
 
@@ -146,10 +152,18 @@ export function CommandPalette(): React.ReactElement | null {
     [activeProjectId, editorStatePerProject]
   )
 
-  const allFiles = useMemo(() => flattenTree(fileTree), [fileTree])
+  // The palette is mounted unconditionally by App, and its `if (!open) return null`
+  // lives at the bottom of the component - so without these `open` guards the memos
+  // below run for the whole session. On a large repo that means flattening a
+  // 30,000-node tree and building a PaletteItem per file (each carrying its own
+  // <FileText/> element and closure) over and over while the palette is closed.
+  // Measured before this guard: 60.5% of total profile time, with React element
+  // creation alone at 39.1%.
+  const allFiles = useMemo(() => (open ? flattenTree(fileTree) : EMPTY_FILES), [open, fileTree])
   const recentFilePaths = useMemo(() => [...openFiles].reverse().map((f) => f.path), [openFiles])
 
   const items = useMemo((): PaletteItem[] => {
+    if (!open) return EMPTY_ITEMS
     const list: PaletteItem[] = []
 
     for (const p of projects) {
@@ -403,7 +417,7 @@ export function CommandPalette(): React.ReactElement | null {
     )
 
     return list
-  }, [projects, activeProjectId, activeLlmTabId, terminalTabs, allFiles, queueItems, query])
+  }, [open, projects, activeProjectId, activeLlmTabId, terminalTabs, allFiles, queueItems, query])
 
   const filtered = useMemo(() => {
     const q = query.trim()
