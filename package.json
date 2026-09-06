@@ -1,6 +1,6 @@
 {
   "name": "vbcdr",
-  "version": "1.1.96",
+  "version": "1.1.97",
   "description": "Desktop vibe coding environment for Claude Code developers",
   "author": {
     "name": "jo vinkenroye",
@@ -55,7 +55,7 @@
         "dmg",
         "zip"
       ],
-      "notarize": true
+      "notarize": false
     },
     "linux": {
       "target": [
