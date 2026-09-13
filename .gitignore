@@ -3,7 +3,12 @@ out/
 dist/
 .DS_Store
 *.log
-ackage-lock.json
 docs/changelog-2026-04.md
 # LLM tab worktrees
 .worktrees/
+# local tool output
+.playwright-mcp/
+.claude/settings.local.json
+# editor/asset backups
+*.bak
+*.bak.*
