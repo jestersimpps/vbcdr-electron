@@ -41,6 +41,23 @@ describe('terminal-store', () => {
       useTerminalStore.getState().createTab('p1', '/cwd', 'claude')
       expect(useTerminalStore.getState().tabs[0].title).toBe('LLM')
     })
+
+    it('stores worktree info when given and omits the key otherwise', () => {
+      const worktree = { id: 'wt1', path: '/cwd/.worktrees/llm/x', branch: 'llm/x', projectPath: '/cwd' }
+      useTerminalStore.getState().createTab('p1', worktree.path, 'claude', worktree)
+      useTerminalStore.getState().createTab('p1', '/cwd', 'claude')
+      const [withWorktree, plain] = useTerminalStore.getState().tabs
+      expect(withWorktree.worktree).toEqual(worktree)
+      expect(withWorktree.cwd).toBe(worktree.path)
+      expect('worktree' in plain).toBe(false)
+    })
+
+    it('setTabWorktree replaces the worktree info on a tab', () => {
+      const worktree = { id: 'wt1', path: '/cwd/.worktrees/llm/x', branch: 'llm/x', projectPath: '/cwd' }
+      const id = useTerminalStore.getState().createTab('p1', worktree.path, 'claude', worktree)
+      useTerminalStore.getState().setTabWorktree(id, { ...worktree, branch: 'feature/renamed' })
+      expect(useTerminalStore.getState().tabs[0].worktree?.branch).toBe('feature/renamed')
+    })
   })
 
   describe('closeTab', () => {

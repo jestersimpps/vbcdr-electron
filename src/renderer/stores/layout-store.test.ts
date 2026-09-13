@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useLayoutStore, DEFAULT_SPLIT, DEFAULT_TOKEN_CAP } from './layout-store'
+import { useLayoutStore, DEFAULT_SPLIT, DEFAULT_TOKEN_CAP, DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT } from './layout-store'
 import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
 import { DEFAULT_LLM_PROVIDER_ID } from '@/config/llm-provider-registry'
 
@@ -14,6 +14,8 @@ const resetStore = (): void => {
     llmProviderId: DEFAULT_LLM_PROVIDER_ID,
     llmCustomCommand: '',
     globalTerminalCwd: '',
+    useWorktreesForNewLlmTabs: false,
+    closeTabWorkflowPrompt: DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT,
     resetVersion: 0
   })
 }
@@ -135,6 +137,53 @@ describe('layout-store', () => {
       expect(useLayoutStore.getState().tokenCap).toBe(DEFAULT_TOKEN_CAP)
       useLayoutStore.getState().setTokenCap(-5)
       expect(useLayoutStore.getState().tokenCap).toBe(DEFAULT_TOKEN_CAP)
+    })
+  })
+
+  describe('useWorktreesForNewLlmTabs', () => {
+    it('defaults to off', () => {
+      expect(useLayoutStore.getState().useWorktreesForNewLlmTabs).toBe(false)
+    })
+
+    it('toggles via the setter', () => {
+      useLayoutStore.getState().setUseWorktreesForNewLlmTabs(true)
+      expect(useLayoutStore.getState().useWorktreesForNewLlmTabs).toBe(true)
+    })
+
+    it('falls back to false when the persisted value is not a boolean', async () => {
+      seedPersisted({ useWorktreesForNewLlmTabs: 'yes' }, 1)
+      const mod = await importFresh()
+      expect(mod.useLayoutStore.getState().useWorktreesForNewLlmTabs).toBe(false)
+    })
+
+    it('restores a persisted true', async () => {
+      seedPersisted({ useWorktreesForNewLlmTabs: true }, 1)
+      const mod = await importFresh()
+      expect(mod.useLayoutStore.getState().useWorktreesForNewLlmTabs).toBe(true)
+    })
+  })
+
+  describe('closeTabWorkflowPrompt', () => {
+    it('defaults to the built-in prompt', () => {
+      expect(useLayoutStore.getState().closeTabWorkflowPrompt).toBe(DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT)
+    })
+
+    it('stores a trimmed custom prompt and resets back to the default', () => {
+      useLayoutStore.getState().setCloseTabWorkflowPrompt('  push it  ')
+      expect(useLayoutStore.getState().closeTabWorkflowPrompt).toBe('push it')
+      useLayoutStore.getState().resetCloseTabWorkflowPrompt()
+      expect(useLayoutStore.getState().closeTabWorkflowPrompt).toBe(DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT)
+    })
+
+    it('falls back to the default when set to whitespace', () => {
+      useLayoutStore.getState().setCloseTabWorkflowPrompt('   ')
+      expect(useLayoutStore.getState().closeTabWorkflowPrompt).toBe(DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT)
+    })
+
+    it('ignores a persisted empty prompt', async () => {
+      seedPersisted({ closeTabWorkflowPrompt: '' }, 1)
+      const mod = await importFresh()
+      expect(mod.useLayoutStore.getState().closeTabWorkflowPrompt).toBe(mod.DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT)
     })
   })
 

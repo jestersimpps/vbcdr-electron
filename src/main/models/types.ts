@@ -122,6 +122,42 @@ export interface GitOpResult {
   error?: string
 }
 
+export interface WorktreeInfo {
+  id: string
+  path: string
+  branch: string
+  projectPath: string
+}
+
+export type PrState = 'none' | 'open' | 'merged' | 'closed' | 'unknown'
+
+export interface PrInfo {
+  url: string | null
+  state: PrState
+}
+
+export interface GhStatus {
+  available: boolean
+  authenticated: boolean
+  message: string | null
+}
+
+export interface WorktreeState {
+  exists: boolean
+  hasChanges: boolean
+  conflictPaths: string[]
+}
+
+export interface TrackedWorktree extends WorktreeInfo {
+  projectId: string
+  createdAt: number
+  prUrl: string | null
+  prState: PrState
+  hasChanges: boolean
+  conflictPaths: string[]
+  lastCheckedAt: number | null
+}
+
 export type GitFileStatus = 'modified' | 'added' | 'untracked' | 'deleted' | 'renamed' | 'conflict'
 
 export interface EncryptedCredential {

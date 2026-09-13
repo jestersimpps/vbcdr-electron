@@ -15,13 +15,16 @@ import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useLayoutStore } from '@/stores/layout-store'
+import { useWorktreeStore } from '@/stores/worktree-store'
+import { toWorktreeInfo } from '@/lib/worktree-tabs'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
 import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History, FolderOpen, FolderGit2 } from 'lucide-react'
 import { SessionHistoryModal } from './SessionHistoryModal'
+import { CloseWorktreeTabModal } from './CloseWorktreeTabModal'
 import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
 import { clearContextCommandFor } from '@/config/llm-provider-registry'
 import { cn } from '@/lib/utils'
-import type { TerminalTab } from '@/models/types'
+import type { TerminalTab, WorktreeInfo } from '@/models/types'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
 import { GitActions } from '@/components/git/GitActions'
 import { TaskQueuePanel } from './TaskQueuePanel'
@@ -30,6 +33,16 @@ import { useQueueRunner } from '@/hooks/useQueueRunner'
 import { useTokenVelocity } from '@/hooks/useTokenVelocity'
 import { useContextUsage } from '@/hooks/useContextUsage'
 import { formatTokens, tokenBarFill } from '@/lib/token-display'
+
+async function createWorktreeForProject(projectId: string, projectPath: string): Promise<WorktreeInfo | null> {
+  try {
+    if (!(await window.api.git.isRepo(projectPath))) return null
+    return toWorktreeInfo(await useWorktreeStore.getState().create(projectId, projectPath))
+  } catch (err) {
+    console.error('Failed to create worktree, falling back to project folder', err)
+    return null
+  }
+}
 
 const TERMINAL_THEME_OPTIONS = [
   { id: '', label: 'Auto' },
@@ -227,9 +240,17 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     return () => unsubExit()
   }, [])
 
-  const handleNewTab = (): void => {
+  const handleNewTab = async (): Promise<void> => {
     if (!hasOwner) return
     const cmd = useLayoutStore.getState().getLlmStartupCommand()
+    const worktreeProject = !isCustomOwner ? activeProject : undefined
+    if (worktreeProject && useLayoutStore.getState().useWorktreesForNewLlmTabs) {
+      const worktree = await createWorktreeForProject(worktreeProject.id, worktreeProject.path)
+      if (worktree) {
+        createTab(ownerId!, worktree.path, cmd, worktree)
+        return
+      }
+    }
     createTab(ownerId!, ownerCwd, cmd)
   }
 
@@ -267,7 +288,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     }
   }, [ownerId, reorderTabs])
 
-  const handleCloseTab = useCallback((tabId: string): void => {
+  const teardownTab = useCallback((tabId: string): void => {
     if (teardownInFlight.current.has(tabId)) return
     teardownInFlight.current.add(tabId)
     window.api.terminal.kill(tabId)
@@ -275,6 +296,17 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     closeTab(tabId)
     teardownInFlight.current.delete(tabId)
   }, [closeTab])
+
+  const [closingWorktreeTab, setClosingWorktreeTab] = useState<TerminalTab | null>(null)
+
+  const handleCloseTab = useCallback((tabId: string): void => {
+    const tab = useTerminalStore.getState().tabs.find((t) => t.id === tabId)
+    if (tab?.worktree) {
+      setClosingWorktreeTab(tab)
+      return
+    }
+    teardownTab(tabId)
+  }, [teardownTab])
 
   const handleSelectTab = useCallback((tabId: string): void => {
     if (ownerId) setActiveTab(ownerId, tabId)
@@ -599,6 +631,17 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
           projectName={global ? (globalTerminalCwd.split('/').filter(Boolean).pop() ?? '~') : activeProject!.name}
           onClose={() => setHistoryOpen(false)}
           onResume={handleResume}
+        />
+      )}
+      {closingWorktreeTab?.worktree && (
+        <CloseWorktreeTabModal
+          tab={closingWorktreeTab}
+          worktree={closingWorktreeTab.worktree}
+          onCancel={() => setClosingWorktreeTab(null)}
+          onCloseTab={() => {
+            teardownTab(closingWorktreeTab.id)
+            setClosingWorktreeTab(null)
+          }}
         />
       )}
     </div>

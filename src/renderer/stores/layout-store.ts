@@ -22,6 +22,8 @@ interface LayoutState {
   llmProviderId: LlmProviderId
   llmCustomCommand: string
   globalTerminalCwd: string
+  useWorktreesForNewLlmTabs: boolean
+  closeTabWorkflowPrompt: string
   resetVersion: number
   getSplit: (projectId: string) => number
   setSplit: (projectId: string, size: number) => void
@@ -49,10 +51,15 @@ interface LayoutState {
   setLlmCustomCommand: (cmd: string) => void
   getLlmStartupCommand: () => string
   setGlobalTerminalCwd: (path: string) => void
+  setUseWorktreesForNewLlmTabs: (enabled: boolean) => void
+  setCloseTabWorkflowPrompt: (prompt: string) => void
+  resetCloseTabWorkflowPrompt: () => void
 }
 
 export const DEFAULT_TOKEN_CAP = 160_000
 export const DEFAULT_LLM_STARTUP_COMMAND = 'claude'
+export const DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT =
+  'Wrap up the work in this worktree. Commit any uncommitted changes with a clear message, push the branch {branch} to origin, and open a pull request with gh pr create describing what changed and why. If there are merge conflicts, rebase on the default branch, or if gh is missing or not authenticated, stop and tell me instead of guessing.'
 
 function upgradeLegacyProvider(persisted: unknown): Record<string, unknown> {
   const state = { ...((persisted ?? {}) as Record<string, unknown>) }
@@ -94,6 +101,8 @@ export const useLayoutStore = create<LayoutState>()(
       llmProviderId: DEFAULT_LLM_PROVIDER_ID,
       llmCustomCommand: '',
       globalTerminalCwd: '',
+      useWorktreesForNewLlmTabs: false,
+      closeTabWorkflowPrompt: DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT,
       resetVersion: 0,
       voiceEnabled: false,
       voiceAgentProviderId: null,
@@ -192,6 +201,19 @@ export const useLayoutStore = create<LayoutState>()(
         set({ globalTerminalCwd: path.trim() })
       },
 
+      setUseWorktreesForNewLlmTabs: (enabled: boolean) => {
+        set({ useWorktreesForNewLlmTabs: enabled })
+      },
+
+      setCloseTabWorkflowPrompt: (prompt: string) => {
+        const trimmed = prompt.trim()
+        set({ closeTabWorkflowPrompt: trimmed || DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT })
+      },
+
+      resetCloseTabWorkflowPrompt: () => {
+        set({ closeTabWorkflowPrompt: DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT })
+      },
+
       resetLayout: (projectId: string) => {
         const spp = { ...get().splitsPerProject }
         delete spp[projectId]
@@ -221,6 +243,8 @@ export const useLayoutStore = create<LayoutState>()(
         llmProviderId: state.llmProviderId,
         llmCustomCommand: state.llmCustomCommand,
         globalTerminalCwd: state.globalTerminalCwd,
+        useWorktreesForNewLlmTabs: state.useWorktreesForNewLlmTabs,
+        closeTabWorkflowPrompt: state.closeTabWorkflowPrompt,
         voiceEnabled: state.voiceEnabled,
         voiceAgentProviderId: state.voiceAgentProviderId,
         voiceAgentCustomCommand: state.voiceAgentCustomCommand,
@@ -237,6 +261,14 @@ export const useLayoutStore = create<LayoutState>()(
             : DEFAULT_LLM_PROVIDER_ID,
           llmCustomCommand:
             typeof incoming.llmCustomCommand === 'string' ? incoming.llmCustomCommand : '',
+          useWorktreesForNewLlmTabs:
+            typeof incoming.useWorktreesForNewLlmTabs === 'boolean'
+              ? incoming.useWorktreesForNewLlmTabs
+              : false,
+          closeTabWorkflowPrompt:
+            typeof incoming.closeTabWorkflowPrompt === 'string' && incoming.closeTabWorkflowPrompt.trim()
+              ? incoming.closeTabWorkflowPrompt
+              : DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT,
           voiceEnabled: typeof incoming.voiceEnabled === 'boolean' ? incoming.voiceEnabled : false,
           voiceAgentProviderId:
             incoming.voiceAgentProviderId === null ||

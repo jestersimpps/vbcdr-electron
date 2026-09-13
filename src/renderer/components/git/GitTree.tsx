@@ -8,6 +8,7 @@ import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
 import { GitBranch as GitBranchIcon, ArrowDown, ArrowUp, GitMerge, RefreshCw, FileDiff, GitCommit as GitCommitIcon, Loader2, CloudDownload, CloudUpload, FileText, X, PanelRightClose } from 'lucide-react'
 import type { GitCommit } from '@/models/types'
 import { BranchSwitcher, BranchPanel } from '@/components/git/BranchSwitcher'
+import { WorktreePrPanel } from '@/components/git/WorktreePrPanel'
 
 const LANE_COLORS = [
   '#4ade80',
@@ -457,6 +458,8 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent, onColl
           </button>
         </div>
       )}
+
+      <WorktreePrPanel projectId={effectiveProjectId} />
 
       {showBranches ? (
         <BranchPanel projectId={effectiveProjectId} cwd={effectivePath} onClose={() => setShowBranches(false)} />

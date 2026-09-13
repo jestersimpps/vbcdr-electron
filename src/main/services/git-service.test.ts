@@ -399,3 +399,61 @@ describe('listGitignore / addToGitignore / removeFromGitignore', () => {
     expect(result.error).toMatch(/\.gitignore/i)
   })
 })
+
+describe('worktrees', () => {
+  it('createWorktree adds the gitignore entry once and runs worktree add with a generated branch', async () => {
+    setOutputs('', '')
+    const first = await mod.createWorktree(tmpRoot)
+    expect(first.branch).toMatch(/^llm\/\d{14}-[a-z0-9]{6}$/)
+    expect(first.path).toBe(path.join(tmpRoot, '.worktrees', first.branch))
+    expect(calls[0].args).toEqual(['worktree', 'add', '-b', first.branch, first.path])
+    expect(calls[0].cwd).toBe(tmpRoot)
+
+    await mod.createWorktree(tmpRoot, 'feature/named')
+    const gitignore = fs.readFileSync(path.join(tmpRoot, '.gitignore'), 'utf-8')
+    expect(gitignore.match(/^\.worktrees\/$/gm)?.length).toBe(1)
+  })
+
+  it('ensureWorktreesGitignored appends after an unterminated last line', async () => {
+    fs.writeFileSync(path.join(tmpRoot, '.gitignore'), 'node_modules')
+    await mod.ensureWorktreesGitignored(tmpRoot)
+    expect(fs.readFileSync(path.join(tmpRoot, '.gitignore'), 'utf-8')).toBe('node_modules\n# LLM tab worktrees\n.worktrees/\n')
+  })
+
+  it('renameBranch wraps git branch -m', async () => {
+    setOutputs('')
+    const result = await mod.renameBranch('/wt', 'llm/x', 'feature/y')
+    expect(result.ok).toBe(true)
+    expect(calls[0].args).toEqual(['branch', '-m', 'llm/x', 'feature/y'])
+    setOutputs(Object.assign(new Error('fail'), { stderr: 'fatal: branch exists' }))
+    expect(await mod.renameBranch('/wt', 'a', 'b')).toEqual({ ok: false, output: '', error: 'fatal: branch exists' })
+  })
+
+  it('getWorktreeState reports a missing folder without calling git', async () => {
+    const state = await mod.getWorktreeState(path.join(tmpRoot, 'missing'))
+    expect(state).toEqual({ exists: false, hasChanges: false, conflictPaths: [] })
+    expect(calls).toHaveLength(0)
+  })
+
+  it('getWorktreeState classifies changes and conflicts', async () => {
+    setOutputs('UU src/a.ts\n M src/b.ts\nAA c.ts')
+    const state = await mod.getWorktreeState(tmpRoot)
+    expect(state).toEqual({ exists: true, hasChanges: true, conflictPaths: ['src/a.ts', 'c.ts'] })
+  })
+
+  it('removeWorktree skips git worktree remove when the folder is already gone and deletes the branch on request', async () => {
+    setOutputs('', '')
+    const result = await mod.removeWorktree(tmpRoot, path.join(tmpRoot, 'gone'), 'llm/x', true)
+    expect(result.ok).toBe(true)
+    expect(calls.map((c) => c.args)).toEqual([['worktree', 'prune'], ['branch', '-D', 'llm/x']])
+  })
+
+  it('removeWorktree removes an existing folder and keeps the branch by default', async () => {
+    const wt = path.join(tmpRoot, 'wt')
+    fs.mkdirSync(wt)
+    setOutputs('', '')
+    await mod.removeWorktree(tmpRoot, wt, 'llm/x', false)
+    expect(calls.map((c) => c.args)).toEqual([['worktree', 'remove', '--force', wt], ['worktree', 'prune']])
+  })
+})
+

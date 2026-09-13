@@ -1,0 +1,100 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { PrInfo, TrackedWorktree } from '@main/models/types'
+
+class FakeStore {
+  private state: { worktrees: TrackedWorktree[] }
+  constructor(opts: { defaults: { worktrees: TrackedWorktree[] } }) {
+    this.state = { worktrees: [...opts.defaults.worktrees] }
+  }
+  get(_key: 'worktrees'): TrackedWorktree[] {
+    return this.state.worktrees
+  }
+  set(_key: 'worktrees', value: TrackedWorktree[]): void {
+    this.state.worktrees = value
+  }
+}
+
+vi.mock('electron-store', () => ({ default: FakeStore }))
+
+const git = {
+  createWorktree: vi.fn(async () => ({ path: '/p/.worktrees/llm/x', branch: 'llm/x' })),
+  renameBranch: vi.fn(async () => ({ ok: true, output: '' })),
+  getWorktreeState: vi.fn(async () => ({ exists: true, hasChanges: false, conflictPaths: [] as string[] })),
+  removeWorktree: vi.fn(async () => ({ ok: true, output: '' }))
+}
+vi.mock('@main/services/git-service', () => git)
+
+const gh = { getPrForBranch: vi.fn(async (): Promise<PrInfo> => ({ url: null, state: 'none' })) }
+vi.mock('@main/services/gh-service', () => gh)
+
+let mod: typeof import('./worktree-service')
+
+beforeEach(async () => {
+  vi.resetModules()
+  for (const fn of [...Object.values(git), ...Object.values(gh)]) (fn as ReturnType<typeof vi.fn>).mockClear()
+  git.getWorktreeState.mockResolvedValue({ exists: true, hasChanges: false, conflictPaths: [] })
+  gh.getPrForBranch.mockResolvedValue({ url: null, state: 'none' })
+  mod = await import('./worktree-service')
+})
+
+describe('worktree-service', () => {
+  it('creates and tracks a worktree scoped to its project', async () => {
+    const created = await mod.createTrackedWorktree('p1', '/p')
+    expect(git.createWorktree).toHaveBeenCalledWith('/p')
+    expect(created).toMatchObject({ projectId: 'p1', projectPath: '/p', path: '/p/.worktrees/llm/x', branch: 'llm/x', prState: 'none' })
+    expect(mod.listWorktrees('p1')).toHaveLength(1)
+    expect(mod.listWorktrees('other')).toHaveLength(0)
+  })
+
+  it('renames the branch through git and records the new name', async () => {
+    const { id } = await mod.createTrackedWorktree('p1', '/p')
+    expect(await mod.renameTrackedBranch(id, ' feature/y ')).toEqual({ ok: true, output: '' })
+    expect(git.renameBranch).toHaveBeenCalledWith('/p/.worktrees/llm/x', 'llm/x', 'feature/y')
+    expect(mod.getWorktree(id)?.branch).toBe('feature/y')
+  })
+
+  it('rename is a no-op for the same name and rejects empty names', async () => {
+    const { id } = await mod.createTrackedWorktree('p1', '/p')
+    expect((await mod.renameTrackedBranch(id, 'llm/x')).ok).toBe(true)
+    expect((await mod.renameTrackedBranch(id, '   ')).ok).toBe(false)
+    expect(git.renameBranch).not.toHaveBeenCalled()
+  })
+
+  it('refresh records PR state and conflicts', async () => {
+    const { id } = await mod.createTrackedWorktree('p1', '/p')
+    git.getWorktreeState.mockResolvedValue({ exists: true, hasChanges: true, conflictPaths: ['a.ts'] })
+    gh.getPrForBranch.mockResolvedValue({ url: 'https://x/pr/1', state: 'open' })
+    const refreshed = await mod.refreshWorktree(id)
+    expect(refreshed).toMatchObject({ hasChanges: true, conflictPaths: ['a.ts'], prUrl: 'https://x/pr/1', prState: 'open' })
+    expect(refreshed?.lastCheckedAt).toBeTypeOf('number')
+  })
+
+  it('refresh keeps the last known PR when gh answers unknown', async () => {
+    const { id } = await mod.createTrackedWorktree('p1', '/p')
+    gh.getPrForBranch.mockResolvedValue({ url: 'https://x/pr/1', state: 'open' })
+    await mod.refreshWorktree(id)
+    gh.getPrForBranch.mockResolvedValue({ url: null, state: 'unknown' })
+    const refreshed = await mod.refreshWorktree(id)
+    expect(refreshed).toMatchObject({ prUrl: 'https://x/pr/1', prState: 'open' })
+  })
+
+  it('refresh untracks a worktree whose folder disappeared', async () => {
+    const { id } = await mod.createTrackedWorktree('p1', '/p')
+    git.getWorktreeState.mockResolvedValue({ exists: false, hasChanges: false, conflictPaths: [] })
+    expect(await mod.refreshWorktree(id)).toBeNull()
+    expect(mod.listWorktrees('p1')).toHaveLength(0)
+  })
+
+  it('remove deletes the branch only when the PR is merged', async () => {
+    const a = await mod.createTrackedWorktree('p1', '/p')
+    await mod.removeTrackedWorktree(a.id)
+    expect(git.removeWorktree).toHaveBeenLastCalledWith('/p', '/p/.worktrees/llm/x', 'llm/x', false)
+
+    const b = await mod.createTrackedWorktree('p1', '/p')
+    gh.getPrForBranch.mockResolvedValue({ url: 'https://x/pr/2', state: 'merged' })
+    await mod.refreshWorktree(b.id)
+    await mod.removeTrackedWorktree(b.id)
+    expect(git.removeWorktree).toHaveBeenLastCalledWith('/p', '/p/.worktrees/llm/x', 'llm/x', true)
+    expect(mod.listWorktrees('p1')).toHaveLength(0)
+  })
+})

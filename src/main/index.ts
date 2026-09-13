@@ -5,6 +5,7 @@ import { registerFilesystemHandlers } from '@main/ipc/filesystem'
 import { registerTerminalHandlers } from '@main/ipc/terminal'
 import { registerClipboardHandlers } from '@main/ipc/clipboard'
 import { registerGitHandlers } from '@main/ipc/git'
+import { registerWorktreeHandlers } from '@main/ipc/worktrees'
 import { registerClaudeConfigHandlers } from '@main/ipc/claude-config'
 import { registerClaudeExplainHandlers } from '@main/ipc/claude-explain'
 import { registerClaudeSessionsHandlers } from '@main/ipc/claude-sessions'
@@ -134,6 +135,7 @@ registerFilesystemHandlers()
 registerTerminalHandlers()
 registerClipboardHandlers()
 registerGitHandlers()
+registerWorktreeHandlers()
 registerClaudeConfigHandlers()
 registerClaudeExplainHandlers()
 registerClaudeSessionsHandlers()

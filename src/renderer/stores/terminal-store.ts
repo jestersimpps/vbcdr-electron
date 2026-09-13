@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
-import type { TerminalTab } from '@/models/types'
+import type { TerminalTab, WorktreeInfo } from '@/models/types'
 import { useLayoutStore } from '@/stores/layout-store'
 
 type TabStatus = 'idle' | 'busy'
@@ -20,12 +20,13 @@ interface TerminalStore {
   attentionProjectIds: Record<string, boolean>
   autoScrollPerTab: Record<string, boolean>
   focusedTabId: string | null
-  createTab: (projectId: string, cwd: string, initialCommand?: string) => string
+  createTab: (projectId: string, cwd: string, initialCommand?: string, worktree?: WorktreeInfo) => string
   closeTab: (tabId: string) => void
   replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => string
   setActiveTab: (projectId: string, tabId: string) => void
   setTabStatus: (tabId: string, status: TabStatus) => void
   setTabTitle: (tabId: string, title: string) => void
+  setTabWorktree: (tabId: string, worktree: WorktreeInfo) => void
   reorderTabs: (projectId: string, fromIndex: number, toIndex: number) => void
   setOutput: (projectId: string, lines: string[]) => void
   setTokenUsage: (tabId: string, tokens: number) => void
@@ -50,7 +51,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   autoScrollPerTab: {},
   focusedTabId: null,
 
-  createTab: (projectId: string, cwd: string, initialCommand?: string) => {
+  createTab: (projectId: string, cwd: string, initialCommand?: string, worktree?: WorktreeInfo) => {
     const tabId = uuid()
     const projectTabs = get().tabs.filter((t) => t.projectId === projectId)
     const tab: TerminalTab = {
@@ -58,7 +59,8 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       title: initialCommand ? 'LLM' : `Terminal ${projectTabs.length + 1}`,
       projectId,
       cwd,
-      initialCommand
+      initialCommand,
+      ...(worktree && { worktree })
     }
     set((state) => ({
       tabs: [...state.tabs, tab],
@@ -131,6 +133,12 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   setTabTitle: (tabId: string, title: string) => {
     set((state) => ({
       tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, title } : t))
+    }))
+  },
+
+  setTabWorktree: (tabId: string, worktree: WorktreeInfo) => {
+    set((state) => ({
+      tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, worktree } : t))
     }))
   },
 

@@ -14,12 +14,38 @@ export interface FileNode {
   truncated?: boolean
 }
 
+export interface WorktreeInfo {
+  id: string
+  path: string
+  branch: string
+  projectPath: string
+}
+
+export type PrState = 'none' | 'open' | 'merged' | 'closed' | 'unknown'
+
+export interface GhStatus {
+  available: boolean
+  authenticated: boolean
+  message: string | null
+}
+
+export interface TrackedWorktree extends WorktreeInfo {
+  projectId: string
+  createdAt: number
+  prUrl: string | null
+  prState: PrState
+  hasChanges: boolean
+  conflictPaths: string[]
+  lastCheckedAt: number | null
+}
+
 export interface TerminalTab {
   id: string
   title: string
   projectId: string
   cwd: string
   initialCommand?: string
+  worktree?: WorktreeInfo
 }
 
 export interface GitCommit {

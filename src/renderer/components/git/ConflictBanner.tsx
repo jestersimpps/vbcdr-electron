@@ -4,6 +4,7 @@ import { useGitStore } from '@/stores/git-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { sendToTerminalViaKeyboardEvent } from '@/lib/terminal-utils'
+import { conflictResolutionInstruction } from '@/lib/llm-instructions'
 
 export function ConflictBanner(): React.ReactElement | null {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
@@ -29,10 +30,9 @@ export function ConflictBanner(): React.ReactElement | null {
 
   const handleAskClaude = (): void => {
     if (!activeTerminalTabId) return
-    const files = conflicts.map((c) => c.path).join(', ')
     sendToTerminalViaKeyboardEvent(
       activeTerminalTabId,
-      `Resolve the merge conflicts in these files: ${files}. Read each file, understand both sides, and apply the correct resolution. Then mark them as resolved with git add.`
+      conflictResolutionInstruction(conflicts.map((c) => c.path))
     )
   }
 

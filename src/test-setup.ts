@@ -75,6 +75,29 @@ const api = {
     rangeHashes: fn(async () => []),
     fetchNow: fn(async () => ({ ahead: 0, behind: 0, diverged: false, remoteBranch: null }))
   },
+  worktrees: {
+    list: fn(async () => []),
+    create: fn(async () => ({
+      id: 'wt1',
+      projectId: 'p1',
+      projectPath: '/cwd',
+      path: '/cwd/.worktrees/llm/x',
+      branch: 'llm/x',
+      createdAt: 0,
+      prUrl: null,
+      prState: 'none',
+      hasChanges: false,
+      conflictPaths: [],
+      lastCheckedAt: null
+    })),
+    renameBranch: fn(async () => ({ ok: true, output: '' })),
+    refresh: fn(async () => null),
+    refreshProject: fn(async () => []),
+    untrack: fn(async () => undefined),
+    remove: fn(async () => ({ ok: true, output: '' })),
+    ghStatus: fn(async () => ({ available: true, authenticated: true, message: null })),
+    openUrl: fn(async () => undefined)
+  },
   tokenUsage: {
     record: fn(async () => undefined),
     resetTab: fn(async () => undefined),

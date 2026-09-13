@@ -2,7 +2,7 @@ import { execFile as execFileCb } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
 import fs from 'fs'
-import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, GitOpResult, StatsCommit, LanguageTally } from '@main/models/types'
+import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, GitOpResult, StatsCommit, LanguageTally, WorktreeState } from '@main/models/types'
 import { EXT_TO_LANGUAGE } from '@main/services/language-map'
 import { gitEnv } from '@main/services/git-env'
 
@@ -773,5 +773,83 @@ export async function getLanguageTally(cwd: string): Promise<LanguageTally> {
     return tally
   } catch {
     return {}
+  }
+}
+
+const WORKTREES_DIR = '.worktrees'
+const WORKTREES_GITIGNORE_ENTRY = `${WORKTREES_DIR}/`
+
+function generateWorktreeBranchName(): string {
+  const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)
+  const shortId = Math.random().toString(36).slice(2, 8)
+  return `llm/${stamp}-${shortId}`
+}
+
+export async function ensureWorktreesGitignored(projectPath: string): Promise<void> {
+  const gitignorePath = path.join(projectPath, '.gitignore')
+  let existing = ''
+  try {
+    existing = await fs.promises.readFile(gitignorePath, 'utf-8')
+  } catch {
+    existing = ''
+  }
+  const lines = existing.split('\n').map((l) => l.trim())
+  if (lines.includes(WORKTREES_GITIGNORE_ENTRY) || lines.includes(WORKTREES_DIR)) return
+  const needsNewline = existing.length > 0 && !existing.endsWith('\n')
+  const toAppend = `${needsNewline ? '\n' : ''}# LLM tab worktrees\n${WORKTREES_GITIGNORE_ENTRY}\n`
+  await fs.promises.appendFile(gitignorePath, toAppend, 'utf-8')
+}
+
+export interface CreatedWorktree {
+  path: string
+  branch: string
+}
+
+export async function createWorktree(projectPath: string, branchName?: string): Promise<CreatedWorktree> {
+  const branch = branchName?.trim() || generateWorktreeBranchName()
+  const worktreePath = path.join(projectPath, WORKTREES_DIR, branch)
+  await ensureWorktreesGitignored(projectPath)
+  await runGit(projectPath, ['worktree', 'add', '-b', branch, worktreePath], 30000)
+  return { path: worktreePath, branch }
+}
+
+export async function renameBranch(cwd: string, oldName: string, newName: string): Promise<GitOpResult> {
+  try {
+    const output = await runGit(cwd, ['branch', '-m', oldName, newName], 15000)
+    return { ok: true, output }
+  } catch (err) {
+    return { ok: false, output: '', error: gitErrorMessage(err) }
+  }
+}
+
+function isConflictStatusLine(line: string): boolean {
+  if (line.length < 4) return false
+  const x = line[0]
+  const y = line[1]
+  return x === 'U' || y === 'U' || (x === 'D' && y === 'D') || (x === 'A' && y === 'A')
+}
+
+export async function getWorktreeState(worktreePath: string): Promise<WorktreeState> {
+  if (!fs.existsSync(worktreePath)) return { exists: false, hasChanges: false, conflictPaths: [] }
+  try {
+    const raw = await runGit(worktreePath, ['status', '--porcelain'])
+    const lines = raw ? raw.split('\n') : []
+    const conflictPaths = lines.filter(isConflictStatusLine).map((line) => line.slice(3).split(' -> ').pop()!)
+    return { exists: true, hasChanges: lines.length > 0, conflictPaths }
+  } catch {
+    return { exists: false, hasChanges: false, conflictPaths: [] }
+  }
+}
+
+export async function removeWorktree(projectPath: string, worktreePath: string, branch: string, deleteBranch: boolean): Promise<GitOpResult> {
+  try {
+    if (fs.existsSync(worktreePath)) {
+      await runGit(projectPath, ['worktree', 'remove', '--force', worktreePath], 30000)
+    }
+    await runGit(projectPath, ['worktree', 'prune'], 15000)
+    if (deleteBranch) await runGit(projectPath, ['branch', '-D', branch], 15000)
+    return { ok: true, output: '' }
+  } catch (err) {
+    return { ok: false, output: '', error: gitErrorMessage(err) }
   }
 }

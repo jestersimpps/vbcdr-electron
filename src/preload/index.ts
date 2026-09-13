@@ -184,6 +184,17 @@ const api = {
       }
     }
   },
+  worktrees: {
+    list: (projectId?: string) => ipcRenderer.invoke('worktrees:list', projectId),
+    create: (projectId: string, projectPath: string) => ipcRenderer.invoke('worktrees:create', projectId, projectPath),
+    renameBranch: (id: string, newBranch: string) => ipcRenderer.invoke('worktrees:rename-branch', id, newBranch),
+    refresh: (id: string) => ipcRenderer.invoke('worktrees:refresh', id),
+    refreshProject: (projectId: string) => ipcRenderer.invoke('worktrees:refresh-project', projectId),
+    untrack: (id: string) => ipcRenderer.invoke('worktrees:untrack', id),
+    remove: (id: string) => ipcRenderer.invoke('worktrees:remove', id),
+    ghStatus: () => ipcRenderer.invoke('worktrees:gh-status'),
+    openUrl: (url: string) => ipcRenderer.invoke('worktrees:open-url', url)
+  },
 
   onMenuAction: (callback: (action: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, action: string) => callback(action)
