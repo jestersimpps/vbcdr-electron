@@ -133,7 +133,7 @@
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
     "electron": "^34.0.2",
-    "electron-builder": "^26.7.0",
+    "electron-builder": "^26.16.1",
     "electron-vite": "^3.0.0",
     "jsdom": "^29.1.1",
     "lucide-react": "^0.474.0",
