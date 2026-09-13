@@ -31,6 +31,27 @@ const GESTURE_BY_EMOTE: Record<CompanionEmote, CompanionGesture> = {
   sleeping: 'consider'
 }
 
+/**
+ * What she settles into while the agent works, held for a few seconds after a
+ * trigger fires. The gesture is the reaction; this is the mood it leaves her in.
+ */
+const MOOD_BY_EMOTE: Record<CompanionEmote, CompanionMood> = {
+  thinking: 'thinking',
+  reading: 'attentive',
+  writing: 'busy',
+  searching: 'thinking',
+  running: 'busy',
+  happy: 'attentive',
+  proud: 'attentive',
+  confused: 'error',
+  hurt: 'error',
+  sheepish: 'error',
+  waiting: 'attentive',
+  sleeping: 'idle'
+}
+
+const EMOTE_MOOD_MS = 6000
+
 const MOOD_BY_MIC: Record<MicStatus, CompanionMood> = {
   off: 'idle',
   starting: 'busy',
@@ -47,6 +68,9 @@ export function CompanionDock(): React.ReactElement {
   const stageRef = useRef<CompanionStage | null>(null)
   const bubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pokeRef = useRef<(() => void) | null>(null)
+  const micMoodRef = useRef<CompanionMood>('idle')
+  const emoteMoodUntilRef = useRef(0)
+  const emoteMoodTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [label, setLabel] = useState<string | null>(null)
   const [bubble, setBubble] = useState<string | null>(null)
 
@@ -78,13 +102,27 @@ export function CompanionDock(): React.ReactElement {
 
   useEffect(() => {
     if (COMPANION_DEMO) return
-    stageRef.current?.setMood(MOOD_BY_MIC[micStatus])
+    micMoodRef.current = MOOD_BY_MIC[micStatus]
+    // A trigger mood outranks the mic for its window, so reacting to the work
+    // is not immediately overwritten by the idle microphone state.
+    if (emoteMoodUntilRef.current < Date.now()) {
+      stageRef.current?.setMood(micMoodRef.current)
+    }
   }, [micStatus])
 
   useEffect(() => {
     const scanner = new CompanionMarkerScanner()
     const matcher = new CompanionMatcher()
     const feed = new CompanionLineFeed()
+
+    const feelEmote = (emote: CompanionEmote): void => {
+      stageRef.current?.setMood(MOOD_BY_EMOTE[emote])
+      emoteMoodUntilRef.current = Date.now() + EMOTE_MOOD_MS
+      if (emoteMoodTimerRef.current) clearTimeout(emoteMoodTimerRef.current)
+      emoteMoodTimerRef.current = setTimeout(() => {
+        stageRef.current?.setMood(micMoodRef.current)
+      }, EMOTE_MOOD_MS)
+    }
 
     const say = (text: string, gesture: CompanionGesture | null, soundId?: string): void => {
       if (gesture) stageRef.current?.playGesture(gesture)
@@ -110,6 +148,7 @@ export function CompanionDock(): React.ReactElement {
       for (const line of feed.push(tabId, rows)) {
         const reaction = matcher.match(line)
         if (!reaction) continue
+        feelEmote(reaction.emote)
         say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], reaction.soundId)
         break
       }
@@ -117,6 +156,7 @@ export function CompanionDock(): React.ReactElement {
 
     pokeRef.current = () => {
       const reaction = matcher.poke()
+      feelEmote(reaction.emote)
       say(reaction.line, GESTURE_BY_EMOTE[reaction.emote])
     }
 
@@ -126,6 +166,8 @@ export function CompanionDock(): React.ReactElement {
       stopSpeech()
       if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current)
       bubbleTimerRef.current = null
+      if (emoteMoodTimerRef.current) clearTimeout(emoteMoodTimerRef.current)
+      emoteMoodTimerRef.current = null
     }
   }, [])
 

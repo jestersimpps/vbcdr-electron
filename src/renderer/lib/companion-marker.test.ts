@@ -28,6 +28,35 @@ describe('parseMarkerBody', () => {
   })
 })
 
+describe('cursor-positioned output', () => {
+  // Taken verbatim from captured scrollback: the TUI lays words out with CHA
+  // column jumps, so stripping them outright used to fuse the whole line.
+  const painted =
+    "[TLDR]>thinkingAside|she\x1b[28Gwatches\x1b[36Gyour\x1b[41Gcursor\x1b[48Gnow,\x1b[53Ghope\x1b[58Gyou're<[TLDR]"
+
+  it('keeps the words apart when the TUI positions them by column', () => {
+    const s = new CompanionMarkerScanner()
+    expect(s.push(painted)[0].text).toBe("she watches your cursor now, hope you're")
+  })
+
+  it('handles cursor-forward moves as well as absolute columns', () => {
+    const s = new CompanionMarkerScanner()
+    expect(s.push('[TLDR]>affirm|two\x1b[3Cwords<[TLDR]')[0].text).toBe('two words')
+  })
+
+  it('leaves text that already has real spaces alone', () => {
+    const s = new CompanionMarkerScanner()
+    expect(s.push('[TLDR]>affirm|here you go<[TLDR]')[0].text).toBe('here you go')
+  })
+
+  it('does not introduce a gap from colour codes', () => {
+    const s = new CompanionMarkerScanner()
+    expect(s.push('[TLDR]>affirm|\x1b[38;5;174mstill one line\x1b[39m<[TLDR]')[0].text).toBe(
+      'still one line'
+    )
+  })
+})
+
 describe('CompanionMarkerScanner', () => {
   it('finds a marker in a single chunk', () => {
     const s = new CompanionMarkerScanner()

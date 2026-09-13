@@ -1,6 +1,19 @@
 import { stripAnsi } from '@/lib/terminal-text'
 import type { CompanionGesture } from '@/components/companion/companion-gestures'
 
+/**
+ * Horizontal cursor moves: absolute column (CHA, `G`) and forward (CUF, `C`).
+ * The TUI lays a wrapped line out by jumping between columns rather than
+ * emitting spaces, so stripping these outright fuses the words together
+ * ("shewatchesyourcursor"). Turning each jump into one space restores the gap,
+ * and sanitize() collapses any run of them back down to a single space.
+ */
+const HORIZONTAL_MOVE_RE = /\x1b\[[0-9;]*[GC]/g
+
+export function spaceOutCursorMoves(text: string): string {
+  return text.replace(HORIZONTAL_MOVE_RE, ' ').replace(/\t/g, ' ')
+}
+
 export const MARKER_OPEN = '[TLDR]>'
 export const MARKER_CLOSE = '<[TLDR]'
 
@@ -47,7 +60,7 @@ export class CompanionMarkerScanner {
   private pending = ''
 
   push(chunk: string): CompanionMarker[] {
-    this.pending += stripAnsi(chunk)
+    this.pending += stripAnsi(spaceOutCursorMoves(chunk))
 
     const found: CompanionMarker[] = []
     MARKER_RE.lastIndex = 0

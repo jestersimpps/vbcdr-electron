@@ -82,11 +82,45 @@ export interface CompanionStage {
   dispose(): void
 }
 
+/**
+ * Expression names differ between VRM specs, and three-vrm rewrites a VRM0
+ * model's presets to the VRM1 spelling as it loads (a -> aa, joy -> happy).
+ * setValue() silently ignores a name it does not know, so calling the wrong
+ * one looks exactly like an expression that does not work: this model's mouth
+ * and moods were dead for that reason. Each pair is [VRM1, VRM0] and the one
+ * the loaded model actually registers wins.
+ */
+const EXPRESSION_CANDIDATES = {
+  aa: ['aa', 'a'],
+  ih: ['ih', 'i'],
+  ou: ['ou', 'u'],
+  ee: ['ee', 'e'],
+  oh: ['oh', 'o'],
+  happy: ['happy', 'joy'],
+  sad: ['sad', 'sorrow'],
+  relaxed: ['relaxed', 'fun'],
+  angry: ['angry'],
+  blink: ['blink']
+} as const
+
+type ExpressionKey = keyof typeof EXPRESSION_CANDIDATES
+
 /** Vowel shapes the mouth cycles through, so talking is not one held sound. */
-const VISEMES = ['a', 'i', 'u', 'e', 'o'] as const
-const MOUTH_SMOOTHING = 22
+const VISEMES: ExpressionKey[] = ['aa', 'ih', 'ou', 'ee', 'oh']
+/**
+ * Asymmetric on purpose: the mouth snaps open on a syllable and eases shut
+ * after it. Equal rates read as a vibrating jaw rather than speech.
+ */
+const MOUTH_ATTACK = 60
+const MOUTH_RELEASE = 45
+/**
+ * The viseme blendshapes bind at full weight, so they only read as an open
+ * mouth near 1.0. The curve pushes moderate speech most of the way there
+ * instead of leaving it hovering barely parted.
+ */
+const MOUTH_GAIN = 1.25
 /** Below this the mouth is treated as shut, so silence does not leave it ajar. */
-const MOUTH_FLOOR = 0.06
+const MOUTH_FLOOR = 0.14
 
 /**
  * Kept under the gesture ranges so following never reads as a gesture, but the
@@ -100,6 +134,33 @@ const LOOK_HEAD_YAW = 9 * (Math.PI / 180)
 const LOOK_HEAD_PITCH_DOWN = 7 * (Math.PI / 180)
 const LOOK_HEAD_PITCH_UP = 13 * (Math.PI / 180)
 const LOOK_SMOOTHING = 7
+
+/**
+ * Skin is unlit with a baked texture and a white baseColorFactor, so it renders
+ * at full brightness with no shading to warm it up. Multiplying the material
+ * colour tints that texture rather than replacing it, which keeps the shading
+ * painted into the map. Only the two SKIN materials are touched: the mouth,
+ * brows, eyelines and eyes are separate materials and tinting them would muddy
+ * the line art.
+ */
+const SKIN_TINT = new THREE.Color(0.94, 0.86, 0.81)
+const SKIN_MATERIAL_RE = /_SKIN$/
+
+function tintSkin(vrm: VRM): void {
+  const seen = new Set<THREE.Material>()
+  vrm.scene.traverse((object) => {
+    const mesh = object as THREE.Mesh
+    if (!mesh.material) return
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const material of materials) {
+      if (seen.has(material)) continue
+      seen.add(material)
+      if (!SKIN_MATERIAL_RE.test(material.name)) continue
+      const tinted = material as THREE.Material & { color?: THREE.Color }
+      tinted.color?.multiply(SKIN_TINT)
+    }
+  })
+}
 
 function nextBlinkDelay(): number {
   return BLINK_INTERVAL_MIN + Math.random() * (BLINK_INTERVAL_MAX - BLINK_INTERVAL_MIN)
@@ -128,6 +189,7 @@ export async function createCompanionStage(
 
   VRMUtils.removeUnnecessaryVertices(gltf.scene)
   VRMUtils.combineSkeletons(gltf.scene)
+  tintSkin(vrm)
   vrm.scene.rotation.y = Math.PI
   vrm.humanoid?.setNormalizedPose(REST_POSE)
   vrm.update(0)
@@ -177,8 +239,19 @@ export async function createCompanionStage(
   const look = { x: 0, y: 0, weight: 0 }
   let mouthTarget = 0
   let mouth = 0
-  let viseme: (typeof VISEMES)[number] = 'a'
+  let viseme: ExpressionKey = 'aa'
   let mouthWasOpen = false
+
+  const expressionNames = new Map<ExpressionKey, string>()
+  for (const [key, candidates] of Object.entries(EXPRESSION_CANDIDATES)) {
+    const found = candidates.find((n) => vrm.expressionManager?.getExpression(n) != null)
+    if (found) expressionNames.set(key as ExpressionKey, found)
+  }
+
+  const setExpression = (key: ExpressionKey, weight: number): void => {
+    const name = expressionNames.get(key)
+    if (name) vrm.expressionManager?.setValue(name, weight)
+  }
   const current = { joy: 0, sorrow: 0, fun: 0, angry: 0 }
   let blinkCountdown = nextBlinkDelay()
   let blinkElapsed = -1
@@ -255,10 +328,10 @@ export async function createCompanionStage(
       current.sorrow += (target.sorrow + ch.sorrow - current.sorrow) * alpha
       current.fun += (target.fun + ch.fun - current.fun) * alpha
       current.angry += (ch.angry - current.angry) * alpha
-      expressions.setValue('joy', THREE.MathUtils.clamp(current.joy, 0, 1))
-      expressions.setValue('sorrow', THREE.MathUtils.clamp(current.sorrow, 0, 1))
-      expressions.setValue('fun', THREE.MathUtils.clamp(current.fun, 0, 1))
-      expressions.setValue('angry', THREE.MathUtils.clamp(current.angry, 0, 1))
+      setExpression('happy', THREE.MathUtils.clamp(current.joy, 0, 1))
+      setExpression('sad', THREE.MathUtils.clamp(current.sorrow, 0, 1))
+      setExpression('relaxed', THREE.MathUtils.clamp(current.fun, 0, 1))
+      setExpression('angry', THREE.MathUtils.clamp(current.angry, 0, 1))
 
       blinkCountdown -= delta
       if (blinkCountdown <= 0 && blinkElapsed < 0) {
@@ -273,19 +346,25 @@ export async function createCompanionStage(
         if (phase >= 1) blinkElapsed = -1
       }
       const lids = THREE.MathUtils.clamp(Math.max(blink, ch.blink) - ch.eyeWide, 0, 1)
-      expressions.setValue('blink', lids)
+      setExpression('blink', lids)
 
       // Mouth follows the waveform faster than the mood expressions settle, or
       // it lags behind the syllables and reads as dubbing.
-      const mouthAlpha = 1 - Math.exp(-MOUTH_SMOOTHING * delta)
+      const rate = mouthTarget > mouth ? MOUTH_ATTACK : MOUTH_RELEASE
+      const mouthAlpha = 1 - Math.exp(-rate * delta)
       mouth += (mouthTarget - mouth) * mouthAlpha
       const open = mouth > MOUTH_FLOOR
       // A new vowel per mouth-opening, not per frame: picking every frame is a
       // flutter, holding one for a whole line is a drone.
       if (open && !mouthWasOpen) viseme = VISEMES[Math.floor(Math.random() * VISEMES.length)]
       mouthWasOpen = open
+      // Rescaled from the floor rather than from zero: a curve applied to the
+      // raw level lifts near-silence into a visibly parted mouth, which is what
+      // made it hang open between syllables.
+      const above = Math.max(0, (mouth - MOUTH_FLOOR) / (1 - MOUTH_FLOOR))
+      const opening = THREE.MathUtils.clamp(Math.pow(above, 0.7) * MOUTH_GAIN, 0, 1)
       for (const shape of VISEMES) {
-        expressions.setValue(shape, shape === viseme && open ? THREE.MathUtils.clamp(mouth, 0, 1) : 0)
+        setExpression(shape, shape === viseme && open ? opening : 0)
       }
     }
 

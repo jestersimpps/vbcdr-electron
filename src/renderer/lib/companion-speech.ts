@@ -39,7 +39,9 @@ function readLevel(): number {
     const v = (samples[i] - 128) / 128
     sum += v * v
   }
-  return Math.min(1, Math.sqrt(sum / samples.length) * 3.2)
+  // Speech RMS sits around 0.05-0.2, so it takes a lot of gain before the
+  // viseme blendshapes (which bind at full weight) read as an open mouth.
+  return Math.min(1, Math.sqrt(sum / samples.length) * 7)
 }
 
 function startLevelLoop(): void {
@@ -77,7 +79,9 @@ function attachAnalyser(audio: HTMLAudioElement): void {
     if (!analyser) {
       analyser = context.createAnalyser()
       analyser.fftSize = 512
-      analyser.smoothingTimeConstant = 0.6
+      // Near zero: any averaging here flattens the syllable peaks that make
+      // the mouth look like it is actually forming words.
+      analyser.smoothingTimeConstant = 0.05
       samples = new Uint8Array(new ArrayBuffer(analyser.fftSize))
       analyser.connect(context.destination)
     }
