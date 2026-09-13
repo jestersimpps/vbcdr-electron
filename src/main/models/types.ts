@@ -150,6 +150,7 @@ export interface WorktreeState {
 
 export interface TrackedWorktree extends WorktreeInfo {
   projectId: string
+  label: string | null
   createdAt: number
   prUrl: string | null
   prState: PrState

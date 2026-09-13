@@ -2,12 +2,14 @@ import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import type { TerminalTab, WorktreeInfo } from '@/models/types'
 import { useLayoutStore } from '@/stores/layout-store'
+import { useWorktreeStore } from '@/stores/worktree-store'
 
 type TabStatus = 'idle' | 'busy'
 
 const OUTPUT_BUFFER_SIZE = 10
 
 export const GLOBAL_TERMINAL_OWNER = '__global__'
+export const DEFAULT_LLM_TAB_TITLE = 'LLM'
 
 interface TerminalStore {
   tabs: TerminalTab[]
@@ -56,7 +58,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     const projectTabs = get().tabs.filter((t) => t.projectId === projectId)
     const tab: TerminalTab = {
       id: tabId,
-      title: initialCommand ? 'LLM' : `Terminal ${projectTabs.length + 1}`,
+      title: initialCommand ? DEFAULT_LLM_TAB_TITLE : `Terminal ${projectTabs.length + 1}`,
       projectId,
       cwd,
       initialCommand,
@@ -110,7 +112,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     const newTabId = uuid()
     const tab: TerminalTab = {
       id: newTabId,
-      title: initialCommand ? 'LLM' : 'Terminal',
+      title: initialCommand ? DEFAULT_LLM_TAB_TITLE : 'Terminal',
       projectId,
       cwd,
       initialCommand
@@ -134,6 +136,10 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     set((state) => ({
       tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, title } : t))
     }))
+    const worktree = get().tabs.find((t) => t.id === tabId)?.worktree
+    if (worktree && title.trim() && title !== DEFAULT_LLM_TAB_TITLE) {
+      void useWorktreeStore.getState().setLabel(worktree.id, title)
+    }
   },
 
   setTabWorktree: (tabId: string, worktree: WorktreeInfo) => {

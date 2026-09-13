@@ -8,6 +8,7 @@ const tracked = (overrides: Partial<TrackedWorktree> = {}): TrackedWorktree => (
   projectPath: '/cwd',
   path: '/cwd/.worktrees/llm/x',
   branch: 'llm/x',
+  label: null,
   createdAt: 0,
   prUrl: null,
   prState: 'none',

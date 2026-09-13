@@ -6,6 +6,7 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
 import { sendToTerminalViaKeyboardEvent } from '@/lib/terminal-utils'
 import { closeWorkflowInstruction } from '@/lib/llm-instructions'
+import { deleteWorktree } from '@/lib/worktree-tabs'
 import { PrStateBadge } from '@/components/git/PrStateBadge'
 import type { TerminalTab, TrackedWorktree, WorktreeInfo } from '@/models/types'
 
@@ -13,7 +14,6 @@ interface CloseWorktreeTabModalProps {
   tab: TerminalTab
   worktree: WorktreeInfo
   onCancel: () => void
-  onCloseTab: () => void
 }
 
 function StatusSummary({ status }: { status: TrackedWorktree }): React.ReactElement {
@@ -33,7 +33,7 @@ function StatusSummary({ status }: { status: TrackedWorktree }): React.ReactElem
   )
 }
 
-export function CloseWorktreeTabModal({ tab, worktree, onCancel, onCloseTab }: CloseWorktreeTabModalProps): React.ReactElement {
+export function CloseWorktreeTabModal({ tab, worktree, onCancel }: CloseWorktreeTabModalProps): React.ReactElement {
   const defaultPrompt = useLayoutStore((s) => s.closeTabWorkflowPrompt)
   const ghStatus = useWorktreeStore((s) => s.ghStatus)
   const [branch, setBranch] = useState(worktree.branch)
@@ -80,15 +80,33 @@ export function CloseWorktreeTabModal({ tab, worktree, onCancel, onCloseTab }: C
     onCancel()
   }
 
+  const handleCloseAndDelete = async (): Promise<void> => {
+    setBusy(true)
+    setError(null)
+    const deleteError = await deleteWorktree(worktree.id)
+    setBusy(false)
+    if (deleteError) {
+      setError(deleteError)
+      return
+    }
+    onCancel()
+  }
+
+  const hasUncommittedWork = !!status && (status.hasChanges || status.conflictPaths.length > 0)
+
   const footer = (
     <>
       <button
-        onClick={onCloseTab}
+        onClick={handleCloseAndDelete}
         disabled={busy}
-        className="mr-auto rounded px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-40"
-        title="Close the terminal now. The worktree and branch stay on disk."
+        className="mr-auto rounded px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"
+        title={
+          hasUncommittedWork
+            ? 'Closes the tab and deletes the worktree folder and branch. Uncommitted changes are lost.'
+            : 'Closes the tab and deletes the worktree folder and branch.'
+        }
       >
-        Close tab without workflow
+        Close tab and delete worktree
       </button>
       <button
         onClick={onCancel}
@@ -139,6 +157,9 @@ export function CloseWorktreeTabModal({ tab, worktree, onCancel, onCloseTab }: C
             <StatusSummary status={status} />
           ) : (
             <span className="text-micro text-zinc-500">Worktree folder is missing on disk</span>
+          )}
+          {hasUncommittedWork && (
+            <p className="mt-1 text-micro text-zinc-500">Deleting the worktree discards these changes unless the workflow commits and pushes them first.</p>
           )}
           {ghStatus && (!ghStatus.available || !ghStatus.authenticated) && (
             <div className="mt-2 flex items-start gap-1.5 rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-micro text-amber-300">

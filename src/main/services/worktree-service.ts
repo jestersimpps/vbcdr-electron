@@ -44,6 +44,7 @@ export async function createTrackedWorktree(projectId: string, projectPath: stri
     projectPath,
     path: created.path,
     branch: created.branch,
+    label: null,
     createdAt: Date.now(),
     prUrl: null,
     prState: 'none',
@@ -64,6 +65,11 @@ export async function renameTrackedBranch(id: string, newBranch: string): Promis
   const result = await renameBranch(worktree.path, worktree.branch, target)
   if (result.ok) update(id, { branch: target })
   return result
+}
+
+export function setWorktreeLabel(id: string, label: string): TrackedWorktree | null {
+  const trimmed = label.trim()
+  return update(id, { label: trimmed || null })
 }
 
 export async function refreshWorktree(id: string): Promise<TrackedWorktree | null> {
@@ -97,8 +103,7 @@ export function untrackWorktree(id: string): void {
 export async function removeTrackedWorktree(id: string): Promise<GitOpResult> {
   const worktree = getWorktree(id)
   if (!worktree) return { ok: false, output: '', error: 'Unknown worktree' }
-  const deleteBranch = worktree.prState === 'merged'
-  const result = await removeWorktree(worktree.projectPath, worktree.path, worktree.branch, deleteBranch)
+  const result = await removeWorktree(worktree.projectPath, worktree.path, worktree.branch, true)
   if (result.ok) untrackWorktree(id)
   return result
 }

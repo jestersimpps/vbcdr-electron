@@ -52,6 +52,19 @@ describe('terminal-store', () => {
       expect('worktree' in plain).toBe(false)
     })
 
+    it('setTabTitle syncs a meaningful title to the worktree label', () => {
+      const worktree = { id: 'wt1', path: '/cwd/.worktrees/llm/x', branch: 'llm/x', projectPath: '/cwd' }
+      const id = useTerminalStore.getState().createTab('p1', worktree.path, 'claude', worktree)
+      const plainId = useTerminalStore.getState().createTab('p1', '/cwd', 'claude')
+      vi.mocked(window.api.worktrees.setLabel).mockClear()
+      useTerminalStore.getState().setTabTitle(id, 'LLM')
+      useTerminalStore.getState().setTabTitle(id, '   ')
+      useTerminalStore.getState().setTabTitle(plainId, 'Fix login')
+      expect(window.api.worktrees.setLabel).not.toHaveBeenCalled()
+      useTerminalStore.getState().setTabTitle(id, 'Fix login')
+      expect(window.api.worktrees.setLabel).toHaveBeenCalledWith('wt1', 'Fix login')
+    })
+
     it('setTabWorktree replaces the worktree info on a tab', () => {
       const worktree = { id: 'wt1', path: '/cwd/.worktrees/llm/x', branch: 'llm/x', projectPath: '/cwd' }
       const id = useTerminalStore.getState().createTab('p1', worktree.path, 'claude', worktree)

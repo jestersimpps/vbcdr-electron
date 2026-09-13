@@ -4,6 +4,7 @@ import {
   listWorktrees,
   createTrackedWorktree,
   renameTrackedBranch,
+  setWorktreeLabel,
   refreshWorktree,
   refreshProjectWorktrees,
   untrackWorktree,
@@ -23,6 +24,10 @@ export function registerWorktreeHandlers(): void {
 
   safeHandle('worktrees:rename-branch', async (_event, id: string, newBranch: string): Promise<GitOpResult> => {
     return renameTrackedBranch(id, newBranch)
+  })
+
+  safeHandle('worktrees:set-label', (_event, id: string, label: string): TrackedWorktree | null => {
+    return setWorktreeLabel(id, label)
   })
 
   safeHandle('worktrees:refresh', async (_event, id: string): Promise<TrackedWorktree | null> => {

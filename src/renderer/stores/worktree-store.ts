@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { GhStatus, TrackedWorktree } from '@/models/types'
+import type { GhStatus, TrackedWorktree, WorktreeInfo } from '@/models/types'
 
 interface WorktreeStore {
   worktreesPerProject: Record<string, TrackedWorktree[]>
@@ -10,6 +10,7 @@ interface WorktreeStore {
   refreshOne: (id: string) => Promise<TrackedWorktree | null>
   create: (projectId: string, projectPath: string) => Promise<TrackedWorktree>
   renameBranch: (id: string, newBranch: string) => Promise<string | null>
+  setLabel: (id: string, label: string) => Promise<void>
   remove: (id: string) => Promise<string | null>
   loadGhStatus: () => Promise<GhStatus>
   find: (id: string) => TrackedWorktree | undefined
@@ -29,6 +30,20 @@ function upsert(list: TrackedWorktree[], worktree: TrackedWorktree): TrackedWork
   const next = [...list]
   next[index] = worktree
   return next
+}
+
+export function toWorktreeInfo(worktree: TrackedWorktree): WorktreeInfo {
+  return { id: worktree.id, path: worktree.path, branch: worktree.branch, projectPath: worktree.projectPath }
+}
+
+export async function createWorktreeForProject(projectId: string, projectPath: string): Promise<WorktreeInfo | null> {
+  try {
+    if (!(await window.api.git.isRepo(projectPath))) return null
+    return toWorktreeInfo(await useWorktreeStore.getState().create(projectId, projectPath))
+  } catch (err) {
+    console.error('Failed to create worktree, falling back to project folder', err)
+    return null
+  }
 }
 
 export const useWorktreeStore = create<WorktreeStore>((set, get) => ({
@@ -84,6 +99,12 @@ export const useWorktreeStore = create<WorktreeStore>((set, get) => ({
       )
     }
     return null
+  },
+
+  setLabel: async (id: string, label: string) => {
+    const updated = await window.api.worktrees.setLabel(id, label)
+    if (!updated) return
+    set((state) => replaceProjectList(state, updated.projectId, upsert(state.worktreesPerProject[updated.projectId] ?? [], updated)))
   },
 
   remove: async (id: string) => {

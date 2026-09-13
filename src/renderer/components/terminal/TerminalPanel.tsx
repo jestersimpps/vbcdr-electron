@@ -15,8 +15,7 @@ import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useLayoutStore } from '@/stores/layout-store'
-import { useWorktreeStore } from '@/stores/worktree-store'
-import { toWorktreeInfo } from '@/lib/worktree-tabs'
+import { createWorktreeForProject } from '@/stores/worktree-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
 import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History, FolderOpen, FolderGit2 } from 'lucide-react'
 import { SessionHistoryModal } from './SessionHistoryModal'
@@ -24,7 +23,7 @@ import { CloseWorktreeTabModal } from './CloseWorktreeTabModal'
 import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
 import { clearContextCommandFor } from '@/config/llm-provider-registry'
 import { cn } from '@/lib/utils'
-import type { TerminalTab, WorktreeInfo } from '@/models/types'
+import type { TerminalTab } from '@/models/types'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
 import { GitActions } from '@/components/git/GitActions'
 import { TaskQueuePanel } from './TaskQueuePanel'
@@ -33,16 +32,6 @@ import { useQueueRunner } from '@/hooks/useQueueRunner'
 import { useTokenVelocity } from '@/hooks/useTokenVelocity'
 import { useContextUsage } from '@/hooks/useContextUsage'
 import { formatTokens, tokenBarFill } from '@/lib/token-display'
-
-async function createWorktreeForProject(projectId: string, projectPath: string): Promise<WorktreeInfo | null> {
-  try {
-    if (!(await window.api.git.isRepo(projectPath))) return null
-    return toWorktreeInfo(await useWorktreeStore.getState().create(projectId, projectPath))
-  } catch (err) {
-    console.error('Failed to create worktree, falling back to project folder', err)
-    return null
-  }
-}
 
 const TERMINAL_THEME_OPTIONS = [
   { id: '', label: 'Auto' },
@@ -638,10 +627,6 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
           tab={closingWorktreeTab}
           worktree={closingWorktreeTab.worktree}
           onCancel={() => setClosingWorktreeTab(null)}
-          onCloseTab={() => {
-            teardownTab(closingWorktreeTab.id)
-            setClosingWorktreeTab(null)
-          }}
         />
       )}
     </div>

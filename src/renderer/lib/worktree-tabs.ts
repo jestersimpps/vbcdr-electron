@@ -2,11 +2,9 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useQueueStore } from '@/stores/queue-store'
 import { sendToTerminalViaKeyboardEvent } from '@/lib/terminal-utils'
-import type { TerminalTab, TrackedWorktree, WorktreeInfo } from '@/models/types'
-
-export function toWorktreeInfo(worktree: TrackedWorktree): WorktreeInfo {
-  return { id: worktree.id, path: worktree.path, branch: worktree.branch, projectPath: worktree.projectPath }
-}
+import { toWorktreeInfo, useWorktreeStore } from '@/stores/worktree-store'
+import { disposeTerminal } from '@/components/terminal/TerminalInstance'
+import type { TerminalTab, TrackedWorktree } from '@/models/types'
 
 export function findLiveWorktreeTab(worktreeId: string): TerminalTab | undefined {
   return useTerminalStore.getState().tabs.find((t) => t.worktree?.id === worktreeId)
@@ -24,4 +22,14 @@ export function openWorktreeTab(worktree: TrackedWorktree, instruction?: string)
   const tabId = store.createTab(worktree.projectId, worktree.path, command, toWorktreeInfo(worktree))
   if (instruction) useQueueStore.getState().addItem(tabId, instruction)
   return tabId
+}
+
+export async function deleteWorktree(worktreeId: string): Promise<string | null> {
+  const liveTab = findLiveWorktreeTab(worktreeId)
+  if (liveTab) {
+    window.api.terminal.kill(liveTab.id)
+    disposeTerminal(liveTab.id)
+    useTerminalStore.getState().closeTab(liveTab.id)
+  }
+  return useWorktreeStore.getState().remove(worktreeId)
 }

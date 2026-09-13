@@ -60,6 +60,13 @@ describe('worktree-service', () => {
     expect(git.renameBranch).not.toHaveBeenCalled()
   })
 
+  it('setWorktreeLabel stores a trimmed label and clears on blank', async () => {
+    const { id } = await mod.createTrackedWorktree('p1', '/p')
+    expect(mod.setWorktreeLabel(id, '  Fix login  ')?.label).toBe('Fix login')
+    expect(mod.setWorktreeLabel(id, '   ')?.label).toBeNull()
+    expect(mod.setWorktreeLabel('nope', 'x')).toBeNull()
+  })
+
   it('refresh records PR state and conflicts', async () => {
     const { id } = await mod.createTrackedWorktree('p1', '/p')
     git.getWorktreeState.mockResolvedValue({ exists: true, hasChanges: true, conflictPaths: ['a.ts'] })
@@ -85,15 +92,9 @@ describe('worktree-service', () => {
     expect(mod.listWorktrees('p1')).toHaveLength(0)
   })
 
-  it('remove deletes the branch only when the PR is merged', async () => {
+  it('remove deletes the folder and branch and untracks the worktree', async () => {
     const a = await mod.createTrackedWorktree('p1', '/p')
-    await mod.removeTrackedWorktree(a.id)
-    expect(git.removeWorktree).toHaveBeenLastCalledWith('/p', '/p/.worktrees/llm/x', 'llm/x', false)
-
-    const b = await mod.createTrackedWorktree('p1', '/p')
-    gh.getPrForBranch.mockResolvedValue({ url: 'https://x/pr/2', state: 'merged' })
-    await mod.refreshWorktree(b.id)
-    await mod.removeTrackedWorktree(b.id)
+    expect(await mod.removeTrackedWorktree(a.id)).toEqual({ ok: true, output: '' })
     expect(git.removeWorktree).toHaveBeenLastCalledWith('/p', '/p/.worktrees/llm/x', 'llm/x', true)
     expect(mod.listWorktrees('p1')).toHaveLength(0)
   })

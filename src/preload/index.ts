@@ -188,6 +188,7 @@ const api = {
     list: (projectId?: string) => ipcRenderer.invoke('worktrees:list', projectId),
     create: (projectId: string, projectPath: string) => ipcRenderer.invoke('worktrees:create', projectId, projectPath),
     renameBranch: (id: string, newBranch: string) => ipcRenderer.invoke('worktrees:rename-branch', id, newBranch),
+    setLabel: (id: string, label: string) => ipcRenderer.invoke('worktrees:set-label', id, label),
     refresh: (id: string) => ipcRenderer.invoke('worktrees:refresh', id),
     refreshProject: (projectId: string) => ipcRenderer.invoke('worktrees:refresh-project', projectId),
     untrack: (id: string) => ipcRenderer.invoke('worktrees:untrack', id),

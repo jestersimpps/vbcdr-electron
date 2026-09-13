@@ -83,6 +83,7 @@ const api = {
       projectPath: '/cwd',
       path: '/cwd/.worktrees/llm/x',
       branch: 'llm/x',
+      label: null,
       createdAt: 0,
       prUrl: null,
       prState: 'none',
@@ -91,6 +92,7 @@ const api = {
       lastCheckedAt: null
     })),
     renameBranch: fn(async () => ({ ok: true, output: '' })),
+    setLabel: fn(async () => null),
     refresh: fn(async () => null),
     refreshProject: fn(async () => []),
     untrack: fn(async () => undefined),
