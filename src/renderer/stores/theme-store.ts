@@ -35,7 +35,7 @@ function parseThemeId(fullId: string): { themeName: string; variant: Variant } |
 }
 
 function migrateTheme(stored: string | null): { themeName: string; variant: Variant } {
-  if (!stored) return { themeName: 'github', variant: 'dark' }
+  if (!stored) return { themeName: 'vbcdr', variant: 'dark' }
 
   const legacy = LEGACY_MAPPING[stored]
   if (legacy) return legacy
@@ -43,7 +43,7 @@ function migrateTheme(stored: string | null): { themeName: string; variant: Vari
   const parsed = parseThemeId(stored)
   if (parsed) return parsed
 
-  return { themeName: 'github', variant: 'dark' }
+  return { themeName: 'vbcdr', variant: 'dark' }
 }
 
 function loadCustomColors(key: string, fallback: CustomThemeColors): CustomThemeColors {

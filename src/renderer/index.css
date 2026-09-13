@@ -36,6 +36,8 @@
 @import "./styles/themes/afternoon-light.css";
 @import "./styles/themes/custom-dark.css";
 @import "./styles/themes/custom-light.css";
+@import "./styles/themes/vbcdr-dark.css";
+@import "./styles/themes/vbcdr-light.css";
 
 body {
   margin: 0;

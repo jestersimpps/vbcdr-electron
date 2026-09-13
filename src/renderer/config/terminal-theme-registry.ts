@@ -2,6 +2,54 @@ import type { ITheme } from '@xterm/xterm'
 import { DEFAULT_CUSTOM_DARK, DEFAULT_CUSTOM_LIGHT } from '@/models/custom-theme'
 
 export const TERMINAL_THEMES: Record<string, ITheme> = {
+  'vbcdr-dark': {
+    background: '#141414',
+    foreground: '#f5f5f5',
+    cursor: '#ffd21e',
+    cursorAccent: '#141414',
+    selectionBackground: '#1ba0e055',
+    black: '#101010',
+    red: '#ff6b5e',
+    green: '#3cb44a',
+    yellow: '#ffd21e',
+    blue: '#1ba0e0',
+    magenta: '#b98cf0',
+    cyan: '#7fd4f5',
+    white: '#f5f5f5',
+    brightBlack: '#5c5c5c',
+    brightRed: '#ff8378',
+    brightGreen: '#5fd06d',
+    brightYellow: '#ffe066',
+    brightBlue: '#3fb6ef',
+    brightMagenta: '#cfa8ff',
+    brightCyan: '#a8e4fa',
+    brightWhite: '#ffffff'
+  },
+
+  'vbcdr-light': {
+    background: '#ffffff',
+    foreground: '#101010',
+    cursor: '#b8241a',
+    cursorAccent: '#ffffff',
+    selectionBackground: '#ffd21e88',
+    black: '#101010',
+    red: '#b8241a',
+    green: '#1f6b26',
+    yellow: '#6b4f00',
+    blue: '#075e87',
+    magenta: '#6b3fa0',
+    cyan: '#0f6b73',
+    white: '#5c5c5c',
+    brightBlack: '#3d3d3d',
+    brightRed: '#8f1b13',
+    brightGreen: '#175420',
+    brightYellow: '#54400a',
+    brightBlue: '#0d7fb8',
+    brightMagenta: '#54308a',
+    brightCyan: '#0b555c',
+    brightWhite: '#101010'
+  },
+
   'github-dark': {
     background: '#0d1117',
     foreground: '#e6edf3',

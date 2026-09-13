@@ -6,6 +6,7 @@ export interface ThemeDefinition {
 }
 
 export const THEME_REGISTRY: ThemeDefinition[] = [
+  { id: 'vbcdr', name: 'vbcdr', category: 'popular', supportsLightMode: true },
   { id: 'github', name: 'GitHub', category: 'popular', supportsLightMode: true },
   { id: 'onedark-pro', name: 'One Dark Pro', category: 'popular', supportsLightMode: true },
   { id: 'dracula', name: 'Dracula', category: 'popular', supportsLightMode: true },

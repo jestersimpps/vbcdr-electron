@@ -33,10 +33,10 @@ describe('theme-store', () => {
   })
 
   describe('initial state from localStorage', () => {
-    it('defaults to github-dark when nothing is stored', async () => {
+    it('defaults to vbcdr-dark when nothing is stored', async () => {
       const { useThemeStore } = await importFresh()
       const s = useThemeStore.getState()
-      expect(s.themeName).toBe('github')
+      expect(s.themeName).toBe('vbcdr')
       expect(s.variant).toBe('dark')
       expect(s.terminalThemeId).toBe('')
     })
@@ -60,10 +60,10 @@ describe('theme-store', () => {
       expect(useThemeStore.getState().variant).toBe('dark')
     })
 
-    it('falls back to github-dark on unrecognised stored values', async () => {
+    it('falls back to vbcdr-dark on unrecognised stored values', async () => {
       localStorage.setItem('theme', 'garbage-value-no-variant')
       const { useThemeStore } = await importFresh()
-      expect(useThemeStore.getState().themeName).toBe('github')
+      expect(useThemeStore.getState().themeName).toBe('vbcdr')
       expect(useThemeStore.getState().variant).toBe('dark')
     })
 
@@ -115,7 +115,7 @@ describe('theme-store', () => {
       const { useThemeStore } = await importFresh()
       useThemeStore.getState().setVariant('light')
       expect(useThemeStore.getState().variant).toBe('light')
-      expect(localStorage.getItem('theme')).toBe('github-light')
+      expect(localStorage.getItem('theme')).toBe('vbcdr-light')
     })
 
     it('toggleVariant flips dark<->light when supported', async () => {

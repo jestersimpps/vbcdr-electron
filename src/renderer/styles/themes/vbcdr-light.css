@@ -1,0 +1,125 @@
+:root.vbcdr-light body {
+  background: #ffffff;
+  color: #101010;
+}
+
+:root.vbcdr-light {
+}
+
+:root.vbcdr-light ::-webkit-scrollbar-thumb {
+  background: #ffd21e;
+}
+
+:root.vbcdr-light ::-webkit-scrollbar-thumb:hover {
+  background: #f0b400;
+}
+
+/* Paper ground with a sun wash on the raised surfaces: ink on #fff4c2 is
+   17.19, so the warm chrome stays comfortably above AA. */
+:root.vbcdr-light .bg-zinc-950 { background-color: #ffffff; }
+:root.vbcdr-light .bg-zinc-900\/80 { background-color: rgba(255, 251, 232, 0.94); }
+:root.vbcdr-light .bg-zinc-900\/50 { background-color: rgba(255, 251, 232, 0.65); }
+:root.vbcdr-light .bg-zinc-900\/30 { background-color: rgba(255, 251, 232, 0.45); }
+:root.vbcdr-light .bg-zinc-900 { background-color: #fffbe8; }
+:root.vbcdr-light .bg-zinc-800 { background-color: #fff4c2; }
+:root.vbcdr-light .bg-zinc-800\/70 { background-color: rgba(255, 244, 194, 0.7); }
+:root.vbcdr-light .bg-zinc-800\/50 { background-color: rgba(255, 244, 194, 0.5); }
+:root.vbcdr-light .bg-zinc-800\/30 { background-color: rgba(255, 244, 194, 0.3); }
+:root.vbcdr-light .bg-zinc-700 { background-color: #ffe894; }
+:root.vbcdr-light .bg-zinc-700\/30 { background-color: rgba(255, 232, 148, 0.3); }
+
+:root.vbcdr-light .hover\:bg-zinc-800:hover { background-color: #ffeeb0; }
+:root.vbcdr-light .hover\:bg-zinc-800\/50:hover { background-color: rgba(255, 238, 176, 0.5); }
+:root.vbcdr-light .hover\:bg-zinc-800\/30:hover { background-color: rgba(255, 238, 176, 0.3); }
+:root.vbcdr-light .hover\:bg-zinc-700:hover { background-color: #ffe894; }
+
+/* Every element is inked: borders are real black, as on the site. */
+:root.vbcdr-light .border-zinc-800 { border-color: #101010; }
+:root.vbcdr-light .border-zinc-700 { border-color: #10101033; }
+:root.vbcdr-light .border-zinc-600 { border-color: #10101033; }
+:root.vbcdr-light .border-zinc-600\/40 { border-color: #10101022; }
+
+:root.vbcdr-light .text-zinc-100 { color: #101010; }
+:root.vbcdr-light .text-zinc-200 { color: #101010; }
+:root.vbcdr-light .text-zinc-300 { color: #075e87; }
+:root.vbcdr-light .text-zinc-400 { color: #3d3d3d; }
+:root.vbcdr-light .text-zinc-500 { color: #5c5c5c; }
+:root.vbcdr-light .text-zinc-600 { color: #5c5c5c; }
+
+:root.vbcdr-light .hover\:text-zinc-200:hover { color: #075e87; }
+:root.vbcdr-light .hover\:text-zinc-300:hover { color: #101010; }
+:root.vbcdr-light .hover\:text-zinc-400:hover { color: #101010; }
+
+/* Sun is 1.45 on white, so it is a surface here and never a text color.
+   Anything that must be read uses the deepened hue instead. */
+:root.vbcdr-light .bg-blue-500 { background-color: #1ba0e0; }
+:root.vbcdr-light .bg-blue-600 { background-color: #0d7fb8; }
+:root.vbcdr-light .hover\:bg-blue-500:hover { background-color: #3fb6ef; }
+:root.vbcdr-light .bg-blue-500\/15 { background-color: rgba(27, 160, 224, 0.15); }
+:root.vbcdr-light .bg-emerald-400 { background-color: #3cb44a; }
+:root.vbcdr-light .bg-amber-400 { background-color: #ffd21e; }
+:root.vbcdr-light .bg-amber-600 { background-color: #f0b400; }
+:root.vbcdr-light .bg-amber-500\/15 { background-color: rgba(255, 210, 30, 0.15); }
+:root.vbcdr-light .bg-red-500\/20 { background-color: rgba(227, 59, 46, 0.2); }
+:root.vbcdr-light .bg-red-600 { background-color: #b8241a; }
+:root.vbcdr-light .bg-green-400 { background-color: #3cb44a; }
+:root.vbcdr-light .bg-green-400\/15 { background-color: rgba(60, 180, 74, 0.15); }
+:root.vbcdr-light .bg-green-600 { background-color: #2e8b39; }
+
+:root.vbcdr-light .text-blue-400 { color: #075e87; }
+:root.vbcdr-light .text-emerald-400 { color: #1f6b26; }
+:root.vbcdr-light .text-amber-300 { color: #6b4f00; }
+:root.vbcdr-light .text-amber-400 { color: #6b4f00; }
+:root.vbcdr-light .text-red-400 { color: #b8241a; }
+:root.vbcdr-light .text-red-500 { color: #b8241a; }
+:root.vbcdr-light .text-green-400 { color: #1f6b26; }
+:root.vbcdr-light .text-yellow-400 { color: #6b4f00; }
+:root.vbcdr-light .fill-yellow-400 { fill: #6b4f00; }
+:root.vbcdr-light .hover\:text-red-400:hover { color: #8f1b13; }
+
+:root.vbcdr-light .focus\:ring-zinc-600:focus { --tw-ring-color: #101010; }
+
+/* --- semantic tokens (derived from this theme's own values) --- */
+:root.vbcdr-light {
+  --vb-bg-primary: #ffffff;
+  --vb-bg-primary-rgb: 255, 255, 255;
+  --vb-bg-secondary: #fffbe8;
+  --vb-bg-secondary-rgb: 255, 251, 232;
+  --vb-bg-elevated: #fff4c2;
+  --vb-bg-elevated-rgb: 255, 244, 194;
+  --vb-bg-subtle: #ffe894;
+  --vb-bg-subtle-rgb: 255, 232, 148;
+  --vb-text-1: #101010;
+  --vb-text-1-rgb: 16, 16, 16;
+  --vb-text-2: #3d3d3d;
+  --vb-text-2-rgb: 61, 61, 61;
+  --vb-text-3: #5c5c5c;
+  --vb-text-3-rgb: 92, 92, 92;
+  --vb-border-1: #101010;
+  --vb-border-2: #10101033;
+}
+
+/* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
+:root.vbcdr-light .bg-zinc-600 { background-color: var(--vb-bg-subtle); }
+:root.vbcdr-light .bg-zinc-700\/60 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.60); }
+:root.vbcdr-light .bg-zinc-700\/80 { background-color: rgba(var(--vb-bg-subtle-rgb), 0.80); }
+:root.vbcdr-light .bg-zinc-800\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.vbcdr-light .bg-zinc-800\/60 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.vbcdr-light .bg-zinc-800\/80 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.80); }
+:root.vbcdr-light .bg-zinc-900\/40 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.vbcdr-light .bg-zinc-900\/60 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.vbcdr-light .bg-zinc-950\/60 { background-color: rgba(var(--vb-bg-primary-rgb), 0.60); }
+:root.vbcdr-light .bg-zinc-950\/95 { background-color: rgba(var(--vb-bg-primary-rgb), 0.95); }
+:root.vbcdr-light .border-zinc-500 { border-color: var(--vb-border-2); }
+:root.vbcdr-light .border-zinc-900 { border-color: var(--vb-border-1); }
+:root.vbcdr-light .hover\:bg-zinc-600:hover { background-color: var(--vb-bg-subtle); }
+:root.vbcdr-light .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.vbcdr-light .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
+:root.vbcdr-light .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
+:root.vbcdr-light .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
+:root.vbcdr-light .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.vbcdr-light .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
+:root.vbcdr-light .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
+:root.vbcdr-light .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
+:root.vbcdr-light .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
+:root.vbcdr-light .border-zinc-400 { border-color: var(--vb-border-2); }
