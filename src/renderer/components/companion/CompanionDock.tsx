@@ -4,7 +4,7 @@ import modelUrl from '@/assets/models/companion.vrm?url'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useVoiceStore, type MicStatus } from '@/services/voice/voice-controller'
 import { createCompanionStage, type CompanionMood, type CompanionStage } from './companion-stage'
-import { GESTURES, type CompanionGesture } from './companion-gestures'
+import { GESTURES, IDLE_GESTURES, type CompanionGesture } from './companion-gestures'
 import { CompanionMarkerScanner } from '@/lib/companion-marker'
 import { speak, stopSpeech, onSpeechLevel } from '@/lib/companion-speech'
 import { CompanionMatcher } from '@/lib/companion-triggers'
@@ -52,6 +52,21 @@ const MOOD_BY_EMOTE: Record<CompanionEmote, CompanionMood> = {
 
 const EMOTE_MOOD_MS = 6000
 
+/**
+ * How long nothing may happen before she fidgets. Read off the matcher's own
+ * quiet clock, so a fidget never lands on top of a line that just fired.
+ */
+const IDLE_AFTER_MS = 5000
+/** Well under the gap, or the tick rounds a 5s fidget up to the next poll. */
+const IDLE_POLL_MS = 1000
+/** Spacing between fidgets, randomised so she is not metronomic about it. */
+const IDLE_GAP_MIN_MS = 5000
+const IDLE_GAP_MAX_MS = 10_000
+
+function nextIdleGap(): number {
+  return IDLE_GAP_MIN_MS + Math.random() * (IDLE_GAP_MAX_MS - IDLE_GAP_MIN_MS)
+}
+
 const MOOD_BY_MIC: Record<MicStatus, CompanionMood> = {
   off: 'idle',
   starting: 'busy',
@@ -69,6 +84,7 @@ export function CompanionDock(): React.ReactElement {
   const bubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pokeRef = useRef<(() => void) | null>(null)
   const micMoodRef = useRef<CompanionMood>('idle')
+  const pausedRef = useRef(false)
   const emoteMoodUntilRef = useRef(0)
   const emoteMoodTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [label, setLabel] = useState<string | null>(null)
@@ -160,7 +176,21 @@ export function CompanionDock(): React.ReactElement {
       say(reaction.line, GESTURE_BY_EMOTE[reaction.emote])
     }
 
+    // Silent on purpose: no bubble, no speech, no mood change. She is just not
+    // a statue between tasks. The matcher's quiet clock starts at -Infinity, so
+    // the mount time floors it and she does not fidget the instant she loads.
+    const mountedAt = Date.now()
+    let idleDue = nextIdleGap()
+    const idleTimer = setInterval(() => {
+      if (pausedRef.current) return
+      const quiet = Math.min(matcher.quietForMs(), Date.now() - mountedAt)
+      if (quiet < IDLE_AFTER_MS || quiet < idleDue) return
+      idleDue = quiet + nextIdleGap()
+      stageRef.current?.playGesture(IDLE_GESTURES[Math.floor(Math.random() * IDLE_GESTURES.length)])
+    }, IDLE_POLL_MS)
+
     return () => {
+      clearInterval(idleTimer)
       unsubMarkers()
       unsubRows()
       stopSpeech()
@@ -202,9 +232,13 @@ export function CompanionDock(): React.ReactElement {
   }, [])
 
   useEffect(() => {
-    const onBlur = (): void => stageRef.current?.setPaused(true)
-    const onFocus = (): void => stageRef.current?.setPaused(false)
-    const onVisibility = (): void => stageRef.current?.setPaused(document.hidden)
+    const setPaused = (next: boolean): void => {
+      pausedRef.current = next
+      stageRef.current?.setPaused(next)
+    }
+    const onBlur = (): void => setPaused(true)
+    const onFocus = (): void => setPaused(false)
+    const onVisibility = (): void => setPaused(document.hidden)
 
     window.addEventListener('blur', onBlur)
     window.addEventListener('focus', onFocus)

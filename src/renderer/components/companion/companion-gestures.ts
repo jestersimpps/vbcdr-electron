@@ -140,6 +140,14 @@ export const GESTURES: Record<CompanionGesture, GestureDef> = {
   }
 }
 
+/**
+ * The gestures that read as unprompted rather than as an answer. Both are
+ * priority 1, so a real reaction interrupts an idle fidget rather than queueing
+ * behind it. The nods and the wince are deliberately absent: agreeing or
+ * flinching at nothing reads as a glitch, not as life.
+ */
+export const IDLE_GESTURES: CompanionGesture[] = ['thinkingAside', 'consider']
+
 export const GESTURE_ORDER: CompanionGesture[] = [
   'acknowledge',
   'perkUp',

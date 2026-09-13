@@ -88,6 +88,15 @@ export class CompanionMatcher {
   }
 
   /**
+   * How long she has been quiet, so an ambient idle gesture can defer to the
+   * same floor that governs spoken lines rather than keeping its own clock and
+   * fidgeting over the top of a reaction that just landed.
+   */
+  quietForMs(): number {
+    return this.now() - Math.max(this.lastAnyFiredAt, this.suppressedUntil - MARKER_SUPPRESSION_MS)
+  }
+
+  /**
    * A click is the user asking for a reaction, so it ignores the cooldowns that
    * govern unprompted chatter. It still claims the floor afterwards, to stop a
    * regex line landing on top of the poke.
