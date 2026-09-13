@@ -11,6 +11,7 @@ import {
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GitTree } from '@/components/git/GitTree'
+import { CompanionDock } from '@/components/companion/CompanionDock'
 import { DiffPanel } from '@/components/git/DiffPanel'
 import { TerminalPanel } from '@/components/terminal/TerminalPanel'
 import { DevTerminalsPanel } from '@/components/terminal/DevTerminalsPanel'
@@ -179,6 +180,7 @@ export function AppLayoutGrid(): React.ReactElement {
   const projectId = activeProjectId ?? '__default__'
   const splitSize = getSplit(projectId)
   const gitCollapsed = useLayoutStore((s) => !!s.gitCollapsedPerProject[projectId])
+  const companionEnabled = useLayoutStore((s) => s.companionEnabled)
   const devTerminalsCollapsed = useLayoutStore((s) => !!s.devTerminalsCollapsedPerProject[projectId])
 
   useEffect(() => {
@@ -609,9 +611,23 @@ export function AppLayoutGrid(): React.ReactElement {
               </Panel>
               <PanelResizeHandle className="w-px bg-zinc-800 hover:bg-zinc-600 transition-colors" />
               <Panel defaultSize={100 - splitSize} minSize={15}>
-                <div className="h-full overflow-hidden">
-                  <GitTree onCollapse={() => toggleGitCollapsed(projectId)} />
-                </div>
+                {companionEnabled ? (
+                  <PanelGroup direction="vertical">
+                    <Panel defaultSize={70} minSize={25}>
+                      <div className="h-full overflow-hidden">
+                        <GitTree onCollapse={() => toggleGitCollapsed(projectId)} />
+                      </div>
+                    </Panel>
+                    <PanelResizeHandle className="h-px bg-zinc-800 transition-colors hover:bg-zinc-600" />
+                    <Panel defaultSize={30} minSize={12}>
+                      <CompanionDock />
+                    </Panel>
+                  </PanelGroup>
+                ) : (
+                  <div className="h-full overflow-hidden">
+                    <GitTree onCollapse={() => toggleGitCollapsed(projectId)} />
+                  </div>
+                )}
               </Panel>
             </PanelGroup>
           )}

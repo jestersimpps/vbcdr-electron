@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
+import { DEFAULT_COMPANION_VOICE } from '@/config/companion-voices'
 import {
   DEFAULT_LLM_PROVIDER_ID,
   isLlmProviderId,
@@ -36,6 +37,14 @@ interface LayoutState {
   voiceAgentCustomCommand: string
   voiceVadSilenceMs: number
   voiceConfirmDestructive: boolean
+  companionEnabled: boolean
+  companionPromptPath: string | null
+  companionSpeechEnabled: boolean
+  companionVoiceId: string
+  setCompanionEnabled: (enabled: boolean) => void
+  setCompanionPromptPath: (path: string | null) => void
+  setCompanionSpeechEnabled: (enabled: boolean) => void
+  setCompanionVoiceId: (id: string) => void
   setVoiceEnabled: (enabled: boolean) => void
   setVoiceAgentProviderId: (id: LlmProviderId | null) => void
   setVoiceAgentCustomCommand: (cmd: string) => void
@@ -105,10 +114,22 @@ export const useLayoutStore = create<LayoutState>()(
       closeTabWorkflowPrompt: DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT,
       resetVersion: 0,
       voiceEnabled: false,
+      companionEnabled: false,
+      companionPromptPath: null,
+      companionSpeechEnabled: false,
+      companionVoiceId: DEFAULT_COMPANION_VOICE,
       voiceAgentProviderId: null,
       voiceAgentCustomCommand: '',
       voiceVadSilenceMs: DEFAULT_VAD_SILENCE_MS,
       voiceConfirmDestructive: true,
+
+      setCompanionEnabled: (enabled: boolean) => set({ companionEnabled: enabled }),
+
+      setCompanionPromptPath: (path: string | null) => set({ companionPromptPath: path }),
+
+      setCompanionSpeechEnabled: (enabled: boolean) => set({ companionSpeechEnabled: enabled }),
+
+      setCompanionVoiceId: (id: string) => set({ companionVoiceId: id }),
 
       setVoiceEnabled: (enabled: boolean) => set({ voiceEnabled: enabled }),
 
@@ -192,8 +213,9 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       getLlmStartupCommand: () => {
-        const { llmProviderId, llmCustomCommand } = get()
-        const resolved = resolveStartupCommand(llmProviderId, llmCustomCommand)
+        const { llmProviderId, llmCustomCommand, companionEnabled, companionPromptPath } = get()
+        const promptPath = companionEnabled ? companionPromptPath : null
+        const resolved = resolveStartupCommand(llmProviderId, llmCustomCommand, promptPath)
         return resolved.length > 0 ? resolved : DEFAULT_LLM_STARTUP_COMMAND
       },
 
@@ -246,6 +268,9 @@ export const useLayoutStore = create<LayoutState>()(
         useWorktreesForNewLlmTabs: state.useWorktreesForNewLlmTabs,
         closeTabWorkflowPrompt: state.closeTabWorkflowPrompt,
         voiceEnabled: state.voiceEnabled,
+        companionEnabled: state.companionEnabled,
+        companionSpeechEnabled: state.companionSpeechEnabled,
+        companionVoiceId: state.companionVoiceId,
         voiceAgentProviderId: state.voiceAgentProviderId,
         voiceAgentCustomCommand: state.voiceAgentCustomCommand,
         voiceVadSilenceMs: state.voiceVadSilenceMs,
@@ -270,6 +295,16 @@ export const useLayoutStore = create<LayoutState>()(
               ? incoming.closeTabWorkflowPrompt
               : DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT,
           voiceEnabled: typeof incoming.voiceEnabled === 'boolean' ? incoming.voiceEnabled : false,
+          companionEnabled:
+            typeof incoming.companionEnabled === 'boolean' ? incoming.companionEnabled : false,
+          companionSpeechEnabled:
+            typeof incoming.companionSpeechEnabled === 'boolean'
+              ? incoming.companionSpeechEnabled
+              : false,
+          companionVoiceId:
+            typeof incoming.companionVoiceId === 'string' && incoming.companionVoiceId
+              ? incoming.companionVoiceId
+              : DEFAULT_COMPANION_VOICE,
           voiceAgentProviderId:
             incoming.voiceAgentProviderId === null ||
             (isLlmProviderId(incoming.voiceAgentProviderId) &&

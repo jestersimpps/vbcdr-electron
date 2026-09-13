@@ -20,6 +20,7 @@ export interface LlmProviderDefinition {
   capabilities: LlmProviderCapabilities
   voiceAgent: boolean
   readyPattern?: RegExp
+  systemPromptFlag?: string
 }
 
 const NO_CAPABILITIES: LlmProviderCapabilities = {
@@ -42,6 +43,7 @@ export const LLM_PROVIDERS: Record<LlmProviderId, LlmProviderDefinition> = {
     selectable: true,
     voiceAgent: true,
     readyPattern: /(Welcome to Claude Code|╭|>\s*$)/,
+    systemPromptFlag: '--append-system-prompt',
     capabilities: {
       sessions: true,
       usage: true,
@@ -94,9 +96,16 @@ export function providerDefinition(id: LlmProviderId): LlmProviderDefinition {
   return LLM_PROVIDERS[id] ?? LLM_PROVIDERS[DEFAULT_LLM_PROVIDER_ID]
 }
 
-export function resolveStartupCommand(id: LlmProviderId, customCommand: string): string {
-  if (id === 'custom') return customCommand.trim()
-  return providerDefinition(id).command
+export function resolveStartupCommand(
+  id: LlmProviderId,
+  customCommand: string,
+  companionPromptPath?: string | null
+): string {
+  const base = id === 'custom' ? customCommand.trim() : providerDefinition(id).command
+  if (!base || !companionPromptPath) return base
+  const flag = providerDefinition(id).systemPromptFlag
+  if (!flag) return base
+  return `${base} ${flag} "$(cat ${companionPromptPath})"`
 }
 
 export function providerIdForCommand(command: string): LlmProviderId {

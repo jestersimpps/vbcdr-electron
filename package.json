@@ -99,6 +99,7 @@
     "@electron/rebuild": "^3.7.1",
     "@huggingface/transformers": "^4.2.0",
     "@monaco-editor/react": "^4.7.0",
+    "@pixiv/three-vrm": "^3.5.5",
     "@ricky0123/vad-web": "^0.0.30",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.16.0",
@@ -115,6 +116,7 @@
     "react-dom": "^18.3.1",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^3.8.1",
+    "three": "^0.186.0",
     "uuid": "^11.1.0",
     "xlsx": "^0.18.5",
     "zustand": "^5.0.3"
@@ -126,6 +128,7 @@
     "@types/node": "^22.13.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@types/three": "^0.186.0",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^4.1.5",

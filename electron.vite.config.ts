@@ -86,6 +86,7 @@ export default defineConfig({
     }
   },
   renderer: {
+    assetsInclude: ['**/*.vrm'],
     resolve: {
       alias: {
         '@': resolve('src/renderer')
