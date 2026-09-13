@@ -1,11 +1,20 @@
-import { COMPANION_TRIGGERS, type CompanionEmote, type CompanionTrigger } from '@/config/companion-trigger-registry'
+import {
+  COMPANION_TRIGGERS,
+  type CompanionEmote,
+  type CompanionLine,
+  type CompanionTrigger
+} from '@/config/companion-trigger-registry'
 import { COMPANION_POKES, POKE_RESET_MS } from '@/config/companion-poke-registry'
 import { stripAnsi } from '@/lib/terminal-output-tidy'
 
 export interface CompanionReaction {
   triggerId: string
   emote: CompanionEmote
-  line: string
+  /**
+   * Both phrasings of the chosen line. The caller decides which to speak, since
+   * only it knows whether this project was the last one talking.
+   */
+  line: CompanionLine
   soundId?: string
   /** The run has stopped and needs you, so callers may treat it as urgent. */
   attention?: boolean
@@ -125,11 +134,11 @@ export class CompanionMatcher {
     }
   }
 
-  private nextLine(trigger: CompanionTrigger): string {
+  private nextLine(trigger: CompanionTrigger): CompanionLine {
     return this.nextFrom(trigger.id, trigger.lines)
   }
 
-  private nextFrom(key: string, lines: string[]): string {
+  private nextFrom(key: string, lines: CompanionLine[]): CompanionLine {
     if (lines.length === 1) return lines[0]
 
     const previous = this.lastLineIndex.get(key)

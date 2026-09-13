@@ -10,7 +10,13 @@ import { speak, stopSpeech, onSpeechLevel } from '@/lib/companion-speech'
 import { CompanionMatcher } from '@/lib/companion-triggers'
 import { CompanionLineFeed } from '@/lib/companion-buffer-lines'
 import { onCompanionRows } from '@/lib/companion-buffer-feed'
-import type { CompanionEmote } from '@/config/companion-trigger-registry'
+import {
+  renderLine,
+  ProjectVoice,
+  projectNameForTab,
+  activeProjectName
+} from '@/lib/companion-attribution'
+import type { CompanionEmote, CompanionLine } from '@/config/companion-trigger-registry'
 import { playSound } from '@/lib/sound'
 
 const COMPANION_DEMO = false
@@ -130,6 +136,7 @@ export function CompanionDock(): React.ReactElement {
     const scanner = new CompanionMarkerScanner()
     const matcher = new CompanionMatcher()
     const feed = new CompanionLineFeed()
+    const voice = new ProjectVoice()
 
     const feelEmote = (emote: CompanionEmote): void => {
       stageRef.current?.setMood(MOOD_BY_EMOTE[emote])
@@ -140,23 +147,41 @@ export function CompanionDock(): React.ReactElement {
       }, EMOTE_MOOD_MS)
     }
 
-    const say = (text: string, gesture: CompanionGesture | null, soundId?: string): void => {
+    /**
+     * Two agents run side by side and she speaks for both, so a line has to say
+     * whose work it is. The voice decides when that is worth doing: naming the
+     * project on every utterance turns the name into the loudest part of it.
+     */
+    const say = (
+      phrase: CompanionLine,
+      gesture: CompanionGesture | null,
+      project: string | null,
+      soundId?: string
+    ): void => {
       if (gesture) stageRef.current?.playGesture(gesture)
       if (soundId) playSound(soundId)
-      setBubble(text)
+      const line = renderLine(phrase, voice.nameFor(project))
+      setBubble(line)
       if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current)
       bubbleTimerRef.current = setTimeout(() => setBubble(null), BUBBLE_MS)
       const { companionSpeechEnabled, companionVoiceId } = useLayoutStore.getState()
-      if (companionSpeechEnabled) void speak(text, companionVoiceId)
+      if (companionSpeechEnabled) void speak(line, companionVoiceId)
     }
 
-    const unsubMarkers = window.api.terminal.onData((_tabId: string, data: string) => {
+    const unsubMarkers = window.api.terminal.onData((tabId: string, data: string) => {
       for (const marker of scanner.push(data)) {
         // An authored line always wins, and buys silence from the regex side.
         matcher.suppress()
         if (marker.gesture) stageRef.current?.playGesture(marker.gesture)
         if (!marker.text) continue
-        say(marker.text, marker.gesture)
+        // The agent wrote this one itself, so there is no authored second
+        // phrasing to pick from. Naming the project after it keeps the
+        // attribution without touching the sentence she was given.
+        say(
+          { bare: marker.text, named: `${marker.text}, in {project}` },
+          marker.gesture,
+          projectNameForTab(tabId)
+        )
       }
     })
 
@@ -165,7 +190,7 @@ export function CompanionDock(): React.ReactElement {
         const reaction = matcher.match(line)
         if (!reaction) continue
         feelEmote(reaction.emote)
-        say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], reaction.soundId)
+        say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], projectNameForTab(tabId), reaction.soundId)
         // One line per tick, except an attention line: the prompt usually lands
         // last in the tick, so breaking on the tool chatter above it would drop
         // the one line that actually needed saying.
@@ -176,7 +201,7 @@ export function CompanionDock(): React.ReactElement {
     pokeRef.current = () => {
       const reaction = matcher.poke()
       feelEmote(reaction.emote)
-      say(reaction.line, GESTURE_BY_EMOTE[reaction.emote])
+      say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], activeProjectName())
     }
 
     // Silent on purpose: no bubble, no speech, no mood change. She is just not

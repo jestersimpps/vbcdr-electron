@@ -2,6 +2,7 @@
   "name": "vbcdr",
   "version": "1.1.105",
   "description": "Desktop vibe coding environment for Claude Code developers",
+  "license": "AGPL-3.0-or-later",
   "author": {
     "name": "jo vinkenroye",
     "email": "jov2all@gmail.com"

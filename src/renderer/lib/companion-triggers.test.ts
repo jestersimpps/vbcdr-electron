@@ -139,6 +139,11 @@ describe('attention triggers', () => {
       'asking-user'
     )
   })
+
+  it('stays quiet once the prompt has been answered', () => {
+    const clock = fixedClock()
+    expect(matcherAt(clock.now).match('User answered: yes')).toBeNull()
+  })
 })
 
 describe('marker suppression', () => {
@@ -224,7 +229,7 @@ describe('line variety', () => {
     const clock = fixedClock()
     const reading = COMPANION_TRIGGERS.find((t) => t.id === 'reading-file')!
     const line = matcherAt(clock.now).match('⏺ Read(a.ts)')?.line
-    expect(reading.lines).toContain(line)
+    expect(reading.lines).toContainEqual(line)
   })
 })
 
@@ -236,15 +241,32 @@ describe('registry hygiene', () => {
 
   it('gives every trigger at least three distinct phrases', () => {
     for (const trigger of COMPANION_TRIGGERS) {
-      expect(new Set(trigger.lines).size).toBeGreaterThanOrEqual(3)
+      expect(new Set(trigger.lines.map((l) => l.bare)).size).toBeGreaterThanOrEqual(3)
     }
   })
 
   it('writes every phrase as spaced words, never glued together', () => {
     for (const trigger of COMPANION_TRIGGERS) {
-      for (const line of trigger.lines) {
-        expect(line).toMatch(/\s/)
-        expect(line).not.toMatch(/[a-z][A-Z]/)
+      for (const { bare, named } of trigger.lines) {
+        expect(bare).toMatch(/\s/)
+        expect(bare).not.toMatch(/[a-z][A-Z]/)
+        expect(named).toMatch(/\s/)
+      }
+    }
+  })
+
+  it('gives every named phrase a project slot to fill', () => {
+    for (const trigger of COMPANION_TRIGGERS) {
+      for (const { named } of trigger.lines) {
+        expect(named).toContain('{project}')
+      }
+    }
+  })
+
+  it('leaves the bare phrase free of any slot', () => {
+    for (const trigger of COMPANION_TRIGGERS) {
+      for (const { bare } of trigger.lines) {
+        expect(bare).not.toContain('{project}')
       }
     }
   })
