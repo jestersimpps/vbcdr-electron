@@ -617,7 +617,7 @@ export function GitTree({ projectId, cwd, llmTabProjectId, noRepoContent, onColl
         </div>
       )}
 
-      <div className="flex-1 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-auto">
         <div className="relative" style={{ minHeight: graphRows.length * ROW_HEIGHT }}>
           <div className="absolute left-0 top-0">
             <GraphSvg rows={graphRows} />
