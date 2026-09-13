@@ -11,7 +11,7 @@ export interface UpdateStatus {
   error?: string
 }
 
-const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
+export const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 
 let currentStatus: UpdateStatus = { state: 'idle' }
 let checkTimer: NodeJS.Timeout | null = null

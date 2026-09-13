@@ -160,14 +160,14 @@ describe('auto-updater', () => {
       expect(checkForUpdates).not.toHaveBeenCalled()
     })
 
-    it('keeps the hourly timer alive across an offline stretch', () => {
+    it('keeps the daily timer alive across an offline stretch', () => {
       vi.useFakeTimers()
       online = false
       mod.startUpdateChecks()
-      vi.advanceTimersByTime(2 * 60 * 60 * 1000)
+      vi.advanceTimersByTime(2 * mod.UPDATE_CHECK_INTERVAL_MS)
       expect(checkForUpdates).not.toHaveBeenCalled()
       online = true
-      vi.advanceTimersByTime(60 * 60 * 1000)
+      vi.advanceTimersByTime(mod.UPDATE_CHECK_INTERVAL_MS)
       expect(checkForUpdates).toHaveBeenCalledTimes(1)
       mod.stopUpdateChecks()
       vi.useRealTimers()
@@ -202,13 +202,13 @@ describe('auto-updater', () => {
   })
 
   describe('startUpdateChecks', () => {
-    it('checks immediately and then once per hour', () => {
+    it('checks immediately and then once per day', () => {
       vi.useFakeTimers()
       mod.startUpdateChecks()
       expect(checkForUpdates).toHaveBeenCalledTimes(1)
-      vi.advanceTimersByTime(60 * 60 * 1000)
+      vi.advanceTimersByTime(mod.UPDATE_CHECK_INTERVAL_MS)
       expect(checkForUpdates).toHaveBeenCalledTimes(2)
-      vi.advanceTimersByTime(60 * 60 * 1000)
+      vi.advanceTimersByTime(mod.UPDATE_CHECK_INTERVAL_MS)
       expect(checkForUpdates).toHaveBeenCalledTimes(3)
       mod.stopUpdateChecks()
       vi.useRealTimers()
@@ -219,7 +219,7 @@ describe('auto-updater', () => {
       mod.startUpdateChecks()
       mod.startUpdateChecks()
       expect(checkForUpdates).toHaveBeenCalledTimes(1)
-      vi.advanceTimersByTime(60 * 60 * 1000)
+      vi.advanceTimersByTime(mod.UPDATE_CHECK_INTERVAL_MS)
       expect(checkForUpdates).toHaveBeenCalledTimes(2)
       mod.stopUpdateChecks()
       vi.useRealTimers()
@@ -231,7 +231,7 @@ describe('auto-updater', () => {
       vi.useFakeTimers()
       mod.startUpdateChecks()
       mod.stopUpdateChecks()
-      vi.advanceTimersByTime(3 * 60 * 60 * 1000)
+      vi.advanceTimersByTime(3 * mod.UPDATE_CHECK_INTERVAL_MS)
       expect(checkForUpdates).toHaveBeenCalledTimes(1)
       mod.startUpdateChecks()
       expect(checkForUpdates).toHaveBeenCalledTimes(2)
