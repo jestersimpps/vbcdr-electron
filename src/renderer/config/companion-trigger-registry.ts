@@ -21,6 +21,14 @@ export interface CompanionTrigger {
   soundId?: string
   lines: string[]
   cooldownMs: number
+  /**
+   * The run has stopped and cannot continue without you. These skip the global
+   * floor and marker suppression: play-by-play is optional chatter that can be
+   * dropped, but a line saying "you are being waited on" is the whole point of
+   * her being on screen, and the tool triggers fire often enough that it would
+   * otherwise almost always be swallowed.
+   */
+  attention?: boolean
 }
 
 /**
@@ -151,10 +159,14 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'asking-user',
-    pattern: /\b(?:Which do you want|Tell me which|pick one|your call|say the word)\b|User answered/i,
+    // The permission box is the most common "stopped, needs you" moment, and the
+    // old pattern missed it entirely. Not anchored on ❯: the buffer feed strips
+    // that as gutter padding and drops bare-caret rows as noise.
+    pattern: /\bDo you want to (?:proceed|make this edit|create)\b|\bWould you like me to\b|\b(?:Which do you want|Tell me which|pick one|your call|say the word)\b|User answered/i,
     emote: 'waiting',
     soundId: 'message-pop',
     cooldownMs: 6000,
+    attention: true,
     lines: [
       'need you for this bit',
       'your call, not mine',

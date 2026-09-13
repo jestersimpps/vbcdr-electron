@@ -7,6 +7,8 @@ export interface CompanionReaction {
   emote: CompanionEmote
   line: string
   soundId?: string
+  /** The run has stopped and needs you, so callers may treat it as urgent. */
+  attention?: boolean
 }
 
 export interface CompanionMatcherOptions {
@@ -65,12 +67,17 @@ export class CompanionMatcher {
     const line = stripAnsi(rawLine).trimEnd()
     const at = this.now()
 
-    if (at < this.suppressedUntil) return null
-    if (at - this.lastAnyFiredAt < this.globalCooldownMs) return null
+    // The quiet rules are checked per trigger rather than up front, so a line
+    // that means "you are being waited on" can still get through a floor that
+    // ordinary play-by-play is correctly held behind.
+    const quiet = at >= this.suppressedUntil && at - this.lastAnyFiredAt >= this.globalCooldownMs
 
     for (const trigger of this.triggers) {
       if (!trigger.pattern.test(line)) continue
+      if (!quiet && !trigger.attention) return null
 
+      // Its own cooldown still applies: the prompt box repaints on every buffer
+      // tick, and without this she would announce it on each one.
       const last = this.lastFiredAt.get(trigger.id)
       if (last !== undefined && at - last < trigger.cooldownMs) return null
 
@@ -80,7 +87,8 @@ export class CompanionMatcher {
         triggerId: trigger.id,
         emote: trigger.emote,
         line: this.nextLine(trigger),
-        soundId: trigger.soundId
+        soundId: trigger.soundId,
+        attention: trigger.attention
       }
     }
 

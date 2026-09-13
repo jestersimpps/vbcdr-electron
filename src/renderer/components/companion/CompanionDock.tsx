@@ -166,7 +166,10 @@ export function CompanionDock(): React.ReactElement {
         if (!reaction) continue
         feelEmote(reaction.emote)
         say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], reaction.soundId)
-        break
+        // One line per tick, except an attention line: the prompt usually lands
+        // last in the tick, so breaking on the tool chatter above it would drop
+        // the one line that actually needed saying.
+        if (!reaction.attention) break
       }
     })
 

@@ -94,6 +94,53 @@ describe('global cooldown', () => {
   })
 })
 
+describe('attention triggers', () => {
+  const PROMPT = 'Do you want to proceed?'
+
+  it('speaks through the global floor that holds ordinary chatter back', () => {
+    const clock = fixedClock()
+    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    expect(matcher.match('⏺ Read(a.ts)')).not.toBeNull()
+    clock.advance(500)
+    expect(matcher.match('⏺ Bash(ls)')).toBeNull()
+    expect(matcher.match(PROMPT)?.triggerId).toBe('asking-user')
+  })
+
+  it('speaks through marker suppression', () => {
+    const clock = fixedClock()
+    const matcher = matcherAt(clock.now)
+    matcher.suppress()
+    clock.advance(1000)
+    expect(matcher.match(PROMPT)?.triggerId).toBe('asking-user')
+  })
+
+  it('still respects its own cooldown, so a repainting prompt box fires once', () => {
+    const clock = fixedClock()
+    const matcher = matcherAt(clock.now)
+    expect(matcher.match(PROMPT)).not.toBeNull()
+    clock.advance(1000)
+    expect(matcher.match(PROMPT)).toBeNull()
+  })
+
+  it('flags the reaction so callers can treat it as urgent', () => {
+    const clock = fixedClock()
+    expect(matcherAt(clock.now).match(PROMPT)?.attention).toBe(true)
+  })
+
+  it('leaves ordinary reactions unflagged', () => {
+    const clock = fixedClock()
+    expect(matcherAt(clock.now).match('⏺ Read(a.ts)')?.attention).toBeFalsy()
+  })
+
+  it('catches the permission box wording, not just the old phrasings', () => {
+    const clock = fixedClock()
+    const matcher = matcherAt(clock.now)
+    expect(matcher.match('Do you want to make this edit to CompanionDock.tsx?')?.triggerId).toBe(
+      'asking-user'
+    )
+  })
+})
+
 describe('marker suppression', () => {
   it('stays quiet while an authored line is still landing', () => {
     const clock = fixedClock()
