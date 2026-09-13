@@ -6,10 +6,30 @@ import { useVoiceStore, type MicStatus } from '@/services/voice/voice-controller
 import { createCompanionStage, type CompanionMood, type CompanionStage } from './companion-stage'
 import { GESTURES, type CompanionGesture } from './companion-gestures'
 import { CompanionMarkerScanner } from '@/lib/companion-marker'
-import { speak, stopSpeech } from '@/lib/companion-speech'
+import { speak, stopSpeech, onSpeechLevel } from '@/lib/companion-speech'
+import { CompanionMatcher } from '@/lib/companion-triggers'
+import { CompanionLineFeed } from '@/lib/companion-buffer-lines'
+import { onCompanionRows } from '@/lib/companion-buffer-feed'
+import type { CompanionEmote } from '@/config/companion-trigger-registry'
+import { playSound } from '@/lib/sound'
 
 const COMPANION_DEMO = false
 const BUBBLE_MS = 6000
+
+const GESTURE_BY_EMOTE: Record<CompanionEmote, CompanionGesture> = {
+  thinking: 'consider',
+  reading: 'thinkingAside',
+  writing: 'acknowledge',
+  searching: 'thinkingAside',
+  running: 'acknowledge',
+  happy: 'affirm',
+  proud: 'affirm',
+  confused: 'wince',
+  hurt: 'wince',
+  sheepish: 'wince',
+  waiting: 'perkUp',
+  sleeping: 'consider'
+}
 
 const MOOD_BY_MIC: Record<MicStatus, CompanionMood> = {
   off: 'idle',
@@ -23,10 +43,10 @@ const MOOD_BY_MIC: Record<MicStatus, CompanionMood> = {
 
 export function CompanionDock(): React.ReactElement {
   const micStatus = useVoiceStore((s) => s.micStatus)
-  const setCompanionPromptPath = useLayoutStore((s) => s.setCompanionPromptPath)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stageRef = useRef<CompanionStage | null>(null)
   const bubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pokeRef = useRef<(() => void) | null>(null)
   const [label, setLabel] = useState<string | null>(null)
   const [bubble, setBubble] = useState<string | null>(null)
 
@@ -62,39 +82,80 @@ export function CompanionDock(): React.ReactElement {
   }, [micStatus])
 
   useEffect(() => {
-    let cancelled = false
-    window.api.companion
-      .ensurePrompt()
-      .then((path: string) => {
-        if (!cancelled) setCompanionPromptPath(path)
-      })
-      .catch(() => {
-        if (!cancelled) setCompanionPromptPath(null)
-      })
-    return () => {
-      cancelled = true
-      setCompanionPromptPath(null)
-    }
-  }, [setCompanionPromptPath])
-
-  useEffect(() => {
     const scanner = new CompanionMarkerScanner()
-    const unsub = window.api.terminal.onData((_tabId: string, data: string) => {
+    const matcher = new CompanionMatcher()
+    const feed = new CompanionLineFeed()
+
+    const say = (text: string, gesture: CompanionGesture | null, soundId?: string): void => {
+      if (gesture) stageRef.current?.playGesture(gesture)
+      if (soundId) playSound(soundId)
+      setBubble(text)
+      if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current)
+      bubbleTimerRef.current = setTimeout(() => setBubble(null), BUBBLE_MS)
+      const { companionSpeechEnabled, companionVoiceId } = useLayoutStore.getState()
+      if (companionSpeechEnabled) void speak(text, companionVoiceId)
+    }
+
+    const unsubMarkers = window.api.terminal.onData((_tabId: string, data: string) => {
       for (const marker of scanner.push(data)) {
+        // An authored line always wins, and buys silence from the regex side.
+        matcher.suppress()
         if (marker.gesture) stageRef.current?.playGesture(marker.gesture)
         if (!marker.text) continue
-        setBubble(marker.text)
-        if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current)
-        bubbleTimerRef.current = setTimeout(() => setBubble(null), BUBBLE_MS)
-        const { companionSpeechEnabled, companionVoiceId } = useLayoutStore.getState()
-        if (companionSpeechEnabled) void speak(marker.text, companionVoiceId)
+        say(marker.text, marker.gesture)
       }
     })
+
+    const unsubRows = onCompanionRows((tabId: string, rows: string[]) => {
+      for (const line of feed.push(tabId, rows)) {
+        const reaction = matcher.match(line)
+        if (!reaction) continue
+        say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], reaction.soundId)
+        break
+      }
+    })
+
+    pokeRef.current = () => {
+      const reaction = matcher.poke()
+      say(reaction.line, GESTURE_BY_EMOTE[reaction.emote])
+    }
+
     return () => {
-      unsub()
+      unsubMarkers()
+      unsubRows()
       stopSpeech()
       if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current)
       bubbleTimerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    return onSpeechLevel((level: number) => stageRef.current?.setMouthLevel(level))
+  }, [])
+
+  useEffect(() => {
+    // Tracked window-wide rather than over the canvas: the dock is small, and
+    // the point is that she watches what you are doing elsewhere on screen.
+    const onPointerMove = (e: PointerEvent): void => {
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect || rect.width === 0 || rect.height === 0) return
+      const cx = rect.left + rect.width / 2
+      const cy = rect.top + rect.height / 2
+      // Separate spans per axis, measured to the furthest edge from the canvas
+      // centre. A single shared span is dominated by the wider axis, which on a
+      // landscape window flattens vertical gaze to almost nothing — and since
+      // the dock sits low, "almost nothing" is exactly the upward direction.
+      const spanX = Math.max(cx, window.innerWidth - cx, 1)
+      const spanY = Math.max(cy, window.innerHeight - cy, 1)
+      stageRef.current?.setLookAt({ x: (e.clientX - cx) / spanX, y: (e.clientY - cy) / spanY })
+    }
+    const onPointerLeave = (): void => stageRef.current?.setLookAt(null)
+
+    window.addEventListener('pointermove', onPointerMove)
+    document.addEventListener('pointerleave', onPointerLeave)
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove)
+      document.removeEventListener('pointerleave', onPointerLeave)
     }
   }, [])
 
@@ -127,7 +188,11 @@ export function CompanionDock(): React.ReactElement {
         )}
       </div>
       <div className="relative min-h-0 flex-1">
-        <canvas ref={canvasRef} className="h-full w-full" />
+        <canvas
+          ref={canvasRef}
+          onClick={() => pokeRef.current?.()}
+          className="h-full w-full cursor-pointer"
+        />
         {bubble && (
           <div className="pointer-events-none absolute inset-x-1 bottom-1 rounded border border-zinc-700 bg-zinc-900/90 px-2 py-1 text-micro leading-snug text-zinc-200">
             {bubble}

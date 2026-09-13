@@ -17,6 +17,7 @@ import { findFileMatches } from '@/lib/terminal-output-tidy'
 import { extractPromptCommand, isMeaningfulOutput, parseTokenCount, stripAnsi } from '@/lib/terminal-text'
 import { isTranscriptDriven, unmarkTranscriptDriven } from '@/lib/transcript-driven-tabs'
 import { IMAGE_EXTENSIONS, relativeToCwd, resolveAgainstCwd, shellEscape } from '@/lib/terminal-paths'
+import { emitCompanionRows } from '@/lib/companion-buffer-feed'
 import { ImageThumbnail } from '@/components/terminal/ImageThumbnail'
 
 interface TerminalInstanceProps {
@@ -284,6 +285,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
             }
             if (extracted.length > 0) {
               useTerminalStore.getState().setOutput(projectId, extracted)
+              emitCompanionRows(tabId, extracted)
             }
             const providerId = useLayoutStore.getState().llmProviderId
             const usageSupported = capabilitiesFor(providerId).usage

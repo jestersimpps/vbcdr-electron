@@ -9,9 +9,16 @@ import {
 } from './companion-gestures'
 
 const SMOOTHING = 10
-const HEAD_CLEARANCE = 0.06
-const CHEST_DROP = 0.1
-const FRAMED_WIDTH = 0.3
+const HEAD_CLEARANCE = 0.04
+/**
+ * Framed crown-to-shoulders rather than crown-to-chest: the face is unlit, so
+ * its mouth and nose are baked texture detail that only reads when the head
+ * covers enough pixels. FRAMED_WIDTH has to come down with it — the camera
+ * takes whichever of the two constraints pulls it further back, so leaving the
+ * width wide would quietly undo the crop.
+ */
+const SHOULDER_DROP = 0.04
+const FRAMED_WIDTH = 0.22
 const BLINK_INTERVAL_MIN = 2.2
 const BLINK_INTERVAL_MAX = 6.5
 const BLINK_DURATION = 0.12
@@ -65,8 +72,34 @@ export interface CompanionStage {
   playGesture(gesture: CompanionGesture): void
   setDemoLoop(enabled: boolean): void
   onGestureChange(cb: (gesture: CompanionGesture | null) => void): void
+  /**
+   * Where to look, as offsets from straight ahead in the range -1..1
+   * (x right, y down). Pass null to go back to the idle sway.
+   */
+  setLookAt(target: { x: number; y: number } | null): void
+  /** How far the mouth is open, 0..1, driven by the speech waveform. */
+  setMouthLevel(level: number): void
   dispose(): void
 }
+
+/** Vowel shapes the mouth cycles through, so talking is not one held sound. */
+const VISEMES = ['a', 'i', 'u', 'e', 'o'] as const
+const MOUTH_SMOOTHING = 22
+/** Below this the mouth is treated as shut, so silence does not leave it ajar. */
+const MOUTH_FLOOR = 0.06
+
+/**
+ * Kept under the gesture ranges so following never reads as a gesture, but the
+ * pitch is asymmetric: looking up needs noticeably more travel than looking
+ * down before it reads as deliberate rather than as the idle sway.
+ */
+const LOOK_EYE_YAW = 18 * (Math.PI / 180)
+const LOOK_EYE_PITCH_DOWN = 12 * (Math.PI / 180)
+const LOOK_EYE_PITCH_UP = 20 * (Math.PI / 180)
+const LOOK_HEAD_YAW = 9 * (Math.PI / 180)
+const LOOK_HEAD_PITCH_DOWN = 7 * (Math.PI / 180)
+const LOOK_HEAD_PITCH_UP = 13 * (Math.PI / 180)
+const LOOK_SMOOTHING = 7
 
 function nextBlinkDelay(): number {
   return BLINK_INTERVAL_MIN + Math.random() * (BLINK_INTERVAL_MAX - BLINK_INTERVAL_MIN)
@@ -120,15 +153,15 @@ export async function createCompanionStage(
   const headWorld = new THREE.Vector3(0, 1.35, 0)
   if (head) head.getWorldPosition(headWorld)
 
-  const chestNode = bone('upperChest') ?? bone('chest') ?? bone('spine')
-  const chestWorld = new THREE.Vector3(0, 1.15, 0)
-  if (chestNode) chestNode.getWorldPosition(chestWorld)
+  const shoulderNode = leftShoulder ?? rightShoulder ?? bone('upperChest') ?? bone('chest')
+  const shoulderWorld = new THREE.Vector3(0, 1.3, 0)
+  if (shoulderNode) shoulderNode.getWorldPosition(shoulderWorld)
 
   const bounds = new THREE.Box3().setFromObject(vrm.scene)
   const crownY = Number.isFinite(bounds.max.y) ? bounds.max.y : headWorld.y + 0.18
 
   const framedTop = crownY + HEAD_CLEARANCE
-  const framedBottom = chestWorld.y - CHEST_DROP
+  const framedBottom = shoulderWorld.y - SHOULDER_DROP
   const focusY = (framedTop + framedBottom) / 2
   const framedHeight = framedTop - framedBottom
 
@@ -140,6 +173,12 @@ export async function createCompanionStage(
 
   let mood: CompanionMood = 'idle'
   let paused = false
+  let lookTarget: { x: number; y: number } | null = null
+  const look = { x: 0, y: 0, weight: 0 }
+  let mouthTarget = 0
+  let mouth = 0
+  let viseme: (typeof VISEMES)[number] = 'a'
+  let mouthWasOpen = false
   const current = { joy: 0, sorrow: 0, fun: 0, angry: 0 }
   let blinkCountdown = nextBlinkDelay()
   let blinkElapsed = -1
@@ -235,23 +274,53 @@ export async function createCompanionStage(
       }
       const lids = THREE.MathUtils.clamp(Math.max(blink, ch.blink) - ch.eyeWide, 0, 1)
       expressions.setValue('blink', lids)
+
+      // Mouth follows the waveform faster than the mood expressions settle, or
+      // it lags behind the syllables and reads as dubbing.
+      const mouthAlpha = 1 - Math.exp(-MOUTH_SMOOTHING * delta)
+      mouth += (mouthTarget - mouth) * mouthAlpha
+      const open = mouth > MOUTH_FLOOR
+      // A new vowel per mouth-opening, not per frame: picking every frame is a
+      // flutter, holding one for a whole line is a drone.
+      if (open && !mouthWasOpen) viseme = VISEMES[Math.floor(Math.random() * VISEMES.length)]
+      mouthWasOpen = open
+      for (const shape of VISEMES) {
+        expressions.setValue(shape, shape === viseme && open ? THREE.MathUtils.clamp(mouth, 0, 1) : 0)
+      }
     }
+
+    // A gesture owns the head and eyes while it plays, so following fades out
+    // for its duration and picks the cursor back up once it ends.
+    const lookAlpha = 1 - Math.exp(-LOOK_SMOOTHING * delta)
+    const wantWeight = active || !lookTarget ? 0 : 1
+    look.weight += (wantWeight - look.weight) * lookAlpha
+    look.x += ((lookTarget?.x ?? 0) - look.x) * lookAlpha
+    look.y += ((lookTarget?.y ?? 0) - look.y) * lookAlpha
+    const lookX = look.x * look.weight
+    const lookY = look.y * look.weight
+    // Screen y grows downward while head pitch is positive-up, so the pitch
+    // terms carry a negated lookY. Cursor above the canvas => lookY < 0 =>
+    // pitch goes positive => she looks up.
+    const lookPitch = -lookY
+    const headPitchSpan = lookPitch > 0 ? LOOK_HEAD_PITCH_UP : LOOK_HEAD_PITCH_DOWN
+    const eyePitchSpan = lookPitch > 0 ? LOOK_EYE_PITCH_UP : LOOK_EYE_PITCH_DOWN
 
     if (head) {
       const speed = mood === 'thinking' ? 1.4 : 0.6
-      head.rotation.y = Math.sin(t * speed) * 0.05 + ch.headYaw
-      head.rotation.x = Math.sin(t * speed * 1.5) * 0.025 + ch.headPitch
+      const sway = 1 - look.weight
+      head.rotation.y = Math.sin(t * speed) * 0.05 * sway + ch.headYaw + lookX * LOOK_HEAD_YAW
+      head.rotation.x = Math.sin(t * speed * 1.5) * 0.025 * sway + ch.headPitch + lookPitch * headPitchSpan
       head.rotation.z = ch.headRoll
     }
     if (neck) {
-      neck.rotation.x = ch.headPitch * 0.35
-      neck.rotation.y = ch.headYaw * 0.3
+      neck.rotation.x = ch.headPitch * 0.35 + lookPitch * headPitchSpan * 0.35
+      neck.rotation.y = ch.headYaw * 0.3 + lookX * LOOK_HEAD_YAW * 0.3
     }
 
     for (const eye of [leftEye, rightEye]) {
       if (!eye) continue
-      eye.rotation.y = ch.eyeYaw + Math.sin(t * 0.9) * 0.012
-      eye.rotation.x = ch.eyePitch
+      eye.rotation.y = ch.eyeYaw + Math.sin(t * 0.9) * 0.012 + lookX * LOOK_EYE_YAW
+      eye.rotation.x = ch.eyePitch + lookPitch * eyePitchSpan
     }
 
     if (leftShoulder) leftShoulder.rotation.z = shoulderRest.left - ch.shoulder
@@ -299,6 +368,17 @@ export async function createCompanionStage(
     },
     onGestureChange(cb) {
       notify = cb
+    },
+    setMouthLevel(level) {
+      mouthTarget = THREE.MathUtils.clamp(level, 0, 1)
+    },
+    setLookAt(target) {
+      lookTarget = target
+        ? {
+            x: THREE.MathUtils.clamp(target.x, -1, 1),
+            y: THREE.MathUtils.clamp(target.y, -1, 1)
+          }
+        : null
     },
     dispose() {
       cancelAnimationFrame(frame)

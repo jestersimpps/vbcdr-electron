@@ -7,8 +7,9 @@ function fixedClock(start = 0): { now: () => number; advance: (ms: number) => vo
   return { now: () => t, advance: (ms: number) => { t += ms } }
 }
 
+/** Most cases exercise one trigger at a time, so the global floor is off here. */
 function matcherAt(now: () => number, pick = (): number => 0): CompanionMatcher {
-  return new CompanionMatcher(COMPANION_TRIGGERS, { now, pick })
+  return new CompanionMatcher(COMPANION_TRIGGERS, { now, pick, globalCooldownMs: 0 })
 }
 
 describe('CompanionMatcher pattern hits', () => {
@@ -72,6 +73,91 @@ describe('cooldown', () => {
     const matcher = matcherAt(clock.now)
     expect(matcher.match('Exit code 2')).not.toBeNull()
     expect(matcher.match('⏺ Read(a.ts)')?.triggerId).toBe('reading-file')
+  })
+})
+
+describe('global cooldown', () => {
+  it('keeps a burst of different triggers down to one line', () => {
+    const clock = fixedClock()
+    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    expect(matcher.match('Exit code 2')).not.toBeNull()
+    clock.advance(500)
+    expect(matcher.match('⏺ Read(a.ts)')).toBeNull()
+  })
+
+  it('speaks again once the floor has passed', () => {
+    const clock = fixedClock()
+    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    expect(matcher.match('Exit code 2')).not.toBeNull()
+    clock.advance(9001)
+    expect(matcher.match('⏺ Read(a.ts)')?.triggerId).toBe('reading-file')
+  })
+})
+
+describe('marker suppression', () => {
+  it('stays quiet while an authored line is still landing', () => {
+    const clock = fixedClock()
+    const matcher = matcherAt(clock.now)
+    matcher.suppress()
+    clock.advance(1000)
+    expect(matcher.match('Exit code 2')).toBeNull()
+  })
+
+  it('resumes after the suppression window', () => {
+    const clock = fixedClock()
+    const matcher = matcherAt(clock.now)
+    matcher.suppress()
+    clock.advance(8001)
+    expect(matcher.match('Exit code 2')).not.toBeNull()
+  })
+})
+
+describe('poke', () => {
+  it('answers a click even while the global floor is blocking chatter', () => {
+    const clock = fixedClock()
+    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    expect(matcher.match('Exit code 2')).not.toBeNull()
+    clock.advance(100)
+    expect(matcher.poke().line).toBeTruthy()
+  })
+
+  it('escalates through the tiers as the clicking continues', () => {
+    const clock = fixedClock()
+    const matcher = matcherAt(clock.now)
+    const tiers: string[] = []
+    for (let i = 0; i < 3; i++) {
+      tiers.push(matcher.poke().triggerId)
+      clock.advance(300)
+    }
+    expect(tiers).toEqual(['poke:0', 'poke:1', 'poke:2'])
+  })
+
+  it('stays on the last tier rather than running off the end', () => {
+    const clock = fixedClock()
+    const matcher = matcherAt(clock.now)
+    let last = ''
+    for (let i = 0; i < 8; i++) {
+      last = matcher.poke().triggerId
+      clock.advance(300)
+    }
+    expect(last).toBe('poke:2')
+  })
+
+  it('softens again after a quiet gap', () => {
+    const clock = fixedClock()
+    const matcher = matcherAt(clock.now)
+    matcher.poke()
+    matcher.poke()
+    clock.advance(20_001)
+    expect(matcher.poke().triggerId).toBe('poke:0')
+  })
+
+  it('claims the floor so a regex line does not land on top of it', () => {
+    const clock = fixedClock()
+    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    matcher.poke()
+    clock.advance(500)
+    expect(matcher.match('Exit code 2')).toBeNull()
   })
 })
 
