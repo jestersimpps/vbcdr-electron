@@ -6,7 +6,14 @@ import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
 
 const DISPATCH_COOLDOWN_MS = 2000
 
-export function useQueueRunner(): void {
+/**
+ * `enabled` exists because TerminalPanel mounts more than once - the workspace
+ * grid keeps its copy mounted-but-hidden while TerminalsPage renders another -
+ * and every instance would otherwise run a runner against the same active tab.
+ * The cooldown cannot arbitrate between them: lastDispatchAtPerTab is a ref, so
+ * each copy keeps its own. Only the project-owned panel should dispatch.
+ */
+export function useQueueRunner(enabled: boolean = true): void {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const tabs = useTerminalStore((s) => s.tabs)
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
@@ -24,6 +31,7 @@ export function useQueueRunner(): void {
   const [retryTick, setRetryTick] = useState(0)
 
   useEffect(() => {
+    if (!enabled) return
     if (!activeTabId || !activeTab) return
     if (!activeTab.initialCommand) return
     if (!autoRun) return
@@ -50,5 +58,5 @@ export function useQueueRunner(): void {
     return () => {
       cancelled = true
     }
-  }, [activeTabId, activeTab?.initialCommand, status, autoRun, items, retryTick])
+  }, [enabled, activeTabId, activeTab?.initialCommand, status, autoRun, items, retryTick])
 }

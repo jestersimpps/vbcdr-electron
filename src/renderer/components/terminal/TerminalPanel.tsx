@@ -11,6 +11,7 @@ import {
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useTerminalStore, GLOBAL_TERMINAL_OWNER } from '@/stores/terminal-store'
+import { useQueueStore } from '@/stores/queue-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
@@ -223,6 +224,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
       if (tab) {
         disposeTerminal(tabId)
         useTerminalStore.getState().closeTab(tabId)
+        useQueueStore.getState().clearTab(tabId)
       }
       teardownInFlight.current.delete(tabId)
     })
@@ -283,6 +285,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     window.api.terminal.kill(tabId)
     disposeTerminal(tabId)
     closeTab(tabId)
+    useQueueStore.getState().clearTab(tabId)
     teardownInFlight.current.delete(tabId)
   }, [closeTab])
 
@@ -302,13 +305,16 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
   }, [ownerId, setActiveTab])
 
   const tokenCap = useLayoutStore((s) => s.tokenCap)
+  // Only the project-owned panel polls and dispatches. The workspace grid keeps
+  // its TerminalPanel mounted-but-hidden, so a global/override panel on screen at
+  // the same time would double the 2s context poll and race the queue runner.
   useContextUsage(
-    tokenVelocityTabId,
-    activeTab?.projectId ?? null,
-    activeTab?.initialCommand && llmCapabilities.usage ? (activeTab?.cwd ?? null) : null
+    isCustomOwner ? null : tokenVelocityTabId,
+    isCustomOwner ? null : (activeTab?.projectId ?? null),
+    !isCustomOwner && activeTab?.initialCommand && llmCapabilities.usage ? (activeTab?.cwd ?? null) : null
   )
 
-  useQueueRunner()
+  useQueueRunner(!isCustomOwner)
 
   return (
     <div data-terminal-panel style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import type { DevServer } from '../../../main/models/types'
 
 
-const REFRESH_MS = 3000
+const REFRESH_MS = 12_000
 
 function formatUptime(startedAt: number | null): string {
   if (!startedAt) return '—'

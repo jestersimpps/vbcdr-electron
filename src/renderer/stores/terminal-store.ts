@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid'
 import type { TerminalTab, WorktreeInfo } from '@/models/types'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
+import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 
 type TabStatus = 'idle' | 'busy'
 
@@ -231,6 +232,10 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
             delete tabStatuses[id]
             delete tokenUsagePerTab[id]
           }
+          // Dropping the tab from the store is not enough: TerminalInstance keeps
+          // every xterm in a module-scope map that nothing reconciles against this
+          // list, so a pruned tab would leak its terminal, buffer and timers.
+          for (const id of deadIds) disposeTerminal(id)
           return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab }
         })
       }

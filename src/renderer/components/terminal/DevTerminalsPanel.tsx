@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useDevTerminalStore } from '@/stores/dev-terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
+import { useQueueStore } from '@/stores/queue-store'
 import { TerminalInstance, disposeTerminal, focusTerminal } from '@/components/terminal/TerminalInstance'
 import { Plus, X, PanelLeftClose } from 'lucide-react'
 
@@ -43,6 +44,7 @@ export function DevTerminalsPanel({ onCollapse }: DevTerminalsPanelProps = {}): 
       if (tab) {
         disposeTerminal(tabId)
         useDevTerminalStore.getState().closeTab(tabId)
+        useQueueStore.getState().clearTab(tabId)
       }
       teardownInFlight.current.delete(tabId)
     })
@@ -60,6 +62,7 @@ export function DevTerminalsPanel({ onCollapse }: DevTerminalsPanelProps = {}): 
     window.api.terminal.kill(tabId)
     disposeTerminal(tabId)
     closeTab(tabId)
+    useQueueStore.getState().clearTab(tabId)
     teardownInFlight.current.delete(tabId)
   }
 

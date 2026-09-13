@@ -214,6 +214,16 @@ describe('terminal-store', () => {
       expect(tabs[0].initialCommand).toBe('claude')
     })
 
+    it('disposes the terminal of every pruned tab', async () => {
+      const a = useTerminalStore.getState().createTab('p1', '/cwd', 'claude')
+      vi.mocked(window.api.tokenUsage.resetTab).mockClear()
+      vi.mocked(window.api.terminal.has).mockResolvedValueOnce(false)
+      await useTerminalStore.getState().initProject('p1', '/cwd')
+      // disposeTerminal is what releases the xterm instance held in
+      // TerminalInstance's module-scope map; resetTab is its observable tail.
+      expect(window.api.tokenUsage.resetTab).toHaveBeenCalledWith(a)
+    })
+
     it('keeps live tabs when one of multiple is dead, no new creation', async () => {
       const a = useTerminalStore.getState().createTab('p1', '/cwd', 'claude')
       const b = useTerminalStore.getState().createTab('p1', '/cwd', 'claude')

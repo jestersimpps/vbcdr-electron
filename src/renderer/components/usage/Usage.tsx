@@ -4,7 +4,7 @@ import { Activity, BarChart3, Cpu, Gauge, History, Layers, Zap } from 'lucide-re
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useLayoutStore } from '@/stores/layout-store'
-import { useSecondsTick, useTokenVelocity } from '@/hooks/useTokenVelocity'
+import { useTokenVelocity } from '@/hooks/useTokenVelocity'
 import { Sparkline } from '@/components/terminal/Sparkline'
 import { TIME_RANGES, rangeStartMs, type TimeRange } from '@/lib/sessions'
 import { cn } from '@/lib/utils'
@@ -110,8 +110,6 @@ export function Usage(): React.ReactElement {
   const llmLabel = providerDefinition(useLayoutStore((s) => s.llmProviderId)).label
 
   const [range, setRange] = useState<TimeRange['key']>('week')
-
-  useSecondsTick()
 
   const [dailyUsage, setDailyUsage] = useState<DailyUsageRow[]>([])
   useEffect(() => {

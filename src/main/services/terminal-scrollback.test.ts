@@ -113,4 +113,80 @@ describe('terminal-scrollback', () => {
     const mod = await importFresh()
     expect(() => mod.clearScrollback('never-existed')).not.toThrow()
   })
+
+  describe('sweepScrollback', () => {
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+    const writeAged = (tabId: string, ageMs: number): string => {
+      const dir = path.join(scrollbackRoot, 'scrollback')
+      fs.mkdirSync(dir, { recursive: true })
+      const file = path.join(dir, `${tabId}.txt`)
+      fs.writeFileSync(file, 'old output')
+      const when = new Date(Date.now() - ageMs)
+      fs.utimesSync(file, when, when)
+      return file
+    }
+
+    it('removes files older than the stale window', async () => {
+      const mod = await importFresh()
+      const file = writeAged('long-gone', WEEK_MS + 60_000)
+
+      expect(mod.sweepScrollback()).toBe(1)
+      expect(fs.existsSync(file)).toBe(false)
+    })
+
+    it('keeps files inside the stale window', async () => {
+      const mod = await importFresh()
+      const file = writeAged('recent', 60_000)
+
+      expect(mod.sweepScrollback()).toBe(0)
+      expect(fs.existsSync(file)).toBe(true)
+    })
+
+    it('keeps an open tab even when its file is old', async () => {
+      const mod = await importFresh()
+      const file = writeAged('still-open', WEEK_MS + 60_000)
+      // An in-memory buffer means the terminal is live right now.
+      mod.appendScrollback('still-open', 'live output')
+
+      expect(mod.sweepScrollback()).toBe(0)
+      expect(fs.existsSync(file)).toBe(true)
+    })
+
+    it('honours an explicit max age', async () => {
+      const mod = await importFresh()
+      const file = writeAged('hour-old', 60 * 60 * 1000)
+
+      expect(mod.sweepScrollback(30 * 60 * 1000)).toBe(1)
+      expect(fs.existsSync(file)).toBe(false)
+    })
+
+    it('ignores non-scrollback files', async () => {
+      const mod = await importFresh()
+      const dir = path.join(scrollbackRoot, 'scrollback')
+      fs.mkdirSync(dir, { recursive: true })
+      const stray = path.join(dir, 'notes.md')
+      fs.writeFileSync(stray, 'not scrollback')
+      const when = new Date(Date.now() - (WEEK_MS + 60_000))
+      fs.utimesSync(stray, when, when)
+
+      expect(mod.sweepScrollback()).toBe(0)
+      expect(fs.existsSync(stray)).toBe(true)
+    })
+
+    it('returns 0 when the directory does not exist yet', async () => {
+      const mod = await importFresh()
+      expect(mod.sweepScrollback()).toBe(0)
+    })
+
+    it('sweeps several stale tabs in one pass', async () => {
+      const mod = await importFresh()
+      writeAged('a', WEEK_MS + 1000)
+      writeAged('b', WEEK_MS + 2000)
+      const kept = writeAged('c', 1000)
+
+      expect(mod.sweepScrollback()).toBe(2)
+      expect(fs.existsSync(kept)).toBe(true)
+    })
+  })
 })

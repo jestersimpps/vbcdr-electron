@@ -26,6 +26,7 @@ import { stopWatching } from '@main/services/file-watcher'
 import { registerUpdaterHandlers } from '@main/ipc/updater'
 import { initAutoUpdater, startUpdateChecks, stopUpdateChecks, checkForUpdatesInteractive } from '@main/services/auto-updater'
 import { startClipboardWatcher, stopClipboardWatcher } from '@main/services/clipboard-watcher'
+import { startScrollbackSweeps, stopScrollbackSweeps } from '@main/services/scrollback-sweeper'
 import { stopAutoFetch } from '@main/services/git-fetch-service'
 import { stopAllRefsWatchers } from '@main/services/git-refs-watcher'
 
@@ -387,6 +388,7 @@ app.whenReady().then(() => {
   killOrphanedPtys()
   compactActivity()
   compactTokenUsage()
+  startScrollbackSweeps()
 
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
     if (permission === 'media') {
@@ -415,6 +417,7 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   stopUpdateChecks()
+  stopScrollbackSweeps()
   killAll()
   stopWatching()
   stopClipboardWatcher()
@@ -427,6 +430,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  stopScrollbackSweeps()
   killAll()
   stopWatching()
   stopClipboardWatcher()

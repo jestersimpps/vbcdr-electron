@@ -30,6 +30,7 @@ export async function deleteWorktree(worktreeId: string): Promise<string | null>
     window.api.terminal.kill(liveTab.id)
     disposeTerminal(liveTab.id)
     useTerminalStore.getState().closeTab(liveTab.id)
+    useQueueStore.getState().clearTab(liveTab.id)
   }
   return useWorktreeStore.getState().remove(worktreeId)
 }

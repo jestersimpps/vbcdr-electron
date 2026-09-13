@@ -89,6 +89,24 @@ describe('useQueueRunner', () => {
     expect(sendToTerminalMock).not.toHaveBeenCalled()
   })
 
+  it('does nothing when disabled, even with a dispatchable queue', async () => {
+    // Guards the double-mount case: TerminalPanel renders twice (hidden grid copy
+    // plus TerminalsPage), and the per-instance cooldown ref cannot stop both
+    // copies dispatching the same item.
+    setupRunnerState({
+      activeProjectId: 'p1',
+      tabs: [llmTab('t1', 'p1')],
+      activeTabPerProject: { p1: 't1' },
+      itemsPerTab: { t1: [{ id: 'q1', text: 'hello' }] },
+      autoRunPerTab: { t1: true },
+      tabStatuses: { t1: 'idle' }
+    })
+    renderHook(() => useQueueRunner(false))
+    await flushDispatch()
+    expect(sendToTerminalMock).not.toHaveBeenCalled()
+    expect(useQueueStore.getState().itemsPerTab.t1).toHaveLength(1)
+  })
+
   it('does nothing when the active tab is not an LLM tab', async () => {
     setupRunnerState({
       activeProjectId: 'p1',

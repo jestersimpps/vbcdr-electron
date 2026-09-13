@@ -5,6 +5,7 @@ import { app } from 'electron'
 const MAX_BYTES = 128_000
 const TRIM_HIGH_WATER = MAX_BYTES * 2
 const FLUSH_DEBOUNCE_MS = 2000
+const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000
 
 const scrollbackDir = (): string => path.join(app.getPath('userData'), 'scrollback')
 
@@ -75,6 +76,45 @@ export function clearScrollback(tabId: string): void {
   chunkSize.delete(tabId)
   dirty.delete(tabId)
   try { fs.unlinkSync(tabFile(tabId)) } catch { /* already gone */ }
+}
+
+/**
+ * Deletes scrollback files that no longer belong to any tab.
+ *
+ * clearScrollback only runs from killPty, so a terminal that exits on its own -
+ * a shell `exit`, a crash, the restart button - leaves its file behind, and tab
+ * ids are fresh uuids that never recur. Without this the directory grows for the
+ * life of the install.
+ *
+ * Age is the discriminator rather than liveness: a tab whose PTY died is still
+ * in the renderer's persisted tab list and wants its scrollback for session
+ * restore, so "no live PTY" would delete files that are about to be read. An
+ * in-memory buffer means the tab is open right now, which is why those are
+ * skipped regardless of the file's mtime.
+ */
+export function sweepScrollback(maxAgeMs: number = STALE_AFTER_MS): number {
+  let names: string[]
+  try {
+    names = fs.readdirSync(scrollbackDir())
+  } catch {
+    return 0
+  }
+  const cutoff = Date.now() - maxAgeMs
+  let removed = 0
+  for (const name of names) {
+    if (!name.endsWith('.txt')) continue
+    const tabId = name.slice(0, -'.txt'.length)
+    if (chunks.has(tabId)) continue
+    const file = path.join(scrollbackDir(), name)
+    try {
+      if (fs.statSync(file).mtimeMs >= cutoff) continue
+      fs.unlinkSync(file)
+      removed++
+    } catch {
+      /* raced with another delete, or unreadable */
+    }
+  }
+  return removed
 }
 
 function scheduleFlush(): void {
