@@ -18,6 +18,7 @@ import { registerSessionSummaryHandlers } from '@main/ipc/session-summary'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
 import { registerDevServerHandlers } from '@main/ipc/dev-servers'
 import { registerTsProjectHandlers } from '@main/ipc/ts-project'
+import { registerProviderModelsHandlers } from '@main/ipc/provider-models'
 import { registerVoiceAgentHandlers } from '@main/ipc/voice-agent'
 import { stopVoiceAgent } from '@main/services/voice-agent'
 import { isFeatureEnabled } from '@main/models/feature-flags'
@@ -152,6 +153,7 @@ registerSessionSummaryHandlers()
 registerTokenUsageHandlers()
 registerDevServerHandlers()
 registerTsProjectHandlers()
+registerProviderModelsHandlers()
 if (isFeatureEnabled('voiceControl')) registerVoiceAgentHandlers()
 
 function buildMenu(): Electron.MenuItemConstructorOptions[] {

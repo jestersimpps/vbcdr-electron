@@ -332,6 +332,12 @@ const api = {
     }
   },
 
+  providerModels: {
+    list: (force?: boolean) => ipcRenderer.invoke('provider-models:list', force),
+    for: (provider: 'anthropic' | 'openai', force?: boolean) =>
+      ipcRenderer.invoke('provider-models:for', provider, force)
+  },
+
   voiceAgent: {
     start: (cwd: string, command: string, preamble: string, readyPatternSource?: string) =>
       ipcRenderer.invoke(

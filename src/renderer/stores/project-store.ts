@@ -23,6 +23,7 @@ interface ProjectStore {
   terminalsPageActive: boolean
   devServersPageActive: boolean
   voicePageActive: boolean
+  sdlcPageActive: boolean
   loadProjects: () => Promise<void>
   addProject: () => Promise<Project | null>
   removeProject: (id: string) => Promise<void>
@@ -38,6 +39,7 @@ interface ProjectStore {
   showTerminalsPage: () => void
   showDevServersPage: () => void
   showVoicePage: () => void
+  showSdlcPage: () => void
   activeProject: () => Project | undefined
 }
 
@@ -51,7 +53,8 @@ const PAGES_OFF = {
   mcpPageActive: false,
   terminalsPageActive: false,
   devServersPageActive: false,
-  voicePageActive: false
+  voicePageActive: false,
+  sdlcPageActive: false
 } as const
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -67,6 +70,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   terminalsPageActive: false,
   devServersPageActive: false,
   voicePageActive: false,
+  sdlcPageActive: false,
 
   loadProjects: async () => {
     const projects = await window.api.projects.list()
@@ -170,6 +174,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   showVoicePage: () => {
     set({ ...PAGES_OFF, voicePageActive: true })
+  },
+
+  showSdlcPage: () => {
+    set({ ...PAGES_OFF, sdlcPageActive: true })
   },
 
   activeProject: () => {

@@ -37,9 +37,10 @@ import { Settings } from '@/components/settings/Settings'
 import { TerminalsPage } from '@/components/terminal/TerminalsPage'
 import { DevServersPage } from '@/components/dev-servers/DevServersPage'
 import { VoicePage } from '@/components/voice/VoicePage'
+import { SdlcPage } from '@/components/sdlc/SdlcPage'
 import { isFeatureEnabled } from '@/config/feature-flags'
 import { useTutorialStore } from '@/stores/tutorial-store'
-import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Server, Plug, Settings as SettingsIcon, GitBranch, PanelRightOpen, PanelLeftOpen, Mic, HelpCircle } from 'lucide-react'
+import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Server, Plug, Settings as SettingsIcon, GitBranch, PanelRightOpen, PanelLeftOpen, Mic, HelpCircle, Workflow } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/models/types'
 
@@ -137,6 +138,7 @@ export function AppLayoutGrid(): React.ReactElement {
   const terminalsPageActive = useProjectStore((s) => s.terminalsPageActive)
   const devServersPageActive = useProjectStore((s) => s.devServersPageActive)
   const voicePageActive = useProjectStore((s) => s.voicePageActive)
+  const sdlcPageActive = useProjectStore((s) => s.sdlcPageActive)
   const loadProjects = useProjectStore((s) => s.loadProjects)
   const addProject = useProjectStore((s) => s.addProject)
   const removeProject = useProjectStore((s) => s.removeProject)
@@ -153,9 +155,10 @@ export function AppLayoutGrid(): React.ReactElement {
   const showTerminalsPage = useProjectStore((s) => s.showTerminalsPage)
   const showDevServersPage = useProjectStore((s) => s.showDevServersPage)
   const showVoicePage = useProjectStore((s) => s.showVoicePage)
+  const showSdlcPage = useProjectStore((s) => s.showSdlcPage)
   const llmCapabilities = useLlmCapabilities()
   const voiceEnabled = isFeatureEnabled('voiceControl')
-  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || mcpPageActive || terminalsPageActive || devServersPageActive || (voicePageActive && voiceEnabled)
+  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || mcpPageActive || terminalsPageActive || devServersPageActive || sdlcPageActive || (voicePageActive && voiceEnabled)
   const centerTab = useEditorStore(
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'terminals' : 'terminals')
   )
@@ -437,6 +440,19 @@ export function AppLayoutGrid(): React.ReactElement {
             >
               <LayoutDashboard size={18} />
             </button>
+            <button
+              onClick={showSdlcPage}
+              data-tour="nav-sdlc"
+              className={cn(
+                'flex h-10 w-10 items-center justify-center rounded transition-colors',
+                sdlcPageActive
+                  ? 'text-zinc-200 bg-zinc-800'
+                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
+              )}
+              title="Agent SDLC"
+            >
+              <Workflow size={18} />
+            </button>
             {llmCapabilities.configFiles && (
               <button
                 onClick={showClaudePage}
@@ -675,6 +691,11 @@ export function AppLayoutGrid(): React.ReactElement {
         {devServersPageActive && (
           <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <DevServersPage />
+          </div>
+        )}
+        {sdlcPageActive && (
+          <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
+            <SdlcPage />
           </div>
         )}
         {voicePageActive && voiceEnabled && (

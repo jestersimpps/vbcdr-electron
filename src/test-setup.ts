@@ -106,6 +106,13 @@ const api = {
     context: fn(async () => null),
     daily: fn(async () => []),
     events: fn(async () => [])
+  },
+  providerModels: {
+    list: fn(async () => [
+      { provider: 'anthropic', models: [], error: null, source: 'catalogue' },
+      { provider: 'openai', models: [], error: null, source: 'catalogue' }
+    ]),
+    for: fn(async () => ({ provider: 'anthropic', models: [], error: null, source: 'catalogue' }))
   }
 }
 
