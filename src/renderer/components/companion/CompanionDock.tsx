@@ -137,6 +137,13 @@ export function CompanionDock(): React.ReactElement {
     const matcher = new CompanionMatcher()
     const feed = new CompanionLineFeed()
     const voice = new ProjectVoice()
+    // Hard backstop, independent of source: the prompt tells the LLM not to
+    // repeat a marker line, and nextFrom() only dodges an immediate re-pick
+    // for the registry side — neither stops the same exact line from landing
+    // twice via a different path (marker vs. regex match) or a stale pick.
+    // This is keyed on the bare text so it catches every caller of say().
+    const recentLines = new Map<string, number>()
+    const RECENT_LINE_MS = 5 * 60_000
 
     const feelEmote = (emote: CompanionEmote): void => {
       stageRef.current?.setMood(MOOD_BY_EMOTE[emote])
@@ -158,6 +165,13 @@ export function CompanionDock(): React.ReactElement {
       project: string | null,
       soundId?: string
     ): void => {
+      const key = phrase.bare.trim().toLowerCase()
+      const now = Date.now()
+      if (key) {
+        const last = recentLines.get(key)
+        if (last !== undefined && now - last < RECENT_LINE_MS) return
+        recentLines.set(key, now)
+      }
       if (gesture) stageRef.current?.playGesture(gesture)
       if (soundId) playSound(soundId)
       const line = renderLine(phrase, voice.nameFor(project))

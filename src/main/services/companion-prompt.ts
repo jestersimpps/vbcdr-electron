@@ -36,10 +36,11 @@ consider = settling in for something long. thinkingAside = a doubt or a jab.
 acknowledge = taking the instruction on board, possibly grudgingly.
 
 First person, lowercase, under 60 characters, no full stop at the end. Vary it:
-do not open with the same word twice in a row. Stay silent on small talk and
-trivial edits. Silence is better than filler. At most one per response, always
-the very last line. Never put secrets, tokens, file contents or user data inside
-the marker.`
+do not open with the same word twice in a row, and never reuse a line you have
+already spoken earlier in this conversation, even if it still fits — say it
+differently or stay silent. Stay silent on small talk and trivial edits.
+Silence is better than filler. At most one per response, always the very last
+line. Never put secrets, tokens, file contents or user data inside the marker.`
 
 function promptDir(): string {
   return path.join(os.homedir(), '.vbcdr')
