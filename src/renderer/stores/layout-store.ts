@@ -3,6 +3,11 @@ import { persist } from 'zustand/middleware'
 import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
 import { DEFAULT_COMPANION_VOICE } from '@/config/companion-voices'
 import {
+  DEFAULT_CHATTINESS,
+  CHATTINESS_LEVELS,
+  type CompanionChattiness
+} from '@/lib/companion-triggers'
+import {
   DEFAULT_LLM_PROVIDER_ID,
   isLlmProviderId,
   providerIdForCommand,
@@ -41,10 +46,12 @@ interface LayoutState {
   companionPromptPath: string | null
   companionSpeechEnabled: boolean
   companionVoiceId: string
+  companionChattiness: CompanionChattiness
   setCompanionEnabled: (enabled: boolean) => void
   setCompanionPromptPath: (path: string | null) => void
   setCompanionSpeechEnabled: (enabled: boolean) => void
   setCompanionVoiceId: (id: string) => void
+  setCompanionChattiness: (level: CompanionChattiness) => void
   setVoiceEnabled: (enabled: boolean) => void
   setVoiceAgentProviderId: (id: LlmProviderId | null) => void
   setVoiceAgentCustomCommand: (cmd: string) => void
@@ -118,6 +125,7 @@ export const useLayoutStore = create<LayoutState>()(
       companionPromptPath: null,
       companionSpeechEnabled: false,
       companionVoiceId: DEFAULT_COMPANION_VOICE,
+      companionChattiness: DEFAULT_CHATTINESS,
       voiceAgentProviderId: null,
       voiceAgentCustomCommand: '',
       voiceVadSilenceMs: DEFAULT_VAD_SILENCE_MS,
@@ -130,6 +138,8 @@ export const useLayoutStore = create<LayoutState>()(
       setCompanionSpeechEnabled: (enabled: boolean) => set({ companionSpeechEnabled: enabled }),
 
       setCompanionVoiceId: (id: string) => set({ companionVoiceId: id }),
+
+      setCompanionChattiness: (level: CompanionChattiness) => set({ companionChattiness: level }),
 
       setVoiceEnabled: (enabled: boolean) => set({ voiceEnabled: enabled }),
 
@@ -271,6 +281,7 @@ export const useLayoutStore = create<LayoutState>()(
         companionEnabled: state.companionEnabled,
         companionSpeechEnabled: state.companionSpeechEnabled,
         companionVoiceId: state.companionVoiceId,
+        companionChattiness: state.companionChattiness,
         voiceAgentProviderId: state.voiceAgentProviderId,
         voiceAgentCustomCommand: state.voiceAgentCustomCommand,
         voiceVadSilenceMs: state.voiceVadSilenceMs,
@@ -295,6 +306,11 @@ export const useLayoutStore = create<LayoutState>()(
               ? incoming.closeTabWorkflowPrompt
               : DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT,
           voiceEnabled: typeof incoming.voiceEnabled === 'boolean' ? incoming.voiceEnabled : false,
+          companionChattiness: CHATTINESS_LEVELS.includes(
+            incoming.companionChattiness as CompanionChattiness
+          )
+            ? (incoming.companionChattiness as CompanionChattiness)
+            : DEFAULT_CHATTINESS,
           companionEnabled:
             typeof incoming.companionEnabled === 'boolean' ? incoming.companionEnabled : false,
           companionSpeechEnabled:

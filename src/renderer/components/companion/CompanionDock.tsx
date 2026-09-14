@@ -73,6 +73,14 @@ function nextIdleGap(): number {
   return IDLE_GAP_MIN_MS + Math.random() * (IDLE_GAP_MAX_MS - IDLE_GAP_MIN_MS)
 }
 
+/**
+ * How long the agent must produce nothing before she says so out loud. Long
+ * enough that a slow build or a long thinking pause is not mistaken for the run
+ * being over, since saying "done" mid-task is worse than saying nothing.
+ */
+const IDLE_SPEECH_AFTER_MS = 45_000
+const IDLE_SPEECH_POLL_MS = 5000
+
 const MOOD_BY_MIC: Record<MicStatus, CompanionMood> = {
   off: 'idle',
   starting: 'busy',
@@ -144,6 +152,8 @@ export function CompanionDock(): React.ReactElement {
     // This is keyed on the bare text so it catches every caller of say().
     const recentLines = new Map<string, number>()
     const RECENT_LINE_MS = 5 * 60_000
+    /** When the agent last produced anything. 0 until it first does. */
+    let sawOutput = 0
 
     const feelEmote = (emote: CompanionEmote): void => {
       stageRef.current?.setMood(MOOD_BY_EMOTE[emote])
@@ -184,6 +194,7 @@ export function CompanionDock(): React.ReactElement {
 
     const unsubMarkers = window.api.terminal.onData((tabId: string, data: string) => {
       for (const marker of scanner.push(data)) {
+        sawOutput = Date.now()
         // An authored line always wins, and buys silence from the regex side.
         matcher.suppress()
         if (marker.gesture) stageRef.current?.playGesture(marker.gesture)
@@ -203,7 +214,14 @@ export function CompanionDock(): React.ReactElement {
       for (const line of feed.push(tabId, rows)) {
         const reaction = matcher.match(line)
         if (!reaction) continue
+        sawOutput = Date.now()
         feelEmote(reaction.emote)
+        // Below the chattiness floor she reacts without narrating: the gesture
+        // and the mood still land, the bubble and the voice do not.
+        if (reaction.silent) {
+          stageRef.current?.playGesture(GESTURE_BY_EMOTE[reaction.emote])
+          continue
+        }
         say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], projectNameForTab(tabId), reaction.soundId)
         // One line per tick, except an attention line: the prompt usually lands
         // last in the tick, so breaking on the tool chatter above it would drop
@@ -231,8 +249,29 @@ export function CompanionDock(): React.ReactElement {
       stageRef.current?.playGesture(IDLE_GESTURES[Math.floor(Math.random() * IDLE_GESTURES.length)])
     }, IDLE_POLL_MS)
 
+    // The run going quiet is the other thing worth interrupting for, and it is
+    // the absence of output rather than a line of it, so no pattern can catch
+    // it. Measured from the last row the agent produced, not from the last time
+    // she spoke: staying quiet under a low chattiness floor is not the agent
+    // being done. Fires once per lull, since sawOutput only moves on new output.
+    const idleSpeechTimer = setInterval(() => {
+      if (pausedRef.current || sawOutput === 0) return
+      if (Date.now() - sawOutput < IDLE_SPEECH_AFTER_MS) return
+      const reaction = matcher.idleLine()
+      if (!reaction) return
+      feelEmote(reaction.emote)
+      say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], activeProjectName(), reaction.soundId)
+    }, IDLE_SPEECH_POLL_MS)
+
+    const unsubChattiness = useLayoutStore.subscribe((s) =>
+      matcher.setChattiness(s.companionChattiness)
+    )
+    matcher.setChattiness(useLayoutStore.getState().companionChattiness)
+
     return () => {
       clearInterval(idleTimer)
+      clearInterval(idleSpeechTimer)
+      unsubChattiness()
       unsubMarkers()
       unsubRows()
       stopSpeech()

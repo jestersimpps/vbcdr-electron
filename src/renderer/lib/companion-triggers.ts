@@ -2,6 +2,7 @@ import {
   COMPANION_TRIGGERS,
   type CompanionEmote,
   type CompanionLine,
+  type CompanionTier,
   type CompanionTrigger
 } from '@/config/companion-trigger-registry'
 import { COMPANION_POKES, POKE_RESET_MS } from '@/config/companion-poke-registry'
@@ -18,12 +19,36 @@ export interface CompanionReaction {
   soundId?: string
   /** The run has stopped and needs you, so callers may treat it as urgent. */
   attention?: boolean
+  /**
+   * Below the chattiness floor: play the gesture, say nothing. She still reacts
+   * to the work, she just stops commentating on it.
+   */
+  silent?: boolean
 }
 
 export interface CompanionMatcherOptions {
   now?: () => number
   pick?: (count: number) => number
   globalCooldownMs?: number
+  /** Quietest tier she is allowed to speak. Anything below it still gestures. */
+  floor?: CompanionTier
+}
+
+/**
+ * How talkative she is, quietest first. A level admits its own tier and every
+ * tier above it, so `outcome` speaks outcomes and attention but not chatter.
+ */
+export const CHATTINESS_LEVELS = ['attention', 'outcome', 'chatter'] as const
+
+export type CompanionChattiness = (typeof CHATTINESS_LEVELS)[number]
+
+export const DEFAULT_CHATTINESS: CompanionChattiness = 'outcome'
+
+const TIER_RANK: Record<CompanionTier, number> = { attention: 0, outcome: 1, chatter: 2 }
+
+/** Whether a tier is loud enough to be spoken at this level. */
+export function tierSpeaksAt(tier: CompanionTier, level: CompanionChattiness): boolean {
+  return TIER_RANK[tier] <= TIER_RANK[level]
 }
 
 const DEFAULT_PICK = (count: number): number => Math.floor(Math.random() * count)
@@ -53,6 +78,7 @@ export class CompanionMatcher {
   private suppressedUntil = -Infinity
   private pokeTier = -1
   private lastPokedAt = -Infinity
+  private floor: CompanionChattiness
 
   constructor(
     private readonly triggers: CompanionTrigger[] = COMPANION_TRIGGERS,
@@ -61,6 +87,12 @@ export class CompanionMatcher {
     this.now = options.now ?? Date.now
     this.pick = options.pick ?? DEFAULT_PICK
     this.globalCooldownMs = options.globalCooldownMs ?? DEFAULT_GLOBAL_COOLDOWN_MS
+    this.floor = options.floor ?? DEFAULT_CHATTINESS
+  }
+
+  /** Changing the setting takes effect on the next line, without a remount. */
+  setChattiness(level: CompanionChattiness): void {
+    this.floor = level
   }
 
   /**
@@ -83,7 +115,10 @@ export class CompanionMatcher {
 
     for (const trigger of this.triggers) {
       if (!trigger.pattern.test(line)) continue
-      if (!quiet && !trigger.attention) return null
+      // Below the floor she still feels it: the caller gets a silent reaction and
+      // plays the gesture, so she reacts to the work without narrating it.
+      const silent = !tierSpeaksAt(trigger.tier, this.floor)
+      if (!quiet && !trigger.attention && !silent) return null
 
       // Its own cooldown still applies: the prompt box repaints on every buffer
       // tick, and without this she would announce it on each one.
@@ -91,13 +126,16 @@ export class CompanionMatcher {
       if (last !== undefined && at - last < trigger.cooldownMs) return null
 
       this.lastFiredAt.set(trigger.id, at)
-      this.lastAnyFiredAt = at
+      // A silent reaction does not claim the floor: it costs no words, so it must
+      // not buy the quiet that a spoken line earns.
+      if (!silent) this.lastAnyFiredAt = at
       return {
         triggerId: trigger.id,
         emote: trigger.emote,
         line: this.nextLine(trigger),
-        soundId: trigger.soundId,
-        attention: trigger.attention
+        soundId: silent ? undefined : trigger.soundId,
+        attention: trigger.attention,
+        silent
       }
     }
 
@@ -131,6 +169,30 @@ export class CompanionMatcher {
       triggerId: key,
       emote: poke.emote,
       line: this.nextFrom(key, poke.lines)
+    }
+  }
+
+  /**
+   * The line for having gone quiet. Going idle is the absence of output rather
+   * than a line of it, so no pattern can catch it and the caller drives this off
+   * a timer instead. Returns null if the registry has no idle trigger.
+   */
+  idleLine(): CompanionReaction | null {
+    const trigger = this.triggers.find((t) => t.id === 'idle')
+    if (!trigger) return null
+
+    const at = this.now()
+    const last = this.lastFiredAt.get(trigger.id)
+    if (last !== undefined && at - last < trigger.cooldownMs) return null
+
+    this.lastFiredAt.set(trigger.id, at)
+    this.lastAnyFiredAt = at
+    return {
+      triggerId: trigger.id,
+      emote: trigger.emote,
+      line: this.nextLine(trigger),
+      soundId: trigger.soundId,
+      attention: true
     }
   }
 

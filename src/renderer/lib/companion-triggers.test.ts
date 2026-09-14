@@ -7,9 +7,23 @@ function fixedClock(start = 0): { now: () => number; advance: (ms: number) => vo
   return { now: () => t, advance: (ms: number) => { t += ms } }
 }
 
-/** Most cases exercise one trigger at a time, so the global floor is off here. */
+/**
+ * Most cases exercise one trigger at a time, so the global floor is off here.
+ * Chattiness is opened all the way up: these cases are about patterns and
+ * cooldowns, and the tiering rules get their own block below.
+ */
 function matcherAt(now: () => number, pick = (): number => 0): CompanionMatcher {
-  return new CompanionMatcher(COMPANION_TRIGGERS, { now, pick, globalCooldownMs: 0 })
+  return new CompanionMatcher(COMPANION_TRIGGERS, {
+    now,
+    pick,
+    globalCooldownMs: 0,
+    floor: 'chatter'
+  })
+}
+
+/** As above, but with the real global floor in play. */
+function matcherWithFloor(now: () => number): CompanionMatcher {
+  return new CompanionMatcher(COMPANION_TRIGGERS, { now, pick: () => 0, floor: 'chatter' })
 }
 
 describe('CompanionMatcher pattern hits', () => {
@@ -79,7 +93,7 @@ describe('cooldown', () => {
 describe('global cooldown', () => {
   it('keeps a burst of different triggers down to one line', () => {
     const clock = fixedClock()
-    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    const matcher = matcherWithFloor(clock.now)
     expect(matcher.match('Exit code 2')).not.toBeNull()
     clock.advance(500)
     expect(matcher.match('⏺ Read(a.ts)')).toBeNull()
@@ -87,7 +101,7 @@ describe('global cooldown', () => {
 
   it('speaks again once the floor has passed', () => {
     const clock = fixedClock()
-    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    const matcher = matcherWithFloor(clock.now)
     expect(matcher.match('Exit code 2')).not.toBeNull()
     clock.advance(9001)
     expect(matcher.match('⏺ Read(a.ts)')?.triggerId).toBe('reading-file')
@@ -99,7 +113,7 @@ describe('attention triggers', () => {
 
   it('speaks through the global floor that holds ordinary chatter back', () => {
     const clock = fixedClock()
-    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    const matcher = matcherWithFloor(clock.now)
     expect(matcher.match('⏺ Read(a.ts)')).not.toBeNull()
     clock.advance(500)
     expect(matcher.match('⏺ Bash(ls)')).toBeNull()
@@ -167,7 +181,7 @@ describe('marker suppression', () => {
 describe('poke', () => {
   it('answers a click even while the global floor is blocking chatter', () => {
     const clock = fixedClock()
-    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    const matcher = matcherWithFloor(clock.now)
     expect(matcher.match('Exit code 2')).not.toBeNull()
     clock.advance(100)
     expect(matcher.poke().line).toBeTruthy()
@@ -206,7 +220,7 @@ describe('poke', () => {
 
   it('claims the floor so a regex line does not land on top of it', () => {
     const clock = fixedClock()
-    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    const matcher = matcherWithFloor(clock.now)
     matcher.poke()
     clock.advance(500)
     expect(matcher.match('Exit code 2')).toBeNull()
@@ -216,7 +230,7 @@ describe('poke', () => {
 describe('line variety', () => {
   it('never returns the same line twice in a row', () => {
     const clock = fixedClock()
-    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, { now: clock.now, pick: () => 0 })
+    const matcher = matcherWithFloor(clock.now)
     const first = matcher.match('⏺ Read(a.ts)')?.line
     clock.advance(10_000)
     const second = matcher.match('⏺ Read(b.ts)')?.line
@@ -230,6 +244,97 @@ describe('line variety', () => {
     const reading = COMPANION_TRIGGERS.find((t) => t.id === 'reading-file')!
     const line = matcherAt(clock.now).match('⏺ Read(a.ts)')?.line
     expect(reading.lines).toContainEqual(line)
+  })
+})
+
+describe('chattiness', () => {
+  function at(level: 'attention' | 'outcome' | 'chatter', now: () => number): CompanionMatcher {
+    return new CompanionMatcher(COMPANION_TRIGGERS, {
+      now,
+      pick: () => 0,
+      globalCooldownMs: 0,
+      floor: level
+    })
+  }
+
+  it('speaks chatter only at the loudest level', () => {
+    expect(at('chatter', fixedClock().now).match('⏺ Read(a.ts)')?.silent).toBeFalsy()
+    expect(at('outcome', fixedClock().now).match('⏺ Read(a.ts)')?.silent).toBe(true)
+    expect(at('attention', fixedClock().now).match('⏺ Read(a.ts)')?.silent).toBe(true)
+  })
+
+  it('speaks outcomes at the default level but not the quietest', () => {
+    expect(at('outcome', fixedClock().now).match('Exit code 2')?.silent).toBeFalsy()
+    expect(at('attention', fixedClock().now).match('Exit code 2')?.silent).toBe(true)
+  })
+
+  it('speaks attention lines at every level', () => {
+    for (const level of ['attention', 'outcome', 'chatter'] as const) {
+      expect(at(level, fixedClock().now).match('Do you want to proceed?')?.silent).toBeFalsy()
+    }
+  })
+
+  it('still reports the emote when silent, so she can react without speaking', () => {
+    const reaction = at('attention', fixedClock().now).match('⏺ Read(a.ts)')
+    expect(reaction?.triggerId).toBe('reading-file')
+    expect(reaction?.emote).toBe('reading')
+  })
+
+  it('plays no sound for a line it will not speak', () => {
+    expect(at('attention', fixedClock().now).match('Exit code 2')?.soundId).toBeUndefined()
+    expect(at('outcome', fixedClock().now).match('Exit code 2')?.soundId).toBeDefined()
+  })
+
+  it('does not let a silent reaction claim the floor from a spoken one', () => {
+    const clock = fixedClock()
+    const matcher = new CompanionMatcher(COMPANION_TRIGGERS, {
+      now: clock.now,
+      pick: () => 0,
+      floor: 'outcome'
+    })
+    expect(matcher.match('⏺ Read(a.ts)')?.silent).toBe(true)
+    clock.advance(500)
+    expect(matcher.match('Exit code 2')?.silent).toBeFalsy()
+  })
+
+  it('takes a new level without needing a fresh matcher', () => {
+    const clock = fixedClock()
+    const matcher = at('attention', clock.now)
+    expect(matcher.match('Exit code 2')?.silent).toBe(true)
+    matcher.setChattiness('chatter')
+    clock.advance(6001)
+    expect(matcher.match('Exit code 2')?.silent).toBeFalsy()
+  })
+})
+
+describe('idle line', () => {
+  it('is never reachable by matching, since going quiet emits no line', () => {
+    const clock = fixedClock()
+    const matcher = matcherAt(clock.now)
+    for (const line of ['', ' ', 'idle', 'done for now']) {
+      expect(matcher.match(line)?.triggerId).not.toBe('idle')
+    }
+  })
+
+  it('hands back an idle reaction on request', () => {
+    const reaction = matcherAt(fixedClock().now).idleLine()
+    expect(reaction?.triggerId).toBe('idle')
+    expect(reaction?.attention).toBe(true)
+  })
+
+  it('holds its cooldown, so one lull does not repeat', () => {
+    const clock = fixedClock()
+    const matcher = matcherAt(clock.now)
+    expect(matcher.idleLine()).not.toBeNull()
+    clock.advance(1000)
+    expect(matcher.idleLine()).toBeNull()
+    clock.advance(30_001)
+    expect(matcher.idleLine()).not.toBeNull()
+  })
+
+  it('draws from the authored idle phrases', () => {
+    const idle = COMPANION_TRIGGERS.find((t) => t.id === 'idle')!
+    expect(idle.lines).toContainEqual(matcherAt(fixedClock().now).idleLine()?.line)
   })
 })
 

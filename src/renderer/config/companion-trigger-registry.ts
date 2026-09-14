@@ -26,6 +26,16 @@ export interface CompanionLine {
   named: string
 }
 
+/**
+ * How much she is worth interrupting for.
+ *
+ * `attention` is the run having stopped and needing you. `outcome` is something
+ * having concluded, which you would otherwise have to notice yourself.
+ * `chatter` is play-by-play on the agent's own tool calls: the terminal is
+ * already showing you that, so saying it out loud adds nothing.
+ */
+export type CompanionTier = 'attention' | 'outcome' | 'chatter'
+
 export interface CompanionTrigger {
   id: string
   pattern: RegExp
@@ -33,6 +43,7 @@ export interface CompanionTrigger {
   soundId?: string
   lines: CompanionLine[]
   cooldownMs: number
+  tier: CompanionTier
   /**
    * The run has stopped and cannot continue without you. These skip the global
    * floor and marker suppression: play-by-play is optional chatter that can be
@@ -56,6 +67,7 @@ export interface CompanionTrigger {
 export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   {
     id: 'permission-denied',
+    tier: 'outcome',
     pattern: /Permission to use \w+ .*has been denied|Permission for this action was denied|user doesn't want to (?:take|proceed)/i,
     emote: 'hurt',
     soundId: 'interface-back',
@@ -115,6 +127,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'interrupted',
+    tier: 'outcome',
     pattern: /Interrupted by user|Request interrupted|\brejected\b/i,
     emote: 'sheepish',
     soundId: 'interface-back',
@@ -174,6 +187,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'tests-failed',
+    tier: 'outcome',
     pattern: /\b\d+ (?:failed|failing)\b|✗\s+\d+ tests?|\bFAIL\s+\S+|Tests:\s+\d+ failed/,
     emote: 'confused',
     soundId: 'interface-back',
@@ -233,6 +247,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'command-failed',
+    tier: 'outcome',
     pattern: /\bExit code (?!0\b)\d+|^fatal: |^error: |\b[A-Za-z]*Error: |\berror TS\d+|npm ERR!/,
     emote: 'confused',
     soundId: 'interface-back',
@@ -293,6 +308,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'no-matches',
+    tier: 'chatter',
     // "Failed with non-blocking status code" is a PreToolUse hook complaint, not
     // the agent mistyping a glob: it accounted for 130 of the hits on a replay of
     // 285k captured buffer lines, every one of them a false positive.
@@ -353,6 +369,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'tests-passed',
+    tier: 'outcome',
     pattern: /\b\d+ (?:passed|passing)\b|✓\s+\d+ tests?/i,
     emote: 'happy',
     soundId: 'correct-tone',
@@ -411,6 +428,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'typecheck-clean',
+    tier: 'outcome',
     pattern: /Found 0 errors|No errors found|Typecheck (?:clean|passes|is clean)|compiled successfully/i,
     emote: 'proud',
     soundId: 'correct-tone',
@@ -469,6 +487,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'git-commit',
+    tier: 'outcome',
     pattern: /^\[[\w./-]+ [0-9a-f]{7,}\]|\b\d+ files? changed|Committed as\b/,
     emote: 'proud',
     soundId: 'confirmation',
@@ -527,6 +546,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'asking-user',
+    tier: 'attention',
     // The permission box is the most common "stopped, needs you" moment, and the
     // old pattern missed it entirely. Not anchored on ❯: the buffer feed strips
     // that as gutter padding and drops bare-caret rows as noise.
@@ -593,6 +613,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'editing-file',
+    tier: 'chatter',
     pattern: /(?:^|[⏺●•*]\s*)(?:Edit|Write|Update|MultiEdit)\(|\bApplied \d+ edit|\bWrote \d+ lines/,
     emote: 'writing',
     soundId: 'bubble-pop',
@@ -653,6 +674,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'searching',
+    tier: 'chatter',
     pattern: /(?:^|[⏺●•*]\s*)(?:Grep|Glob|Search)\(|^\s*grep -/,
     emote: 'searching',
     cooldownMs: 3000,
@@ -712,6 +734,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'reading-file',
+    tier: 'chatter',
     pattern: /(?:^|[⏺●•*]\s*)Read\(|\bRead \d+ lines\b/,
     emote: 'reading',
     cooldownMs: 2500,
@@ -770,6 +793,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'running-command',
+    tier: 'chatter',
     pattern: /(?:^|[⏺●•*]\s*)Bash\(|^\s*(?:npm|npx|yarn|pnpm) (?:run |exec )?\S+/,
     emote: 'running',
     cooldownMs: 3000,
@@ -829,6 +853,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'long-thinking',
+    tier: 'chatter',
     pattern: /^(?:Let me|I need to|Before (?:firing|writing)|Privately,|What I (?:still )?need)/,
     emote: 'thinking',
     cooldownMs: 4000,
@@ -887,6 +912,7 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'admitting-wrong',
+    tier: 'chatter',
     pattern: /\bI was wrong\b|\bmy (?:mistake|bad)\b|\bI (?:mis)?read (?:the|that) wrong\b|contradicts what I/i,
     emote: 'sheepish',
     soundId: 'interface-hint',
@@ -945,7 +971,12 @@ export const COMPANION_TRIGGERS: CompanionTrigger[] = [
   },
   {
     id: 'idle',
-    pattern: /^$/,
+    tier: 'attention',
+    // Never matches by design. Going quiet is the absence of output, so there is
+    // no line to match on: the feed drops anything under three characters, which
+    // is why the old /^$/ pattern here had never once fired. The lines below are
+    // real and used; CompanionDock reaches them through a timer instead.
+    pattern: /(?!)/,
     emote: 'sleeping',
     soundId: DEFAULT_IDLE_SOUND_ID,
     cooldownMs: 30000,
