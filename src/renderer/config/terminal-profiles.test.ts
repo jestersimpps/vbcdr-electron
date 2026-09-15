@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   DEFAULT_BUILTIN_PROFILE_COLORS,
-  DEFAULT_CUSTOM_PROFILE_COLORS,
   buildTerminalProfiles,
+  createCustomProfile,
   defaultCustomProfiles,
   inferProviderId,
   isValidHexColor,
@@ -45,20 +45,31 @@ describe('sanitizeBuiltinProfileColors', () => {
 })
 
 describe('sanitizeCustomProfiles', () => {
-  it('always returns the three slots in order', () => {
+  it('returns an empty list for missing or invalid data', () => {
     expect(sanitizeCustomProfiles(undefined)).toEqual(defaultCustomProfiles())
-    expect(sanitizeCustomProfiles('garbage').map((p) => p.id)).toEqual(['custom-1', 'custom-2', 'custom-3'])
+    expect(sanitizeCustomProfiles('garbage')).toEqual([])
   })
 
-  it('keeps valid fields, trims, and repairs the rest', () => {
-    const [a, b, c] = sanitizeCustomProfiles([
+  it('keeps valid fields in order, trims, and drops malformed entries', () => {
+    const profiles = sanitizeCustomProfiles([
       { id: 'custom-3', label: '  Gemini ', color: '#abcdef', command: ' gemini --yolo ' },
       { id: 'custom-1', label: '', color: 'bad', command: 42 },
-      { id: 'bogus', label: 'x', color: '#000000', command: 'x' }
+      { id: 'bogus', label: 'x', color: '#000000', command: 'x' },
+      { id: 'custom-3', label: 'Duplicate', color: '#000000', command: 'x' }
     ])
-    expect(a).toEqual({ id: 'custom-1', label: 'Custom 1', color: DEFAULT_CUSTOM_PROFILE_COLORS['custom-1'], command: '' })
-    expect(b).toEqual(defaultCustomProfiles()[1])
-    expect(c).toEqual({ id: 'custom-3', label: 'Gemini', color: '#abcdef', command: 'gemini --yolo' })
+    expect(profiles).toEqual([
+      { id: 'custom-3', label: 'Gemini', color: '#abcdef', command: 'gemini --yolo' },
+      { id: 'custom-1', label: 'Custom 2', color: '#c084fc', command: '' }
+    ])
+  })
+})
+
+describe('createCustomProfile', () => {
+  it('creates the next editable profile with a rotating default color', () => {
+    const first = createCustomProfile([], 'custom-new')
+    const second = createCustomProfile([first], 'custom-next')
+    expect(first).toEqual({ id: 'custom-new', label: 'Custom 1', color: '#60a5fa', command: '' })
+    expect(second).toEqual({ id: 'custom-next', label: 'Custom 2', color: '#c084fc', command: '' })
   })
 })
 
@@ -68,12 +79,15 @@ describe('buildTerminalProfiles', () => {
       { claude: '#111111', codex: '#222222' },
       sanitizeCustomProfiles([{ id: 'custom-2', label: 'Opus', color: '#333333', command: 'claude --model opus' }])
     )
-    expect(profiles.map((p) => p.id)).toEqual(['claude', 'codex', 'custom-1', 'custom-2', 'custom-3'])
+    expect(profiles.map((p) => p.id)).toEqual(['claude', 'codex', 'custom-2'])
     expect(profiles[0]).toMatchObject({ label: 'Claude Code', command: 'claude', color: '#111111', providerId: 'claude', builtin: true })
     expect(profiles[1]).toMatchObject({ label: 'Codex', command: 'codex', color: '#222222', providerId: 'codex', builtin: true })
-    expect(profiles[3]).toMatchObject({ label: 'Opus', command: 'claude --model opus', providerId: 'claude', builtin: false })
-    expect(profiles[2].command).toBe('')
-    expect(profiles[2].providerId).toBe('custom')
+    expect(profiles[2]).toMatchObject({ label: 'Opus', command: 'claude --model opus', providerId: 'claude', builtin: false })
+  })
+
+  it('omits built-in profiles that the user removed', () => {
+    const profiles = buildTerminalProfiles(DEFAULT_BUILTIN_PROFILE_COLORS, [], ['claude'])
+    expect(profiles.map((profile) => profile.id)).toEqual(['codex'])
   })
 
   it('toTabProfileMeta carries only what a tab needs', () => {

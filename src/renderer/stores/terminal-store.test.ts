@@ -20,7 +20,13 @@ const reset = (): void => {
 describe('terminal-store', () => {
   beforeEach(() => {
     reset()
-    useLayoutStore.setState({ llmProviderId: 'claude', llmCustomCommand: '', companionEnabled: false })
+    useLayoutStore.setState({
+      llmProviderId: 'claude',
+      llmCustomCommand: '',
+      hiddenBuiltinProfileIds: [],
+      defaultTerminalProfileId: 'claude',
+      companionEnabled: false
+    })
     vi.mocked(window.api.terminal.has).mockReset().mockResolvedValue(true)
   })
 

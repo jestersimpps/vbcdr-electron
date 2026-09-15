@@ -19,10 +19,14 @@ import {
 import {
   DEFAULT_BUILTIN_PROFILE_COLORS,
   buildTerminalProfiles,
+  createCustomProfile,
   defaultCustomProfiles,
+  inferProviderId,
+  isTerminalProfileId,
   isValidHexColor,
   sanitizeBuiltinProfileColors,
   sanitizeCustomProfiles,
+  sanitizeHiddenBuiltinProfileIds,
   type BuiltinProfileId,
   type CustomProfileId,
   type CustomTerminalProfile,
@@ -42,12 +46,19 @@ interface LayoutState {
   llmProviderId: LlmProviderId
   llmCustomCommand: string
   builtinProfileColors: Record<BuiltinProfileId, string>
+  hiddenBuiltinProfileIds: BuiltinProfileId[]
+  defaultTerminalProfileId: TerminalProfileId | null
   customProfiles: CustomTerminalProfile[]
   globalTerminalCwd: string
   useWorktreesForNewLlmTabs: boolean
   closeTabWorkflowPrompt: string
   resetVersion: number
   setBuiltinProfileColor: (id: BuiltinProfileId, color: string) => void
+  removeBuiltinProfile: (id: BuiltinProfileId) => void
+  restoreBuiltinProfile: (id: BuiltinProfileId) => void
+  setDefaultTerminalProfileId: (id: TerminalProfileId) => void
+  addCustomProfile: () => CustomProfileId
+  removeCustomProfile: (id: CustomProfileId) => void
   updateCustomProfile: (id: CustomProfileId, patch: Partial<Omit<CustomTerminalProfile, 'id'>>) => void
   resetCustomProfile: (id: CustomProfileId) => void
   getTerminalProfiles: () => TerminalProfile[]
@@ -112,6 +123,26 @@ function upgradeLegacyProvider(persisted: unknown): Record<string, unknown> {
   return state
 }
 
+function migrateLayoutState(persisted: unknown, version: number): Record<string, unknown> {
+  const state = upgradeLegacyProvider(persisted)
+  if (version >= 2 || !Array.isArray(state.customProfiles)) return state
+
+  // V1 always persisted three empty placeholder slots. The new profile manager
+  // starts empty, while preserving every slot the user actually customized.
+  const legacyDefaults: Record<string, { label: string; color: string }> = {
+    'custom-1': { label: 'Custom 1', color: '#60a5fa' },
+    'custom-2': { label: 'Custom 2', color: '#c084fc' },
+    'custom-3': { label: 'Custom 3', color: '#f472b6' }
+  }
+  state.customProfiles = state.customProfiles.filter((entry) => {
+    if (typeof entry !== 'object' || entry === null) return true
+    const profile = entry as Record<string, unknown>
+    const fallback = typeof profile.id === 'string' ? legacyDefaults[profile.id] : undefined
+    return !fallback || profile.label !== fallback.label || profile.color !== fallback.color || profile.command !== ''
+  })
+  return state
+}
+
 function clampSplit(size: number): number {
   if (!Number.isFinite(size)) return DEFAULT_SPLIT
   if (size < 20) return 20
@@ -140,6 +171,8 @@ export const useLayoutStore = create<LayoutState>()(
       llmProviderId: DEFAULT_LLM_PROVIDER_ID,
       llmCustomCommand: '',
       builtinProfileColors: { ...DEFAULT_BUILTIN_PROFILE_COLORS },
+      hiddenBuiltinProfileIds: [],
+      defaultTerminalProfileId: 'claude',
       customProfiles: defaultCustomProfiles(),
       globalTerminalCwd: '',
       useWorktreesForNewLlmTabs: false,
@@ -240,7 +273,11 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       setLlmProviderId: (id: LlmProviderId) => {
-        set({ llmProviderId: id })
+        const defaultTerminalProfileId =
+          (id === 'claude' || id === 'codex') && !get().hiddenBuiltinProfileIds.includes(id)
+            ? id
+            : null
+        set({ llmProviderId: id, defaultTerminalProfileId })
       },
 
       setLlmCustomCommand: (cmd: string) => {
@@ -249,6 +286,8 @@ export const useLayoutStore = create<LayoutState>()(
 
       getLlmStartupCommand: () => {
         const { llmProviderId, llmCustomCommand, companionEnabled, companionPromptPath } = get()
+        const profileId = get().getDefaultProfileId()
+        if (profileId) return get().getProfileStartupCommand(profileId)
         const promptPath = companionEnabled ? companionPromptPath : null
         const resolved = resolveStartupCommand(llmProviderId, llmCustomCommand, promptPath)
         return resolved.length > 0 ? resolved : DEFAULT_LLM_STARTUP_COMMAND
@@ -257,6 +296,48 @@ export const useLayoutStore = create<LayoutState>()(
       setBuiltinProfileColor: (id: BuiltinProfileId, color: string) => {
         if (!isValidHexColor(color)) return
         set({ builtinProfileColors: { ...get().builtinProfileColors, [id]: color } })
+      },
+
+      removeBuiltinProfile: (id: BuiltinProfileId) => {
+        set({ hiddenBuiltinProfileIds: sanitizeHiddenBuiltinProfileIds([...get().hiddenBuiltinProfileIds, id]) })
+        if (get().defaultTerminalProfileId === id) {
+          const replacement = get().getTerminalProfiles().find((profile) => profile.command)
+          if (replacement) get().setDefaultTerminalProfileId(replacement.id)
+          else set({ defaultTerminalProfileId: null })
+        }
+      },
+
+      restoreBuiltinProfile: (id: BuiltinProfileId) => {
+        set({ hiddenBuiltinProfileIds: get().hiddenBuiltinProfileIds.filter((profileId) => profileId !== id) })
+      },
+
+      setDefaultTerminalProfileId: (id: TerminalProfileId) => {
+        const profile = get().getTerminalProfiles().find((candidate) => candidate.id === id && candidate.command)
+        if (!profile) return
+        set({
+          defaultTerminalProfileId: profile.id,
+          llmProviderId: profile.providerId,
+          ...(profile.providerId === 'custom' && { llmCustomCommand: profile.command })
+        })
+      },
+
+      addCustomProfile: () => {
+        const profiles = get().customProfiles
+        let id: CustomProfileId
+        do {
+          id = `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+        } while (profiles.some((profile) => profile.id === id))
+        set({ customProfiles: [...profiles, createCustomProfile(profiles, id)] })
+        return id
+      },
+
+      removeCustomProfile: (id: CustomProfileId) => {
+        set({ customProfiles: get().customProfiles.filter((profile) => profile.id !== id) })
+        if (get().defaultTerminalProfileId === id) {
+          const replacement = get().getTerminalProfiles().find((profile) => profile.command)
+          if (replacement) get().setDefaultTerminalProfileId(replacement.id)
+          else set({ defaultTerminalProfileId: null })
+        }
       },
 
       updateCustomProfile: (id: CustomProfileId, patch: Partial<Omit<CustomTerminalProfile, 'id'>>) => {
@@ -269,18 +350,33 @@ export const useLayoutStore = create<LayoutState>()(
             ...(typeof patch.command === 'string' && { command: patch.command.trim() })
           }
         })
-        set({ customProfiles: sanitizeCustomProfiles(next) })
+        const customProfiles = sanitizeCustomProfiles(next)
+        const active = customProfiles.find((profile) => profile.id === get().defaultTerminalProfileId)
+        set({ customProfiles })
+        if (active?.command) {
+          const providerId = inferProviderId(active.command)
+          set({
+            llmProviderId: providerId,
+            ...(providerId === 'custom' && { llmCustomCommand: active.command })
+          })
+        } else if (active) {
+          const replacement = get().getTerminalProfiles().find((profile) => profile.command)
+          if (replacement) get().setDefaultTerminalProfileId(replacement.id)
+          else set({ defaultTerminalProfileId: null })
+        }
       },
 
       resetCustomProfile: (id: CustomProfileId) => {
-        const fallback = defaultCustomProfiles().find((p) => p.id === id)
-        if (!fallback) return
-        set({ customProfiles: get().customProfiles.map((p) => (p.id === id ? fallback : p)) })
+        const profiles = get().customProfiles
+        const index = profiles.findIndex((p) => p.id === id)
+        if (index < 0) return
+        const fallback = createCustomProfile(profiles.slice(0, index), id)
+        get().updateCustomProfile(id, fallback)
       },
 
       getTerminalProfiles: () => {
-        const { builtinProfileColors, customProfiles } = get()
-        return buildTerminalProfiles(builtinProfileColors, customProfiles)
+        const { builtinProfileColors, customProfiles, hiddenBuiltinProfileIds } = get()
+        return buildTerminalProfiles(builtinProfileColors, customProfiles, hiddenBuiltinProfileIds)
       },
 
       getTerminalProfile: (id: TerminalProfileId) => {
@@ -298,9 +394,10 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       getDefaultProfileId: () => {
-        const { llmProviderId } = get()
-        if (llmProviderId === 'claude' || llmProviderId === 'codex') return llmProviderId
-        return null
+        const { defaultTerminalProfileId } = get()
+        return defaultTerminalProfileId && get().getTerminalProfiles().some((profile) => profile.id === defaultTerminalProfileId && profile.command)
+          ? defaultTerminalProfileId
+          : null
       },
 
       setGlobalTerminalCwd: (path: string) => {
@@ -337,8 +434,8 @@ export const useLayoutStore = create<LayoutState>()(
     }),
     {
       name: 'vbcdr-layout',
-      version: 1,
-      migrate: (persisted: unknown) => upgradeLegacyProvider(persisted),
+      version: 2,
+      migrate: (persisted: unknown, version: number) => migrateLayoutState(persisted, version),
       partialize: (state) => ({
         splitsPerProject: state.splitsPerProject,
         gitCollapsedPerProject: state.gitCollapsedPerProject,
@@ -349,6 +446,8 @@ export const useLayoutStore = create<LayoutState>()(
         llmProviderId: state.llmProviderId,
         llmCustomCommand: state.llmCustomCommand,
         builtinProfileColors: state.builtinProfileColors,
+        hiddenBuiltinProfileIds: state.hiddenBuiltinProfileIds,
+        defaultTerminalProfileId: state.defaultTerminalProfileId,
         customProfiles: state.customProfiles,
         globalTerminalCwd: state.globalTerminalCwd,
         useWorktreesForNewLlmTabs: state.useWorktreesForNewLlmTabs,
@@ -365,6 +464,19 @@ export const useLayoutStore = create<LayoutState>()(
       }),
       merge: (persisted, current) => {
         const incoming = upgradeLegacyProvider(persisted) as Partial<LayoutState>
+        const hiddenBuiltinProfileIds = sanitizeHiddenBuiltinProfileIds(incoming.hiddenBuiltinProfileIds)
+        const customProfiles = sanitizeCustomProfiles(incoming.customProfiles)
+        const legacyDefault = incoming.llmProviderId === 'claude' || incoming.llmProviderId === 'codex'
+          ? incoming.llmProviderId
+          : null
+        const requestedDefault = isTerminalProfileId(incoming.defaultTerminalProfileId)
+          ? incoming.defaultTerminalProfileId
+          : legacyDefault
+        const defaultTerminalProfileId = requestedDefault && (
+          (requestedDefault === 'claude' || requestedDefault === 'codex')
+            ? !hiddenBuiltinProfileIds.includes(requestedDefault)
+            : customProfiles.some((profile) => profile.id === requestedDefault && profile.command)
+        ) ? requestedDefault : null
         return {
           ...current,
           ...incoming,
@@ -374,7 +486,9 @@ export const useLayoutStore = create<LayoutState>()(
           llmCustomCommand:
             typeof incoming.llmCustomCommand === 'string' ? incoming.llmCustomCommand : '',
           builtinProfileColors: sanitizeBuiltinProfileColors(incoming.builtinProfileColors),
-          customProfiles: sanitizeCustomProfiles(incoming.customProfiles),
+          hiddenBuiltinProfileIds,
+          defaultTerminalProfileId,
+          customProfiles,
           useWorktreesForNewLlmTabs:
             typeof incoming.useWorktreesForNewLlmTabs === 'boolean'
               ? incoming.useWorktreesForNewLlmTabs

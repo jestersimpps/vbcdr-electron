@@ -15,6 +15,8 @@ const resetStore = (): void => {
     llmProviderId: DEFAULT_LLM_PROVIDER_ID,
     llmCustomCommand: '',
     builtinProfileColors: { ...DEFAULT_BUILTIN_PROFILE_COLORS },
+    hiddenBuiltinProfileIds: [],
+    defaultTerminalProfileId: 'claude',
     customProfiles: defaultCustomProfiles(),
     globalTerminalCwd: '',
     useWorktreesForNewLlmTabs: false,
@@ -226,11 +228,11 @@ describe('layout-store', () => {
   })
 
   describe('terminal profiles', () => {
-    it('starts with the built-in colors and three empty custom slots', () => {
+    it('starts with built-in profiles and no custom profiles', () => {
       const { builtinProfileColors, customProfiles, getTerminalProfiles } = useLayoutStore.getState()
       expect(builtinProfileColors).toEqual(DEFAULT_BUILTIN_PROFILE_COLORS)
       expect(customProfiles).toEqual(defaultCustomProfiles())
-      expect(getTerminalProfiles().map((p) => p.id)).toEqual(['claude', 'codex', 'custom-1', 'custom-2', 'custom-3'])
+      expect(getTerminalProfiles().map((p) => p.id)).toEqual(['claude', 'codex'])
     })
 
     it('setBuiltinProfileColor accepts only valid hex', () => {
@@ -242,37 +244,42 @@ describe('layout-store', () => {
       })
     })
 
-    it('updateCustomProfile patches one slot and keeps the others', () => {
-      useLayoutStore.getState().updateCustomProfile('custom-2', { label: ' Opus ', command: ' claude --model opus ', color: '#abcdef' })
-      useLayoutStore.getState().updateCustomProfile('custom-2', { label: '   ', color: 'bad' })
-      const [one, two, three] = useLayoutStore.getState().customProfiles
-      expect(two).toEqual({ id: 'custom-2', label: 'Opus', color: '#abcdef', command: 'claude --model opus' })
-      expect(one).toEqual(defaultCustomProfiles()[0])
-      expect(three).toEqual(defaultCustomProfiles()[2])
-      expect(useLayoutStore.getState().getTerminalProfile('custom-2').providerId).toBe('claude')
+    it('adds, updates, and removes a custom profile', () => {
+      const id = useLayoutStore.getState().addCustomProfile()
+      useLayoutStore.getState().updateCustomProfile(id, { label: ' Opus ', command: ' claude --model opus ', color: '#abcdef' })
+      useLayoutStore.getState().updateCustomProfile(id, { label: '   ', color: 'bad' })
+      expect(useLayoutStore.getState().customProfiles).toEqual([
+        { id, label: 'Opus', color: '#abcdef', command: 'claude --model opus' }
+      ])
+      expect(useLayoutStore.getState().getTerminalProfile(id).providerId).toBe('claude')
+      useLayoutStore.getState().removeCustomProfile(id)
+      expect(useLayoutStore.getState().customProfiles).toEqual([])
     })
 
-    it('resetCustomProfile restores a single slot', () => {
-      useLayoutStore.getState().updateCustomProfile('custom-1', { command: 'gemini' })
-      useLayoutStore.getState().updateCustomProfile('custom-3', { command: 'aider' })
-      useLayoutStore.getState().resetCustomProfile('custom-1')
-      const [one, , three] = useLayoutStore.getState().customProfiles
-      expect(one).toEqual(defaultCustomProfiles()[0])
-      expect(three.command).toBe('aider')
+    it('resetCustomProfile clears one profile without affecting another', () => {
+      const oneId = useLayoutStore.getState().addCustomProfile()
+      const twoId = useLayoutStore.getState().addCustomProfile()
+      useLayoutStore.getState().updateCustomProfile(oneId, { command: 'gemini' })
+      useLayoutStore.getState().updateCustomProfile(twoId, { command: 'aider' })
+      useLayoutStore.getState().resetCustomProfile(oneId)
+      const [one, two] = useLayoutStore.getState().customProfiles
+      expect(one).toMatchObject({ id: oneId, label: 'Custom 1', color: '#60a5fa', command: '' })
+      expect(two.command).toBe('aider')
     })
 
     it('getProfileStartupCommand keeps custom flags and adds the companion prompt for claude-like commands', () => {
       expect(useLayoutStore.getState().getProfileStartupCommand('claude')).toBe('claude')
       expect(useLayoutStore.getState().getProfileStartupCommand('codex')).toBe('codex')
-      useLayoutStore.getState().updateCustomProfile('custom-1', { command: 'claude --model opus' })
-      useLayoutStore.getState().updateCustomProfile('custom-2', { command: 'gemini' })
-      expect(useLayoutStore.getState().getProfileStartupCommand('custom-1')).toBe('claude --model opus')
-      expect(useLayoutStore.getState().getProfileStartupCommand('custom-3')).toBe('')
+      const claudeId = useLayoutStore.getState().addCustomProfile()
+      const geminiId = useLayoutStore.getState().addCustomProfile()
+      useLayoutStore.getState().updateCustomProfile(claudeId, { command: 'claude --model opus' })
+      useLayoutStore.getState().updateCustomProfile(geminiId, { command: 'gemini' })
+      expect(useLayoutStore.getState().getProfileStartupCommand(claudeId)).toBe('claude --model opus')
       useLayoutStore.setState({ companionEnabled: true, companionPromptPath: '/tmp/prompt.md' })
-      expect(useLayoutStore.getState().getProfileStartupCommand('custom-1')).toBe(
+      expect(useLayoutStore.getState().getProfileStartupCommand(claudeId)).toBe(
         'claude --model opus --append-system-prompt "$(cat /tmp/prompt.md)"'
       )
-      expect(useLayoutStore.getState().getProfileStartupCommand('custom-2')).toBe('gemini')
+      expect(useLayoutStore.getState().getProfileStartupCommand(geminiId)).toBe('gemini')
       expect(useLayoutStore.getState().getProfileStartupCommand('codex')).toBe('codex')
       useLayoutStore.setState({ companionEnabled: false, companionPromptPath: null })
     })
@@ -283,6 +290,36 @@ describe('layout-store', () => {
       expect(useLayoutStore.getState().getDefaultProfileId()).toBe('codex')
       useLayoutStore.getState().setLlmProviderId('custom')
       expect(useLayoutStore.getState().getDefaultProfileId()).toBeNull()
+    })
+
+    it('removes and restores built-in profiles and replaces a removed default', () => {
+      useLayoutStore.getState().removeBuiltinProfile('claude')
+      expect(useLayoutStore.getState().hiddenBuiltinProfileIds).toEqual(['claude'])
+      expect(useLayoutStore.getState().getTerminalProfiles().map((profile) => profile.id)).toEqual(['codex'])
+      expect(useLayoutStore.getState().getDefaultProfileId()).toBe('codex')
+      expect(useLayoutStore.getState().llmProviderId).toBe('codex')
+
+      useLayoutStore.getState().restoreBuiltinProfile('claude')
+      expect(useLayoutStore.getState().getTerminalProfiles().map((profile) => profile.id)).toEqual(['claude', 'codex'])
+      expect(useLayoutStore.getState().getDefaultProfileId()).toBe('codex')
+    })
+
+    it('allows a configured custom profile to become the default', () => {
+      const id = useLayoutStore.getState().addCustomProfile()
+      useLayoutStore.getState().updateCustomProfile(id, { label: 'Opus', command: 'claude --model opus' })
+      useLayoutStore.getState().setDefaultTerminalProfileId(id)
+      expect(useLayoutStore.getState().getDefaultProfileId()).toBe(id)
+      expect(useLayoutStore.getState().getLlmStartupCommand()).toBe('claude --model opus')
+      expect(useLayoutStore.getState().llmProviderId).toBe('claude')
+    })
+
+    it('falls back to another profile when the default custom command is cleared', () => {
+      const id = useLayoutStore.getState().addCustomProfile()
+      useLayoutStore.getState().updateCustomProfile(id, { command: 'gemini' })
+      useLayoutStore.getState().setDefaultTerminalProfileId(id)
+      useLayoutStore.getState().updateCustomProfile(id, { command: '' })
+      expect(useLayoutStore.getState().getDefaultProfileId()).toBe('claude')
+      expect(useLayoutStore.getState().getLlmStartupCommand()).toBe('claude')
     })
 
     it('repairs persisted profile data on load', async () => {
@@ -296,9 +333,28 @@ describe('layout-store', () => {
       const { useLayoutStore: store } = await importFresh()
       expect(store.getState().builtinProfileColors).toEqual({ claude: '#010203', codex: DEFAULT_BUILTIN_PROFILE_COLORS.codex })
       const customs = store.getState().customProfiles
-      expect(customs.map((p) => p.id)).toEqual(['custom-1', 'custom-2', 'custom-3'])
-      expect(customs[2]).toEqual({ id: 'custom-3', label: 'Gemini', color: '#abcdef', command: 'gemini' })
-      expect(customs[0]).toEqual(defaultCustomProfiles()[0])
+      expect(customs).toEqual([{ id: 'custom-3', label: 'Gemini', color: '#abcdef', command: 'gemini' }])
+    })
+
+    it('keeps an explicitly empty profile list after reload', async () => {
+      seedPersisted({ customProfiles: [] }, 2)
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().customProfiles).toEqual([])
+      expect(store.getState().getTerminalProfiles().map((profile) => profile.id)).toEqual(['claude', 'codex'])
+    })
+
+    it('removes untouched V1 placeholder slots while preserving configured profiles', async () => {
+      seedPersisted({
+        customProfiles: [
+          { id: 'custom-1', label: 'Custom 1', color: '#60a5fa', command: '' },
+          { id: 'custom-2', label: 'Opus', color: '#c084fc', command: 'claude --model opus' },
+          { id: 'custom-3', label: 'Custom 3', color: '#f472b6', command: '' }
+        ]
+      }, 1)
+      const { useLayoutStore: store } = await importFresh()
+      expect(store.getState().customProfiles).toEqual([
+        { id: 'custom-2', label: 'Opus', color: '#c084fc', command: 'claude --model opus' }
+      ])
     })
   })
 

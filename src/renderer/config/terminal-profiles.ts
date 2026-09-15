@@ -2,11 +2,11 @@ import { LLM_PROVIDERS, type LlmProviderId } from '@/config/llm-provider-registr
 
 /**
  * A terminal profile is a named, colored "+" button in the terminal tab bar.
- * Two are built in (Claude Code, Codex) and three are user-defined slots with
- * their own label, color and start command. The color follows the tab it opens.
+ * Two are built in (Claude Code, Codex) and users can add their own profiles
+ * with a label, color and start command. The color follows the tab it opens.
  */
 export type BuiltinProfileId = 'claude' | 'codex'
-export type CustomProfileId = 'custom-1' | 'custom-2' | 'custom-3'
+export type CustomProfileId = `custom-${string}`
 export type TerminalProfileId = BuiltinProfileId | CustomProfileId
 
 export interface CustomTerminalProfile {
@@ -35,18 +35,19 @@ export interface TabProfileMeta {
 }
 
 export const BUILTIN_PROFILE_IDS: BuiltinProfileId[] = ['claude', 'codex']
-export const CUSTOM_PROFILE_IDS: CustomProfileId[] = ['custom-1', 'custom-2', 'custom-3']
 
 export const DEFAULT_BUILTIN_PROFILE_COLORS: Record<BuiltinProfileId, string> = {
   claude: '#d97757',
   codex: '#10a37f'
 }
 
-export const DEFAULT_CUSTOM_PROFILE_COLORS: Record<CustomProfileId, string> = {
+export const DEFAULT_CUSTOM_PROFILE_COLORS = {
   'custom-1': '#60a5fa',
   'custom-2': '#c084fc',
   'custom-3': '#f472b6'
-}
+} as const
+
+const CUSTOM_PROFILE_COLOR_SEQUENCE = ['#60a5fa', '#c084fc', '#f472b6', '#facc15', '#22d3ee', '#a3e635']
 
 /** Quick-pick swatches shown in settings next to the free color picker. */
 export const PROFILE_COLOR_PRESETS: string[] = [
@@ -73,7 +74,7 @@ export function isBuiltinProfileId(value: unknown): value is BuiltinProfileId {
 }
 
 export function isCustomProfileId(value: unknown): value is CustomProfileId {
-  return value === 'custom-1' || value === 'custom-2' || value === 'custom-3'
+  return typeof value === 'string' && /^custom-[a-z0-9-]{1,80}$/i.test(value)
 }
 
 export function isTerminalProfileId(value: unknown): value is TerminalProfileId {
@@ -81,12 +82,20 @@ export function isTerminalProfileId(value: unknown): value is TerminalProfileId 
 }
 
 export function defaultCustomProfiles(): CustomTerminalProfile[] {
-  return CUSTOM_PROFILE_IDS.map((id, index) => ({
+  return []
+}
+
+export function createCustomProfile(
+  existing: CustomTerminalProfile[],
+  id: CustomProfileId
+): CustomTerminalProfile {
+  const index = existing.length
+  return {
     id,
     label: `Custom ${index + 1}`,
-    color: DEFAULT_CUSTOM_PROFILE_COLORS[id],
+    color: CUSTOM_PROFILE_COLOR_SEQUENCE[index % CUSTOM_PROFILE_COLOR_SEQUENCE.length],
     command: ''
-  }))
+  }
 }
 
 /**
@@ -110,30 +119,38 @@ export function sanitizeBuiltinProfileColors(value: unknown): Record<BuiltinProf
   }
 }
 
-/** Always returns exactly three slots in a stable order, filling gaps with defaults. */
+export function sanitizeHiddenBuiltinProfileIds(value: unknown): BuiltinProfileId[] {
+  if (!Array.isArray(value)) return []
+  return BUILTIN_PROFILE_IDS.filter((id) => value.includes(id))
+}
+
+/** Keeps valid user-created profiles in their stored order and drops malformed entries. */
 export function sanitizeCustomProfiles(value: unknown): CustomTerminalProfile[] {
-  const defaults = defaultCustomProfiles()
-  const list = Array.isArray(value) ? (value as unknown[]) : []
-  return defaults.map((fallback) => {
-    const found = list.find(
-      (p) => typeof p === 'object' && p !== null && (p as { id?: unknown }).id === fallback.id
-    ) as Partial<CustomTerminalProfile> | undefined
-    if (!found) return fallback
-    return {
-      id: fallback.id,
-      label:
-        typeof found.label === 'string' && found.label.trim() ? found.label.trim() : fallback.label,
-      color: isValidHexColor(found.color) ? found.color : fallback.color,
+  if (!Array.isArray(value)) return defaultCustomProfiles()
+  const seen = new Set<string>()
+  return value.flatMap((entry, index): CustomTerminalProfile[] => {
+    if (typeof entry !== 'object' || entry === null) return []
+    const found = entry as Partial<CustomTerminalProfile>
+    if (!isCustomProfileId(found.id) || seen.has(found.id)) return []
+    seen.add(found.id)
+    return [{
+      id: found.id,
+      label: typeof found.label === 'string' && found.label.trim() ? found.label.trim() : `Custom ${index + 1}`,
+      color: isValidHexColor(found.color)
+        ? found.color
+        : CUSTOM_PROFILE_COLOR_SEQUENCE[index % CUSTOM_PROFILE_COLOR_SEQUENCE.length],
       command: typeof found.command === 'string' ? found.command.trim() : ''
-    }
+    }]
   })
 }
 
 export function buildTerminalProfiles(
   builtinColors: Record<BuiltinProfileId, string>,
-  customProfiles: CustomTerminalProfile[]
+  customProfiles: CustomTerminalProfile[],
+  hiddenBuiltinProfileIds: BuiltinProfileId[] = []
 ): TerminalProfile[] {
-  const builtins: TerminalProfile[] = BUILTIN_PROFILE_IDS.map((id) => ({
+  const hidden = new Set(hiddenBuiltinProfileIds)
+  const builtins: TerminalProfile[] = BUILTIN_PROFILE_IDS.filter((id) => !hidden.has(id)).map((id) => ({
     id,
     label: LLM_PROVIDERS[id].label,
     color: builtinColors[id],

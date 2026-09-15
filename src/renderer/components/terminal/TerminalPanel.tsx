@@ -207,10 +207,11 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
   const defaultLlmLabel = providerDefinition(llmProviderId).label
 
   const builtinProfileColors = useLayoutStore((s) => s.builtinProfileColors)
+  const hiddenBuiltinProfileIds = useLayoutStore((s) => s.hiddenBuiltinProfileIds)
   const customProfiles = useLayoutStore((s) => s.customProfiles)
   const profiles = useMemo(
-    () => buildTerminalProfiles(builtinProfileColors, customProfiles),
-    [builtinProfileColors, customProfiles]
+    () => buildTerminalProfiles(builtinProfileColors, customProfiles, hiddenBuiltinProfileIds),
+    [builtinProfileColors, customProfiles, hiddenBuiltinProfileIds]
   )
   const startableProfiles = useMemo(() => profiles.filter((p) => p.command), [profiles])
   // Resolve live so recoloring a profile in settings repaints its open tabs.

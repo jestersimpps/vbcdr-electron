@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Palette, Sliders, Code, Shield, Keyboard, type LucideIcon } from 'lucide-react'
+import { Palette, Sliders, Code, Shield, Bot, Keyboard, type LucideIcon } from 'lucide-react'
 import { PermissionPresetsSection } from '@/components/settings/PermissionPresetsSection'
-import { LlmStartupCommandSection } from '@/components/settings/LlmStartupCommandSection'
 import { TerminalProfilesSection } from '@/components/settings/TerminalProfilesSection'
 import { GlobalTerminalFolderSection } from '@/components/settings/GlobalTerminalFolderSection'
 import { WorktreeSection } from '@/components/settings/WorktreeSection'
@@ -14,10 +13,11 @@ import { KeybindingsSection } from '@/components/settings/KeybindingsSection'
 import { Section, useAccent } from '@/components/settings/SettingsControls'
 import { cn } from '@/lib/utils'
 
-type SettingsTab = 'general' | 'editor' | 'keybindings' | 'theme' | 'permissions'
+type SettingsTab = 'general' | 'llm' | 'editor' | 'keybindings' | 'theme' | 'permissions'
 
 const TABS: { id: SettingsTab; label: string; icon: LucideIcon }[] = [
   { id: 'general', label: 'General', icon: Sliders },
+  { id: 'llm', label: 'LLM', icon: Bot },
   { id: 'editor', label: 'Editor', icon: Code },
   { id: 'keybindings', label: 'Keybindings', icon: Keyboard },
   { id: 'theme', label: 'Theme', icon: Palette },
@@ -74,20 +74,28 @@ export function Settings(): React.ReactElement {
 
         {tab === 'general' && (
           <>
-            <Section title="LLM">
-              <LlmStartupCommandSection />
-              <TerminalProfilesSection />
-              <GlobalTerminalFolderSection />
-              <WorktreeSection />
-            </Section>
-            <Section title="Limits">
-              <TokenCapSection />
-            </Section>
             <Section title="Notifications">
               <SoundSection />
             </Section>
             <Section title="Companion">
               <CompanionSection />
+            </Section>
+          </>
+        )}
+
+        {tab === 'llm' && (
+          <>
+            <Section title="Terminal">
+              <GlobalTerminalFolderSection />
+            </Section>
+            <Section title="Launch profiles">
+              <TerminalProfilesSection />
+            </Section>
+            <Section title="Workflow">
+              <WorktreeSection />
+            </Section>
+            <Section title="Context">
+              <TokenCapSection />
             </Section>
           </>
         )}
