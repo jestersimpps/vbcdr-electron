@@ -25,12 +25,13 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { useShortcutHintStore } from '@/stores/shortcut-hint-store'
 import { createWorktreeForProject } from '@/stores/worktree-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
-import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History, FolderOpen, FolderGit2 } from 'lucide-react'
+import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History, FolderOpen, FolderGit2, Workflow } from 'lucide-react'
 import { SessionHistoryModal } from './SessionHistoryModal'
 import { CloseWorktreeTabModal } from './CloseWorktreeTabModal'
 import { capabilitiesFor, clearContextCommandFor, providerDefinition } from '@/config/llm-provider-registry'
 import {
   buildTerminalProfiles,
+  isSdlcTab,
   toTabProfileMeta,
   type TabProfileMeta,
   type TerminalProfile
@@ -40,6 +41,7 @@ import type { TerminalTab } from '@/models/types'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
 import { GitActions } from '@/components/git/GitActions'
 import { TaskQueuePanel } from './TaskQueuePanel'
+import { SdlcStageBar } from '@/components/sdlc/SdlcStageBar'
 import { Sparkline } from './Sparkline'
 import { useQueueRunner } from '@/hooks/useQueueRunner'
 import { useTokenVelocity } from '@/hooks/useTokenVelocity'
@@ -109,6 +111,7 @@ const SortableTerminalTab = memo(function SortableTerminalTab({
           {shortcutNumber}
         </span>
       )}
+      {isSdlcTab(tab) && <Workflow size={11} className="shrink-0" />}
       <span>{tab.title}</span>
       <button
         onClick={handleClose}
@@ -193,7 +196,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
   const projectTabIds = useMemo(() => projectTabs.map((t) => t.id), [projectTabs])
   const llmShortcutNumbers = useMemo(() => {
     const numbers = new Map<string, number>()
-    projectTabs.filter((tab) => tab.initialCommand).slice(0, 9)
+    projectTabs.filter((tab) => tab.initialCommand && !isSdlcTab(tab)).slice(0, 9)
       .forEach((tab, index) => numbers.set(tab.id, index + 1))
     return numbers
   }, [projectTabs])
@@ -720,6 +723,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
         })}
       </div>
 
+      <SdlcStageBar tabId={activeTab?.initialCommand ? activeTabId : null} />
       <TaskQueuePanel tabId={activeTab?.initialCommand ? activeTabId : null} />
       {historyOpen && llmCapabilities.sessions && (global ? userHome : activeProject) && (
         <SessionHistoryModal

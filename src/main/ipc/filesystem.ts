@@ -169,6 +169,15 @@ export function registerFilesystemHandlers(): void {
     await fsp.writeFile(resolved, content, 'utf-8')
   })
 
+  safeHandle('fs:write-data-url', async (_event, filePath: string, dataUrl: string): Promise<void> => {
+    const resolved = path.resolve(filePath)
+    if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')
+    const comma = dataUrl.indexOf(',')
+    if (!dataUrl.startsWith('data:') || comma === -1) throw new Error('Not a data URL')
+    await fsp.mkdir(path.dirname(resolved), { recursive: true })
+    await fsp.writeFile(resolved, Buffer.from(dataUrl.slice(comma + 1), 'base64'))
+  })
+
   safeHandle('fs:delete-file', async (_event, filePath: string): Promise<void> => {
     const resolved = path.resolve(filePath)
     if (!isWithinProjectRoot(resolved)) throw new Error('Path outside project root')

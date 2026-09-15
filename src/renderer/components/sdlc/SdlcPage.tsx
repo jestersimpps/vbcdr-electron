@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   Check,
@@ -11,6 +11,8 @@ import {
   Loader2,
   Paperclip,
   Plus,
+  Settings2,
+  Terminal,
   UserCheck,
   Workflow,
   X
@@ -23,14 +25,30 @@ import {
   type SdlcTicket,
   type SdlcTicketStatus
 } from '@/models/sdlc'
-import { useProviderModels, type UseProviderModels } from '@/hooks/useProviderModels'
-import { SDLC_MOCK_PROJECTS } from '@/config/sdlc-mock-data'
+import { useProviderModels, type ProviderModel, type UseProviderModels } from '@/hooks/useProviderModels'
+import { isHandoffStage } from '@/models/sdlc-prompts'
+import { useProjectStore } from '@/stores/project-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
+import { useTerminalStore } from '@/stores/terminal-store'
+import { focusTicketTab } from '@/lib/sdlc-handover'
+import { useAccent } from '@/components/settings/SettingsControls'
 import { NewTicketModal } from '@/components/sdlc/NewTicketModal'
 import { TicketDetailModal } from '@/components/sdlc/TicketDetailModal'
 import { cn } from '@/lib/utils'
 
 const LANE_MIN_WIDTH = 'min-w-[220px]'
+
+/** Catalogues list small models first; a stage that writes code should not default to one. */
+const PREFERRED_MODEL_KEYWORDS = ['sonnet', 'opus', 'gpt-5']
+
+function preferredModelId(models: ProviderModel[] | undefined): string | null {
+  if (!models?.length) return null
+  for (const keyword of PREFERRED_MODEL_KEYWORDS) {
+    const match = models.find((m) => m.id.toLowerCase().includes(keyword))
+    if (match) return match.id
+  }
+  return models[0].id
+}
 
 function relativeTime(timestamp: number): string {
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
@@ -93,11 +111,21 @@ function TicketCard({
   onSelect: () => void
 }): React.ReactElement {
   const hasDiff = ticket.filesChanged > 0
+  const hasTab = useTerminalStore((s) => !!ticket.tabId && s.tabs.some((t) => t.id === ticket.tabId))
+  const accent = useAccent()
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
       className={cn(
-        'w-full rounded-md border bg-zinc-900/60 p-2 text-left transition-colors',
+        'w-full cursor-pointer rounded-md border bg-zinc-900/60 p-2 text-left transition-colors',
         isSelected
           ? 'border-indigo-500/70 bg-zinc-900'
           : 'border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900'
@@ -163,8 +191,26 @@ function TicketCard({
         </div>
       </div>
 
-      <div className="mt-1 text-micro text-zinc-600">{relativeTime(ticket.updatedAt)}</div>
-    </button>
+      <div className="mt-1.5 flex items-end justify-between gap-2">
+        <span className="text-micro text-zinc-600">{relativeTime(ticket.updatedAt)}</span>
+        {ticket.tabId && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              focusTicketTab(ticket)
+            }}
+            disabled={!hasTab}
+            className="flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ borderColor: accent, color: accent }}
+            title={hasTab ? 'Switch to the agent tab' : 'The agent tab is no longer open. Run the stage again.'}
+            aria-label={`Open the agent tab for ${ticket.title}`}
+          >
+            <Terminal size={13} />
+            Open tab
+          </button>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -183,10 +229,20 @@ function StageModelPicker({
   const assignment = useSdlcStore((s) => s.stageModels[stage])
   const setStageProvider = useSdlcStore((s) => s.setStageProvider)
   const setStageModel = useSdlcStore((s) => s.setStageModel)
+  const setStageAssignment = useSdlcStore((s) => s.setStageAssignment)
 
-  const provider = assignment?.provider
-  const result = provider ? models.byProvider[provider] : undefined
+  const provider = assignment?.provider ?? MODEL_PROVIDERS[0].id
+  const result = models.byProvider[provider]
   const error = result?.error ?? null
+  const preferred = preferredModelId(result?.models)
+  const model = assignment?.model ?? preferred
+
+  // An unset stage adopts the first provider and a sensible model once the list
+  // arrives, so the board never shows an empty picker that nothing would run with.
+  useEffect(() => {
+    if (assignment?.model || !preferred) return
+    setStageAssignment(stage, provider, preferred)
+  }, [assignment?.model, preferred, provider, stage, setStageAssignment])
 
   return (
     <div className={cn('flex flex-1 flex-col gap-1', LANE_MIN_WIDTH)}>
@@ -194,14 +250,11 @@ function StageModelPicker({
         {label}
       </span>
       <select
-        value={provider ?? ''}
+        value={provider}
         aria-label={`Provider for ${stage}`}
         onChange={(e) => setStageProvider(stage, e.target.value as ModelProviderId)}
         className={SELECT_CLASS}
       >
-        <option value="" disabled>
-          —
-        </option>
         {MODEL_PROVIDERS.map((p) => (
           <option key={p.id} value={p.id}>
             {p.label}
@@ -209,23 +262,15 @@ function StageModelPicker({
         ))}
       </select>
       <select
-        value={assignment?.model ?? ''}
-        disabled={!provider || models.isLoading || !!error || !result?.models.length}
+        value={model ?? ''}
+        disabled={models.isLoading || !!error || !result?.models.length}
         aria-label={`Model for ${stage}`}
         onChange={(e) => setStageModel(stage, e.target.value || null)}
         className={SELECT_CLASS}
         title={error ?? undefined}
       >
         <option value="" disabled>
-          {!provider
-            ? '—'
-            : models.isLoading
-              ? 'loading…'
-              : error
-                ? error
-                : result?.models.length
-                  ? 'pick a model'
-                  : 'no models'}
+          {models.isLoading ? 'loading…' : error ? error : result?.models.length ? 'pick a model' : 'no models'}
         </option>
         {result?.models.map((m) => (
           <option key={m.id} value={m.id}>
@@ -238,9 +283,9 @@ function StageModelPicker({
 }
 
 /**
- * Every stage takes a slot so this row lines up with the swimlane columns below,
- * but only the agent-driven ones get a picker: backlog has no worktree yet, and
- * review and done are human steps — nothing runs there to pick a model for.
+ * Every stage takes a slot so this row lines up with the swimlane columns below.
+ * Each stage that hands off to an agent gets a picker; done is the only one
+ * where nothing runs.
  *
  * The padding mirrors the swimlane's own `p-4` page gutter plus its inner `p-2`,
  * so the slots sit over the columns rather than drifting by the difference.
@@ -252,7 +297,7 @@ function StageModelBar(): React.ReactElement {
     <div className="shrink-0 border-b border-zinc-800 bg-zinc-900/30 px-4 pb-2 pt-2">
       <div className="flex items-start gap-2 px-2">
         {SDLC_STAGES.map((stage) =>
-          stage.autonomous ? (
+          isHandoffStage(stage.id) ? (
             <StageModelPicker
               key={stage.id}
               stage={stage.id}
@@ -281,6 +326,8 @@ function ProjectSwimlane({
   const tickets = useSdlcStore((s) => s.tickets)
   const collapsed = useSdlcStore((s) => !!s.collapsedProjectIds[projectId])
   const toggleProjectCollapsed = useSdlcStore((s) => s.toggleProjectCollapsed)
+  const setActiveProject = useProjectStore((s) => s.setActiveProject)
+  const showSdlcPromptsPage = useProjectStore((s) => s.showSdlcPromptsPage)
   const selectedTicketId = useSdlcStore((s) => s.selectedTicketId)
   const selectTicket = useSdlcStore((s) => s.selectTicket)
 
@@ -308,9 +355,10 @@ function ProjectSwimlane({
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/30">
+      <div className="flex items-center transition-colors hover:bg-zinc-900/60">
       <button
         onClick={() => toggleProjectCollapsed(projectId)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-zinc-900/60"
+        className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left"
       >
         {collapsed ? (
           <ChevronRight size={13} className="shrink-0 text-zinc-500" />
@@ -332,6 +380,18 @@ function ProjectSwimlane({
           </span>
         </div>
       </button>
+      <button
+        onClick={() => {
+          setActiveProject(projectId)
+          showSdlcPromptsPage()
+        }}
+        className="mr-2 rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+        title="Stage prompts for this project"
+        aria-label={`Stage prompts for ${projectName}`}
+      >
+        <Settings2 size={13} />
+      </button>
+      </div>
 
       {!collapsed && (
         <div className="overflow-x-auto border-t border-zinc-800">
@@ -413,6 +473,7 @@ export function SdlcPage(): React.ReactElement {
   const attentionCount = tickets.filter(
     (t) => t.status === 'awaiting-approval' || t.status === 'blocked' || t.status === 'failed'
   ).length
+  const projects = useProjectStore((s) => s.projects)
 
   return (
     <div className="flex h-full flex-col bg-zinc-950 text-zinc-200">
@@ -422,9 +483,6 @@ export function SdlcPage(): React.ReactElement {
           <h1 className="text-title font-semibold">Agent SDLC</h1>
           <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-micro text-zinc-400">
             {tickets.length}
-          </span>
-          <span className="rounded border border-amber-900/60 bg-amber-950/30 px-1.5 py-0.5 text-micro text-amber-400">
-            mock data
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -447,7 +505,12 @@ export function SdlcPage(): React.ReactElement {
 
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-3">
-          {SDLC_MOCK_PROJECTS.map((project) => (
+          {projects.length === 0 && (
+            <div className="rounded border border-dashed border-zinc-800 px-3 py-6 text-center text-xs text-zinc-600">
+              Add a project to start a board for it.
+            </div>
+          )}
+          {projects.map((project) => (
             <ProjectSwimlane
               key={project.id}
               projectId={project.id}

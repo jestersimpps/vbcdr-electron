@@ -9,6 +9,7 @@ import { useFileTreeStore } from '@/stores/filetree-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { disposeTerminal, focusTerminal } from '@/components/terminal/TerminalInstance'
 import { THEME_REGISTRY } from '@/config/theme-registry'
+import { isSdlcTab } from '@/config/terminal-profiles'
 import { flattenTree } from '@/lib/flatten-tree'
 import {
   resolveByName,
@@ -487,7 +488,7 @@ function switchTerminalByIndex(index: number): DispatchResult {
   if (!projectId) return fail('no-project')
   const terminalStore = useTerminalStore.getState()
   const tab = terminalStore.tabs.filter(
-    (candidate) => candidate.projectId === projectId && candidate.initialCommand
+    (candidate) => candidate.projectId === projectId && candidate.initialCommand && !isSdlcTab(candidate)
   )[index]
   if (!tab) return fail('unresolved')
   terminalStore.setActiveTab(projectId, tab.id)

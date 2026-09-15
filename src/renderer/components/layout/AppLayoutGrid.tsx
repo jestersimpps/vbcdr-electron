@@ -39,6 +39,7 @@ import { TerminalsPage } from '@/components/terminal/TerminalsPage'
 import { DevServersPage } from '@/components/dev-servers/DevServersPage'
 import { VoicePage } from '@/components/voice/VoicePage'
 import { SdlcPage } from '@/components/sdlc/SdlcPage'
+import { SdlcPromptsPage } from '@/components/sdlc/SdlcPromptsPage'
 import { isFeatureEnabled } from '@/config/feature-flags'
 import { useTutorialStore } from '@/stores/tutorial-store'
 import { Code, Bot, TerminalSquare, Wand2, Plus, X, FolderOpen, LayoutDashboard, PieChart, Gauge, GitCompareArrows, Server, Plug, Settings as SettingsIcon, GitBranch, PanelRightOpen, PanelLeftOpen, Mic, HelpCircle, Workflow } from 'lucide-react'
@@ -148,6 +149,7 @@ export function AppLayoutGrid(): React.ReactElement {
   const devServersPageActive = useProjectStore((s) => s.devServersPageActive)
   const voicePageActive = useProjectStore((s) => s.voicePageActive)
   const sdlcPageActive = useProjectStore((s) => s.sdlcPageActive)
+  const sdlcPromptsPageActive = useProjectStore((s) => s.sdlcPromptsPageActive)
   const loadProjects = useProjectStore((s) => s.loadProjects)
   const addProject = useProjectStore((s) => s.addProject)
   const removeProject = useProjectStore((s) => s.removeProject)
@@ -167,7 +169,7 @@ export function AppLayoutGrid(): React.ReactElement {
   const showSdlcPage = useProjectStore((s) => s.showSdlcPage)
   const llmCapabilities = useLlmCapabilities()
   const voiceEnabled = isFeatureEnabled('voiceControl')
-  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || mcpPageActive || terminalsPageActive || devServersPageActive || sdlcPageActive || (voicePageActive && voiceEnabled)
+  const anyPageActive = dashboardActive || statisticsActive || usageActive || settingsActive || claudePageActive || skillsPageActive || mcpPageActive || terminalsPageActive || devServersPageActive || sdlcPageActive || sdlcPromptsPageActive || (voicePageActive && voiceEnabled)
   const centerTab = useEditorStore(
     (s) => (activeProjectId ? s.centerTabPerProject[activeProjectId] ?? 'terminals' : 'terminals')
   )
@@ -706,6 +708,11 @@ export function AppLayoutGrid(): React.ReactElement {
         {sdlcPageActive && (
           <div className="absolute inset-0 z-10 overflow-hidden bg-zinc-950">
             <SdlcPage />
+          </div>
+        )}
+        {sdlcPromptsPageActive && (
+          <div className="absolute inset-0 z-10 overflow-auto bg-zinc-950">
+            <SdlcPromptsPage />
           </div>
         )}
         {voicePageActive && voiceEnabled && (

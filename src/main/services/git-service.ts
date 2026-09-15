@@ -813,6 +813,29 @@ export async function ensureWorktreesGitignored(projectPath: string): Promise<vo
   await fs.promises.appendFile(gitignorePath, toAppend, 'utf-8')
 }
 
+/**
+ * `.git/info/exclude` rather than `.gitignore`: it is never tracked, so it can
+ * never dirty a branch, and worktrees share the common git dir so one entry
+ * covers every worktree of the repo.
+ */
+export async function ensureInfoExclude(projectPath: string, entry: string): Promise<void> {
+  const commonDir = path.resolve(projectPath, await runGit(projectPath, ['rev-parse', '--git-common-dir']))
+  const infoDir = path.join(commonDir, 'info')
+  const excludePath = path.join(infoDir, 'exclude')
+  let existing = ''
+  try {
+    existing = await fs.promises.readFile(excludePath, 'utf-8')
+  } catch {
+    existing = ''
+  }
+  const lines = existing.split('\n').map((l) => l.trim())
+  if (lines.includes(entry)) return
+  await fs.promises.mkdir(infoDir, { recursive: true })
+  const needsNewline = existing.length > 0 && !existing.endsWith('\n')
+  const toAppend = `${needsNewline ? '\n' : ''}# vbcdr stage output\n${entry}\n`
+  await fs.promises.appendFile(excludePath, toAppend, 'utf-8')
+}
+
 export interface CreatedWorktree {
   path: string
   branch: string

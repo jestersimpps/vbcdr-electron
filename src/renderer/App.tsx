@@ -17,6 +17,7 @@ import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { applyThemeToAll } from '@/components/terminal/TerminalInstance'
+import { useSdlcStageWatcher } from '@/hooks/useSdlcStageWatcher'
 import type { CustomThemeUI } from '@/models/custom-theme'
 import type { FileNode } from '@/models/types'
 
@@ -57,6 +58,7 @@ function applyCustomVars(ui: CustomThemeUI): void {
 }
 
 export function App(): React.ReactElement {
+  useSdlcStageWatcher()
   const themeName = useThemeStore((s) => s.themeName)
   const variant = useThemeStore((s) => s.variant)
   const customDark = useThemeStore((s) => s.customDark)

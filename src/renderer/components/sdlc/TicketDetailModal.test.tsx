@@ -14,6 +14,8 @@ function ticket(overrides: Partial<SdlcTicket> = {}): SdlcTicket {
     status: 'idle',
     branch: '—',
     worktreePath: '—',
+    worktreeId: null,
+    tabId: null,
     agent: 'claude',
     createdAt: 0,
     updatedAt: 0,
@@ -69,6 +71,42 @@ describe('TicketDetailModal', () => {
     expect(textarea.value).toBe('Scrollback is lost when a worktree tab is reopened.')
   })
 
+  it('asks before deleting and names the worktree that goes with the ticket', () => {
+    render(
+      <TicketDetailModal
+        ticket={ticket({ stage: 'planning', worktreeId: 'wt1', branch: 'llm/add-auth' })}
+        onClose={vi.fn()}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^delete$/i }))
+    expect(screen.getByText(/worktree on llm\/add-auth/i)).toBeTruthy()
+    expect(screen.getByRole('button', { name: /delete ticket/i })).toBeTruthy()
+    expect(useSdlcStore.getState().tickets).toHaveLength(0)
+  })
+
+  it('keeps Approve plan disabled until the agent has written a plan', () => {
+    render(<TicketDetailModal ticket={ticket({ stage: 'planning' })} onClose={vi.fn()} />)
+    const approve = screen.getByRole('button', { name: /approve plan/i }) as HTMLButtonElement
+    expect(approve.disabled).toBe(true)
+    expect(approve.title).toMatch(/waiting for the agent's plan/i)
+  })
+
+  it('enables Approve plan once the plan exists and renders it as markdown', () => {
+    render(
+      <TicketDetailModal
+        ticket={ticket({
+          stage: 'planning',
+          status: 'awaiting-approval',
+          artifacts: { ...EMPTY_ARTIFACTS, plan: '# Steps\n\n1. add a login form\n2. wire the session' }
+        })}
+        onClose={vi.fn()}
+      />
+    )
+    expect((screen.getByRole('button', { name: /approve plan/i }) as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.getByRole('heading', { name: 'Steps' })).toBeTruthy()
+    expect(screen.getByText('add a login form')).toBeTruthy()
+  })
+
   it('renders a non-backlog ticket as read-only text', () => {
     render(
       <TicketDetailModal
@@ -95,14 +133,14 @@ describe('TicketDetailModal', () => {
   })
 
   it('adds a comment to the store without moving the ticket', () => {
-    const t = ticket({ stage: 'review' })
+    const t = ticket({ stage: 'review', worktreeId: 'wt1' })
     useSdlcStore.setState({ tickets: [t], selectedTicketId: t.id })
     render(<TicketDetailModal ticket={t} onClose={vi.fn()} />)
 
     fireEvent.change(screen.getByLabelText('Review comment'), {
       target: { value: 'needs a test for the 401 path' }
     })
-    fireEvent.click(screen.getByText('Comment'))
+    fireEvent.click(screen.getByText('Refine'))
 
     const updated = useSdlcStore.getState().tickets[0]
     expect(updated.comments).toHaveLength(1)
@@ -112,12 +150,12 @@ describe('TicketDetailModal', () => {
   })
 
   it('does not add an empty comment', () => {
-    const t = ticket({ stage: 'review' })
+    const t = ticket({ stage: 'review', worktreeId: 'wt1' })
     useSdlcStore.setState({ tickets: [t], selectedTicketId: t.id })
     render(<TicketDetailModal ticket={t} onClose={vi.fn()} />)
 
     fireEvent.change(screen.getByLabelText('Review comment'), { target: { value: '   ' } })
-    fireEvent.click(screen.getByText('Comment'))
+    fireEvent.click(screen.getByText('Refine'))
 
     expect(useSdlcStore.getState().tickets[0].comments).toHaveLength(0)
   })

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Palette, Sliders, Code, Shield, Bot, Keyboard, type LucideIcon } from 'lucide-react'
+import { Palette, Sliders, Code, Shield, Bot, Keyboard, Workflow, type LucideIcon } from 'lucide-react'
+import { SdlcPromptsSection } from '@/components/settings/SdlcPromptsSection'
 import { PermissionPresetsSection } from '@/components/settings/PermissionPresetsSection'
 import { TerminalProfilesSection } from '@/components/settings/TerminalProfilesSection'
 import { GlobalTerminalFolderSection } from '@/components/settings/GlobalTerminalFolderSection'
@@ -13,11 +14,12 @@ import { KeybindingsSection } from '@/components/settings/KeybindingsSection'
 import { Section, useAccent } from '@/components/settings/SettingsControls'
 import { cn } from '@/lib/utils'
 
-type SettingsTab = 'general' | 'llm' | 'editor' | 'keybindings' | 'theme' | 'permissions'
+type SettingsTab = 'general' | 'llm' | 'sdlc' | 'editor' | 'keybindings' | 'theme' | 'permissions'
 
 const TABS: { id: SettingsTab; label: string; icon: LucideIcon }[] = [
   { id: 'general', label: 'General', icon: Sliders },
   { id: 'llm', label: 'LLM', icon: Bot },
+  { id: 'sdlc', label: 'SDLC', icon: Workflow },
   { id: 'editor', label: 'Editor', icon: Code },
   { id: 'keybindings', label: 'Keybindings', icon: Keyboard },
   { id: 'theme', label: 'Theme', icon: Palette },
@@ -98,6 +100,12 @@ export function Settings(): React.ReactElement {
               <TokenCapSection />
             </Section>
           </>
+        )}
+
+        {tab === 'sdlc' && (
+          <Section title="Agent SDLC">
+            <SdlcPromptsSection />
+          </Section>
         )}
 
         {tab === 'editor' && (

@@ -73,7 +73,16 @@ const api = {
     commitsFileCounts: fn(async () => ({})),
     rangeFileCount: fn(async () => 0),
     rangeHashes: fn(async () => []),
-    fetchNow: fn(async () => ({ ahead: 0, behind: 0, diverged: false, remoteBranch: null }))
+    fetchNow: fn(async () => ({ ahead: 0, behind: 0, diverged: false, remoteBranch: null })),
+    defaultBranch: fn(async () => 'main'),
+    diffSummary: fn(async () => ''),
+    ensureInfoExclude: fn(async () => undefined)
+  },
+  fs: {
+    readFile: fn(async () => ({ content: '', isBinary: false })),
+    deleteFile: fn(async () => undefined),
+    writeFile: fn(async () => undefined),
+    writeDataUrl: fn(async () => undefined)
   },
   worktrees: {
     list: fn(async () => []),

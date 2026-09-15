@@ -81,6 +81,16 @@ export function isTerminalProfileId(value: unknown): value is TerminalProfileId 
   return isBuiltinProfileId(value) || isCustomProfileId(value)
 }
 
+/**
+ * Marks tabs the SDLC board opened. Never a registered profile, so profile
+ * lookups miss and fall through to the tab's own color and start command.
+ */
+export const SDLC_PROFILE_ID: CustomProfileId = 'custom-sdlc'
+
+export function isSdlcTab(tab: { profileId?: string }): boolean {
+  return tab.profileId === SDLC_PROFILE_ID
+}
+
 export function defaultCustomProfiles(): CustomTerminalProfile[] {
   return []
 }

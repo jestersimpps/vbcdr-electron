@@ -3,12 +3,13 @@ import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type ModalSize = 'sm' | 'md' | 'lg'
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl'
 
 const SIZE_CLASS: Record<ModalSize, string> = {
   sm: 'max-w-sm',
   md: 'max-w-lg',
-  lg: 'max-w-2xl'
+  lg: 'max-w-2xl',
+  xl: 'max-w-6xl'
 }
 
 interface ModalProps {
@@ -21,6 +22,10 @@ interface ModalProps {
   closeOnBackdropClick?: boolean
   closeOnEscape?: boolean
   preventClose?: boolean
+  /** Set when the content manages its own internal scroll regions instead of scrolling as one block. */
+  bodyScroll?: boolean
+  /** Extra content in the header, between the title and the close button. */
+  headerExtra?: React.ReactNode
 }
 
 export function Modal({
@@ -32,7 +37,9 @@ export function Modal({
   size = 'md',
   closeOnBackdropClick = true,
   closeOnEscape = true,
-  preventClose = false
+  preventClose = false,
+  bodyScroll = true,
+  headerExtra
 }: ModalProps): React.ReactElement | null {
   const canClose = !preventClose
 
@@ -58,10 +65,15 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={cn('mx-4 flex max-h-[85vh] w-full flex-col rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl', SIZE_CLASS[size])}
+        className={cn(
+          'mx-4 flex max-h-[85vh] w-full flex-col overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl',
+          SIZE_CLASS[size],
+          !bodyScroll && 'h-[85vh]'
+        )}
       >
-        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-          <span className="text-sm font-medium text-zinc-200">{title}</span>
+        <div className="flex items-center justify-between gap-3 border-b border-zinc-800 px-4 py-3">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-200">{title}</span>
+          {headerExtra}
           <button
             onClick={onClose}
             disabled={!canClose}
@@ -71,7 +83,9 @@ export function Modal({
             <X size={16} />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">{children}</div>
+        <div className={cn('min-h-0 flex-1 px-4 py-3', bodyScroll ? 'overflow-y-auto' : 'overflow-hidden')}>
+          {children}
+        </div>
         {footer && <div className="flex items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">{footer}</div>}
       </div>
     </div>,

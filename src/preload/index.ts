@@ -57,6 +57,7 @@ const api = {
     readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
     readImageAsDataUrl: (filePath: string) => ipcRenderer.invoke('fs:read-image-data-url', filePath) as Promise<string | null>,
     writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:write-file', filePath, content),
+    writeDataUrl: (filePath: string, dataUrl: string) => ipcRenderer.invoke('fs:write-data-url', filePath, dataUrl) as Promise<void>,
     saveText: (defaultFileName: string, content: string) =>
       ipcRenderer.invoke('fs:save-text', defaultFileName, content) as Promise<string | null>,
     deleteFile: (filePath: string) => ipcRenderer.invoke('fs:delete-file', filePath),
@@ -152,7 +153,8 @@ const api = {
     commitsFileCounts: (cwd: string, hashes: string[]) => ipcRenderer.invoke('git:commits-file-counts', cwd, hashes),
     checkout: (cwd: string, branch: string) => ipcRenderer.invoke('git:checkout', cwd, branch),
     defaultBranch: (cwd: string) => ipcRenderer.invoke('git:default-branch', cwd),
-    diffSummary: (cwd: string, baseBranch: string) => ipcRenderer.invoke('git:diff-summary', cwd, baseBranch),
+    diffSummary: (cwd: string, baseBranch: string) => ipcRenderer.invoke('git:diff-summary', cwd, baseBranch) as Promise<string>,
+    ensureInfoExclude: (cwd: string, entry: string) => ipcRenderer.invoke('git:ensure-info-exclude', cwd, entry) as Promise<void>,
     registerFetch: (projectId: string, cwd: string) => ipcRenderer.invoke('git:register-fetch', projectId, cwd),
     unregisterFetch: (projectId: string) => ipcRenderer.invoke('git:unregister-fetch', projectId),
     watchRefs: (projectId: string, cwd: string) => ipcRenderer.invoke('git:watch-refs', projectId, cwd),

@@ -30,7 +30,8 @@ import {
   getLanguageTally,
   addToGitignore,
   listGitignore,
-  removeFromGitignore
+  removeFromGitignore,
+  ensureInfoExclude
 } from '@main/services/git-service'
 import { registerProject, unregisterProject, fetchNow } from '@main/services/git-fetch-service'
 import { watchRefs, unwatchRefs } from '@main/services/git-refs-watcher'
@@ -219,5 +220,9 @@ export function registerGitHandlers(): void {
 
   safeHandle('git:gitignore-remove', async (_event, cwd: string, entry: string): Promise<GitCommitResult> => {
     return removeFromGitignore(cwd, entry)
+  })
+
+  safeHandle('git:ensure-info-exclude', async (_event, cwd: string, entry: string): Promise<void> => {
+    return ensureInfoExclude(cwd, entry)
   })
 }

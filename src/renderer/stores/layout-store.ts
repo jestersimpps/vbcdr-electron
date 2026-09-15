@@ -3,6 +3,12 @@ import { persist } from 'zustand/middleware'
 import { DEFAULT_IDLE_SOUND_ID } from '@/config/sound-registry'
 import { DEFAULT_COMPANION_VOICE } from '@/config/companion-voices'
 import {
+  DEFAULT_SDLC_STAGE_PROMPTS,
+  sanitizeStagePrompts,
+  type SdlcHandoffStage,
+  type SdlcStagePrompts
+} from '@/models/sdlc-prompts'
+import {
   DEFAULT_CHATTINESS,
   CHATTINESS_LEVELS,
   type CompanionChattiness
@@ -52,6 +58,7 @@ interface LayoutState {
   globalTerminalCwd: string
   useWorktreesForNewLlmTabs: boolean
   closeTabWorkflowPrompt: string
+  sdlcStagePrompts: SdlcStagePrompts
   resetVersion: number
   setBuiltinProfileColor: (id: BuiltinProfileId, color: string) => void
   removeBuiltinProfile: (id: BuiltinProfileId) => void
@@ -104,6 +111,8 @@ interface LayoutState {
   setUseWorktreesForNewLlmTabs: (enabled: boolean) => void
   setCloseTabWorkflowPrompt: (prompt: string) => void
   resetCloseTabWorkflowPrompt: () => void
+  setSdlcStagePrompt: (stage: SdlcHandoffStage, prompt: string) => void
+  resetSdlcStagePrompt: (stage: SdlcHandoffStage) => void
 }
 
 export const DEFAULT_TOKEN_CAP = 160_000
@@ -177,6 +186,7 @@ export const useLayoutStore = create<LayoutState>()(
       globalTerminalCwd: '',
       useWorktreesForNewLlmTabs: false,
       closeTabWorkflowPrompt: DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT,
+      sdlcStagePrompts: { ...DEFAULT_SDLC_STAGE_PROMPTS },
       resetVersion: 0,
       voiceEnabled: false,
       companionEnabled: false,
@@ -417,6 +427,22 @@ export const useLayoutStore = create<LayoutState>()(
         set({ closeTabWorkflowPrompt: DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT })
       },
 
+      setSdlcStagePrompt: (stage: SdlcHandoffStage, prompt: string) => {
+        const trimmed = prompt.trim()
+        set((state) => ({
+          sdlcStagePrompts: {
+            ...state.sdlcStagePrompts,
+            [stage]: trimmed || DEFAULT_SDLC_STAGE_PROMPTS[stage]
+          }
+        }))
+      },
+
+      resetSdlcStagePrompt: (stage: SdlcHandoffStage) => {
+        set((state) => ({
+          sdlcStagePrompts: { ...state.sdlcStagePrompts, [stage]: DEFAULT_SDLC_STAGE_PROMPTS[stage] }
+        }))
+      },
+
       resetLayout: (projectId: string) => {
         const spp = { ...get().splitsPerProject }
         delete spp[projectId]
@@ -452,6 +478,7 @@ export const useLayoutStore = create<LayoutState>()(
         globalTerminalCwd: state.globalTerminalCwd,
         useWorktreesForNewLlmTabs: state.useWorktreesForNewLlmTabs,
         closeTabWorkflowPrompt: state.closeTabWorkflowPrompt,
+        sdlcStagePrompts: state.sdlcStagePrompts,
         voiceEnabled: state.voiceEnabled,
         companionEnabled: state.companionEnabled,
         companionSpeechEnabled: state.companionSpeechEnabled,
@@ -497,6 +524,7 @@ export const useLayoutStore = create<LayoutState>()(
             typeof incoming.closeTabWorkflowPrompt === 'string' && incoming.closeTabWorkflowPrompt.trim()
               ? incoming.closeTabWorkflowPrompt
               : DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT,
+          sdlcStagePrompts: sanitizeStagePrompts(incoming.sdlcStagePrompts),
           voiceEnabled: typeof incoming.voiceEnabled === 'boolean' ? incoming.voiceEnabled : false,
           companionChattiness: CHATTINESS_LEVELS.includes(
             incoming.companionChattiness as CompanionChattiness

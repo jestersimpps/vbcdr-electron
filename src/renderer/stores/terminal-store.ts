@@ -1,10 +1,12 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import type { TerminalTab, WorktreeInfo } from '@/models/types'
-import type { TabProfileMeta } from '@/config/terminal-profiles'
-import type { LlmProviderId } from '@/config/llm-provider-registry'
+import { isSdlcTab, type TabProfileMeta } from '@/config/terminal-profiles'
+import { LLM_PROVIDERS, type LlmProviderId } from '@/config/llm-provider-registry'
+import { SDLC_STAGES, type SdlcStage } from '@/models/sdlc'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
+import { useSdlcStore } from '@/stores/sdlc-store'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 
 type TabStatus = 'idle' | 'busy'
@@ -16,6 +18,24 @@ export const DEFAULT_LLM_TAB_TITLE = 'LLM'
 
 function profileFields(profile: TabProfileMeta): Pick<TerminalTab, 'profileId' | 'providerId' | 'color'> {
   return { profileId: profile.profileId, providerId: profile.providerId, color: profile.color }
+}
+
+const PRODUCT_NAMES = new Set(
+  Object.values(LLM_PROVIDERS)
+    .flatMap((p) => [p.label, p.command])
+    .map((s) => s.toLowerCase().replace(/[^a-z0-9]/g, ''))
+    .filter(Boolean)
+)
+
+/** A CLI's startup title ("Claude Code") is not a summary of the work; only real summaries rename a ticket. */
+function isDescriptiveTitle(title: string): boolean {
+  const trimmed = title.trim()
+  if (!trimmed || trimmed === DEFAULT_LLM_TAB_TITLE) return false
+  return !PRODUCT_NAMES.has(trimmed.toLowerCase().replace(/[^a-z0-9]/g, ''))
+}
+
+function stageLabelFor(stage: SdlcStage): string {
+  return SDLC_STAGES.find((s) => s.id === stage)?.label ?? stage
 }
 
 /**
@@ -218,10 +238,17 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   },
 
   setTabTitle: (tabId: string, title: string) => {
+    const tab = get().tabs.find((t) => t.id === tabId)
+    const ticket = tab && isSdlcTab(tab) && isDescriptiveTitle(title)
+      ? useSdlcStore.getState().ticketForTab(tabId)
+      : undefined
+    // The agent's own title is the best ticket title we get; the tab keeps its stage prefix.
+    const tabTitle = ticket ? `${stageLabelFor(ticket.stage)} · ${title}` : title
+    if (ticket) useSdlcStore.getState().patchTicket(ticket.id, { title })
     set((state) => ({
-      tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, title } : t))
+      tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, title: tabTitle } : t))
     }))
-    const worktree = get().tabs.find((t) => t.id === tabId)?.worktree
+    const worktree = tab?.worktree
     if (worktree && title.trim() && title !== DEFAULT_LLM_TAB_TITLE) {
       void useWorktreeStore.getState().setLabel(worktree.id, title)
     }

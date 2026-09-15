@@ -6,6 +6,8 @@ import { useFileTreeStore } from './filetree-store'
 import { useGitStore } from './git-store'
 import { useQueueStore } from './queue-store'
 import { useSearchPrefsStore } from './search-prefs-store'
+import { useSdlcStore } from './sdlc-store'
+import { useSdlcPromptsStore } from './sdlc-prompts-store'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 import type { Project } from '@/models/types'
 
@@ -23,6 +25,7 @@ interface ProjectStore {
   devServersPageActive: boolean
   voicePageActive: boolean
   sdlcPageActive: boolean
+  sdlcPromptsPageActive: boolean
   loadProjects: () => Promise<void>
   addProject: () => Promise<Project | null>
   removeProject: (id: string) => Promise<void>
@@ -39,6 +42,7 @@ interface ProjectStore {
   showDevServersPage: () => void
   showVoicePage: () => void
   showSdlcPage: () => void
+  showSdlcPromptsPage: () => void
   activeProject: () => Project | undefined
 }
 
@@ -53,7 +57,8 @@ const PAGES_OFF = {
   terminalsPageActive: false,
   devServersPageActive: false,
   voicePageActive: false,
-  sdlcPageActive: false
+  sdlcPageActive: false,
+  sdlcPromptsPageActive: false
 } as const
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -70,10 +75,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   devServersPageActive: false,
   voicePageActive: false,
   sdlcPageActive: false,
+  sdlcPromptsPageActive: false,
 
   loadProjects: async () => {
-    const projects = await window.api.projects.list()
+    const projects: Project[] = await window.api.projects.list()
     set({ projects })
+    useSdlcStore.getState().pruneOrphans(projects.map((p) => p.id))
   },
 
   addProject: async () => {
@@ -106,6 +113,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     useFileTreeStore.getState().removeProjectState(id)
     useGitStore.getState().removeProjectState(id)
     useSearchPrefsStore.getState().removeProjectExcludes(id)
+    useSdlcStore.getState().removeProjectState(id)
+    useSdlcPromptsStore.getState().removeProjectState(id)
 
     await Promise.all(allTabs.map((tab) => window.api.terminal.kill(tab.id)))
     await window.api.projects.remove(id)
@@ -175,6 +184,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
   showSdlcPage: () => {
     set({ ...PAGES_OFF, sdlcPageActive: true })
+  },
+
+  showSdlcPromptsPage: () => {
+    set({ ...PAGES_OFF, sdlcPromptsPageActive: true })
   },
 
   activeProject: () => {

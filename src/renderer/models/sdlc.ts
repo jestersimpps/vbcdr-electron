@@ -94,7 +94,8 @@ export interface SdlcComment {
 }
 
 export interface SdlcArtifacts {
-  plan: string[] | null
+  /** The planning agent's output, as the markdown document it wrote. */
+  plan: string | null
   diffFiles: SdlcDiffFile[]
   checkOutput: string | null
   prSummary: string | null
@@ -119,6 +120,8 @@ export interface SdlcTicket {
   status: SdlcTicketStatus
   branch: string
   worktreePath: string
+  worktreeId: string | null
+  tabId: string | null
   agent: string
   createdAt: number
   updatedAt: number
