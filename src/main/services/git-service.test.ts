@@ -100,6 +100,18 @@ describe('getCommits', () => {
     nextOutputs = [new Error('boom')]
     expect(await mod.getCommits('/p')).toEqual([])
   })
+
+  it('walks branches, remotes and tags but not private ref namespaces', async () => {
+    setOutputs('')
+    await mod.getCommits('/p', 10)
+    const args = calls[0].args
+    expect(args).toContain('--branches')
+    expect(args).toContain('--remotes')
+    expect(args).toContain('--tags')
+    expect(args).toContain('HEAD')
+    // `--all` would pull in refs/wonderful-code/checkpoints/* and friends.
+    expect(args).not.toContain('--all')
+  })
 })
 
 describe('getBranches', () => {

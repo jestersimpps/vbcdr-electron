@@ -58,7 +58,20 @@ export async function isGitRepo(cwd: string): Promise<boolean> {
 export async function getCommits(cwd: string, maxCount: number = 50): Promise<GitCommit[]> {
   try {
     const safeMax = Math.max(1, Math.min(Math.floor(maxCount), 1000))
-    const raw = await runGit(cwd, ['log', '--all', `--format=${FORMAT}`, `--max-count=${safeMax}`])
+    // Not `--all`: that walks every ref under refs/, including private
+    // namespaces other tools write into the object store — e.g. per-turn
+    // `refs/wonderful-code/checkpoints/<session>/turn/<n>` snapshots, prefetch
+    // refs from `git maintenance`, and notes. Those are real commits on no
+    // branch, and being the newest objects they crowd out actual history.
+    const raw = await runGit(cwd, [
+      'log',
+      '--branches',
+      '--remotes',
+      '--tags',
+      'HEAD',
+      `--format=${FORMAT}`,
+      `--max-count=${safeMax}`
+    ])
     if (!raw) return []
 
     return raw.split('\n').map((line) => {
