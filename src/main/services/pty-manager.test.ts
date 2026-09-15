@@ -116,6 +116,41 @@ describe('pty-manager', () => {
       expect(mod.getPtySpawnTime('unknown')).toBeNull()
     })
 
+    it('reattaches to the live pty instead of spawning a rival for the same tabId', async () => {
+      const mod = await importFresh()
+      const first = makeWin()
+      expect(mod.createPty('t1', 'p1', '/cwd', first as never, 80, 24)).toBe('created')
+
+      // What a renderer reload does: same persisted tabId, brand-new empty xterm.
+      const reloaded = makeWin()
+      mockLoadScrollback.mockReturnValueOnce('earlier output')
+      expect(mod.createPty('t1', 'p1', '/cwd', reloaded as never, 120, 40)).toBe('attached')
+
+      expect(ptyInstances).toHaveLength(1)
+      expect(ptyInstances[0].resize).toHaveBeenCalledWith(120, 40)
+      expect(reloaded.webContents.send).toHaveBeenCalledWith(
+        'terminal:data',
+        't1',
+        expect.stringContaining('earlier output')
+      )
+    })
+
+    it('streams a reattached pty to the window that reattached', async () => {
+      const mod = await importFresh()
+      const first = makeWin()
+      mod.createPty('t1', 'p1', '/cwd', first as never)
+      const reloaded = makeWin()
+      mod.createPty('t1', 'p1', '/cwd', reloaded as never)
+      first.webContents.send.mockClear()
+      reloaded.webContents.send.mockClear()
+
+      ptyInstances[0].emitData('after reload')
+      vi.advanceTimersByTime(16)
+
+      expect(reloaded.webContents.send).toHaveBeenCalledWith('terminal:data', 't1', 'after reload')
+      expect(first.webContents.send).not.toHaveBeenCalled()
+    })
+
     it('replays saved scrollback to the renderer on creation', async () => {
       const mod = await importFresh()
       mockLoadScrollback.mockReturnValueOnce('previous output')

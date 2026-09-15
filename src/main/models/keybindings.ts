@@ -22,7 +22,7 @@ const RESERVED_ACCELERATORS: Readonly<Record<string, string>> = {
 }
 
 export function reservedAcceleratorReason(accelerator: string): string | null {
-  if (/^CmdOrCtrl\+[1-9]$/.test(accelerator)) return 'Switch LLM tabs'
+  if (/^(?:CmdOrCtrl|Control)\+[1-9]$/.test(accelerator)) return 'Switch LLM tabs'
   if (/^Alt\+[1-9]$/.test(accelerator)) return 'Switch projects'
   return RESERVED_ACCELERATORS[accelerator.toLowerCase()] ?? null
 }
@@ -30,7 +30,7 @@ export function reservedAcceleratorReason(accelerator: string): string | null {
 export const KEYBINDING_DEFINITIONS: readonly KeybindingDefinition[] = [
   { id: 'settings', label: 'Open settings', category: 'General', defaultAccelerator: 'CmdOrCtrl+,' },
   { id: 'open-palette', label: 'Command palette', category: 'General', defaultAccelerator: 'CmdOrCtrl+K' },
-  { id: 'new-project', label: 'New project', category: 'File', defaultAccelerator: 'CmdOrCtrl+N' },
+  { id: 'new-project', label: 'New project', category: 'File', defaultAccelerator: 'CmdOrCtrl+Shift+N' },
   { id: 'close-project', label: 'Close project', category: 'File', defaultAccelerator: 'CmdOrCtrl+W' },
   { id: 'open-palette-files', label: 'Open file', category: 'File', defaultAccelerator: 'CmdOrCtrl+P' },
   { id: 'global-search', label: 'Search in files', category: 'File', defaultAccelerator: 'CmdOrCtrl+Shift+F' },
@@ -46,6 +46,7 @@ export const KEYBINDING_DEFINITIONS: readonly KeybindingDefinition[] = [
   { id: 'actual-size', label: 'Actual size', category: 'View', defaultAccelerator: 'CmdOrCtrl+0' },
   { id: 'zoom-in', label: 'Zoom in', category: 'View', defaultAccelerator: 'CmdOrCtrl+=' },
   { id: 'zoom-out', label: 'Zoom out', category: 'View', defaultAccelerator: 'CmdOrCtrl+-' },
+  { id: 'new-llm-tab', label: 'New LLM tab', category: 'Terminal', defaultAccelerator: 'CmdOrCtrl+N' },
   { id: 'terminal-tab-next', label: 'Next terminal tab', category: 'Terminal', defaultAccelerator: 'CmdOrCtrl+Shift+]' },
   { id: 'terminal-tab-prev', label: 'Previous terminal tab', category: 'Terminal', defaultAccelerator: 'CmdOrCtrl+Shift+[' }
 ]

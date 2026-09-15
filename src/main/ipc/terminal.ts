@@ -1,14 +1,29 @@
 import { BrowserWindow, nativeImage, clipboard } from 'electron'
-import { createPty, writePty, resizePty, killPty, hasPty } from '@main/services/pty-manager'
+import {
+  createPty,
+  writePty,
+  resizePty,
+  killPty,
+  hasPty,
+  type PtyAttachResult
+} from '@main/services/pty-manager'
 import { suppressCurrentClipboardImage } from '@main/services/clipboard-watcher'
 import { safeHandle } from '@main/ipc/safe-handle'
 
 export function registerTerminalHandlers(): void {
   safeHandle(
     'terminal:create',
-    (event, tabId: string, projectId: string, cwd: string, cols: number, rows: number): void => {
+    (
+      event,
+      tabId: string,
+      projectId: string,
+      cwd: string,
+      cols: number,
+      rows: number
+    ): PtyAttachResult => {
       const win = BrowserWindow.fromWebContents(event.sender)
-      if (win) createPty(tabId, projectId, cwd, win, cols, rows)
+      if (!win) return 'failed'
+      return createPty(tabId, projectId, cwd, win, cols, rows)
     }
   )
 

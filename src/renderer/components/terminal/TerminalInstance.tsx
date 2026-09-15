@@ -350,12 +350,16 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         fitAddon.fit()
         terminal.scrollToBottom()
         terminal.focus()
-        window.api.terminal.create(tabId, projectId, cwd, terminal.cols, terminal.rows)
-        if (initialCommand) {
-          setTimeout(() => {
-            window.api.terminal.write(tabId, initialCommand + '\n')
-          }, 500)
-        }
+        void window.api.terminal
+          .create(tabId, projectId, cwd, terminal.cols, terminal.rows)
+          .then((attach) => {
+            // 'attached' means the shell outlived the renderer (a reload): it is already
+            // running the startup command, so typing it again would land in a live TUI.
+            if (attach !== 'created' || !initialCommand) return
+            setTimeout(() => {
+              window.api.terminal.write(tabId, initialCommand + '\n')
+            }, 500)
+          })
 
         // Deliberately unguarded: this runs a bounded handful of times while the
         // terminal is first becoming visible (RAF, +100ms, +500ms, font load) and

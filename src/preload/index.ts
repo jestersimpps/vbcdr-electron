@@ -91,7 +91,9 @@ const api = {
 
   terminal: {
     create: (tabId: string, projectId: string, cwd: string, cols: number, rows: number) =>
-      ipcRenderer.invoke('terminal:create', tabId, projectId, cwd, cols, rows),
+      ipcRenderer.invoke('terminal:create', tabId, projectId, cwd, cols, rows) as Promise<
+        'created' | 'attached' | 'failed'
+      >,
     write: (tabId: string, data: string) =>
       ipcRenderer.invoke('terminal:write', tabId, data) as Promise<boolean>,
     resize: (tabId: string, cols: number, rows: number) =>

@@ -13,9 +13,12 @@ import { resetTabTokenTracking } from '@main/services/token-usage-service'
 
 export { flushScrollback }
 
+export type PtyAttachResult = 'created' | 'attached' | 'failed'
+
 interface PtyInstance {
   process: pty.IPty
   projectId: string
+  win: BrowserWindow
   pendingChunks: string[]
   pendingBytes: number
   flushTimer: ReturnType<typeof setTimeout> | null
@@ -26,7 +29,7 @@ const instances = new Map<string, PtyInstance>()
 const IPC_BATCH_MS = 16
 const PENDING_BYTES_CAP = 4 * 1024 * 1024
 
-function flushPending(tabId: string, win: BrowserWindow): void {
+function flushPending(tabId: string): void {
   const instance = instances.get(tabId)
   if (!instance) return
   instance.flushTimer = null
@@ -34,8 +37,19 @@ function flushPending(tabId: string, win: BrowserWindow): void {
   const batch = instance.pendingChunks.join('')
   instance.pendingChunks.length = 0
   instance.pendingBytes = 0
-  if (!win.isDestroyed()) {
-    win.webContents.send('terminal:data', tabId, batch)
+  if (!instance.win.isDestroyed()) {
+    instance.win.webContents.send('terminal:data', tabId, batch)
+  }
+}
+
+function replayScrollback(tabId: string, win: BrowserWindow): void {
+  const saved = loadScrollback(tabId)
+  if (saved.length > 0 && !win.isDestroyed()) {
+    win.webContents.send(
+      'terminal:data',
+      tabId,
+      saved + '\r\n\x1b[2m── session restored ──\x1b[0m\r\n'
+    )
   }
 }
 
@@ -108,19 +122,26 @@ export function createPty(
   win: BrowserWindow,
   cols: number = 80,
   rows: number = 24
-): void {
+): PtyAttachResult {
+  // A renderer reload (Reload, or a crash recovery) remounts every terminal with
+  // its persisted tabId while the shell it spawned is still running. Re-attach to
+  // that shell instead of spawning a rival: the old one would be orphaned, and two
+  // `claude` processes on one session fight over the session lock.
+  const existing = instances.get(tabId)
+  if (existing) {
+    existing.win = win
+    replayScrollback(tabId, win)
+    try {
+      existing.process.resize(cols, rows)
+    } catch { /* process died between the lookup and the resize */ }
+    return 'attached'
+  }
+
   const shell = defaultShell()
   const safeCwd = fs.existsSync(cwd) ? cwd : os.homedir()
   const env = shellEnv()
 
-  const saved = loadScrollback(tabId)
-  if (saved.length > 0 && !win.isDestroyed()) {
-    win.webContents.send(
-      'terminal:data',
-      tabId,
-      saved + '\r\n\x1b[2m── session restored ──\x1b[0m\r\n'
-    )
-  }
+  replayScrollback(tabId, win)
 
   let proc: pty.IPty
   try {
@@ -141,12 +162,13 @@ export function createPty(
       )
       win.webContents.send('terminal:exit', tabId, 1)
     }
-    return
+    return 'failed'
   }
 
   instances.set(tabId, {
     process: proc,
     projectId,
+    win,
     pendingChunks: [],
     pendingBytes: 0,
     flushTimer: null,
@@ -166,22 +188,27 @@ export function createPty(
       instance.pendingBytes = joined.length
     }
     if (!instance.flushTimer) {
-      instance.flushTimer = setTimeout(() => flushPending(tabId, win), IPC_BATCH_MS)
+      instance.flushTimer = setTimeout(() => flushPending(tabId), IPC_BATCH_MS)
     }
   })
 
   proc.onExit(({ exitCode }) => {
     const instance = instances.get(tabId)
+    // Superseded: the tabId belongs to a newer pty, so this exit is not ours to clear.
+    if (instance && instance.process !== proc) return
     if (instance?.flushTimer) {
       clearTimeout(instance.flushTimer)
-      flushPending(tabId, win)
+      flushPending(tabId)
     }
-    if (!win.isDestroyed()) {
-      win.webContents.send('terminal:exit', tabId, exitCode)
+    const target = instance?.win ?? win
+    if (!target.isDestroyed()) {
+      target.webContents.send('terminal:exit', tabId, exitCode)
     }
     instances.delete(tabId)
     resetTabTokenTracking(tabId)
   })
+
+  return 'created'
 }
 
 export function writePty(tabId: string, data: string): boolean {
