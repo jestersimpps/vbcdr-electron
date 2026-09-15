@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { loader } from '@monaco-editor/react'
 import type { editor } from 'monaco-editor'
 import { registerMonacoThemes } from '@/config/monaco-theme-registry'
-import { applyDiagnosticsOptions } from '@/services/monaco-project-loader'
+import { applyDiagnosticsOptions } from '@/services/monaco-diagnostics'
 
 export function MonacoAnchor(): React.ReactElement {
   const hostRef = useRef<HTMLDivElement | null>(null)

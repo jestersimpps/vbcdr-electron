@@ -17,7 +17,6 @@ import { registerActivityHandlers } from '@main/ipc/activity'
 import { registerSessionSummaryHandlers } from '@main/ipc/session-summary'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
 import { registerDevServerHandlers } from '@main/ipc/dev-servers'
-import { registerTsProjectHandlers } from '@main/ipc/ts-project'
 import { registerProviderModelsHandlers } from '@main/ipc/provider-models'
 import { registerKeybindingHandlers } from '@main/ipc/keybindings'
 import { effectiveAccelerator } from '@main/models/keybindings'
@@ -160,7 +159,6 @@ registerActivityHandlers()
 registerSessionSummaryHandlers()
 registerTokenUsageHandlers()
 registerDevServerHandlers()
-registerTsProjectHandlers()
 registerProviderModelsHandlers()
 registerKeybindingHandlers(() => {
   Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenu()))

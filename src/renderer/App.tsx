@@ -16,7 +16,6 @@ import { useClipboardStore } from '@/stores/clipboard-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { useLayoutStore } from '@/stores/layout-store'
-import { loadProjectIntoMonaco } from '@/services/monaco-project-loader'
 import { applyThemeToAll } from '@/components/terminal/TerminalInstance'
 import type { CustomThemeUI } from '@/models/custom-theme'
 import type { FileNode } from '@/models/types'
@@ -154,8 +153,6 @@ export function App(): React.ReactElement {
       void git.loadStatus(projectId, cwd)
       void git.loadRangeFileCounts(projectId, cwd)
     })
-
-    void loadProjectIntoMonaco(cwd)
 
     return () => {
       unsubTree()

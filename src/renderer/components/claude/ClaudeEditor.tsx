@@ -3,12 +3,15 @@ import Editor, { type Monaco } from '@monaco-editor/react'
 import { useClaudeStore } from '@/stores/claude-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
+import { applyDiagnosticsOptions } from '@/services/monaco-diagnostics'
 import { MonacoErrorBoundary } from '@/components/editor/MonacoErrorBoundary'
 import type { editor } from 'monaco-editor'
 import { detectLanguage } from '@/lib/language-detect'
 
 function handleBeforeMount(monaco: Monaco): void {
   registerMonacoThemes(monaco)
+  // Must land before the first model exists, or the worker validates it once anyway.
+  applyDiagnosticsOptions(monaco)
 }
 
 export function ClaudeEditor({ projectId }: { projectId: string }): React.ReactElement {
@@ -78,7 +81,8 @@ export function ClaudeEditor({ projectId }: { projectId: string }): React.ReactE
               lineNumbers: 'on',
               scrollBeyondLastLine: false,
               wordWrap: 'on',
-              padding: { top: 8 }
+              padding: { top: 8 },
+              renderValidationDecorations: 'off'
             }}
           />
         </MonacoErrorBoundary>

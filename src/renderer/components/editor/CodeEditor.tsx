@@ -13,9 +13,8 @@ import { CSS } from '@dnd-kit/utilities'
 import { useEditorStore } from '@/stores/editor-store'
 import { useEditorPrefsStore } from '@/stores/editor-prefs-store'
 import { useThemeStore } from '@/stores/theme-store'
-import { useProjectStore } from '@/stores/project-store'
 import { registerMonacoThemes, MONACO_THEME_NAME } from '@/config/monaco-theme-registry'
-import { updateFileInMonaco } from '@/services/monaco-project-loader'
+import { applyDiagnosticsOptions } from '@/services/monaco-diagnostics'
 import { MonacoErrorBoundary } from '@/components/editor/MonacoErrorBoundary'
 import { BinaryPreview } from '@/components/editor/BinaryPreview'
 import { GIT_STATUS_COLORS, GIT_STATUS_LABELS } from '@/config/git-status-style'
@@ -28,6 +27,8 @@ import { useDiffEditorModels } from '@/hooks/useDiffEditorModels'
 
 function handleBeforeMount(monaco: Monaco): void {
   registerMonacoThemes(monaco)
+  // Must land before the first model exists, or the worker validates it once anyway.
+  applyDiagnosticsOptions(monaco)
 }
 
 function SortableTab({
@@ -116,8 +117,6 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
   useEffect(() => {
     return window.api.fs.onFileChanged((path, content) => {
       useEditorStore.getState().updateFileContent(path, content)
-      const projectPath = useProjectStore.getState().projects.find((p) => p.id === projectId)?.path
-      if (projectPath) void updateFileInMonaco(projectPath, path, content)
     })
   }, [projectId])
 
@@ -134,15 +133,7 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
         // Formatter may not exist for this language — fall through to save
       }
     }
-    const saved = await useEditorStore.getState().saveFile(projectId, filePath)
-    if (saved) {
-      const projectPath = useProjectStore.getState().projects.find((p) => p.id === projectId)?.path
-      const content = ed?.getValue()
-      if (projectPath && typeof content === 'string') {
-        void updateFileInMonaco(projectPath, filePath, content)
-      }
-    }
-    return saved
+    return useEditorStore.getState().saveFile(projectId, filePath)
   }, [projectId])
 
   const applyPendingReveal = useCallback((filePath: string | null): void => {
@@ -299,7 +290,8 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
                   scrollBeyondLastLine: false,
                   wordWrap: 'on',
                   padding: { top: 8 },
-                  bracketPairColorization: { enabled: bracketPairColorization }
+                  bracketPairColorization: { enabled: bracketPairColorization },
+                  renderValidationDecorations: 'off'
                 }}
               />
             </MonacoErrorBoundary>
@@ -321,7 +313,8 @@ export function CodeEditor({ projectId }: { projectId: string }): React.ReactEle
                   scrollBeyondLastLine: false,
                   wordWrap: 'on',
                   padding: { top: 8 },
-                  bracketPairColorization: { enabled: bracketPairColorization }
+                  bracketPairColorization: { enabled: bracketPairColorization },
+                  renderValidationDecorations: 'off'
                 }}
               />
             </MonacoErrorBoundary>

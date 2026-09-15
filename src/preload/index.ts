@@ -270,19 +270,6 @@ const api = {
       ipcRenderer.invoke('dev-servers:open', port) as Promise<void>
   },
 
-  tsproject: {
-    scan: (rootPath: string, knownHashes?: Record<string, number>) =>
-      ipcRenderer.invoke('tsproject:scan', rootPath, knownHashes) as Promise<{
-        rootPath: string
-        tsconfigFound: boolean
-        compilerOptions: Record<string, unknown>
-        files: Record<string, string>
-        hashes: Record<string, number>
-        currentUris: string[]
-        truncated: boolean
-      }>
-  },
-
   mcp: {
     list: (projectPath: string | null) =>
       ipcRenderer.invoke('mcp:list', projectPath) as Promise<
