@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { X, Plus, ChevronUp, ChevronDown, ArrowDownToLine, Trash2, RotateCw, ImagePlus, Zap, ExternalLink } from 'lucide-react'
-import { useTerminalStore } from '@/stores/terminal-store'
+import { useTerminalStore, defaultLlmTab, startupCommandForTab, tabProfileMeta } from '@/stores/terminal-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useLayoutStore } from '@/stores/layout-store'
@@ -68,7 +68,8 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
   }, [activeTabId])
 
   const handleNewTab = (): void => {
-    createTab(project.id, project.path, useLayoutStore.getState().getLlmStartupCommand())
+    const { command, profile } = defaultLlmTab()
+    createTab(project.id, project.path, command, undefined, profile)
   }
 
   const handleCloseTab = (tabId: string): void => {
@@ -249,11 +250,13 @@ export function ProjectModal({ project, onClose }: ProjectModalProps): React.Rea
               if (!activeTabId) return
               window.api.terminal.kill(activeTabId)
               disposeTerminal(activeTabId)
+              const current = tabs.find((t) => t.id === activeTabId)
               replaceTab(
                 activeTabId,
                 project.id,
                 project.path,
-                useLayoutStore.getState().getLlmStartupCommand()
+                current ? startupCommandForTab(current) : useLayoutStore.getState().getLlmStartupCommand(),
+                current ? tabProfileMeta(current) : undefined
               )
             }}
             disabled={!activeTabId}

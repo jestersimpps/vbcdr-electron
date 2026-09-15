@@ -1,6 +1,6 @@
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
-import { useTerminalStore } from '@/stores/terminal-store'
+import { useTerminalStore, defaultLlmTab, startupCommandForTab, tabProfileMeta } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useTutorialStore } from '@/stores/tutorial-store'
@@ -239,8 +239,8 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
     destructive: false,
     run: (_target, ctx) => {
       if (!ctx.activeProjectId || !ctx.projectPath) return fail('no-project')
-      const cmd = useLayoutStore.getState().getLlmStartupCommand()
-      void useTerminalStore.getState().createTab(ctx.activeProjectId, ctx.projectPath, cmd)
+      const { command, profile } = defaultLlmTab()
+      void useTerminalStore.getState().createTab(ctx.activeProjectId, ctx.projectPath, command, undefined, profile)
       return ok('Opened a new LLM terminal')
     }
   },
@@ -269,7 +269,8 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
           activeLlmTab.id,
           activeProjectId,
           projectPath,
-          useLayoutStore.getState().getLlmStartupCommand()
+          startupCommandForTab(activeLlmTab),
+          tabProfileMeta(activeLlmTab)
         )
       return ok('Restarted the LLM terminal')
     }

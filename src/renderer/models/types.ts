@@ -47,6 +47,11 @@ export interface TerminalTab {
   cwd: string
   initialCommand?: string
   worktree?: WorktreeInfo
+  /** Which "+" button opened this tab; drives the tab and pane border color. */
+  profileId?: string
+  /** Provider the start command behaves like, so Claude-only features follow the tab. */
+  providerId?: 'claude' | 'codex' | 'custom'
+  color?: string
 }
 
 export interface GitCommit {

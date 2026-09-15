@@ -10,7 +10,13 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useTerminalStore, GLOBAL_TERMINAL_OWNER } from '@/stores/terminal-store'
+import {
+  useTerminalStore,
+  GLOBAL_TERMINAL_OWNER,
+  defaultLlmTab,
+  startupCommandForTab,
+  tabProfileMeta
+} from '@/stores/terminal-store'
 import { useQueueStore } from '@/stores/queue-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
@@ -21,8 +27,13 @@ import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, cle
 import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History, FolderOpen, FolderGit2 } from 'lucide-react'
 import { SessionHistoryModal } from './SessionHistoryModal'
 import { CloseWorktreeTabModal } from './CloseWorktreeTabModal'
-import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
-import { clearContextCommandFor } from '@/config/llm-provider-registry'
+import { capabilitiesFor, clearContextCommandFor, providerDefinition } from '@/config/llm-provider-registry'
+import {
+  buildTerminalProfiles,
+  toTabProfileMeta,
+  type TabProfileMeta,
+  type TerminalProfile
+} from '@/config/terminal-profiles'
 import { cn } from '@/lib/utils'
 import type { TerminalTab } from '@/models/types'
 import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
@@ -43,12 +54,14 @@ const SortableTerminalTab = memo(function SortableTerminalTab({
   tab,
   isActive,
   status,
+  color,
   onSelect,
   onClose
 }: {
   tab: TerminalTab
   isActive: boolean
   status: 'idle' | 'busy' | undefined
+  color: string | undefined
   onSelect: (tabId: string) => void
   onClose: (tabId: string) => void
 }): React.ReactElement {
@@ -56,7 +69,13 @@ const SortableTerminalTab = memo(function SortableTerminalTab({
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : undefined
+    opacity: isDragging ? 0.5 : undefined,
+    // Profile color: active tabs get a tinted background and a colored top edge,
+    // inactive ones only a muted text color so the strip stays readable.
+    ...(color &&
+      (isActive
+        ? { color, backgroundColor: `${color}1f`, boxShadow: `inset 0 2px 0 0 ${color}` }
+        : { color: `${color}99` }))
   }
   const handleSelect = useCallback(() => onSelect(tab.id), [onSelect, tab.id])
   const handleClose = useCallback((e: React.MouseEvent) => {
@@ -71,7 +90,8 @@ const SortableTerminalTab = memo(function SortableTerminalTab({
       {...listeners}
       className={cn(
         'group flex shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-t-md px-3 py-1.5 text-xs',
-        isActive ? 'bg-zinc-950 text-zinc-200' : 'text-zinc-500 hover:text-zinc-400'
+        isActive ? 'bg-zinc-950 text-zinc-200' : 'text-zinc-500 hover:text-zinc-400',
+        color && !isActive && 'hover:brightness-125'
       )}
       onClick={handleSelect}
     >
@@ -163,9 +183,28 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
   )
   const projectTabIds = useMemo(() => projectTabs.map((t) => t.id), [projectTabs])
 
-  const llmCapabilities = useLlmCapabilities()
+  // Claude-only features (usage, sessions, /clear) follow the active tab's own
+  // provider, falling back to the global default for tabs opened without a profile.
   const llmProviderId = useLayoutStore((s) => s.llmProviderId)
-  const clearContextCommand = clearContextCommandFor(llmProviderId)
+  const activeProviderId = activeTab?.providerId ?? llmProviderId
+  const llmCapabilities = capabilitiesFor(activeProviderId)
+  const clearContextCommand = clearContextCommandFor(activeProviderId)
+  const defaultLlmLabel = providerDefinition(llmProviderId).label
+
+  const builtinProfileColors = useLayoutStore((s) => s.builtinProfileColors)
+  const customProfiles = useLayoutStore((s) => s.customProfiles)
+  const profiles = useMemo(
+    () => buildTerminalProfiles(builtinProfileColors, customProfiles),
+    [builtinProfileColors, customProfiles]
+  )
+  const startableProfiles = useMemo(() => profiles.filter((p) => p.command), [profiles])
+  // Resolve live so recoloring a profile in settings repaints its open tabs.
+  const colorForTab = useCallback(
+    (tab: TerminalTab): string | undefined =>
+      (tab.profileId && profiles.find((p) => p.id === tab.profileId)?.color) || tab.color,
+    [profiles]
+  )
+  const activeColor = activeTab ? colorForTab(activeTab) : undefined
   const tokenVelocityTabId = activeTab?.initialCommand ? activeTabId : null
   const { velocityPerSample, tokensPerMinute } = useTokenVelocity(tokenVelocityTabId)
 
@@ -231,24 +270,43 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     return () => unsubExit()
   }, [])
 
-  const handleNewTab = async (): Promise<void> => {
+  const openLlmTab = async (cmd: string, profile?: TabProfileMeta): Promise<void> => {
     if (!hasOwner) return
-    const cmd = useLayoutStore.getState().getLlmStartupCommand()
     const worktreeProject = !isCustomOwner ? activeProject : undefined
     if (worktreeProject && useLayoutStore.getState().useWorktreesForNewLlmTabs) {
       const worktree = await createWorktreeForProject(worktreeProject.id, worktreeProject.path)
       if (worktree) {
-        createTab(ownerId!, worktree.path, cmd, worktree)
+        createTab(ownerId!, worktree.path, cmd, worktree, profile)
         return
       }
     }
-    createTab(ownerId!, ownerCwd, cmd)
+    createTab(ownerId!, ownerCwd, cmd, undefined, profile)
+  }
+
+  /** Default assistant from settings (the empty-state "Start … here" button). */
+  const handleNewTab = async (): Promise<void> => {
+    const { command, profile } = defaultLlmTab()
+    await openLlmTab(command, profile)
+  }
+
+  /** One of the colored "+" buttons: Claude Code, Codex or a custom profile. */
+  const handleNewProfileTab = async (profile: TerminalProfile): Promise<void> => {
+    if (!profile.command) return
+    const cmd = useLayoutStore.getState().getProfileStartupCommand(profile.id)
+    await openLlmTab(cmd, toTabProfileMeta(profile))
+  }
+
+  /** The neutral "+": an empty shell with no assistant started. */
+  const handleNewShellTab = (): void => {
+    if (!hasOwner) return
+    createTab(ownerId!, ownerCwd)
   }
 
   const openFolderTab = useCallback((folder: string): void => {
     if (!ownerId) return
     setGlobalTerminalCwd(folder)
-    createTab(ownerId, folder, useLayoutStore.getState().getLlmStartupCommand())
+    const { command, profile } = defaultLlmTab()
+    createTab(ownerId, folder, command, undefined, profile)
   }, [ownerId, setGlobalTerminalCwd, createTab])
 
   const handleOpenFolder = useCallback(async (): Promise<void> => {
@@ -318,7 +376,10 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
 
   return (
     <div data-terminal-panel style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
-      <div className="flex h-9 shrink-0 items-center border-b border-zinc-800 bg-zinc-900/50">
+      <div
+        className="flex h-9 shrink-0 items-center border-b border-zinc-800 bg-zinc-900/50"
+        style={activeColor ? { borderBottomColor: activeColor } : undefined}
+      >
         <div className="flex h-full flex-1 items-center gap-0.5 overflow-x-auto px-1">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTabDragEnd}>
             <SortableContext items={projectTabIds} strategy={horizontalListSortingStrategy}>
@@ -328,6 +389,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
                   tab={tab}
                   isActive={activeTabId === tab.id}
                   status={tabStatuses[tab.id]}
+                  color={colorForTab(tab)}
                   onSelect={handleSelectTab}
                   onClose={handleCloseTab}
                 />
@@ -335,15 +397,31 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
             </SortableContext>
           </DndContext>
         </div>
-        <button
-          onClick={handleNewTab}
-          disabled={!hasOwner}
-          className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
-          data-tour="terminal-newtab"
-          title="New tab"
-        >
-          <Plus size={14} />
-        </button>
+        <div className="flex shrink-0 items-center gap-0.5 pr-0.5" data-tour="terminal-newtab">
+          {startableProfiles.map((profile) => (
+            <button
+              key={profile.id}
+              onClick={() => void handleNewProfileTab(profile)}
+              disabled={!hasOwner}
+              className="rounded p-1.5 hover:bg-zinc-800 disabled:opacity-30"
+              style={{ color: profile.color }}
+              title={`New ${profile.label} tab`}
+              aria-label={`New ${profile.label} tab`}
+            >
+              <Plus size={14} />
+            </button>
+          ))}
+          <div className="mx-0.5 h-3.5 w-px bg-zinc-800" />
+          <button
+            onClick={handleNewShellTab}
+            disabled={!hasOwner}
+            className="rounded p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-30"
+            title="New empty shell"
+            aria-label="New empty shell"
+          >
+            <Plus size={14} />
+          </button>
+        </div>
         {global && (
           <div className="flex shrink-0 items-center gap-0.5 pr-1">
             <div className="mx-0.5 h-3.5 w-px bg-zinc-800" />
@@ -473,7 +551,8 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
             const tabCwd = activeTab?.cwd ?? ownerCwd
             window.api.terminal.kill(activeTabId)
             disposeTerminal(activeTabId)
-            replaceTab(activeTabId, ownerId, tabCwd, useLayoutStore.getState().getLlmStartupCommand())
+            const cmd = activeTab ? startupCommandForTab(activeTab) : useLayoutStore.getState().getLlmStartupCommand()
+            replaceTab(activeTabId, ownerId, tabCwd, cmd, activeTab ? tabProfileMeta(activeTab) : undefined)
           }}
           disabled={!activeTabId}
           onMouseDown={(e) => e.preventDefault()}
@@ -587,9 +666,11 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
                   className="flex items-center gap-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-medium text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/20"
                 >
                   <Sparkles size={14} />
-                  Start Claude Code here
+                  Start {defaultLlmLabel} here
                 </button>
-                <div className="text-micro text-zinc-600">or click + above for an empty shell</div>
+                <div className="text-micro text-zinc-600">
+                  or use the colored + buttons above, the grey one opens an empty shell
+                </div>
               </>
             ) : (
               <div className="text-xs text-zinc-600">Select a project first</div>
@@ -598,6 +679,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
         )}
         {projectTabs.map((tab) => {
           const isVisible = activeTabId === tab.id
+          const tabColor = colorForTab(tab)
           return (
             <div
               key={tab.id}
@@ -605,7 +687,9 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
                 position: 'absolute',
                 inset: 0,
                 visibility: isVisible ? 'visible' : 'hidden',
-                pointerEvents: isVisible ? 'auto' : 'none'
+                pointerEvents: isVisible ? 'auto' : 'none',
+                // Inset shadow rather than a border so xterm's fit measurement is unchanged.
+                boxShadow: tabColor ? `inset 0 0 0 1px ${tabColor}` : undefined
               }}
             >
               <TerminalInstance

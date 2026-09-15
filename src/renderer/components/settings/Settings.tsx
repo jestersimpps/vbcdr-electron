@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Palette, Sliders, Code, Shield, type LucideIcon } from 'lucide-react'
 import { PermissionPresetsSection } from '@/components/settings/PermissionPresetsSection'
 import { LlmStartupCommandSection } from '@/components/settings/LlmStartupCommandSection'
+import { TerminalProfilesSection } from '@/components/settings/TerminalProfilesSection'
 import { GlobalTerminalFolderSection } from '@/components/settings/GlobalTerminalFolderSection'
 import { WorktreeSection } from '@/components/settings/WorktreeSection'
 import { TokenCapSection } from '@/components/settings/TokenCapSection'
@@ -73,6 +74,7 @@ export function Settings(): React.ReactElement {
           <>
             <Section title="LLM">
               <LlmStartupCommandSection />
+              <TerminalProfilesSection />
               <GlobalTerminalFolderSection />
               <WorktreeSection />
             </Section>

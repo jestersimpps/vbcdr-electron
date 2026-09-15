@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useTerminalStore } from './terminal-store'
+import { useTerminalStore, providerIdForTab, startupCommandForTab, tabProfileMeta } from './terminal-store'
+import { useLayoutStore } from './layout-store'
+import { DEFAULT_BUILTIN_PROFILE_COLORS } from '@/config/terminal-profiles'
 
 const reset = (): void => {
   useTerminalStore.setState({
@@ -18,7 +20,36 @@ const reset = (): void => {
 describe('terminal-store', () => {
   beforeEach(() => {
     reset()
+    useLayoutStore.setState({ llmProviderId: 'claude', llmCustomCommand: '', companionEnabled: false })
     vi.mocked(window.api.terminal.has).mockReset().mockResolvedValue(true)
+  })
+
+  describe('profile helpers', () => {
+    it('providerIdForTab prefers the tab provider and falls back to the global one', () => {
+      const profile = { profileId: 'codex' as const, providerId: 'codex' as const, label: 'Codex', color: '#10a37f' }
+      const withProfile = useTerminalStore.getState().createTab('p1', '/cwd', 'codex', undefined, profile)
+      const plain = useTerminalStore.getState().createTab('p1', '/cwd', 'claude')
+      expect(providerIdForTab(withProfile)).toBe('codex')
+      expect(providerIdForTab(plain)).toBe('claude')
+      expect(providerIdForTab('missing')).toBe('claude')
+    })
+
+    it('startupCommandForTab restarts a profiled tab with its own command, not the global default', () => {
+      useLayoutStore.getState().updateCustomProfile('custom-1', { label: 'Opus', command: 'claude --model opus' })
+      const profile = { profileId: 'custom-1' as const, providerId: 'claude' as const, label: 'Opus', color: '#60a5fa' }
+      const id = useTerminalStore.getState().createTab('p1', '/cwd', 'claude --model opus', undefined, profile)
+      const tab = useTerminalStore.getState().tabs.find((t) => t.id === id)!
+      expect(startupCommandForTab(tab)).toBe('claude --model opus')
+      expect(tabProfileMeta(tab)).toEqual(profile)
+      useLayoutStore.getState().resetCustomProfile('custom-1')
+    })
+
+    it('startupCommandForTab keeps a plain LLM tab on its original command', () => {
+      const id = useTerminalStore.getState().createTab('p1', '/cwd', 'gemini')
+      const tab = useTerminalStore.getState().tabs.find((t) => t.id === id)!
+      expect(startupCommandForTab(tab)).toBe('gemini')
+      expect(tabProfileMeta(tab)).toBeUndefined()
+    })
   })
 
   describe('createTab', () => {
@@ -40,6 +71,16 @@ describe('terminal-store', () => {
     it('uses LLM title when an initial command is given', () => {
       useTerminalStore.getState().createTab('p1', '/cwd', 'claude')
       expect(useTerminalStore.getState().tabs[0].title).toBe('LLM')
+    })
+
+    it('titles and colors the tab from its profile when one is given', () => {
+      const profile = { profileId: 'codex' as const, providerId: 'codex' as const, label: 'Codex', color: '#10a37f' }
+      useTerminalStore.getState().createTab('p1', '/cwd', 'codex', undefined, profile)
+      const [tab] = useTerminalStore.getState().tabs
+      expect(tab.title).toBe('Codex')
+      expect(tab.profileId).toBe('codex')
+      expect(tab.providerId).toBe('codex')
+      expect(tab.color).toBe('#10a37f')
     })
 
     it('stores worktree info when given and omits the key otherwise', () => {
@@ -189,12 +230,26 @@ describe('terminal-store', () => {
   })
 
   describe('initProject', () => {
-    it('creates a new claude tab when none exist', async () => {
+    it('creates a new claude tab, colored with the Claude profile, when none exist', async () => {
       await useTerminalStore.getState().initProject('p1', '/cwd')
       const tabs = useTerminalStore.getState().tabs
       expect(tabs).toHaveLength(1)
-      expect(tabs[0].title).toBe('LLM')
+      expect(tabs[0].title).toBe('Claude Code')
       expect(tabs[0].initialCommand).toBe('claude')
+      expect(tabs[0].profileId).toBe('claude')
+      expect(tabs[0].providerId).toBe('claude')
+      expect(tabs[0].color).toBe(DEFAULT_BUILTIN_PROFILE_COLORS.claude)
+    })
+
+    it('falls back to an uncolored LLM tab when the default provider is custom', async () => {
+      useLayoutStore.getState().setLlmProviderId('custom')
+      useLayoutStore.getState().setLlmCustomCommand('gemini')
+      await useTerminalStore.getState().initProject('p1', '/cwd')
+      const [tab] = useTerminalStore.getState().tabs
+      expect(tab.title).toBe('LLM')
+      expect(tab.initialCommand).toBe('gemini')
+      expect(tab.profileId).toBeUndefined()
+      expect(tab.color).toBeUndefined()
     })
 
     it('skips creation when a live tab exists', async () => {

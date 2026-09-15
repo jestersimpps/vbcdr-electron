@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { v4 as uuid } from 'uuid'
 import type { TerminalTab, WorktreeInfo } from '@/models/types'
+import type { TabProfileMeta } from '@/config/terminal-profiles'
+import type { LlmProviderId } from '@/config/llm-provider-registry'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
@@ -11,6 +13,58 @@ const OUTPUT_BUFFER_SIZE = 10
 
 export const GLOBAL_TERMINAL_OWNER = '__global__'
 export const DEFAULT_LLM_TAB_TITLE = 'LLM'
+
+function profileFields(profile: TabProfileMeta): Pick<TerminalTab, 'profileId' | 'providerId' | 'color'> {
+  return { profileId: profile.profileId, providerId: profile.providerId, color: profile.color }
+}
+
+/**
+ * Command and profile for a default LLM tab (auto-opened first tab, "Start
+ * here" button). Colored when the default provider is a built-in profile.
+ */
+export function defaultLlmTab(): { command: string; profile?: TabProfileMeta } {
+  const layout = useLayoutStore.getState()
+  const profileId = layout.getDefaultProfileId()
+  if (!profileId) return { command: layout.getLlmStartupCommand() }
+  const profile = layout.getTerminalProfile(profileId)
+  return {
+    command: layout.getProfileStartupCommand(profileId),
+    profile: {
+      profileId: profile.id,
+      providerId: profile.providerId,
+      label: profile.label,
+      color: profile.color
+    }
+  }
+}
+
+/** The command a restarted tab should run: its own profile's, else the default. */
+export function startupCommandForTab(tab: TerminalTab): string {
+  const layout = useLayoutStore.getState()
+  const profileId = tab.profileId
+  if (profileId && layout.getTerminalProfiles().some((p) => p.id === profileId)) {
+    const cmd = layout.getProfileStartupCommand(profileId as TabProfileMeta['profileId'])
+    if (cmd) return cmd
+  }
+  return tab.initialCommand ?? layout.getLlmStartupCommand()
+}
+
+/** The provider a tab behaves like: its own profile's, else the global default. */
+export function providerIdForTab(tabId: string): LlmProviderId {
+  const tab = useTerminalStore.getState().tabs.find((t) => t.id === tabId)
+  return tab?.providerId ?? useLayoutStore.getState().llmProviderId
+}
+
+/** Profile metadata to carry over when a tab is replaced or restarted. */
+export function tabProfileMeta(tab: TerminalTab): TabProfileMeta | undefined {
+  if (!tab.profileId || !tab.providerId || !tab.color) return undefined
+  return {
+    profileId: tab.profileId as TabProfileMeta['profileId'],
+    providerId: tab.providerId,
+    label: tab.title,
+    color: tab.color
+  }
+}
 
 interface TerminalStore {
   tabs: TerminalTab[]
@@ -23,9 +77,21 @@ interface TerminalStore {
   attentionProjectIds: Record<string, boolean>
   autoScrollPerTab: Record<string, boolean>
   focusedTabId: string | null
-  createTab: (projectId: string, cwd: string, initialCommand?: string, worktree?: WorktreeInfo) => string
+  createTab: (
+    projectId: string,
+    cwd: string,
+    initialCommand?: string,
+    worktree?: WorktreeInfo,
+    profile?: TabProfileMeta
+  ) => string
   closeTab: (tabId: string) => void
-  replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => string
+  replaceTab: (
+    oldTabId: string,
+    projectId: string,
+    cwd: string,
+    initialCommand?: string,
+    profile?: TabProfileMeta
+  ) => string
   setActiveTab: (projectId: string, tabId: string) => void
   setTabStatus: (tabId: string, status: TabStatus) => void
   setTabTitle: (tabId: string, title: string) => void
@@ -54,16 +120,27 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   autoScrollPerTab: {},
   focusedTabId: null,
 
-  createTab: (projectId: string, cwd: string, initialCommand?: string, worktree?: WorktreeInfo) => {
+  createTab: (
+    projectId: string,
+    cwd: string,
+    initialCommand?: string,
+    worktree?: WorktreeInfo,
+    profile?: TabProfileMeta
+  ) => {
     const tabId = uuid()
     const projectTabs = get().tabs.filter((t) => t.projectId === projectId)
     const tab: TerminalTab = {
       id: tabId,
-      title: initialCommand ? DEFAULT_LLM_TAB_TITLE : `Terminal ${projectTabs.length + 1}`,
+      title: profile
+        ? profile.label
+        : initialCommand
+          ? DEFAULT_LLM_TAB_TITLE
+          : `Terminal ${projectTabs.length + 1}`,
       projectId,
       cwd,
       initialCommand,
-      ...(worktree && { worktree })
+      ...(worktree && { worktree }),
+      ...(profile && profileFields(profile))
     }
     set((state) => ({
       tabs: [...state.tabs, tab],
@@ -109,14 +186,21 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
 
   isAutoScroll: (tabId: string) => get().autoScrollPerTab[tabId] ?? true,
 
-  replaceTab: (oldTabId: string, projectId: string, cwd: string, initialCommand?: string) => {
+  replaceTab: (
+    oldTabId: string,
+    projectId: string,
+    cwd: string,
+    initialCommand?: string,
+    profile?: TabProfileMeta
+  ) => {
     const newTabId = uuid()
     const tab: TerminalTab = {
       id: newTabId,
-      title: initialCommand ? DEFAULT_LLM_TAB_TITLE : 'Terminal',
+      title: profile ? profile.label : initialCommand ? DEFAULT_LLM_TAB_TITLE : 'Terminal',
       projectId,
       cwd,
-      initialCommand
+      initialCommand,
+      ...(profile && profileFields(profile))
     }
     set((state) => ({
       tabs: [...state.tabs.filter((t) => t.id !== oldTabId), tab],
@@ -241,6 +325,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       }
       if (liveCount > 0) return
     }
-    get().createTab(projectId, cwd, useLayoutStore.getState().getLlmStartupCommand())
+    const { command, profile } = defaultLlmTab()
+    get().createTab(projectId, cwd, command, undefined, profile)
   }
 }))

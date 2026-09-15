@@ -5,7 +5,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { useThemeStore } from '@/stores/theme-store'
-import { useTerminalStore } from '@/stores/terminal-store'
+import { useTerminalStore, providerIdForTab } from '@/stores/terminal-store'
 import { useClipboardStore } from '@/stores/clipboard-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { capabilitiesFor } from '@/config/llm-provider-registry'
@@ -287,7 +287,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
               useTerminalStore.getState().setOutput(projectId, extracted)
               emitCompanionRows(tabId, extracted)
             }
-            const providerId = useLayoutStore.getState().llmProviderId
+            const providerId = providerIdForTab(tabId)
             const usageSupported = capabilitiesFor(providerId).usage
             if (latestTokens !== null && usageSupported && !isTranscriptDriven(tabId)) {
               const provider = providerId === 'codex' ? 'codex' : 'claude'

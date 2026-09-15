@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
-import { useTerminalStore } from '@/stores/terminal-store'
-import { useLayoutStore } from '@/stores/layout-store'
+import { useTerminalStore, providerIdForTab } from '@/stores/terminal-store'
 import { markTranscriptDriven } from '@/lib/transcript-driven-tabs'
 
 const POLL_INTERVAL_MS = 2000
@@ -15,7 +14,7 @@ export function useContextUsage(
     let cancelled = false
 
     const poll = async (): Promise<void> => {
-      const providerId = useLayoutStore.getState().llmProviderId
+      const providerId = providerIdForTab(tabId)
       const provider = providerId === 'codex' ? 'codex' : 'claude'
       const usage = await window.api.tokenUsage.context(cwd, tabId, provider)
       if (cancelled || !usage) return

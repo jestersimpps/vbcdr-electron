@@ -102,10 +102,20 @@ export function resolveStartupCommand(
   companionPromptPath?: string | null
 ): string {
   const base = id === 'custom' ? customCommand.trim() : providerDefinition(id).command
-  if (!base || !companionPromptPath) return base
+  return appendCompanionPrompt(base, id, companionPromptPath)
+}
+
+/** Appends the provider's system-prompt flag when it has one and a prompt file is set. */
+export function appendCompanionPrompt(
+  base: string,
+  id: LlmProviderId,
+  companionPromptPath?: string | null
+): string {
+  const trimmed = base.trim()
+  if (!trimmed || !companionPromptPath) return trimmed
   const flag = providerDefinition(id).systemPromptFlag
-  if (!flag) return base
-  return `${base} ${flag} "$(cat ${companionPromptPath})"`
+  if (!flag) return trimmed
+  return `${trimmed} ${flag} "$(cat ${companionPromptPath})"`
 }
 
 export function providerIdForCommand(command: string): LlmProviderId {

@@ -9,12 +9,26 @@ import {
 } from '@/lib/companion-triggers'
 import {
   DEFAULT_LLM_PROVIDER_ID,
+  appendCompanionPrompt,
   isLlmProviderId,
   providerIdForCommand,
   resolveStartupCommand,
   supportsVoiceAgent,
   type LlmProviderId
 } from '@/config/llm-provider-registry'
+import {
+  DEFAULT_BUILTIN_PROFILE_COLORS,
+  buildTerminalProfiles,
+  defaultCustomProfiles,
+  isValidHexColor,
+  sanitizeBuiltinProfileColors,
+  sanitizeCustomProfiles,
+  type BuiltinProfileId,
+  type CustomProfileId,
+  type CustomTerminalProfile,
+  type TerminalProfile,
+  type TerminalProfileId
+} from '@/config/terminal-profiles'
 
 export const DEFAULT_SPLIT = 75
 
@@ -27,10 +41,19 @@ interface LayoutState {
   idleSoundId: string
   llmProviderId: LlmProviderId
   llmCustomCommand: string
+  builtinProfileColors: Record<BuiltinProfileId, string>
+  customProfiles: CustomTerminalProfile[]
   globalTerminalCwd: string
   useWorktreesForNewLlmTabs: boolean
   closeTabWorkflowPrompt: string
   resetVersion: number
+  setBuiltinProfileColor: (id: BuiltinProfileId, color: string) => void
+  updateCustomProfile: (id: CustomProfileId, patch: Partial<Omit<CustomTerminalProfile, 'id'>>) => void
+  resetCustomProfile: (id: CustomProfileId) => void
+  getTerminalProfiles: () => TerminalProfile[]
+  getTerminalProfile: (id: TerminalProfileId) => TerminalProfile
+  getProfileStartupCommand: (id: TerminalProfileId) => string
+  getDefaultProfileId: () => TerminalProfileId | null
   getSplit: (projectId: string) => number
   setSplit: (projectId: string, size: number) => void
   setGitCollapsed: (projectId: string, collapsed: boolean) => void
@@ -116,6 +139,8 @@ export const useLayoutStore = create<LayoutState>()(
       idleSoundId: DEFAULT_IDLE_SOUND_ID,
       llmProviderId: DEFAULT_LLM_PROVIDER_ID,
       llmCustomCommand: '',
+      builtinProfileColors: { ...DEFAULT_BUILTIN_PROFILE_COLORS },
+      customProfiles: defaultCustomProfiles(),
       globalTerminalCwd: '',
       useWorktreesForNewLlmTabs: false,
       closeTabWorkflowPrompt: DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT,
@@ -229,6 +254,55 @@ export const useLayoutStore = create<LayoutState>()(
         return resolved.length > 0 ? resolved : DEFAULT_LLM_STARTUP_COMMAND
       },
 
+      setBuiltinProfileColor: (id: BuiltinProfileId, color: string) => {
+        if (!isValidHexColor(color)) return
+        set({ builtinProfileColors: { ...get().builtinProfileColors, [id]: color } })
+      },
+
+      updateCustomProfile: (id: CustomProfileId, patch: Partial<Omit<CustomTerminalProfile, 'id'>>) => {
+        const next = get().customProfiles.map((p) => {
+          if (p.id !== id) return p
+          return {
+            ...p,
+            ...(typeof patch.label === 'string' && patch.label.trim() && { label: patch.label.trim() }),
+            ...(isValidHexColor(patch.color) && { color: patch.color }),
+            ...(typeof patch.command === 'string' && { command: patch.command.trim() })
+          }
+        })
+        set({ customProfiles: sanitizeCustomProfiles(next) })
+      },
+
+      resetCustomProfile: (id: CustomProfileId) => {
+        const fallback = defaultCustomProfiles().find((p) => p.id === id)
+        if (!fallback) return
+        set({ customProfiles: get().customProfiles.map((p) => (p.id === id ? fallback : p)) })
+      },
+
+      getTerminalProfiles: () => {
+        const { builtinProfileColors, customProfiles } = get()
+        return buildTerminalProfiles(builtinProfileColors, customProfiles)
+      },
+
+      getTerminalProfile: (id: TerminalProfileId) => {
+        const profiles = get().getTerminalProfiles()
+        return profiles.find((p) => p.id === id) ?? profiles[0]
+      },
+
+      getProfileStartupCommand: (id: TerminalProfileId) => {
+        const profile = get().getTerminalProfile(id)
+        const { companionEnabled, companionPromptPath } = get()
+        const promptPath = companionEnabled ? companionPromptPath : null
+        // A custom slot keeps its own flags (`claude --resume`) and still gets
+        // the companion prompt when its binary behaves like a known provider.
+        return appendCompanionPrompt(profile.command, profile.providerId, promptPath)
+      },
+
+      getDefaultProfileId: () => {
+        const { llmProviderId } = get()
+        if (llmProviderId === 'claude' || llmProviderId === 'codex') return llmProviderId
+        return null
+      },
+
       setGlobalTerminalCwd: (path: string) => {
         set({ globalTerminalCwd: path.trim() })
       },
@@ -274,6 +348,8 @@ export const useLayoutStore = create<LayoutState>()(
         idleSoundId: state.idleSoundId,
         llmProviderId: state.llmProviderId,
         llmCustomCommand: state.llmCustomCommand,
+        builtinProfileColors: state.builtinProfileColors,
+        customProfiles: state.customProfiles,
         globalTerminalCwd: state.globalTerminalCwd,
         useWorktreesForNewLlmTabs: state.useWorktreesForNewLlmTabs,
         closeTabWorkflowPrompt: state.closeTabWorkflowPrompt,
@@ -297,6 +373,8 @@ export const useLayoutStore = create<LayoutState>()(
             : DEFAULT_LLM_PROVIDER_ID,
           llmCustomCommand:
             typeof incoming.llmCustomCommand === 'string' ? incoming.llmCustomCommand : '',
+          builtinProfileColors: sanitizeBuiltinProfileColors(incoming.builtinProfileColors),
+          customProfiles: sanitizeCustomProfiles(incoming.customProfiles),
           useWorktreesForNewLlmTabs:
             typeof incoming.useWorktreesForNewLlmTabs === 'boolean'
               ? incoming.useWorktreesForNewLlmTabs
