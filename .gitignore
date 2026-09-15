@@ -8,7 +8,8 @@ docs/changelog-2026-04.md
 .worktrees/
 # local tool output
 .playwright-mcp/
-.claude/settings.local.json
+.claude
 # editor/asset backups
 *.bak
 *.bak.*
+.serena
