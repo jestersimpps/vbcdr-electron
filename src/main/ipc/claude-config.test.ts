@@ -104,5 +104,29 @@ describe('claude-config ipc', () => {
       expect(await invoke(registry, 'claude:read-file', projectClaudeMd, projectDir)).toBe('project root')
       expect(await invoke(registry, 'claude:read-file', projectScoped, projectDir)).toBe('scoped')
     })
+
+    it('returns empty string for a missing optional settings file', async () => {
+      const missing = path.join(projectDir, '.claude', 'settings.local.json')
+      expect(fs.existsSync(missing)).toBe(false)
+      await expect(
+        invoke(registry, 'claude:read-file', missing, projectDir)
+      ).resolves.toBe('')
+    })
+
+    it('still rejects a disallowed path that also does not exist', async () => {
+      const outsideMissing = path.join(homeDir, 'nope', 'settings.local.json')
+      await expect(
+        invoke(registry, 'claude:read-file', outsideMissing, projectDir)
+      ).rejects.toThrow(/not allowed/)
+    })
+
+    it('surfaces non-ENOENT read errors instead of swallowing them', async () => {
+      // A directory where a file is expected fails with EISDIR/EINVAL, not ENOENT.
+      const asDir = path.join(projectDir, '.claude', 'a-directory')
+      fs.mkdirSync(asDir, { recursive: true })
+      await expect(
+        invoke(registry, 'claude:read-file', asDir, projectDir)
+      ).rejects.toThrow()
+    })
   })
 })

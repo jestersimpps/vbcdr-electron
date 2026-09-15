@@ -150,7 +150,14 @@ export function registerClaudeConfigHandlers(): void {
   safeHandle('claude:read-file', (_event, filePath: string, projectPath: string): string => {
     const resolved = path.resolve(filePath)
     if (!isAllowedClaudePath(resolved, projectPath)) throw new Error('Path not allowed')
-    return fs.readFileSync(resolved, 'utf-8')
+    try {
+      return fs.readFileSync(resolved, 'utf-8')
+    } catch (err) {
+      // Optional config files (settings.local.json, CLAUDE.md) are absent in most
+      // projects. Callers treat that as empty, so don't raise it as a handler error.
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return ''
+      throw err
+    }
   })
 
   safeHandle('claude:write-file', (_event, filePath: string, content: string, projectPath: string): void => {
