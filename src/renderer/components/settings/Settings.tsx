@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Palette, Sliders, Code, Shield, type LucideIcon } from 'lucide-react'
+import { Palette, Sliders, Code, Shield, Keyboard, type LucideIcon } from 'lucide-react'
 import { PermissionPresetsSection } from '@/components/settings/PermissionPresetsSection'
 import { LlmStartupCommandSection } from '@/components/settings/LlmStartupCommandSection'
 import { TerminalProfilesSection } from '@/components/settings/TerminalProfilesSection'
@@ -10,14 +10,16 @@ import { SoundSection } from '@/components/settings/SoundSection'
 import { CompanionSection } from '@/components/settings/CompanionSection'
 import { EditorSection } from '@/components/settings/EditorSection'
 import { ThemeSection } from '@/components/settings/ThemeSection'
+import { KeybindingsSection } from '@/components/settings/KeybindingsSection'
 import { Section, useAccent } from '@/components/settings/SettingsControls'
 import { cn } from '@/lib/utils'
 
-type SettingsTab = 'general' | 'editor' | 'theme' | 'permissions'
+type SettingsTab = 'general' | 'editor' | 'keybindings' | 'theme' | 'permissions'
 
 const TABS: { id: SettingsTab; label: string; icon: LucideIcon }[] = [
   { id: 'general', label: 'General', icon: Sliders },
   { id: 'editor', label: 'Editor', icon: Code },
+  { id: 'keybindings', label: 'Keybindings', icon: Keyboard },
   { id: 'theme', label: 'Theme', icon: Palette },
   { id: 'permissions', label: 'Permissions', icon: Shield }
 ]
@@ -99,6 +101,12 @@ export function Settings(): React.ReactElement {
         {tab === 'theme' && (
           <Section title="Theme">
             <ThemeSection />
+          </Section>
+        )}
+
+        {tab === 'keybindings' && (
+          <Section title="Keybindings">
+            <KeybindingsSection />
           </Section>
         )}
 

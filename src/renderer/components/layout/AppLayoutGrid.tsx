@@ -21,6 +21,7 @@ import { useEditorStore } from '@/stores/editor-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useLayoutStore } from '@/stores/layout-store'
+import { useShortcutHintStore } from '@/stores/shortcut-hint-store'
 import { StatusBar } from '@/components/layout/StatusBar'
 import { PanelErrorBoundary } from '@/components/layout/PanelErrorBoundary'
 import { useLlmCapabilities } from '@/hooks/useLlmCapabilities'
@@ -73,12 +74,14 @@ function SortableProjectTab({
   project,
   isActive,
   onSelect,
-  onRemove
+  onRemove,
+  shortcutNumber
 }: {
   project: Project
   isActive: boolean
   onSelect: () => void
   onRemove: () => void
+  shortcutNumber?: number
 }): React.ReactElement {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id })
   const needsAttention = useTerminalStore((s) => !isActive && !!s.attentionProjectIds[project.id])
@@ -109,6 +112,11 @@ function SortableProjectTab({
       )}
     >
       <FolderOpen size={12} className="shrink-0" />
+      {shortcutNumber && (
+        <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded bg-zinc-700 px-1 font-mono text-[10px] text-zinc-200">
+          {shortcutNumber}
+        </span>
+      )}
       <span className="truncate min-w-0 flex-1 text-left">{project.name}</span>
       <ProjectTabStatus projectId={project.id} />
       <span
@@ -127,6 +135,7 @@ function SortableProjectTab({
 
 export function AppLayoutGrid(): React.ReactElement {
   const projects = useProjectStore((s) => s.projects)
+  const projectNumbersVisible = useShortcutHintStore((s) => s.projectNumbersVisible)
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const dashboardActive = useProjectStore((s) => s.dashboardActive)
   const statisticsActive = useProjectStore((s) => s.statisticsActive)
@@ -398,7 +407,7 @@ export function AppLayoutGrid(): React.ReactElement {
           <div className="flex items-center h-full min-w-0 flex-1" data-tour="project-tabs">
             <DndContext sensors={projectTabSensors} collisionDetection={closestCenter} onDragEnd={handleProjectDragEnd}>
               <SortableContext items={projects.map((p) => p.id)} strategy={horizontalListSortingStrategy}>
-                {projects.map((project) => (
+                {projects.map((project, index) => (
                   <SortableProjectTab
                     key={project.id}
                     project={project}
@@ -408,6 +417,7 @@ export function AppLayoutGrid(): React.ReactElement {
                       useTerminalStore.getState().clearProjectAttention(project.id)
                     }}
                     onRemove={() => removeProject(project.id)}
+                    shortcutNumber={projectNumbersVisible && index < 9 ? index + 1 : undefined}
                   />
                 ))}
               </SortableContext>

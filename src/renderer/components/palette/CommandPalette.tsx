@@ -67,23 +67,6 @@ export function CommandPalette(): React.ReactElement | null {
   const paletteLlmLabel = providerDefinition(useLayoutStore((s) => s.llmProviderId)).label
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setOpen((prev) => {
-          if (prev && mode === 'all') return false
-          setMode('all')
-          return true
-        })
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'p' && !e.shiftKey) {
-        e.preventDefault()
-        setOpen((prev) => {
-          if (prev && mode === 'files') return false
-          setMode('files')
-          return true
-        })
-      }
-    }
     const handleOpenEvent = (e: Event): void => {
       const detail = (e as CustomEvent<{ mode?: PaletteMode; open?: boolean }>).detail
       if (detail?.open === false) {
@@ -102,10 +85,8 @@ export function CommandPalette(): React.ReactElement | null {
         return true
       })
     }
-    window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('palette:open', handleOpenEvent)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('palette:open', handleOpenEvent)
     }
   }, [mode])

@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { DevServer } from '../main/models/types'
+import type { KeybindingOverrides } from '../main/models/keybindings'
 
 const api = {
   getPathForFile: (file: File): string => webUtils.getPathForFile(file),
@@ -203,6 +204,13 @@ const api = {
     return (): void => {
       ipcRenderer.removeListener('menu:action', handler)
     }
+  },
+
+  keybindings: {
+    get: () => ipcRenderer.invoke('keybindings:get') as Promise<KeybindingOverrides>,
+    set: (id: string, accelerator: string | null) =>
+      ipcRenderer.invoke('keybindings:set', id, accelerator) as Promise<KeybindingOverrides>,
+    reset: () => ipcRenderer.invoke('keybindings:reset') as Promise<KeybindingOverrides>
   },
 
   updater: {

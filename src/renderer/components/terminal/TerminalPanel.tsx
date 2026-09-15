@@ -22,6 +22,7 @@ import { useProjectStore } from '@/stores/project-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useLayoutStore } from '@/stores/layout-store'
+import { useShortcutHintStore } from '@/stores/shortcut-hint-store'
 import { createWorktreeForProject } from '@/stores/worktree-store'
 import { TerminalInstance, disposeTerminal, applyThemeToAll, searchTerminal, clearTerminalSearch, focusTerminal, getTerminalInstance } from './TerminalInstance'
 import { Plus, X, ChevronUp, ChevronDown, ArrowDownToLine, ArrowDownFromLine, Trash2, RotateCw, ImagePlus, Zap, Palette, Sparkles, History, FolderOpen, FolderGit2 } from 'lucide-react'
@@ -56,7 +57,8 @@ const SortableTerminalTab = memo(function SortableTerminalTab({
   status,
   color,
   onSelect,
-  onClose
+  onClose,
+  shortcutNumber
 }: {
   tab: TerminalTab
   isActive: boolean
@@ -64,6 +66,7 @@ const SortableTerminalTab = memo(function SortableTerminalTab({
   color: string | undefined
   onSelect: (tabId: string) => void
   onClose: (tabId: string) => void
+  shortcutNumber?: number
 }): React.ReactElement {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tab.id })
   const style: React.CSSProperties = {
@@ -100,6 +103,11 @@ const SortableTerminalTab = memo(function SortableTerminalTab({
       )}
       {tab.initialCommand && status === 'idle' && (
         <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+      )}
+      {shortcutNumber && (
+        <span className="flex h-4 min-w-4 items-center justify-center rounded bg-zinc-700 px-1 font-mono text-[10px] text-zinc-200">
+          {shortcutNumber}
+        </span>
       )}
       <span>{tab.title}</span>
       <button
@@ -138,6 +146,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
   const isCustomOwner = !!ownerOverride || global
 
   const tabs = useTerminalStore((s) => s.tabs)
+  const terminalNumbersVisible = useShortcutHintStore((s) => s.terminalNumbersVisible)
   const activeTabPerProject = useTerminalStore((s) => s.activeTabPerProject)
   const tabStatuses = useTerminalStore((s) => s.tabStatuses)
   const tokenUsagePerTab = useTerminalStore((s) => s.tokenUsagePerTab)
@@ -182,6 +191,12 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
     [projectTabs, activeTabId]
   )
   const projectTabIds = useMemo(() => projectTabs.map((t) => t.id), [projectTabs])
+  const llmShortcutNumbers = useMemo(() => {
+    const numbers = new Map<string, number>()
+    projectTabs.filter((tab) => tab.initialCommand).slice(0, 9)
+      .forEach((tab, index) => numbers.set(tab.id, index + 1))
+    return numbers
+  }, [projectTabs])
 
   // Claude-only features (usage, sessions, /clear) follow the active tab's own
   // provider, falling back to the global default for tabs opened without a profile.
@@ -392,6 +407,7 @@ export function TerminalPanel({ global = false, ownerOverride }: TerminalPanelPr
                   color={colorForTab(tab)}
                   onSelect={handleSelectTab}
                   onClose={handleCloseTab}
+                  shortcutNumber={terminalNumbersVisible ? llmShortcutNumbers.get(tab.id) : undefined}
                 />
               ))}
             </SortableContext>

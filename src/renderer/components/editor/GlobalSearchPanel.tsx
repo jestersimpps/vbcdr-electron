@@ -132,15 +132,11 @@ export function GlobalSearchPanel(): React.ReactElement | null {
   }, [])
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
-        if (!activeProjectId) return
-        e.preventDefault()
-        setOpen((prev) => !prev)
-      }
+    const handleToggle = (): void => {
+      if (activeProjectId) setOpen((prev) => !prev)
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('global-search:toggle', handleToggle)
+    return () => window.removeEventListener('global-search:toggle', handleToggle)
   }, [activeProjectId])
 
   useEffect(() => {

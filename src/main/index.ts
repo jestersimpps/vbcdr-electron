@@ -19,6 +19,9 @@ import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
 import { registerDevServerHandlers } from '@main/ipc/dev-servers'
 import { registerTsProjectHandlers } from '@main/ipc/ts-project'
 import { registerProviderModelsHandlers } from '@main/ipc/provider-models'
+import { registerKeybindingHandlers } from '@main/ipc/keybindings'
+import { effectiveAccelerator } from '@main/models/keybindings'
+import { getKeybindingOverrides } from '@main/services/keybindings-service'
 import { registerVoiceAgentHandlers } from '@main/ipc/voice-agent'
 import { stopVoiceAgent } from '@main/services/voice-agent'
 import { isFeatureEnabled } from '@main/models/feature-flags'
@@ -84,8 +87,14 @@ function activeWebContents(): Electron.WebContents | null {
 function handleBeforeInput(_event: Electron.Event, input: Electron.Input): void {
   if (input.type !== 'keyDown') return
 
-  const digit = /^Digit([1-9])$/.exec(input.code)
-  if (input.meta && input.alt && digit) {
+  const digit = /^(?:Digit)?([1-9])$/.exec(input.code)
+  const primary = process.platform === 'darwin' ? input.meta : input.control
+  if (primary && !input.alt && !input.shift && digit) {
+    _event.preventDefault()
+    activeWebContents()?.send('menu:action', `switch-terminal-${digit[1]}`)
+    return
+  }
+  if (input.alt && !input.meta && !input.control && !input.shift && digit) {
     _event.preventDefault()
     activeWebContents()?.send('menu:action', `switch-project-${digit[1]}`)
     return
@@ -154,10 +163,15 @@ registerTokenUsageHandlers()
 registerDevServerHandlers()
 registerTsProjectHandlers()
 registerProviderModelsHandlers()
+registerKeybindingHandlers(() => {
+  Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenu()))
+})
 if (isFeatureEnabled('voiceControl')) registerVoiceAgentHandlers()
 
 function buildMenu(): Electron.MenuItemConstructorOptions[] {
   const isMac = process.platform === 'darwin'
+  const overrides = getKeybindingOverrides()
+  const shortcut = (id: string): string | undefined => effectiveAccelerator(id, overrides)
 
   const appMenu: Electron.MenuItemConstructorOptions = {
     label: 'vbcdr',
@@ -166,7 +180,7 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
       { type: 'separator' },
       {
         label: 'Settings...',
-        accelerator: 'CmdOrCtrl+,',
+        accelerator: shortcut('settings'),
         click: () => activeWebContents()?.send('menu:action', 'settings')
       },
       {
@@ -193,28 +207,33 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
     submenu: [
       {
         label: 'New Project',
-        accelerator: 'CmdOrCtrl+N',
+        accelerator: shortcut('new-project'),
         click: () => send('new-project')
       },
       {
         label: 'Close Project',
-        accelerator: 'CmdOrCtrl+W',
+        accelerator: shortcut('close-project'),
         click: () => send('close-project')
       },
       { type: 'separator' },
       {
         label: 'Open File...',
-        accelerator: 'CmdOrCtrl+P',
+        accelerator: shortcut('open-palette-files'),
         click: () => send('open-palette-files')
       },
       {
+        label: 'Search in Files...',
+        accelerator: shortcut('global-search'),
+        click: () => send('global-search')
+      },
+      {
         label: 'Save',
-        accelerator: 'CmdOrCtrl+S',
+        accelerator: shortcut('save-file'),
         click: () => send('save-file')
       },
       {
         label: 'Close File',
-        accelerator: 'CmdOrCtrl+Alt+W',
+        accelerator: shortcut('close-file-tab'),
         click: () => send('close-file-tab')
       }
     ]
@@ -233,7 +252,7 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
       { type: 'separator' },
       {
         label: 'Command Palette',
-        accelerator: 'CmdOrCtrl+K',
+        accelerator: shortcut('open-palette'),
         click: () => send('open-palette')
       }
     ]
@@ -257,51 +276,51 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
       { type: 'separator' },
       {
         label: 'Editor',
-        accelerator: 'CmdOrCtrl+1',
+        accelerator: shortcut('center-tab-editor'),
         click: () => send('center-tab-editor')
       },
       {
         label: 'Claude Config',
-        accelerator: 'CmdOrCtrl+2',
+        accelerator: shortcut('center-tab-claude'),
         click: () => send('center-tab-claude')
       },
       {
         label: 'Skills',
-        accelerator: 'CmdOrCtrl+3',
+        accelerator: shortcut('center-tab-skills'),
         click: () => send('center-tab-skills')
       },
       {
         label: 'Terminals',
-        accelerator: 'CmdOrCtrl+4',
+        accelerator: shortcut('center-tab-terminals'),
         click: () => send('center-tab-terminals')
       },
       { type: 'separator' },
       {
         label: 'Toggle Light/Dark',
-        accelerator: 'CmdOrCtrl+Shift+L',
+        accelerator: shortcut('toggle-variant'),
         click: () => send('toggle-variant')
       },
       { type: 'separator' },
       {
         label: 'Reload',
-        accelerator: 'CmdOrCtrl+R',
+        accelerator: shortcut('reload'),
         click: () => activeWebContents()?.reload()
       },
       {
         label: 'Force Reload',
-        accelerator: 'CmdOrCtrl+Shift+R',
+        accelerator: shortcut('force-reload'),
         click: () => activeWebContents()?.reloadIgnoringCache()
       },
       { role: 'toggleDevTools' },
       { type: 'separator' },
       {
         label: 'Actual Size',
-        accelerator: 'CmdOrCtrl+0',
+        accelerator: shortcut('actual-size'),
         click: () => activeWebContents()?.setZoomLevel(0)
       },
       {
         label: 'Zoom In',
-        accelerator: 'CmdOrCtrl+=',
+        accelerator: shortcut('zoom-in'),
         click: () => {
           const wc = activeWebContents()
           if (wc) wc.setZoomLevel(wc.getZoomLevel() + 0.5)
@@ -309,7 +328,7 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
       },
       {
         label: 'Zoom Out',
-        accelerator: 'CmdOrCtrl+-',
+        accelerator: shortcut('zoom-out'),
         click: () => {
           const wc = activeWebContents()
           if (wc) wc.setZoomLevel(wc.getZoomLevel() - 0.5)
@@ -334,12 +353,12 @@ function buildMenu(): Electron.MenuItemConstructorOptions[] {
       { type: 'separator' },
       {
         label: 'Next Tab',
-        accelerator: 'CmdOrCtrl+Shift+]',
+        accelerator: shortcut('terminal-tab-next'),
         click: () => send('terminal-tab-next')
       },
       {
         label: 'Previous Tab',
-        accelerator: 'CmdOrCtrl+Shift+[',
+        accelerator: shortcut('terminal-tab-prev'),
         click: () => send('terminal-tab-prev')
       },
       { type: 'separator' },

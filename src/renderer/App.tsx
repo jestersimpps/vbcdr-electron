@@ -10,6 +10,7 @@ import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay'
 import { useThemeStore } from '@/stores/theme-store'
 import { useProjectStore } from '@/stores/project-store'
 import { dispatchAppAction } from '@/lib/app-actions'
+import { ShortcutHintsController } from '@/components/layout/ShortcutHintsController'
 import { useUpdaterStore } from '@/stores/updater-store'
 import { useClipboardStore } from '@/stores/clipboard-store'
 import { useGitStore } from '@/stores/git-store'
@@ -172,6 +173,7 @@ export function App(): React.ReactElement {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
+      <ShortcutHintsController />
       <MonacoAnchor />
       <UpdateBanner />
       <ConflictBanner />

@@ -210,6 +210,14 @@ export const ACTION_SPECS: Record<string, ActionSpec> = {
       return ok('Opened file search')
     }
   },
+  'global-search': {
+    needsTarget: false,
+    destructive: false,
+    run: () => {
+      window.dispatchEvent(new CustomEvent('global-search:toggle'))
+      return ok('Toggled search in files')
+    }
+  },
   'save-file': {
     needsTarget: false,
     destructive: false,
@@ -474,11 +482,25 @@ function switchProjectByIndex(index: number): DispatchResult {
   return ok(`Switched to ${project.name}`)
 }
 
+function switchTerminalByIndex(index: number): DispatchResult {
+  const projectId = useProjectStore.getState().activeProjectId
+  if (!projectId) return fail('no-project')
+  const terminalStore = useTerminalStore.getState()
+  const tab = terminalStore.tabs.filter(
+    (candidate) => candidate.projectId === projectId && candidate.initialCommand
+  )[index]
+  if (!tab) return fail('unresolved')
+  terminalStore.setActiveTab(projectId, tab.id)
+  return ok(`Switched to ${tab.title}`)
+}
+
 export function dispatchAppAction(req: AppActionRequest): DispatchResult {
   const spec = ACTION_SPECS[req.action]
   if (!spec) {
     const m = req.action.match(/^switch-project-(\d)$/)
     if (m) return switchProjectByIndex(parseInt(m[1]) - 1)
+    const terminal = req.action.match(/^switch-terminal-(\d)$/)
+    if (terminal) return switchTerminalByIndex(parseInt(terminal[1]) - 1)
     return fail('unknown-action')
   }
   if (spec.capability) {

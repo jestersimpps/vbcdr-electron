@@ -11,6 +11,7 @@ const MENU_ACTIONS = [
   'close-project',
   'git-commit',
   'git-pull-rebase',
+  'global-search',
   'new-claude-terminal',
   'new-project',
   'new-shell-terminal',
