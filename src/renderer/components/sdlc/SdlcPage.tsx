@@ -34,6 +34,7 @@ import { focusTicketTab } from '@/lib/sdlc-handover'
 import { useAccent } from '@/components/settings/SettingsControls'
 import { NewTicketModal } from '@/components/sdlc/NewTicketModal'
 import { TicketDetailModal } from '@/components/sdlc/TicketDetailModal'
+import { buildSeedTickets } from '@/lib/dev-seed-tickets'
 import { cn } from '@/lib/utils'
 
 const LANE_MIN_WIDTH = 'min-w-[220px]'
@@ -391,6 +392,19 @@ function ProjectSwimlane({
       >
         <Settings2 size={13} />
       </button>
+      {import.meta.env.DEV && (
+        <button
+          onClick={() =>
+            useSdlcStore.setState((state) => ({
+              tickets: [...state.tickets, ...buildSeedTickets(projectId)]
+            }))
+          }
+          className="mr-2 rounded px-1.5 py-1 text-micro text-zinc-600 hover:bg-zinc-800 hover:text-zinc-300"
+          title="Dev only: add one demo ticket per stage to inspect the modals"
+        >
+          Seed demo tickets
+        </button>
+      )}
       </div>
 
       {!collapsed && (

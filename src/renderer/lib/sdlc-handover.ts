@@ -16,6 +16,7 @@ import {
   EMPTY_PROMPT_VALUE,
   SDLC_PLAN_RELATIVE,
   SDLC_SENTINEL_DIR,
+  SENTINEL_CLAUSE,
   isHandoffStage,
   type SdlcHandoffStage
 } from '@/models/sdlc-prompts'
@@ -46,6 +47,16 @@ export function sdlcProfileMeta(stage: SdlcHandoffStage, ticket: SdlcTicket, pro
 
 const RESUME_FLAG: Partial<Record<LlmProviderId, string>> = { claude: '--continue' }
 
+/**
+ * A stage runs in a fresh worktree, and `.claude/settings.local.json` is
+ * gitignored, so the project's own permission mode never reaches the agent and
+ * it would stop for an approval prompt on its first tool call. Handed-off
+ * stages are unattended by definition, so the mode is set on the command line.
+ */
+const AUTONOMOUS_FLAG: Partial<Record<LlmProviderId, string>> = {
+  claude: '--permission-mode bypassPermissions'
+}
+
 interface StageCommand {
   command: string
   providerId: LlmProviderId
@@ -54,6 +65,12 @@ interface StageCommand {
 function withResume(command: string, providerId: LlmProviderId): string {
   const flag = RESUME_FLAG[providerId]
   return flag ? command.replace(/^(\S+)/, `$1 ${flag}`) : command
+}
+
+function withAutonomy(command: string, providerId: LlmProviderId): string {
+  const flag = AUTONOMOUS_FLAG[providerId]
+  if (!flag || command.includes('--permission-mode')) return command
+  return command.replace(/^(\S+)/, `$1 ${flag}`)
 }
 
 /**
@@ -76,7 +93,10 @@ function stageCommand(stage: SdlcHandoffStage, resume: boolean): StageCommand {
     const { command, profile } = defaultLlmTab()
     base = { command, providerId: profile?.providerId ?? layout.llmProviderId }
   }
-  return resume ? { ...base, command: withResume(base.command, base.providerId) } : base
+  const autonomous = { ...base, command: withAutonomy(base.command, base.providerId) }
+  return resume
+    ? { ...autonomous, command: withResume(autonomous.command, autonomous.providerId) }
+    : autonomous
 }
 
 export function canResumeStage(stage: SdlcHandoffStage): boolean {
@@ -122,10 +142,19 @@ function promptVariables(
   }
 }
 
-/** Leaves whatever page is open and lands on the tab; the queue runner only drains the active tab of the active project. */
+/**
+ * Marks the tab as the project's active one so the queue runner drains it,
+ * without touching which page or panel is on screen. Used for handoffs kicked
+ * off from the SDLC board, which should stay on the board.
+ */
+function activateTab(projectId: string, tabId: string): void {
+  useTerminalStore.getState().setActiveTab(projectId, tabId)
+}
+
+/** Leaves whatever page is open and lands on the tab; for the user explicitly asking to see it. */
 function focusTab(projectId: string, tabId: string): void {
   useProjectStore.getState().setActiveProject(projectId)
-  useTerminalStore.getState().setActiveTab(projectId, tabId)
+  activateTab(projectId, tabId)
   useEditorStore.getState().setCenterTab(projectId, 'terminals')
 }
 
@@ -187,7 +216,7 @@ export async function handOffStage(
     .getState()
     .createTab(project.id, worktree.path, command, worktree, sdlcProfileMeta(stage, ticket, providerId))
   useQueueStore.getState().addItem(tabId, prompt)
-  focusTab(project.id, tabId)
+  activateTab(project.id, tabId)
 
   patchTicket(ticket.id, {
     ...worktreeFields,
@@ -197,6 +226,70 @@ export async function handOffStage(
     artifacts: activityEntry(ticket, `Handed ${stageLabel(stage)} to the agent`)
   })
   return { tabId, worktree }
+}
+
+function mergePrompt(target: string, branch: string, worktreePath: string): string {
+  return [
+    `Bring branch ${branch} up to date with ${target} in the worktree at ${worktreePath}.`,
+    '',
+    `Run \`git merge ${target}\` on this branch. If it conflicts, resolve every conflict:`,
+    'read both sides, keep the intent of each change rather than blindly taking one side,',
+    'and remove all conflict markers. Do not merge this branch into ' + target + ' —',
+    'the merge goes the other way, so the main checkout is never touched.',
+    '',
+    "When the tree is clean, run the project's typecheck, lint and tests, and fix anything",
+    'the merge broke. Commit the merge on this branch. Do not push and do not open a pull request.',
+    '',
+    `If ${target} does not exist or there is nothing to merge, say so and stop.`,
+    '',
+    SENTINEL_CLAUSE
+  ].join('\n')
+}
+
+/**
+ * Merges the target branch INTO the ticket's branch, inside the ticket's own
+ * worktree: conflicts get resolved on the disposable side, so the user's real
+ * checkout is never left mid-merge. Fast-forwarding the target onto the result
+ * stays a human/PR step.
+ */
+export async function mergeIntoTicketBranch(ticketId: string, target: string): Promise<boolean> {
+  const store = useSdlcStore.getState()
+  const ticket = store.tickets.find((t) => t.id === ticketId)
+  if (!ticket || ticket.worktreePath === '—') return false
+  const project = findProject(ticket)
+  if (!project) return false
+  const cleanTarget = target.trim()
+  if (!cleanTarget) return false
+
+  const worktree = await ensureTicketWorktree(ticket, project)
+  if (!worktree) return false
+
+  try {
+    await window.api.git.ensureInfoExclude(project.path, `${SDLC_SENTINEL_DIR}/`)
+    await clearSentinel(worktree.path)
+  } catch {
+    return false
+  }
+
+  await closeTicketTab(ticket)
+
+  const { command, providerId } = stageCommand('implementing', false)
+  const tabId = useTerminalStore
+    .getState()
+    .createTab(project.id, worktree.path, command, worktree, sdlcProfileMeta(ticket.stage, ticket, providerId))
+  useQueueStore.getState().addItem(tabId, mergePrompt(cleanTarget, worktree.branch, worktree.path))
+  activateTab(project.id, tabId)
+
+  store.patchTicket(ticket.id, {
+    worktreeId: worktree.id,
+    worktreePath: worktree.path,
+    branch: worktree.branch,
+    tabId,
+    status: 'running',
+    blockedReason: null,
+    artifacts: activityEntry(ticket, `Merging ${cleanTarget} into ${worktree.branch}`)
+  })
+  return true
 }
 
 /**
@@ -298,6 +391,22 @@ export async function advanceAndHandOff(ticketId: string): Promise<void> {
   await handOffStage(advanced, project)
 }
 
+/**
+ * An auto-advancing ticket takes the same route a human would click, so review
+ * output is still captured and worktrees are still cleaned up. Only invoked for
+ * a stage that has written its sentinel, and never for one whose agent is
+ * blocked or failed — those still need a person.
+ */
+export async function autoAdvanceTicket(ticketId: string): Promise<void> {
+  const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
+  if (!ticket || !ticket.autoAdvance) return
+  if (ticket.stage === 'review') {
+    await finishTicket(ticketId)
+    return
+  }
+  await advanceAndHandOff(ticketId)
+}
+
 /** Picks the ticket's last session back up in a fresh tab: no prompt is re-sent, the session already has it. */
 export async function resumeStage(ticketId: string): Promise<boolean> {
   const store = useSdlcStore.getState()
@@ -314,7 +423,7 @@ export async function resumeStage(ticketId: string): Promise<boolean> {
   const tabId = useTerminalStore
     .getState()
     .createTab(project.id, worktree.path, command, worktree, sdlcProfileMeta(ticket.stage, ticket, providerId))
-  focusTab(project.id, tabId)
+  activateTab(project.id, tabId)
   store.patchTicket(ticket.id, {
     tabId,
     status: 'running',
@@ -369,6 +478,26 @@ export async function discardTicket(ticketId: string): Promise<void> {
     await closeTicketTab(ticket)
   }
   useSdlcStore.getState().deleteTicket(ticketId)
+}
+
+/**
+ * Finishing deletes the branch as well as the worktree, so commits that exist
+ * nowhere else would survive only as unreachable objects. Returns the commit
+ * subjects that would be lost, for the caller to confirm first.
+ */
+export async function unmergedCommits(ticketId: string): Promise<string[]> {
+  const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
+  if (!ticket || ticket.worktreePath === '—') return []
+  const project = findProject(ticket)
+  if (!project) return []
+  try {
+    const target = await window.api.git.defaultBranch(project.path)
+    const summary = await window.api.git.diffSummary(ticket.worktreePath, target)
+    const commits = summary.split('\n\nChanges:')[0].replace(/^Commits:\n?/, '').trim()
+    return commits ? commits.split('\n').filter((l) => l.trim()) : []
+  } catch {
+    return []
+  }
 }
 
 /** Review → done, after the close-tab workflow has pushed and opened the PR. */

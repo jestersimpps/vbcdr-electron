@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractPromptCommand, parseTokenCount } from './terminal-text'
+import { extractPromptCommand, looksLikeInteractivePrompt, parseTokenCount } from './terminal-text'
 
 describe('parseTokenCount', () => {
   it('parses plain integers', () => {
@@ -47,5 +47,41 @@ describe('extractPromptCommand', () => {
 
   it('returns an empty string for a bare prompt', () => {
     expect(extractPromptCommand('❯ ')).toBe('')
+  })
+})
+
+describe('looksLikeInteractivePrompt', () => {
+  it('detects the trust-this-folder dialog', () => {
+    expect(
+      looksLikeInteractivePrompt('Do you trust the files in this folder?\n\n❯ 1. Yes, proceed\n  2. No, exit\n')
+    ).toBe(true)
+  })
+
+  it('detects a permission-approval question', () => {
+    expect(looksLikeInteractivePrompt('Do you want to allow this tool?')).toBe(true)
+  })
+
+  it('detects the confirm footer with either separator glyph', () => {
+    expect(looksLikeInteractivePrompt('Enter to confirm · Esc to cancel')).toBe(true)
+    expect(looksLikeInteractivePrompt('Enter to confirm • Esc to cancel')).toBe(true)
+  })
+
+  it('detects a prompt split across PTY writes once the tail is joined', () => {
+    expect(looksLikeInteractivePrompt('…writing files\nDo you want to ' + 'proceed?')).toBe(true)
+  })
+
+  it('sees through ANSI styling', () => {
+    expect(looksLikeInteractivePrompt('\x1b[1m❯ 1.\x1b[0m Yes, proceed')).toBe(true)
+  })
+
+  it('ignores ordinary agent output', () => {
+    expect(looksLikeInteractivePrompt('Running tests...\n1205 passed\n')).toBe(false)
+    expect(looksLikeInteractivePrompt('')).toBe(false)
+  })
+
+  it('does not fire on a numbered plan the agent wrote', () => {
+    expect(
+      looksLikeInteractivePrompt('Here is the plan:\n  1. Yes-and refactor the store\n  2. Add tests\n')
+    ).toBe(false)
   })
 })

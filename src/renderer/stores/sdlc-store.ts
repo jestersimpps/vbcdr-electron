@@ -96,7 +96,8 @@ export const useSdlcStore = create<SdlcStore>()(
           comments: [],
           artifacts: EMPTY_ARTIFACTS,
           prUrl: null,
-          blockedReason: null
+          blockedReason: null,
+          autoAdvance: input.autoAdvance ?? false
         }
         set((state) => ({ tickets: [...state.tickets, ticket] }))
         return ticket
@@ -250,6 +251,11 @@ export const useSdlcStore = create<SdlcStore>()(
       },
 
       pruneOrphans: (keepProjectIds: string[]) => {
+        // An empty list never legitimately means "no projects" here — every
+        // real caller passes the loaded project list, so an empty array is a
+        // sign loadProjects() hasn't resolved yet (or raced). Pruning against
+        // it would silently delete every ticket in the persisted store.
+        if (keepProjectIds.length === 0) return
         const keep = new Set(keepProjectIds)
         set((state) => {
           const tickets = state.tickets.filter((t) => keep.has(t.projectId))

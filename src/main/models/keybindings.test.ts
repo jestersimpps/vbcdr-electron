@@ -27,12 +27,10 @@ describe('keybinding definitions', () => {
   it('disables stale overrides that collide with numbered switching', () => {
     expect(sanitizeKeybindingOverrides({ 'center-tab-editor': 'CmdOrCtrl+1' }))
       .toEqual({ 'center-tab-editor': '' })
-    expect(sanitizeKeybindingOverrides({ 'center-tab-editor': 'Control+1' }))
-      .toEqual({ 'center-tab-editor': '' })
   })
 
   it('reserves the numbered switching rows and keeps CmdOrCtrl+N for a new LLM tab', () => {
-    expect(reservedAcceleratorReason('Control+3')).toBe('Switch LLM tabs')
+    expect(reservedAcceleratorReason('CmdOrCtrl+3')).toBe('Switch LLM tabs')
     expect(reservedAcceleratorReason('Alt+3')).toBe('Switch projects')
     expect(reservedAcceleratorReason('CmdOrCtrl+N')).toBeNull()
     expect(effectiveAccelerator('new-llm-tab', {})).toBe('CmdOrCtrl+N')

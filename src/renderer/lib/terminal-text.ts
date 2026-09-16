@@ -29,3 +29,22 @@ export function isMeaningfulOutput(data: string): boolean {
   const stripped = stripAnsi(data).replace(NON_CONTENT_CHARS_RE, '')
   return stripped.length >= MEANINGFUL_OUTPUT_MIN_CHARS
 }
+
+/**
+ * Matches the CLI idioms Claude Code and Codex use for a prompt that blocks
+ * on a keypress: the trust-this-folder check, tool/permission approval menus,
+ * and the generic "Enter to confirm" footer they all share. Checked against a
+ * rolling tail of recent output, not per-chunk, since prompts render across
+ * several PTY writes.
+ *
+ * A bare numbered "Yes" is deliberately not enough: agents write numbered
+ * plans, and one starting with "Yes" would otherwise mark the ticket blocked
+ * while the agent is working fine. It must carry a menu marker or a No option.
+ */
+const INTERACTIVE_PROMPT_RE =
+  /Enter to confirm\s*[·•|]\s*Esc to cancel|Do you want to (?:proceed|allow|continue)|Yes, I trust this folder|❯\s*\d+\.\s|^\s*\d+\.\s*Yes\b.*\n\s*\d+\.\s*No\b/im
+
+export function looksLikeInteractivePrompt(text: string): boolean {
+  if (!text) return false
+  return INTERACTIVE_PROMPT_RE.test(stripAnsi(text))
+}

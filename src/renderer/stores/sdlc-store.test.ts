@@ -60,3 +60,19 @@ describe('advanceTicket', () => {
     expect(updated.status).toBe('idle')
   })
 })
+
+describe('pruneOrphans', () => {
+  it('removes tickets whose project is not in the keep list', () => {
+    useSdlcStore.getState().createTicket({ projectId: 'p1', description: 'Keep me', attachments: [] })
+    useSdlcStore.getState().createTicket({ projectId: 'p2', description: 'Drop me', attachments: [] })
+    useSdlcStore.getState().pruneOrphans(['p1'])
+    expect(useSdlcStore.getState().tickets.map((t) => t.projectId)).toEqual(['p1'])
+  })
+
+  it('is a no-op on an empty keep list, since that means the caller has not finished loading yet', () => {
+    useSdlcStore.getState().createTicket({ projectId: 'p1', description: 'Keep me', attachments: [] })
+    useSdlcStore.getState().createTicket({ projectId: 'p2', description: 'Also keep me', attachments: [] })
+    useSdlcStore.getState().pruneOrphans([])
+    expect(useSdlcStore.getState().tickets).toHaveLength(2)
+  })
+})

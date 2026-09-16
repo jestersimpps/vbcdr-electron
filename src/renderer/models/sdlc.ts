@@ -134,6 +134,8 @@ export interface SdlcTicket {
   artifacts: SdlcArtifacts
   prUrl: string | null
   blockedReason: string | null
+  /** Advance through every stage without waiting for approval, chosen at creation. */
+  autoAdvance: boolean
 }
 
 export const EMPTY_ARTIFACTS: SdlcArtifacts = {
@@ -158,4 +160,5 @@ export interface NewSdlcTicketInput {
   projectId: string
   description: string
   attachments: SdlcAttachment[]
+  autoAdvance?: boolean
 }

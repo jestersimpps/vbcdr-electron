@@ -87,7 +87,8 @@ function handleBeforeInput(_event: Electron.Event, input: Electron.Input): void 
   if (input.type !== 'keyDown') return
 
   const digit = /^(?:Digit)?([1-9])$/.exec(input.code)
-  if (input.control && !input.meta && !input.alt && !input.shift && digit) {
+  const primary = process.platform === 'darwin' ? input.meta : input.control
+  if (primary && !input.alt && !input.shift && digit) {
     _event.preventDefault()
     activeWebContents()?.send('menu:action', `switch-terminal-${digit[1]}`)
     return

@@ -34,7 +34,7 @@ export function sanitizeStagePrompts(value: unknown): SdlcStagePrompts {
   return out
 }
 
-const SENTINEL_CLAUSE = `When you are completely finished, write your full result to ${SDLC_SENTINEL_RELATIVE} inside the worktree, creating the folder if needed. Do not write that file until everything above is done: it is the signal that this stage is complete.`
+export const SENTINEL_CLAUSE = `When you are completely finished, write your full result to ${SDLC_SENTINEL_RELATIVE} inside the worktree, creating the folder if needed. Do not write that file until everything above is done: it is the signal that this stage is complete.`
 
 export const DEFAULT_SDLC_STAGE_PROMPTS: SdlcStagePrompts = {
   planning: `Write an implementation plan for this ticket in the worktree at {{worktreePath}} (branch {{branch}}).

@@ -14,7 +14,13 @@ import { useEditorStore } from '@/stores/editor-store'
 import { getTerminalTheme } from '@/config/terminal-theme-registry'
 import { playSound } from '@/lib/sound'
 import { findFileMatches } from '@/lib/terminal-output-tidy'
-import { extractPromptCommand, isMeaningfulOutput, parseTokenCount, stripAnsi } from '@/lib/terminal-text'
+import {
+  extractPromptCommand,
+  isMeaningfulOutput,
+  looksLikeInteractivePrompt,
+  parseTokenCount,
+  stripAnsi
+} from '@/lib/terminal-text'
 import { isTranscriptDriven, unmarkTranscriptDriven } from '@/lib/transcript-driven-tabs'
 import { IMAGE_EXTENSIONS, relativeToCwd, resolveAgainstCwd, shellEscape } from '@/lib/terminal-paths'
 import { emitCompanionRows } from '@/lib/companion-buffer-feed'
@@ -39,7 +45,14 @@ interface TerminalEntry {
   busyPromoteTimer?: ReturnType<typeof setTimeout> | null
   bufferReadTimer?: ReturnType<typeof setTimeout> | null
   lastBufferSig?: string
+  /** Last ~2KB of raw output, for matching interactive-prompt patterns that render across multiple PTY writes. */
+  recentOutputTail: string
 }
+
+const PROMPT_TAIL_MAX_CHARS = 2000
+
+/** Keys that dismiss an agent's approval prompt: Enter, Esc, or picking a numbered option. */
+const ANSWERS_PROMPT_RE = /^(?:\r|\n|\x1b|\d)$/
 
 const terminalsMap = new Map<string, TerminalEntry>()
 
@@ -165,7 +178,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
       terminal.unicode.activeVersion = '11'
 
-      entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0, projectId }
+      entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0, projectId, recentOutputTail: '' }
       terminalsMap.set(tabId, entry)
 
       terminal.attachCustomKeyEventHandler((e) => {
@@ -192,7 +205,19 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
         }
         if (isLlm) {
           const e = terminalsMap.get(tabId)
-          if (e) e.suppressBusyUntil = Date.now() + 300
+          if (e) {
+            e.suppressBusyUntil = Date.now() + 300
+            // Answering a prompt leaves its text in the tail, which would keep
+            // matching and hold the ticket at "blocked" until ~2000 chars of new
+            // output evicted it. Only a keypress that actually dismisses a prompt
+            // counts: these TUIs echo redraws (menu movement, spinners) back
+            // through onData, and clearing on those would wipe the prompt from the
+            // tail before the watcher's next poll could ever see it.
+            if (ANSWERS_PROMPT_RE.test(data)) {
+              e.recentOutputTail = ''
+              useTerminalStore.getState().setPromptDetected(tabId, false)
+            }
+          }
         } else if (data === '\r') {
           const buf = terminal.buffer.active
           const cursorRow = buf.baseY + buf.cursorY
@@ -233,6 +258,13 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
         const entry = terminalsMap.get(tabId)
         if (!entry) return
+
+        if (isLlm) {
+          entry.recentOutputTail = (entry.recentOutputTail + data).slice(-PROMPT_TAIL_MAX_CHARS)
+          const promptNow = looksLikeInteractivePrompt(entry.recentOutputTail)
+          useTerminalStore.getState().setPromptDetected(tabId, promptNow)
+        }
+
         const suppressed = Date.now() < entry.suppressBusyUntil
         if (!suppressed) {
           const now = Date.now()

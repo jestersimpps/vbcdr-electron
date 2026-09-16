@@ -27,12 +27,14 @@ export function NewTicketModal({
   const [description, setDescription] = useState('')
   const [attachments, setAttachments] = useState<SdlcAttachment[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [autoAdvance, setAutoAdvance] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
     setDescription('')
     setAttachments([])
     setIsDragging(false)
+    setAutoAdvance(false)
     const timer = setTimeout(() => textareaRef.current?.focus(), 50)
     return (): void => clearTimeout(timer)
   }, [isOpen])
@@ -46,7 +48,7 @@ export function NewTicketModal({
 
   const handleSubmit = (): void => {
     if (!canSubmit) return
-    createTicket({ projectId, description, attachments })
+    createTicket({ projectId, description, attachments, autoAdvance })
     onClose()
   }
 
@@ -148,6 +150,22 @@ export function NewTicketModal({
             ))}
           </div>
         )}
+
+        <label className="flex cursor-pointer items-start gap-2 rounded border border-zinc-800 bg-zinc-900/60 px-2.5 py-2">
+          <input
+            type="checkbox"
+            checked={autoAdvance}
+            onChange={(e) => setAutoAdvance(e.target.checked)}
+            className="mt-px h-3 w-3 shrink-0 accent-indigo-500"
+          />
+          <span className="min-w-0">
+            <span className="block text-xs text-zinc-300">Run stages automatically</span>
+            <span className="block text-micro leading-relaxed text-zinc-500">
+              Planning, implementing and review hand off without waiting for approval, then the
+              ticket is finished and its worktree and branch are removed.
+            </span>
+          </span>
+        </label>
 
         <div className="flex items-center justify-between gap-2">
           <button

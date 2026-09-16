@@ -95,9 +95,10 @@ describe('handOffStage', () => {
     expect(current().branch).toBe('llm/add-auth')
   })
 
-  it('focuses the project and the terminal view so the queue can drain', async () => {
+  it('activates the new tab for the queue without navigating away from the SDLC board', async () => {
     await handOffStage(current(), project)
-    expect(useProjectStore.getState().activeProjectId).toBe('p1')
+    const tabId = current().tabId
+    expect(useTerminalStore.getState().activeTabPerProject['p1']).toBe(tabId)
   })
 
   it('clears a stale sentinel and excludes it from git before the agent starts', async () => {
@@ -178,7 +179,9 @@ describe('stage model', () => {
   it('starts the CLI with the picked model', async () => {
     useSdlcStore.getState().setStageAssignment('planning', 'anthropic', 'claude-sonnet-5')
     await handOffStage(current(), project)
-    expect(useTerminalStore.getState().tabs[0].initialCommand).toBe('claude --model claude-sonnet-5')
+    expect(useTerminalStore.getState().tabs[0].initialCommand).toBe(
+      'claude --permission-mode bypassPermissions --model claude-sonnet-5'
+    )
   })
 
   it('maps an OpenAI pick to the codex CLI', async () => {
@@ -191,7 +194,25 @@ describe('stage model', () => {
 
   it('runs the default profile when nothing is picked for the stage', async () => {
     await handOffStage(current(), project)
-    expect(useTerminalStore.getState().tabs[0].initialCommand).toBe('claude')
+    expect(useTerminalStore.getState().tabs[0].initialCommand).toBe(
+      'claude --permission-mode bypassPermissions'
+    )
+  })
+})
+
+describe('unattended permissions', () => {
+  it('bypasses permission prompts, since each stage runs in a throwaway worktree', async () => {
+    useSdlcStore.getState().setStageAssignment('planning', 'anthropic', 'claude-sonnet-5')
+    await handOffStage(current(), project)
+    expect(useTerminalStore.getState().tabs[0].initialCommand).toContain(
+      '--permission-mode bypassPermissions'
+    )
+  })
+
+  it('does not pass the claude-only flag to codex', async () => {
+    useSdlcStore.getState().setStageAssignment('planning', 'openai', 'gpt-5')
+    await handOffStage(current(), project)
+    expect(useTerminalStore.getState().tabs[0].initialCommand).not.toContain('--permission-mode')
   })
 })
 
@@ -203,7 +224,9 @@ describe('resumeStage', () => {
 
     expect(await resumeStage('t1')).toBe(true)
     const tab = useTerminalStore.getState().tabs[0]
-    expect(tab.initialCommand).toBe('claude --continue --model claude-sonnet-5')
+    expect(tab.initialCommand).toBe(
+      'claude --continue --permission-mode bypassPermissions --model claude-sonnet-5'
+    )
     expect(useQueueStore.getState().itemsPerTab[tab.id] ?? []).toHaveLength(0)
     expect(current().status).toBe('running')
     expect(current().tabId).toBe(tab.id)
@@ -268,6 +291,29 @@ describe('agent tab titles', () => {
     useTerminalStore.getState().setTabTitle(tabId, 'LLM')
     expect(current().title).toBe('Add auth')
     expect(useTerminalStore.getState().tabs[0].title).toBe('LLM')
+  })
+
+  it('strips the agent status glyph from the ticket title but keeps it on the tab', async () => {
+    await handOffStage(current(), project)
+    const tabId = current().tabId!
+    useTerminalStore.getState().setTabTitle(tabId, '✳ Add scoreboard to snake game')
+    expect(current().title).toBe('Add scoreboard to snake game')
+    expect(useTerminalStore.getState().tabs[0].title).toBe('Planning · ✳ Add scoreboard to snake game')
+  })
+
+  it('still ignores the CLI product name when it arrives glyph-prefixed', async () => {
+    await handOffStage(current(), project)
+    const tabId = current().tabId!
+    useTerminalStore.getState().setTabTitle(tabId, '◐ Claude Code')
+    expect(current().title).toBe('Add auth')
+  })
+
+  it('ignores the shell prompt the shell reasserts when the agent exits', async () => {
+    await handOffStage(current(), project)
+    const tabId = current().tabId!
+    useTerminalStore.getState().setTabTitle(tabId, 'jovinkenroye@MacBook-Air-24:~/Sites/x/.worktrees/llm/y')
+    useTerminalStore.getState().setTabTitle(tabId, '~/Sites/x')
+    expect(current().title).toBe('Add auth')
   })
 
   it('leaves tickets alone for tabs the board does not own', () => {

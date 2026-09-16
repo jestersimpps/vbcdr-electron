@@ -22,7 +22,7 @@ const RESERVED_ACCELERATORS: Readonly<Record<string, string>> = {
 }
 
 export function reservedAcceleratorReason(accelerator: string): string | null {
-  if (/^(?:CmdOrCtrl|Control)\+[1-9]$/.test(accelerator)) return 'Switch LLM tabs'
+  if (/^CmdOrCtrl\+[1-9]$/.test(accelerator)) return 'Switch LLM tabs'
   if (/^Alt\+[1-9]$/.test(accelerator)) return 'Switch projects'
   return RESERVED_ACCELERATORS[accelerator.toLowerCase()] ?? null
 }

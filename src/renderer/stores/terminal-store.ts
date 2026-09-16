@@ -27,10 +27,25 @@ const PRODUCT_NAMES = new Set(
     .filter(Boolean)
 )
 
+/**
+ * A shell reasserts its own title when the agent process exits (`user@host:~/path`),
+ * and that would overwrite the ticket's real title with a path.
+ */
+const SHELL_PROMPT_TITLE_RE = /^\S+@\S+:|^(?:~|\/)\S*$/
+
+/** Claude Code prefixes its title with a spinner/status glyph that is not part of the name. */
+const STATUS_GLYPH_PREFIX_RE = /^[✨✳✻-✿✴✵●○◐-◓·•∙✱✲✶-✽*+■-◿\s]+/
+
+/** The agent's title arrives decorated with its live status glyph; only the text is the ticket's name. */
+export function cleanAgentTitle(title: string): string {
+  return title.replace(STATUS_GLYPH_PREFIX_RE, '').trim()
+}
+
 /** A CLI's startup title ("Claude Code") is not a summary of the work; only real summaries rename a ticket. */
 function isDescriptiveTitle(title: string): boolean {
-  const trimmed = title.trim()
+  const trimmed = cleanAgentTitle(title)
   if (!trimmed || trimmed === DEFAULT_LLM_TAB_TITLE) return false
+  if (SHELL_PROMPT_TITLE_RE.test(trimmed)) return false
   return !PRODUCT_NAMES.has(trimmed.toLowerCase().replace(/[^a-z0-9]/g, ''))
 }
 
@@ -95,6 +110,8 @@ interface TerminalStore {
   lastCommandPerTab: Record<string, string>
   lastActivityPerProject: Record<string, number>
   attentionProjectIds: Record<string, boolean>
+  /** Tabs whose recent output matched an interactive-prompt pattern (trust dialog, permission menu, ...). Cleared on the next PTY write once the pattern no longer matches. */
+  promptDetectedTabIds: Record<string, boolean>
   autoScrollPerTab: Record<string, boolean>
   focusedTabId: string | null
   createTab: (
@@ -123,6 +140,7 @@ interface TerminalStore {
   setFocusedTabId: (tabId: string | null) => void
   markProjectAttention: (projectId: string) => void
   clearProjectAttention: (projectId: string) => void
+  setPromptDetected: (tabId: string, detected: boolean) => void
   setAutoScroll: (tabId: string, value: boolean) => void
   isAutoScroll: (tabId: string) => boolean
   initProject: (projectId: string, cwd: string) => Promise<void>
@@ -137,6 +155,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   lastCommandPerTab: {},
   lastActivityPerProject: {},
   attentionProjectIds: {},
+  promptDetectedTabIds: {},
   autoScrollPerTab: {},
   focusedTabId: null,
 
@@ -192,9 +211,21 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       const autoScrollPerTab = { ...state.autoScrollPerTab }
       delete autoScrollPerTab[tabId]
 
+      const promptDetectedTabIds = { ...state.promptDetectedTabIds }
+      delete promptDetectedTabIds[tabId]
+
       const focusedTabId = state.focusedTabId === tabId ? null : state.focusedTabId
 
-      return { tabs, activeTabPerProject, tabStatuses, tokenUsagePerTab, lastCommandPerTab, autoScrollPerTab, focusedTabId }
+      return {
+        tabs,
+        activeTabPerProject,
+        tabStatuses,
+        tokenUsagePerTab,
+        lastCommandPerTab,
+        autoScrollPerTab,
+        promptDetectedTabIds,
+        focusedTabId
+      }
     })
   },
 
@@ -243,8 +274,9 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       ? useSdlcStore.getState().ticketForTab(tabId)
       : undefined
     // The agent's own title is the best ticket title we get; the tab keeps its stage prefix.
+    const ticketTitle = ticket ? cleanAgentTitle(title) : title
     const tabTitle = ticket ? `${stageLabelFor(ticket.stage)} · ${title}` : title
-    if (ticket) useSdlcStore.getState().patchTicket(ticket.id, { title })
+    if (ticket) useSdlcStore.getState().patchTicket(ticket.id, { title: ticketTitle })
     set((state) => ({
       tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, title: tabTitle } : t))
     }))
@@ -277,6 +309,15 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
     if (!(projectId in next)) return
     delete next[projectId]
     set({ attentionProjectIds: next })
+  },
+
+  setPromptDetected: (tabId: string, detected: boolean) => {
+    const current = !!get().promptDetectedTabIds[tabId]
+    if (current === detected) return
+    const next = { ...get().promptDetectedTabIds }
+    if (detected) next[tabId] = true
+    else delete next[tabId]
+    set({ promptDetectedTabIds: next })
   },
 
   reorderTabs: (projectId: string, fromIndex: number, toIndex: number) => {
