@@ -47,9 +47,13 @@ interface TerminalEntry {
   lastBufferSig?: string
   /** Last ~2KB of raw output, for matching interactive-prompt patterns that render across multiple PTY writes. */
   recentOutputTail: string
+  openedAt: number
+  lastKeyAt: number
 }
 
 const PROMPT_TAIL_MAX_CHARS = 2000
+/** A custom startup command may never enable bracketed paste; after this long an LLM tab is assumed up. */
+const TUI_READY_GRACE_MS = 60_000
 
 /** Keys that dismiss an agent's approval prompt: Enter, Esc, or picking a numbered option. */
 const ANSWERS_PROMPT_RE = /^(?:\r|\n|\x1b|\d)$/
@@ -178,10 +182,14 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
       terminal.unicode.activeVersion = '11'
 
-      entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0, projectId, recentOutputTail: '' }
+      entry = { terminal, fitAddon, searchAddon, suppressBusyUntil: 0, projectId, recentOutputTail: '', openedAt: Date.now(), lastKeyAt: 0 }
       terminalsMap.set(tabId, entry)
 
       terminal.attachCustomKeyEventHandler((e) => {
+        if (e.type === 'keydown') {
+          const own = terminalsMap.get(tabId)
+          if (own) own.lastKeyAt = Date.now()
+        }
         if (e.key === 'Enter' && e.shiftKey && (e.type === 'keydown' || e.type === 'keypress')) {
           if (e.type === 'keydown') {
             window.api.terminal.write(tabId, '\x1b[13;2u')
@@ -281,6 +289,11 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
           entry.idleTimer = setTimeout(() => {
             const e = terminalsMap.get(tabId)
             if (e?.busyPromoteTimer) { clearTimeout(e.busyPromoteTimer); e.busyPromoteTimer = null }
+            // A quiet LLM tab is only "idle" once its TUI owns the tty. Before that the
+            // silence is a shell or CLI still booting, and anything sent into it is read
+            // later as one burst with its Enter swallowed. Shells drop bracketed paste
+            // when they exec a command; the TUI turns it back on as it mounts.
+            if (isLlm && e && !terminal.modes.bracketedPasteMode && Date.now() - e.openedAt < TUI_READY_GRACE_MS) return
             const prev = useTerminalStore.getState().tabStatuses[tabId]
             useTerminalStore.getState().setTabStatus(tabId, 'idle')
             if (isLlm) {

@@ -143,11 +143,14 @@ function promptVariables(
 }
 
 /**
- * Marks the tab as the project's active one so the queue runner drains it,
- * without touching which page or panel is on screen. Used for handoffs kicked
- * off from the SDLC board, which should stay on the board.
+ * Makes the ticket's project current and the tab its active one so the queue
+ * runner drains it, without touching which page is on screen. Terminals only
+ * mount for the current project, so a ticket in another project would never
+ * get a pty. Used for handoffs kicked off from the SDLC board, which should
+ * stay on the board.
  */
 function activateTab(projectId: string, tabId: string): void {
+  useProjectStore.setState({ activeProjectId: projectId })
   useTerminalStore.getState().setActiveTab(projectId, tabId)
 }
 
