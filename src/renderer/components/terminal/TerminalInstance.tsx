@@ -154,7 +154,9 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
       const fitAddon = new FitAddon()
       const searchAddon = new SearchAddon()
       const unicode11Addon = new Unicode11Addon()
-      const webLinksAddon = new WebLinksAddon()
+      const webLinksAddon = new WebLinksAddon((_event, uri) => {
+        window.api.worktrees.openUrl(uri)
+      })
 
       terminal.loadAddon(fitAddon)
       terminal.loadAddon(searchAddon)
