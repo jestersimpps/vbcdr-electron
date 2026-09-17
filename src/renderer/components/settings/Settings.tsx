@@ -10,6 +10,7 @@ import { SoundSection } from '@/components/settings/SoundSection'
 import { CompanionSection } from '@/components/settings/CompanionSection'
 import { EditorSection } from '@/components/settings/EditorSection'
 import { ThemeSection } from '@/components/settings/ThemeSection'
+import { TerminalAppearanceSection } from '@/components/settings/TerminalAppearanceSection'
 import { KeybindingsSection } from '@/components/settings/KeybindingsSection'
 import { Section, useAccent } from '@/components/settings/SettingsControls'
 import { cn } from '@/lib/utils'
@@ -115,9 +116,14 @@ export function Settings(): React.ReactElement {
         )}
 
         {tab === 'theme' && (
-          <Section title="Theme">
-            <ThemeSection />
-          </Section>
+          <>
+            <Section title="Theme">
+              <ThemeSection />
+            </Section>
+            <Section title="Terminal">
+              <TerminalAppearanceSection />
+            </Section>
+          </>
         )}
 
         {tab === 'keybindings' && (

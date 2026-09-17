@@ -6,6 +6,7 @@ import { SearchAddon } from '@xterm/addon-search'
 import { Unicode11Addon } from '@xterm/addon-unicode11'
 import { useThemeStore } from '@/stores/theme-store'
 import { useTerminalStore, providerIdForTab } from '@/stores/terminal-store'
+import { useTerminalPrefsStore } from '@/stores/terminal-prefs-store'
 import { useClipboardStore } from '@/stores/clipboard-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { capabilitiesFor } from '@/config/llm-provider-registry'
@@ -90,6 +91,16 @@ export function applyThemeToAll(themeId: string): void {
   })
 }
 
+export function applyFontToAll(fontFamily: string, fontSize: number): void {
+  terminalsMap.forEach(({ terminal, fitAddon }) => {
+    terminal.options.fontFamily = fontFamily
+    terminal.options.fontSize = fontSize
+    const el = terminal.element
+    if (!el || el.clientWidth === 0 || el.clientHeight === 0) return
+    try { fitAddon.fit() } catch { /* disposed */ }
+  })
+}
+
 async function openPathFromTerminal(
   projectId: string,
   cwd: string,
@@ -157,10 +168,11 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
 
     if (!entry) {
       const baseTheme = getTerminalTheme(useThemeStore.getState().getTerminalThemeId())
+      const { fontFamily, fontSize } = useTerminalPrefsStore.getState()
       const terminal = new Terminal({
         cursorBlink: true,
-        fontSize: 13,
-        fontFamily: 'Menlo, Monaco, Courier New, monospace',
+        fontSize,
+        fontFamily,
         cols: 80,
         rows: 24,
         scrollback: 2000,

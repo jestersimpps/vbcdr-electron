@@ -16,7 +16,8 @@ import { useClipboardStore } from '@/stores/clipboard-store'
 import { useGitStore } from '@/stores/git-store'
 import { useFileTreeStore } from '@/stores/filetree-store'
 import { useLayoutStore } from '@/stores/layout-store'
-import { applyThemeToAll } from '@/components/terminal/TerminalInstance'
+import { applyFontToAll, applyThemeToAll } from '@/components/terminal/TerminalInstance'
+import { useTerminalPrefsStore } from '@/stores/terminal-prefs-store'
 import { useSdlcStageWatcher } from '@/hooks/useSdlcStageWatcher'
 import type { CustomThemeUI } from '@/models/custom-theme'
 import type { FileNode } from '@/models/types'
@@ -63,6 +64,9 @@ export function App(): React.ReactElement {
   const variant = useThemeStore((s) => s.variant)
   const customDark = useThemeStore((s) => s.customDark)
   const customLight = useThemeStore((s) => s.customLight)
+  const terminalThemeId = useThemeStore((s) => s.terminalThemeId)
+  const terminalFontFamily = useTerminalPrefsStore((s) => s.fontFamily)
+  const terminalFontSize = useTerminalPrefsStore((s) => s.fontSize)
 
   useEffect(() => {
     const classes = Array.from(document.documentElement.classList)
@@ -89,6 +93,14 @@ export function App(): React.ReactElement {
     applyCustomVars(colors.ui)
     applyThemeToAll(useThemeStore.getState().getTerminalThemeId())
   }, [customDark, customLight])
+
+  useEffect(() => {
+    applyThemeToAll(useThemeStore.getState().getTerminalThemeId())
+  }, [terminalThemeId, customDark, customLight])
+
+  useEffect(() => {
+    applyFontToAll(terminalFontFamily, terminalFontSize)
+  }, [terminalFontFamily, terminalFontSize])
 
   useEffect(() => {
     return useUpdaterStore.getState().init()
