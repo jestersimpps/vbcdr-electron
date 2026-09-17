@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
   Check,
@@ -17,39 +17,22 @@ import {
   Workflow,
   X
 } from 'lucide-react'
-import {
-  MODEL_PROVIDERS,
-  SDLC_STAGES,
-  type ModelProviderId,
-  type SdlcStage,
-  type SdlcTicket,
-  type SdlcTicketStatus
-} from '@/models/sdlc'
-import { useProviderModels, type ProviderModel, type UseProviderModels } from '@/hooks/useProviderModels'
-import { isHandoffStage } from '@/models/sdlc-prompts'
+import type { SdlcTicket, SdlcTicketStatus } from '@/models/sdlc'
+import { isAgentColumn } from '@/models/sdlc-flow'
+import { useProviderModels } from '@/hooks/useProviderModels'
 import { useProjectStore } from '@/stores/project-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
+import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { focusTicketTab } from '@/lib/sdlc-handover'
 import { useAccent } from '@/components/settings/SettingsControls'
 import { NewTicketModal } from '@/components/sdlc/NewTicketModal'
+import { StageModelPicker } from '@/components/sdlc/StageModelPicker'
 import { TicketDetailModal } from '@/components/sdlc/TicketDetailModal'
 import { buildSeedTickets } from '@/lib/dev-seed-tickets'
 import { cn } from '@/lib/utils'
 
 const LANE_MIN_WIDTH = 'min-w-[220px]'
-
-/** Catalogues list small models first; a stage that writes code should not default to one. */
-const PREFERRED_MODEL_KEYWORDS = ['sonnet', 'opus', 'gpt-5']
-
-function preferredModelId(models: ProviderModel[] | undefined): string | null {
-  if (!models?.length) return null
-  for (const keyword of PREFERRED_MODEL_KEYWORDS) {
-    const match = models.find((m) => m.id.toLowerCase().includes(keyword))
-    if (match) return match.id
-  }
-  return models[0].id
-}
 
 function relativeTime(timestamp: number): string {
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
@@ -215,98 +198,31 @@ function TicketCard({
   )
 }
 
-const SELECT_CLASS =
-  'w-full truncate rounded border border-zinc-800 bg-zinc-900 px-1.5 py-1 text-micro text-zinc-400 outline-none hover:border-zinc-700 focus:border-zinc-600 disabled:opacity-40'
-
-function StageModelPicker({
-  stage,
-  label,
-  models
-}: {
-  stage: SdlcStage
-  label: string
-  models: UseProviderModels
-}): React.ReactElement {
-  const assignment = useSdlcStore((s) => s.stageModels[stage])
-  const setStageProvider = useSdlcStore((s) => s.setStageProvider)
-  const setStageModel = useSdlcStore((s) => s.setStageModel)
-  const setStageAssignment = useSdlcStore((s) => s.setStageAssignment)
-
-  const provider = assignment?.provider ?? MODEL_PROVIDERS[0].id
-  const result = models.byProvider[provider]
-  const error = result?.error ?? null
-  const preferred = preferredModelId(result?.models)
-  const model = assignment?.model ?? preferred
-
-  // An unset stage adopts the first provider and a sensible model once the list
-  // arrives, so the board never shows an empty picker that nothing would run with.
-  useEffect(() => {
-    if (assignment?.model || !preferred) return
-    setStageAssignment(stage, provider, preferred)
-  }, [assignment?.model, preferred, provider, stage, setStageAssignment])
-
-  return (
-    <div className={cn('flex flex-1 flex-col gap-1', LANE_MIN_WIDTH)}>
-      <span className="truncate px-0.5 text-micro font-medium uppercase tracking-wide text-zinc-500">
-        {label}
-      </span>
-      <select
-        value={provider}
-        aria-label={`Provider for ${stage}`}
-        onChange={(e) => setStageProvider(stage, e.target.value as ModelProviderId)}
-        className={SELECT_CLASS}
-      >
-        {MODEL_PROVIDERS.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.label}
-          </option>
-        ))}
-      </select>
-      <select
-        value={model ?? ''}
-        disabled={models.isLoading || !!error || !result?.models.length}
-        aria-label={`Model for ${stage}`}
-        onChange={(e) => setStageModel(stage, e.target.value || null)}
-        className={SELECT_CLASS}
-        title={error ?? undefined}
-      >
-        <option value="" disabled>
-          {models.isLoading ? 'loading…' : error ? error : result?.models.length ? 'pick a model' : 'no models'}
-        </option>
-        {result?.models.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  )
-}
-
 /**
- * Every stage takes a slot so this row lines up with the swimlane columns below.
- * Each stage that hands off to an agent gets a picker; done is the only one
- * where nothing runs.
+ * Every column takes a slot so this row lines up with the swimlane columns below.
+ * Each column that hands off to an agent gets a picker; nothing runs in the others.
  *
  * The padding mirrors the swimlane's own `p-4` page gutter plus its inner `p-2`,
  * so the slots sit over the columns rather than drifting by the difference.
  */
 function StageModelBar(): React.ReactElement {
   const models = useProviderModels()
+  const columns = useSdlcFlowStore((s) => s.columns)
 
   return (
     <div className="shrink-0 border-b border-zinc-800 bg-zinc-900/30 px-4 pb-2 pt-2">
       <div className="flex items-start gap-2 px-2">
-        {SDLC_STAGES.map((stage) =>
-          isHandoffStage(stage.id) ? (
+        {columns.map((column) =>
+          isAgentColumn(column) ? (
             <StageModelPicker
-              key={stage.id}
-              stage={stage.id}
-              label={stage.label}
+              key={column.id}
+              stage={column.id}
+              label={column.label}
               models={models}
+              className={cn('flex-1', LANE_MIN_WIDTH)}
             />
           ) : (
-            <div key={stage.id} className={cn('flex-1', LANE_MIN_WIDTH)} aria-hidden />
+            <div key={column.id} className={cn('flex-1', LANE_MIN_WIDTH)} aria-hidden />
           )
         )}
       </div>
@@ -331,16 +247,19 @@ function ProjectSwimlane({
   const showSdlcPromptsPage = useProjectStore((s) => s.showSdlcPromptsPage)
   const selectedTicketId = useSdlcStore((s) => s.selectedTicketId)
   const selectTicket = useSdlcStore((s) => s.selectTicket)
+  const columns = useSdlcFlowStore((s) => s.columns)
+  const firstColumnId = columns[0].id
 
+  // A ticket whose column no longer exists shows at the start rather than vanishing from the board.
   const byStage = useMemo(() => {
-    const map = new Map<SdlcStage, SdlcTicket[]>()
-    for (const stage of SDLC_STAGES) map.set(stage.id, [])
+    const map = new Map<string, SdlcTicket[]>()
+    for (const column of columns) map.set(column.id, [])
     for (const ticket of tickets) {
       if (ticket.projectId !== projectId) continue
-      map.get(ticket.stage)?.push(ticket)
+      ;(map.get(ticket.stage) ?? map.get(firstColumnId))?.push(ticket)
     }
     return map
-  }, [tickets, projectId])
+  }, [tickets, projectId, columns, firstColumnId])
 
   const totalCount = useMemo(
     () => tickets.filter((t) => t.projectId === projectId).length,
@@ -410,7 +329,7 @@ function ProjectSwimlane({
       {!collapsed && (
         <div className="overflow-x-auto border-t border-zinc-800">
           <div className="flex gap-2 p-2">
-            {SDLC_STAGES.map((stage) => {
+            {columns.map((stage) => {
               const stageTickets = byStage.get(stage.id) ?? []
               return (
                 <div
@@ -422,7 +341,7 @@ function ProjectSwimlane({
                       <span className="truncate text-micro font-medium uppercase tracking-wide text-zinc-400">
                         {stage.label}
                       </span>
-                      {stage.autonomous && (
+                      {isAgentColumn(stage) && (
                         <span
                           className="h-1 w-1 shrink-0 rounded-full bg-amber-400/70"
                           title="Agent-driven stage"
@@ -435,7 +354,7 @@ function ProjectSwimlane({
                   </div>
 
                   <div className="flex min-h-[60px] flex-col gap-1.5 rounded-md bg-zinc-950/40 p-1.5">
-                    {stage.id === 'backlog' && (
+                    {stage.id === firstColumnId && (
                       <button
                         onClick={() => setModalOpen(true)}
                         className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-zinc-800 py-2 text-micro text-zinc-500 transition-colors hover:border-zinc-600 hover:bg-zinc-900/60 hover:text-zinc-300"
@@ -446,7 +365,7 @@ function ProjectSwimlane({
                       </button>
                     )}
                     {stageTickets.length === 0
-                      ? stage.id !== 'backlog' && (
+                      ? stage.id !== firstColumnId && (
                           <div className="flex flex-1 items-center justify-center py-3 text-micro text-zinc-700">
                             empty
                           </div>

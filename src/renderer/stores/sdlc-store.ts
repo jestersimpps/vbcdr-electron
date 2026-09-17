@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { sdlcColumns } from '@/stores/sdlc-flow-store'
+import { nextColumn, sendBackTarget } from '@/models/sdlc-flow'
 import {
   EMPTY_ARTIFACTS,
-  nextStage,
-  previousStage,
   type ModelProviderId,
   type NewSdlcTicketInput,
   type SdlcComment,
@@ -23,6 +23,7 @@ interface SdlcStore {
   selectedTicketId: string | null
   createTicket: (input: NewSdlcTicketInput) => SdlcTicket
   moveTicket: (id: string, stage: SdlcStage) => void
+  reassignStage: (from: SdlcStage, to: SdlcStage) => void
   advanceTicket: (id: string) => void
   sendTicketBack: (id: string, reason: string) => void
   addComment: (id: string, text: string) => void
@@ -63,6 +64,25 @@ function stripAttachmentData(ticket: SdlcTicket): SdlcTicket {
   return { ...ticket, attachments: ticket.attachments.map((a) => ({ ...a, dataUrl: null })) }
 }
 
+interface LegacyArtifacts {
+  plan?: string | null
+  checkOutput?: string | null
+  prSummary?: string | null
+}
+
+/** Outputs were three named fields while the flow was fixed; they are keyed by the column that wrote them now. */
+export function upgradeLegacyArtifacts(ticket: SdlcTicket): SdlcTicket {
+  const { plan, checkOutput, prSummary, ...artifacts } = ticket.artifacts as SdlcTicket['artifacts'] & LegacyArtifacts
+  if (artifacts.outputs) return ticket
+  const legacy: [string, string | null | undefined][] = [
+    ['planning', plan],
+    ['implementing', checkOutput],
+    ['review', prSummary]
+  ]
+  const outputs = Object.fromEntries(legacy.filter((entry): entry is [string, string] => !!entry[1]))
+  return { ...ticket, artifacts: { ...artifacts, outputs } }
+}
+
 export const useSdlcStore = create<SdlcStore>()(
   persist(
     (set, get) => ({
@@ -79,7 +99,7 @@ export const useSdlcStore = create<SdlcStore>()(
           projectId: input.projectId,
           title: titleFromDescription(description),
           description,
-          stage: 'backlog',
+          stage: sdlcColumns()[0].id,
           status: 'idle',
           branch: branchNameFrom(description),
           worktreePath: '—',
@@ -111,11 +131,20 @@ export const useSdlcStore = create<SdlcStore>()(
         }))
       },
 
+      /** A deleted column's tickets land idle: whatever ran there says nothing about the column they arrive in. */
+      reassignStage: (from: SdlcStage, to: SdlcStage) => {
+        set((state) => ({
+          tickets: state.tickets.map((t) =>
+            t.stage === from ? { ...t, stage: to, status: 'idle', blockedReason: null, updatedAt: Date.now() } : t
+          )
+        }))
+      },
+
       advanceTicket: (id: string) => {
         set((state) => ({
           tickets: state.tickets.map((t) => {
             if (t.id !== id) return t
-            const stage = nextStage(t.stage)
+            const stage = nextColumn(sdlcColumns(), t.stage)?.id
             if (!stage) return t
             return {
               ...t,
@@ -132,7 +161,7 @@ export const useSdlcStore = create<SdlcStore>()(
         set((state) => ({
           tickets: state.tickets.map((t) => {
             if (t.id !== id) return t
-            const stage = previousStage(t.stage)
+            const stage = sendBackTarget(sdlcColumns(), t.stage)?.id
             if (!stage) return t
             const text = reason.trim()
             return {
@@ -197,7 +226,7 @@ export const useSdlcStore = create<SdlcStore>()(
                   description,
                   attachments: patch.attachments,
                   title: titleFromDescription(description),
-                  branch: t.stage === 'backlog' && !t.worktreeId ? branchNameFrom(description) : t.branch,
+                  branch: t.stage === sdlcColumns()[0].id && !t.worktreeId ? branchNameFrom(description) : t.branch,
                   updatedAt: Date.now()
                 }
               : t
@@ -271,6 +300,11 @@ export const useSdlcStore = create<SdlcStore>()(
     }),
     {
       name: 'vbcdr-sdlc',
+      version: 1,
+      migrate: (persisted: unknown) => {
+        const state = (persisted ?? {}) as { tickets?: SdlcTicket[] }
+        return { ...state, tickets: (state.tickets ?? []).map(upgradeLegacyArtifacts) }
+      },
       partialize: (state) => ({
         tickets: state.tickets.map(stripAttachmentData),
         stageModels: state.stageModels,

@@ -1,39 +1,35 @@
 import { ArrowLeft, FolderOpen } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
-import { useLayoutStore } from '@/stores/layout-store'
+import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useSdlcPromptsStore } from '@/stores/sdlc-prompts-store'
-import {
-  SDLC_HANDOFF_STAGES,
-  type SdlcHandoffStage,
-  type SdlcPromptResolution
-} from '@/models/sdlc-prompts'
+import type { SdlcPromptResolution } from '@/models/sdlc-prompts'
 import { SdlcPromptEditor } from '@/components/sdlc/SdlcPromptEditor'
 import { SectionCard } from '@/components/settings/SettingsControls'
 
-const EMPTY_OVERRIDES = {}
+const EMPTY_OVERRIDES: Record<string, string> = {}
 
 export function SdlcPromptsPage(): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const project = useProjectStore((s) => s.projects.find((p) => p.id === activeProjectId))
   const showSdlcPage = useProjectStore((s) => s.showSdlcPage)
-  const globalPrompts = useLayoutStore((s) => s.sdlcStagePrompts)
+  const columns = useSdlcFlowStore((s) => s.columns)
   const overrides = useSdlcPromptsStore((s) =>
     activeProjectId ? s.promptsPerProject[activeProjectId] ?? EMPTY_OVERRIDES : EMPTY_OVERRIDES
   )
   const setStagePrompt = useSdlcPromptsStore((s) => s.setStagePrompt)
   const clearStagePrompt = useSdlcPromptsStore((s) => s.clearStagePrompt)
 
-  const values = Object.fromEntries(
-    SDLC_HANDOFF_STAGES.map((stage) => {
-      const override = (overrides as Partial<Record<SdlcHandoffStage, string>>)[stage]
+  const values: Record<string, SdlcPromptResolution> = Object.fromEntries(
+    columns.map((column) => {
+      const override = overrides[column.id]
       return [
-        stage,
+        column.id,
         typeof override === 'string'
           ? { text: override, overridden: true }
-          : { text: globalPrompts[stage], overridden: false }
+          : { text: column.prompt, overridden: false }
       ]
     })
-  ) as Record<SdlcHandoffStage, SdlcPromptResolution>
+  )
 
   return (
     <div className="min-h-full w-full p-6 text-zinc-200">
@@ -62,7 +58,7 @@ export function SdlcPromptsPage(): React.ReactElement {
             description="Only the stages you edit here differ from the global defaults in Settings. Everything else follows Settings, including later edits."
           >
             <SdlcPromptEditor
-              mode="project"
+              columns={columns}
               values={values}
               onChange={(stage, text) => setStagePrompt(project.id, stage, text)}
               onReset={(stage) => clearStagePrompt(project.id, stage)}

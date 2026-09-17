@@ -5,7 +5,6 @@ import { DEFAULT_COMPANION_VOICE } from '@/config/companion-voices'
 import {
   DEFAULT_SDLC_STAGE_PROMPTS,
   sanitizeStagePrompts,
-  type SdlcHandoffStage,
   type SdlcStagePrompts
 } from '@/models/sdlc-prompts'
 import {
@@ -58,6 +57,7 @@ interface LayoutState {
   globalTerminalCwd: string
   useWorktreesForNewLlmTabs: boolean
   closeTabWorkflowPrompt: string
+  /** Legacy: read once by sdlc-flow-store to seed column prompts. Columns own their prompt now. */
   sdlcStagePrompts: SdlcStagePrompts
   resetVersion: number
   setBuiltinProfileColor: (id: BuiltinProfileId, color: string) => void
@@ -111,8 +111,6 @@ interface LayoutState {
   setUseWorktreesForNewLlmTabs: (enabled: boolean) => void
   setCloseTabWorkflowPrompt: (prompt: string) => void
   resetCloseTabWorkflowPrompt: () => void
-  setSdlcStagePrompt: (stage: SdlcHandoffStage, prompt: string) => void
-  resetSdlcStagePrompt: (stage: SdlcHandoffStage) => void
 }
 
 export const DEFAULT_TOKEN_CAP = 160_000
@@ -425,22 +423,6 @@ export const useLayoutStore = create<LayoutState>()(
 
       resetCloseTabWorkflowPrompt: () => {
         set({ closeTabWorkflowPrompt: DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT })
-      },
-
-      setSdlcStagePrompt: (stage: SdlcHandoffStage, prompt: string) => {
-        const trimmed = prompt.trim()
-        set((state) => ({
-          sdlcStagePrompts: {
-            ...state.sdlcStagePrompts,
-            [stage]: trimmed || DEFAULT_SDLC_STAGE_PROMPTS[stage]
-          }
-        }))
-      },
-
-      resetSdlcStagePrompt: (stage: SdlcHandoffStage) => {
-        set((state) => ({
-          sdlcStagePrompts: { ...state.sdlcStagePrompts, [stage]: DEFAULT_SDLC_STAGE_PROMPTS[stage] }
-        }))
       },
 
       resetLayout: (projectId: string) => {

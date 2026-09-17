@@ -3,10 +3,12 @@ import { v4 as uuid } from 'uuid'
 import type { TerminalTab, WorktreeInfo } from '@/models/types'
 import { isSdlcTab, type TabProfileMeta } from '@/config/terminal-profiles'
 import { LLM_PROVIDERS, type LlmProviderId } from '@/config/llm-provider-registry'
-import { SDLC_STAGES, type SdlcStage } from '@/models/sdlc'
+import { findColumn } from '@/models/sdlc-flow'
+import type { SdlcStage } from '@/models/sdlc'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
+import { sdlcColumns } from '@/stores/sdlc-flow-store'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 
 type TabStatus = 'idle' | 'busy'
@@ -50,7 +52,7 @@ function isDescriptiveTitle(title: string): boolean {
 }
 
 function stageLabelFor(stage: SdlcStage): string {
-  return SDLC_STAGES.find((s) => s.id === stage)?.label ?? stage
+  return findColumn(sdlcColumns(), stage)?.label ?? stage
 }
 
 /**

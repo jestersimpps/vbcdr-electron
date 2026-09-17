@@ -1,22 +1,22 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resolveStagePrompt, useSdlcPromptsStore } from './sdlc-prompts-store'
-import { useLayoutStore } from './layout-store'
+import { useSdlcFlowStore } from './sdlc-flow-store'
 import { DEFAULT_SDLC_STAGE_PROMPTS } from '@/models/sdlc-prompts'
 
 beforeEach(() => {
   useSdlcPromptsStore.setState({ promptsPerProject: {} })
-  useLayoutStore.setState({ sdlcStagePrompts: { ...DEFAULT_SDLC_STAGE_PROMPTS } })
+  useSdlcFlowStore.getState().resetColumns()
 })
 
 describe('resolveStagePrompt', () => {
   it('inherits the global prompt when the project has no override', () => {
-    useLayoutStore.getState().setSdlcStagePrompt('planning', 'global planning')
+    useSdlcFlowStore.getState().updateColumn('planning', { prompt: 'global planning' })
     expect(resolveStagePrompt('p1', 'planning')).toEqual({ text: 'global planning', overridden: false })
   })
 
   it('follows later global edits while inheriting', () => {
     expect(resolveStagePrompt('p1', 'review').text).toBe(DEFAULT_SDLC_STAGE_PROMPTS.review)
-    useLayoutStore.getState().setSdlcStagePrompt('review', 'stricter review')
+    useSdlcFlowStore.getState().updateColumn('review', { prompt: 'stricter review' })
     expect(resolveStagePrompt('p1', 'review').text).toBe('stricter review')
   })
 
@@ -57,19 +57,19 @@ describe('resolveStagePrompt', () => {
   })
 })
 
-describe('global prompt defaults', () => {
-  it('falls back to the built-in text when a global prompt is blanked', () => {
-    useLayoutStore.getState().setSdlcStagePrompt('implementing', '')
-    expect(resolveStagePrompt('p1', 'implementing').text).toBe(DEFAULT_SDLC_STAGE_PROMPTS.implementing)
+describe('column prompts', () => {
+  it('resolves a custom column to its own prompt', () => {
+    const column = useSdlcFlowStore.getState().addColumn('Security audit', 'review')
+    useSdlcFlowStore.getState().updateColumn(column.id, { prompt: 'audit it' })
+    expect(resolveStagePrompt('p1', column.id)).toEqual({ text: 'audit it', overridden: false })
   })
 
-  it('reset restores the built-in text for one stage only', () => {
-    const layout = useLayoutStore.getState()
-    layout.setSdlcStagePrompt('planning', 'x')
-    layout.setSdlcStagePrompt('review', 'y')
-    layout.resetSdlcStagePrompt('planning')
-    const prompts = useLayoutStore.getState().sdlcStagePrompts
-    expect(prompts.planning).toBe(DEFAULT_SDLC_STAGE_PROMPTS.planning)
-    expect(prompts.review).toBe('y')
+  it('drops every project override for a removed column', () => {
+    const store = useSdlcPromptsStore.getState()
+    store.setStagePrompt('p1', 'planning', 'a')
+    store.setStagePrompt('p1', 'review', 'b')
+    store.removeColumnState('planning')
+    expect(resolveStagePrompt('p1', 'planning').overridden).toBe(false)
+    expect(resolveStagePrompt('p1', 'review')).toEqual({ text: 'b', overridden: true })
   })
 })

@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { TicketDetailModal } from './TicketDetailModal'
 import { useSdlcStore } from '@/stores/sdlc-store'
+import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { makePanel } from '@/models/sdlc-flow'
 import { EMPTY_ARTIFACTS, type SdlcTicket } from '@/models/sdlc'
 
 function ticket(overrides: Partial<SdlcTicket> = {}): SdlcTicket {
@@ -34,6 +36,7 @@ function ticket(overrides: Partial<SdlcTicket> = {}): SdlcTicket {
 
 beforeEach(() => {
   cleanup()
+  useSdlcFlowStore.getState().resetColumns()
   useSdlcStore.setState({ tickets: [], selectedTicketId: null })
 })
 
@@ -97,7 +100,7 @@ describe('TicketDetailModal', () => {
         ticket={ticket({
           stage: 'planning',
           status: 'awaiting-approval',
-          artifacts: { ...EMPTY_ARTIFACTS, plan: '# Steps\n\n1. add a login form\n2. wire the session' }
+          artifacts: { ...EMPTY_ARTIFACTS, outputs: { planning: '# Steps\n\n1. add a login form\n2. wire the session' } }
         })}
         onClose={vi.fn()}
       />
@@ -245,5 +248,82 @@ describe('sendTicketBack', () => {
     const updated = useSdlcStore.getState().tickets[0]
     expect(updated.comments).toHaveLength(0)
     expect(updated.blockedReason).toBe('Sent back for changes')
+  })
+})
+
+describe('TicketDetailModal with a user-defined column', () => {
+  function addAudit(): string {
+    const flow = useSdlcFlowStore.getState()
+    const column = flow.addColumn('Security audit', 'review')
+    flow.updateColumn(column.id, {
+      outputLabel: 'findings',
+      sendBackTo: 'planning',
+      panels: [
+        makePanel('reference', { label: 'Approved plan', sourceColumnId: 'planning' }),
+        makePanel('output', { label: 'Audit findings', emptyText: 'Still auditing.' })
+      ]
+    })
+    return column.id
+  }
+
+  it('builds the body from the column panels and names the buttons after its config', () => {
+    const audit = addAudit()
+    const t = ticket({
+      stage: audit,
+      worktreeId: 'wt1',
+      artifacts: { ...EMPTY_ARTIFACTS, outputs: { planning: 'the plan', [audit]: '## Nothing critical' } }
+    })
+    render(<TicketDetailModal ticket={t} onClose={vi.fn()} />)
+
+    expect(screen.getByText('Audit findings')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Nothing critical' })).toBeTruthy()
+    expect(screen.getByText('Approved plan')).toBeTruthy()
+    expect((screen.getByRole('button', { name: /approve findings/i }) as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.getByLabelText('Review comment')).toBeTruthy()
+  })
+
+  it('shows the panel empty state and gates the advance on the column output', () => {
+    const audit = addAudit()
+    render(<TicketDetailModal ticket={ticket({ stage: audit, worktreeId: 'wt1' })} onClose={vi.fn()} />)
+
+    expect(screen.getByText('Still auditing.')).toBeTruthy()
+    const approve = screen.getByRole('button', { name: /approve findings/i }) as HTMLButtonElement
+    expect(approve.disabled).toBe(true)
+    expect(approve.title).toMatch(/waiting for the agent's findings/i)
+  })
+
+  it('sends a rejected ticket to the configured column, not the neighbour', () => {
+    const audit = addAudit()
+    const t = ticket({ stage: audit, worktreeId: 'wt1' })
+    useSdlcStore.setState({ tickets: [t], selectedTicketId: t.id })
+    render(<TicketDetailModal ticket={t} onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /^send back$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /send back to planning/i }))
+
+    expect(useSdlcStore.getState().tickets[0].stage).toBe('planning')
+  })
+
+  it('hides a reference panel whose source column was deleted instead of breaking', () => {
+    const audit = addAudit()
+    useSdlcFlowStore.getState().removeColumn('planning')
+    render(<TicketDetailModal ticket={ticket({ stage: audit, worktreeId: 'wt1' })} onClose={vi.fn()} />)
+
+    expect(screen.queryByText('Approved plan')).toBeNull()
+    expect(screen.getByText('Still auditing.')).toBeTruthy()
+  })
+
+  it('offers Mark done from whichever column sits before the terminal one', () => {
+    const audit = addAudit()
+    useSdlcFlowStore.getState().removeColumn('review')
+    render(<TicketDetailModal ticket={ticket({ stage: audit, worktreeId: 'wt1' })} onClose={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: /mark done/i })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /wrap up/i })).toBeNull()
+  })
+
+  it('treats a ticket whose column no longer exists as sitting at the start', () => {
+    render(<TicketDetailModal ticket={ticket({ stage: 'vanished' })} onClose={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /start planning/i })).toBeTruthy()
   })
 })

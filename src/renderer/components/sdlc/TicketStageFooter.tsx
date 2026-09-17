@@ -1,5 +1,5 @@
 import { Bot, CheckCircle2, ExternalLink, GitPullRequest, Play, RotateCcw, Terminal, Trash2 } from 'lucide-react'
-import type { SdlcTicket, SdlcStage } from '@/models/sdlc'
+import type { SdlcTicket } from '@/models/sdlc'
 import { cn } from '@/lib/utils'
 
 const CANCEL_BUTTON = 'rounded px-3 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
@@ -38,11 +38,13 @@ function DeleteConfirmFooter({
 }
 
 function RejectConfirmFooter({
+  target,
   reason,
   onReasonChange,
   onCancel,
   onConfirm
 }: {
+  target: string
   reason: string
   onReasonChange: (value: string) => void
   onCancel: () => void
@@ -68,26 +70,43 @@ function RejectConfirmFooter({
         onClick={onConfirm}
         className="rounded bg-orange-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-500"
       >
-        Send back
+        Send back to {target}
       </button>
     </>
   )
 }
 
-/** What each stage's advance button needs to know: where it goes, what to call it, and why it might be disabled. */
-export interface AdvanceState {
-  target: SdlcStage | null
+export type FooterActionIcon = 'advance' | 'pull-request' | 'done'
+
+/** A button that moves the ticket on: what to call it, why it might be disabled, and what it does. */
+export interface FooterAction {
   label: string
+  icon: FooterActionIcon
+  title?: string
   blockedReason: string | undefined
+  onClick: () => void
 }
 
-/** Which of the stage-dependent actions are currently available. */
+/** Which of the column-dependent actions are currently available. */
 export interface StageActions {
-  canSendBack: boolean
+  /** The column a rejection goes to, or null where there is nowhere to send it. */
+  sendBackLabel: string | null
   canHandOff: boolean
   canRefine: boolean
-  isReview: boolean
-  isRunning: boolean
+  primary: FooterAction | null
+  /** Shown beside a wrap-up primary: moving on without going through the pull-request workflow. */
+  secondary: FooterAction | null
+}
+
+const ACTION_ICON: Record<FooterActionIcon, typeof Play> = {
+  advance: Play,
+  'pull-request': GitPullRequest,
+  done: CheckCircle2
+}
+
+function ActionIcon({ icon }: { icon: FooterActionIcon }): React.ReactElement {
+  const Icon = ACTION_ICON[icon]
+  return <Icon size={12} />
 }
 
 function ActionFooter({
@@ -101,10 +120,7 @@ function ActionFooter({
   onShowReject,
   onHandOff,
   onRefine,
-  onFinish,
-  commentDraft,
-  advance,
-  onAdvance
+  commentDraft
 }: {
   ticket: SdlcTicket
   isDirty: boolean
@@ -116,11 +132,9 @@ function ActionFooter({
   onShowReject: () => void
   onHandOff: () => void
   onRefine: () => void
-  onFinish: () => void
   commentDraft: string
-  advance: AdvanceState
-  onAdvance: () => void
 }): React.ReactElement {
+  const { primary, secondary } = actions
   return (
     <>
       <button
@@ -150,8 +164,8 @@ function ActionFooter({
           Save changes
         </button>
       )}
-      {actions.canSendBack && (
-        <button onClick={onShowReject} className={GHOST_BUTTON}>
+      {actions.sendBackLabel && (
+        <button onClick={onShowReject} className={GHOST_BUTTON} title={`Send back to ${actions.sendBackLabel}`}>
           <RotateCcw size={12} />
           Send back
         </button>
@@ -179,26 +193,26 @@ function ActionFooter({
           Refine
         </button>
       )}
-      {actions.isReview && (
+      {secondary && (
         <button
-          onClick={onFinish}
-          disabled={actions.isRunning}
+          onClick={secondary.onClick}
+          disabled={!!secondary.blockedReason}
           className={OUTLINE_BUTTON}
-          title="After the PR is open: remove the worktree and move the ticket to done"
+          title={secondary.blockedReason ?? secondary.title}
         >
-          <CheckCircle2 size={12} />
-          Mark done
+          <ActionIcon icon={secondary.icon} />
+          {secondary.label}
         </button>
       )}
-      {advance.target && (
+      {primary && (
         <button
-          onClick={onAdvance}
-          disabled={!!advance.blockedReason}
+          onClick={primary.onClick}
+          disabled={!!primary.blockedReason}
           className="flex items-center gap-1.5 rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
-          title={advance.blockedReason}
+          title={primary.blockedReason ?? primary.title}
         >
-          {actions.isReview ? <GitPullRequest size={12} /> : <Play size={12} />}
-          {advance.label}
+          <ActionIcon icon={primary.icon} />
+          {primary.label}
         </button>
       )}
     </>
@@ -225,9 +239,6 @@ interface TicketStageFooterProps {
   onHandOff: () => void
   commentDraft: string
   onRefine: () => void
-  onFinish: () => void
-  advance: AdvanceState
-  onAdvance: () => void
 }
 
 /** Picks which of the three footer states to show: confirming a delete, confirming a send-back, or the normal action bar. */
@@ -250,16 +261,14 @@ export function TicketStageFooter({
   onOpenAgentTab,
   onHandOff,
   commentDraft,
-  onRefine,
-  onFinish,
-  advance,
-  onAdvance
+  onRefine
 }: TicketStageFooterProps): React.ReactElement {
   if (showDelete) return <DeleteConfirmFooter ticket={ticket} onCancel={onCancelDelete} onConfirm={onDelete} />
 
   if (showReject) {
     return (
       <RejectConfirmFooter
+        target={actions.sendBackLabel ?? ''}
         reason={rejectReason}
         onReasonChange={onRejectReasonChange}
         onCancel={onCancelReject}
@@ -280,10 +289,7 @@ export function TicketStageFooter({
       onShowReject={onShowReject}
       onHandOff={onHandOff}
       onRefine={onRefine}
-      onFinish={onFinish}
       commentDraft={commentDraft}
-      advance={advance}
-      onAdvance={onAdvance}
     />
   )
 }

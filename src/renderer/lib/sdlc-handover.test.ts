@@ -3,12 +3,15 @@ import {
   advanceAndHandOff,
   applyStageOutput,
   discardTicket,
+  autoAdvanceTicket,
   handOffStage,
+  moveTicketOn,
   rerunStage,
   resumeStage,
   sendAttachmentsToAgent
 } from './sdlc-handover'
 import { useSdlcStore } from '@/stores/sdlc-store'
+import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useQueueStore } from '@/stores/queue-store'
@@ -56,6 +59,7 @@ function current(): SdlcTicket {
 }
 
 beforeEach(() => {
+  useSdlcFlowStore.getState().resetColumns()
   useSdlcStore.setState({ tickets: [ticket()], selectedTicketId: null, stageModels: {} })
   useProjectStore.setState({ projects: [project], activeProjectId: null })
   useTerminalStore.setState({ tabs: [], activeTabPerProject: {}, tabStatuses: {} })
@@ -143,7 +147,7 @@ describe('advanceAndHandOff', () => {
 
     const updated = current()
     expect(updated.stage).toBe('implementing')
-    expect(updated.artifacts.plan).toBe('1. add a login form\n2. wire the session')
+    expect(updated.artifacts.outputs.planning).toBe('1. add a login form\n2. wire the session')
     expect(window.api.fs.writeFile).toHaveBeenCalledWith(
       '/cwd/.worktrees/llm/x/.vbcdr/plan.md',
       '1. add a login form\n2. wire the session'
@@ -357,15 +361,127 @@ describe('discardTicket', () => {
 describe('applyStageOutput', () => {
   it('keeps the planning output whole as the plan document', () => {
     const patch = applyStageOutput(ticket({ stage: 'planning' }), '# Plan\n\n1. do it')
-    expect(patch.artifacts?.plan).toBe('# Plan\n\n1. do it')
+    expect(patch.artifacts?.outputs.planning).toBe('# Plan\n\n1. do it')
   })
 
   it('leaves a backlog ticket untouched: there is no agent output to apply', () => {
     expect(applyStageOutput(ticket({ stage: 'backlog' }), 'anything')).toEqual({})
   })
 
-  it('stores review output as the PR summary', () => {
+  it('stores review output under the review column', () => {
     const patch = applyStageOutput(ticket({ stage: 'review' }), 'Looks good')
-    expect(patch.artifacts?.prSummary).toBe('Looks good')
+    expect(patch.artifacts?.outputs.review).toBe('Looks good')
+  })
+})
+
+describe('custom columns', () => {
+  function addAudit(): string {
+    const flow = useSdlcFlowStore.getState()
+    const column = flow.addColumn('Security audit', 'review')
+    flow.updateColumn(column.id, {
+      prompt: 'Audit {{branch}} against the plan:\n{{output.planning}}\nChanges:\n{{output.implementing}}',
+      outputFile: '.vbcdr/audit.md'
+    })
+    return column.id
+  }
+
+  it('hands a user-defined column its own prompt, fed by the columns before it', async () => {
+    const audit = addAudit()
+    useSdlcStore.setState({
+      tickets: [
+        ticket({ stage: audit, artifacts: { ...EMPTY_ARTIFACTS, outputs: { planning: 'the plan', implementing: 'the changes' } } })
+      ]
+    })
+
+    await handOffStage(current(), project)
+
+    const tab = useTerminalStore.getState().tabs[0]
+    expect(tab.title).toBe('Security audit · Add auth')
+    const prompt = useQueueStore.getState().itemsPerTab[tab.id][0].text
+    expect(prompt).toContain('the plan')
+    expect(prompt).toContain('the changes')
+    expect(prompt).not.toContain('{{')
+  })
+
+  it('reads a column that has not produced anything as (none) rather than leaving the token', async () => {
+    const audit = addAudit()
+    useSdlcStore.setState({ tickets: [ticket({ stage: audit })] })
+    await handOffStage(current(), project)
+    const tab = useTerminalStore.getState().tabs[0]
+    expect(useQueueStore.getState().itemsPerTab[tab.id][0].text).toContain('(none)')
+  })
+
+  it('only fetches the diff for a prompt that asks for it', async () => {
+    vi.mocked(window.api.git.diffSummary).mockClear()
+    await handOffStage(current(), project)
+    expect(window.api.git.diffSummary).not.toHaveBeenCalled()
+
+    useSdlcStore.setState({ tickets: [ticket({ stage: 'review' })] })
+    await handOffStage(current(), project)
+    expect(window.api.git.diffSummary).toHaveBeenCalled()
+  })
+
+  it('stores the result under the column id and saves it where the column says', async () => {
+    const audit = addAudit()
+    useSdlcStore.setState({ tickets: [ticket({ stage: 'implementing' })] })
+    await handOffStage(current(), project)
+    vi.mocked(window.api.fs.readFile).mockResolvedValue({ content: 'wrote the code', isBinary: false })
+
+    await advanceAndHandOff('t1')
+    expect(current().stage).toBe(audit)
+    expect(current().artifacts.outputs.implementing).toBe('wrote the code')
+
+    vi.mocked(window.api.fs.readFile).mockResolvedValue({ content: 'no findings', isBinary: false })
+    await advanceAndHandOff('t1')
+    expect(current().stage).toBe('review')
+    expect(current().artifacts.outputs[audit]).toBe('no findings')
+    expect(window.api.fs.writeFile).toHaveBeenCalledWith('/cwd/.worktrees/llm/x/.vbcdr/audit.md', 'no findings')
+  })
+
+  it('parks the ticket in a human column without opening an agent tab', async () => {
+    const flow = useSdlcFlowStore.getState()
+    const qa = flow.addColumn('Manual QA', 'review')
+    flow.updateColumn(qa.id, { kind: 'human' })
+    useSdlcStore.setState({
+      tickets: [ticket({ stage: 'implementing', artifacts: { ...EMPTY_ARTIFACTS, outputs: { implementing: 'done' } } })]
+    })
+
+    await advanceAndHandOff('t1')
+
+    expect(current().stage).toBe(qa.id)
+    expect(current().status).toBe('idle')
+    expect(useTerminalStore.getState().tabs).toHaveLength(0)
+  })
+
+  it('leaves the permission flag off for a column that is not unattended', async () => {
+    useSdlcStore.getState().setStageAssignment('planning', 'anthropic', 'claude-sonnet-5')
+    useSdlcFlowStore.getState().updateColumn('planning', { autonomous: false })
+    await handOffStage(current(), project)
+    expect(useTerminalStore.getState().tabs[0].initialCommand).not.toContain('--permission-mode')
+  })
+
+  it('moving on from the column before the terminal one finishes the ticket, whatever it is called', async () => {
+    const audit = addAudit()
+    useSdlcFlowStore.getState().removeColumn('review')
+    useSdlcStore.setState({ tickets: [ticket({ stage: audit, worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/x' })] })
+
+    await moveTicketOn('t1')
+
+    expect(current().stage).toBe('done')
+    expect(window.api.worktrees.remove).toHaveBeenCalled()
+  })
+
+  it('holds an auto-advancing ticket in a column that always waits for approval', async () => {
+    useSdlcFlowStore.getState().updateColumn('planning', { requiresApproval: true })
+    useSdlcStore.setState({
+      tickets: [ticket({ autoAdvance: true, artifacts: { ...EMPTY_ARTIFACTS, outputs: { planning: 'plan' } } })]
+    })
+
+    await autoAdvanceTicket('t1')
+    expect(current().stage).toBe('planning')
+
+    useSdlcFlowStore.getState().updateColumn('planning', { requiresApproval: false })
+    await autoAdvanceTicket('t1')
+    expect(current().stage).toBe('implementing')
   })
 })

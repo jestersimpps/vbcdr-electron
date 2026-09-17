@@ -4,27 +4,22 @@ import { Modal } from '@/components/ui/Modal'
 import { Markdown } from '@/components/ui/Markdown'
 import { CloseWorktreeTabModal } from '@/components/terminal/CloseWorktreeTabModal'
 import { relativeTime } from '@/components/sdlc/TicketStageParts'
-import { TicketStageFooter, type AdvanceState, type StageActions } from '@/components/sdlc/TicketStageFooter'
-import { BacklogBody } from '@/components/sdlc/stages/BacklogBody'
-import { PlanningBody } from '@/components/sdlc/stages/PlanningBody'
-import { ImplementingBody } from '@/components/sdlc/stages/ImplementingBody'
-import { ReviewBody } from '@/components/sdlc/stages/ReviewBody'
-import { DoneBody } from '@/components/sdlc/stages/DoneBody'
-import { SDLC_STAGES, nextStage, type SdlcAttachment, type SdlcTicket } from '@/models/sdlc'
-import { isHandoffStage } from '@/models/sdlc-prompts'
+import { TicketStageFooter, type FooterAction, type StageActions } from '@/components/sdlc/TicketStageFooter'
+import { TicketBody } from '@/components/sdlc/TicketBody'
+import type { SdlcAttachment, SdlcTicket } from '@/models/sdlc'
 import { useSdlcStore } from '@/stores/sdlc-store'
+import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { WRAP_UP_LABEL, ticketTransition } from '@/lib/sdlc-transitions'
 import { useTerminalStore } from '@/stores/terminal-store'
 import {
-  advanceAndHandOff,
+  moveTicketOn,
   canResumeStage,
   discardTicket,
-  finishTicket,
   focusTicketTab,
   refineTicket,
   rerunStage,
   resumeStage,
-  sendAttachmentsToAgent,
-  stageOutputReady
+  sendAttachmentsToAgent
 } from '@/lib/sdlc-handover'
 import { attachmentsFromFiles } from '@/lib/sdlc-attachments'
 import { cn } from '@/lib/utils'
@@ -32,10 +27,6 @@ import { cn } from '@/lib/utils'
 interface TicketDetailModalProps {
   ticket: SdlcTicket | undefined
   onClose: () => void
-}
-
-function stageLabel(ticket: SdlcTicket): string {
-  return SDLC_STAGES.find((s) => s.id === ticket.stage)?.label ?? ticket.stage
 }
 
 export function TicketDetailModal({
@@ -46,6 +37,7 @@ export function TicketDetailModal({
   const updateTicket = useSdlcStore((s) => s.updateTicket)
   const patchTicket = useSdlcStore((s) => s.patchTicket)
   const addComment = useSdlcStore((s) => s.addComment)
+  const columns = useSdlcFlowStore((s) => s.columns)
   const agentTab = useTerminalStore((s) => (ticket?.tabId ? s.tabs.find((t) => t.id === ticket.tabId) : undefined))
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [wrapUpOpen, setWrapUpOpen] = useState(false)
@@ -57,10 +49,10 @@ export function TicketDetailModal({
   const [isDragging, setIsDragging] = useState(false)
   const [commentDraft, setCommentDraft] = useState('')
 
-  const isEditable = ticket?.stage === 'backlog'
-  const isClosed = ticket?.stage === 'done'
-  /** Planning, implementing, review: the three stages with a live or recent agent run and a comment thread. */
-  const isLiveStage = ticket ? !isEditable && !isClosed : false
+  const transition = ticket ? ticketTransition(ticket, columns) : null
+  const isEditable = transition?.layout === 'form'
+  /** The columns between the ends: a worktree exists, so there is work to look at and a comment thread. */
+  const isLiveStage = transition?.layout === 'workspace'
 
   /**
    * Keyed on the ticket id alone. Depending on description/attachments too
@@ -87,7 +79,7 @@ export function TicketDetailModal({
   const addFiles = async (files: FileList | File[]): Promise<void> => {
     if (!ticket) return
     const added = await attachmentsFromFiles(files)
-    if (ticket.stage === 'backlog') {
+    if (isEditable) {
       setDraftAttachments((prev) => [...prev, ...added])
       return
     }
@@ -97,7 +89,7 @@ export function TicketDetailModal({
 
   const removeAttachment = (id: string): void => {
     if (!ticket) return
-    if (ticket.stage === 'backlog') {
+    if (isEditable) {
       setDraftAttachments((prev) => prev.filter((a) => a.id !== id))
       return
     }
@@ -117,7 +109,7 @@ export function TicketDetailModal({
     return () => window.removeEventListener('paste', onPaste)
   })
 
-  if (!ticket) return null
+  if (!ticket || !transition) return null
 
   const attachmentsChanged =
     draftAttachments.length !== ticket.attachments.length ||
@@ -135,41 +127,39 @@ export function TicketDetailModal({
     onClose()
   }
 
-  const target = nextStage(ticket.stage)
-  const canSendBack = ticket.stage !== 'backlog' && ticket.stage !== 'done'
+  const { column, isAgent, next } = transition
   const isRunning = ticket.status === 'running'
   const hasRunBefore = !!ticket.tabId || !!ticket.worktreeId || ticket.status !== 'idle'
-  const canHandOff = isHandoffStage(ticket.stage) && !isRunning && !hasRunBefore
-  const canRefine = isHandoffStage(ticket.stage) && !isRunning && hasRunBefore
-  const canResume =
-    isHandoffStage(ticket.stage) && !isRunning && !agentTab && !!ticket.worktreeId && canResumeStage(ticket.stage)
-  const isReview = ticket.stage === 'review'
-  const outputReady = stageOutputReady(ticket)
-  const advanceBlockedReason = isRunning
-    ? 'The agent is still working'
-    : !outputReady
-      ? `Waiting for the agent's ${ticket.stage === 'planning' ? 'plan' : 'result'}`
-      : isReview && !agentTab?.worktree
-        ? 'Run the review stage first so there is a tab to wrap up in'
-        : undefined
+  /** A ticket that landed here idle from a deleted column has a worktree but was never run in this one. */
+  const neverRanHere = ticket.status === 'idle' && !ticket.tabId && !transition.outputReady
+  const canHandOff = isAgent && !isRunning && (!hasRunBefore || neverRanHere)
+  const canRefine = isAgent && !isRunning && hasRunBefore
+  const canResume = isAgent && !isRunning && !agentTab && !!ticket.worktreeId && canResumeStage(ticket.stage)
 
-  const advanceLabel =
-    ticket.stage === 'backlog'
-      ? 'Start planning'
-      : ticket.stage === 'planning'
-        ? 'Approve plan'
-        : ticket.stage === 'implementing'
-          ? 'Send to review'
-          : 'Wrap up & open PR'
-
-  const handleAdvance = (): void => {
-    if (isReview) {
-      setWrapUpOpen(true)
-      return
-    }
-    void advanceAndHandOff(ticket.id)
+  const handleMoveOn = (): void => {
+    void moveTicketOn(ticket.id)
     onClose()
   }
+
+  const moveOn: FooterAction | null = next && {
+    label: transition.moveOnLabel,
+    icon: transition.finishes ? 'done' : 'advance',
+    title: transition.finishes ? 'Remove the worktree and move the ticket on' : undefined,
+    blockedReason: transition.moveOnBlockedReason,
+    onClick: handleMoveOn
+  }
+  const wrapUp: FooterAction | null = next && transition.wrapsUp
+    ? {
+        label: WRAP_UP_LABEL,
+        icon: 'pull-request',
+        blockedReason:
+          transition.outputBlockedReason ??
+          (agentTab?.worktree
+            ? undefined
+            : `Run the ${column.label.toLowerCase()} stage first so there is a tab to wrap up in`),
+        onClick: () => setWrapUpOpen(true)
+      }
+    : null
 
   const handleHandOff = (): void => {
     void rerunStage(ticket.id)
@@ -189,21 +179,21 @@ export function TicketDetailModal({
     onClose()
   }
 
-  const handleFinish = (): void => {
-    void finishTicket(ticket.id)
-    onClose()
-  }
-
   const handleReject = (): void => {
     sendTicketBack(ticket.id, rejectReason)
     onClose()
   }
 
-  const modalSize = ticket.stage === 'backlog' || ticket.stage === 'done' ? 'lg' : 'xl'
-  const bodyScroll = ticket.stage !== 'backlog'
+  const modalSize = isLiveStage ? 'xl' : 'lg'
+  const bodyScroll = !isEditable
 
-  const stageActions: StageActions = { canSendBack, canHandOff, canRefine, isReview, isRunning }
-  const advanceState: AdvanceState = { target, label: advanceLabel, blockedReason: advanceBlockedReason }
+  const stageActions: StageActions = {
+    sendBackLabel: transition.sendBack?.label ?? null,
+    canHandOff,
+    canRefine,
+    primary: wrapUp ?? moveOn,
+    secondary: wrapUp ? moveOn : null
+  }
   const attachHint = agentTab
     ? 'Drop, paste, or click to attach — goes straight to the agent'
     : 'Drop, paste, or click to attach — sent with the next stage'
@@ -253,9 +243,6 @@ export function TicketDetailModal({
           onHandOff={handleHandOff}
           commentDraft={commentDraft}
           onRefine={handleRefine}
-          onFinish={handleFinish}
-          advance={advanceState}
-          onAdvance={handleAdvance}
         />
       }
     >
@@ -277,7 +264,7 @@ export function TicketDetailModal({
       >
         <div className="shrink-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-micro text-zinc-500">
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-300">{stageLabel(ticket)}</span>
+            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-300">{column.label}</span>
             <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-zinc-400">{ticket.agent}</span>
             {ticket.branch !== '—' && (
               <span className="flex items-center gap-1 font-mono">
@@ -307,61 +294,24 @@ export function TicketDetailModal({
           {isLiveStage && <Markdown content={ticket.description} className="text-zinc-400" />}
         </div>
 
-        {ticket.stage === 'backlog' && (
-          <BacklogBody
-            draft={draft}
-            onDraftChange={setDraft}
-            onSave={handleSave}
-            attachments={attachments}
-            onRemoveAttachment={removeAttachment}
-            onAttachClick={() => fileInputRef.current?.click()}
-            isDragging={isDragging}
-          />
-        )}
-
-        {ticket.stage === 'planning' && (
-          <PlanningBody
-            ticket={ticket}
-            commentDraft={commentDraft}
-            onCommentDraftChange={setCommentDraft}
-            onSubmitComment={handleRefine}
-            attachments={attachments}
-            onRemoveAttachment={removeAttachment}
-            onAttachClick={() => fileInputRef.current?.click()}
-            isDragging={isDragging}
-            attachHint={attachHint}
-          />
-        )}
-
-        {ticket.stage === 'implementing' && (
-          <ImplementingBody
-            ticket={ticket}
-            commentDraft={commentDraft}
-            onCommentDraftChange={setCommentDraft}
-            onSubmitComment={handleRefine}
-            attachments={attachments}
-            onRemoveAttachment={removeAttachment}
-            onAttachClick={() => fileInputRef.current?.click()}
-            isDragging={isDragging}
-            attachHint={attachHint}
-          />
-        )}
-
-        {ticket.stage === 'review' && (
-          <ReviewBody
-            ticket={ticket}
-            commentDraft={commentDraft}
-            onCommentDraftChange={setCommentDraft}
-            onSubmitComment={handleRefine}
-            attachments={attachments}
-            onRemoveAttachment={removeAttachment}
-            onAttachClick={() => fileInputRef.current?.click()}
-            isDragging={isDragging}
-            attachHint={attachHint}
-          />
-        )}
-
-        {ticket.stage === 'done' && <DoneBody ticket={ticket} />}
+        <TicketBody
+          ticket={ticket}
+          column={column}
+          layout={transition.layout}
+          form={{ draft, onDraftChange: setDraft, onSave: handleSave }}
+          thread={{
+            commentDraft,
+            onCommentDraftChange: setCommentDraft,
+            onSubmitComment: handleRefine,
+            attachHint
+          }}
+          files={{
+            attachments,
+            onRemoveAttachment: removeAttachment,
+            onAttachClick: () => fileInputRef.current?.click(),
+            isDragging
+          }}
+        />
 
         <input
           ref={fileInputRef}

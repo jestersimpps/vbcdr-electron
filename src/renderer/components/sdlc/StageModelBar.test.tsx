@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import { SdlcPage } from './SdlcPage'
-import { SDLC_STAGES } from '@/models/sdlc'
-import { isHandoffStage } from '@/models/sdlc-prompts'
+import { defaultSdlcColumns, isAgentColumn } from '@/models/sdlc-flow'
 import { useProjectStore } from '@/stores/project-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
+import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 
-const HANDOFF_STAGES = SDLC_STAGES.filter((s) => isHandoffStage(s.id))
+const SDLC_STAGES = defaultSdlcColumns()
+const HANDOFF_STAGES = SDLC_STAGES.filter(isAgentColumn)
 
 beforeEach(() => {
   cleanup()
@@ -14,6 +15,7 @@ beforeEach(() => {
     projects: [{ id: 'p1', name: 'vbcdr', path: '/cwd', lastOpened: 0 }]
   })
   useSdlcStore.setState({ stageModels: {} })
+  useSdlcFlowStore.getState().resetColumns()
   vi.mocked(window.api.providerModels.list)
     .mockReset()
     .mockResolvedValue([
@@ -29,7 +31,7 @@ describe('StageModelBar', () => {
 
     for (const stage of SDLC_STAGES) {
       const picker = screen.queryByLabelText(`Model for ${stage.id}`)
-      if (isHandoffStage(stage.id)) {
+      if (isAgentColumn(stage)) {
         expect(picker, `${stage.id} should have a picker`).toBeTruthy()
       } else {
         expect(picker, `${stage.id} should not have a picker`).toBeNull()
@@ -83,6 +85,15 @@ describe('StageModelBar', () => {
       expect(useSdlcStore.getState().stageModels.planning).toEqual({ provider: 'anthropic', model: 'claude-sonnet-5' })
     )
     expect((screen.getByLabelText('Model for planning') as HTMLSelectElement).value).toBe('claude-sonnet-5')
+  })
+
+  it('gives a column added to the flow its own picker and lane', async () => {
+    const column = useSdlcFlowStore.getState().addColumn('Security audit', 'review')
+    render(<SdlcPage />)
+    await waitFor(() => expect(window.api.providerModels.list).toHaveBeenCalled())
+
+    expect(screen.getByLabelText(`Model for ${column.id}`)).toBeTruthy()
+    expect(screen.getAllByText('Security audit').length).toBeGreaterThan(1)
   })
 
   it('leaves an explicit choice alone', async () => {

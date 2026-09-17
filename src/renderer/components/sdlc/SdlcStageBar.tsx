@@ -3,8 +3,10 @@ import { AlertTriangle, CheckCircle2, ExternalLink, GitPullRequest, Loader2, Pla
 import { useSdlcStore } from '@/stores/sdlc-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { advanceAndHandOff, finishTicket, rerunStage, stageOutputReady, SDLC_TAB_COLOR } from '@/lib/sdlc-handover'
-import { SDLC_STAGES, nextStage, type SdlcTicket } from '@/models/sdlc'
+import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { moveTicketOn, rerunStage, SDLC_TAB_COLOR } from '@/lib/sdlc-handover'
+import { WRAP_UP_LABEL, ticketTransition } from '@/lib/sdlc-transitions'
+import type { SdlcTicket } from '@/models/sdlc'
 import { CloseWorktreeTabModal } from '@/components/terminal/CloseWorktreeTabModal'
 import { ToolbarButton } from '@/components/ui/ToolbarButton'
 import { cn } from '@/lib/utils'
@@ -52,22 +54,15 @@ export function SdlcStageBar({ tabId }: SdlcStageBarProps): React.ReactElement |
   const selectTicket = useSdlcStore((s) => s.selectTicket)
   const showSdlcPage = useProjectStore((s) => s.showSdlcPage)
   const tab = useTerminalStore((s) => (tabId ? s.tabs.find((t) => t.id === tabId) : undefined))
+  const columns = useSdlcFlowStore((s) => s.columns)
   const [wrapUpOpen, setWrapUpOpen] = useState(false)
 
   if (!ticket || !tab) return null
 
-  const stage = SDLC_STAGES.find((s) => s.id === ticket.stage)
-  const target = nextStage(ticket.stage)
+  const { column, next, wrapsUp, finishes, isAgent, moveOnLabel, moveOnBlockedReason, outputBlockedReason } =
+    ticketTransition(ticket, columns)
   const isRunning = ticket.status === 'running'
-  const isReview = ticket.stage === 'review'
-
-  const handleAdvance = (): void => {
-    if (isReview) {
-      setWrapUpOpen(true)
-      return
-    }
-    void advanceAndHandOff(ticket.id)
-  }
+  const moveOn = (): void => void moveTicketOn(ticket.id)
 
   return (
     <div
@@ -76,7 +71,7 @@ export function SdlcStageBar({ tabId }: SdlcStageBarProps): React.ReactElement |
     >
       <Workflow size={12} className="shrink-0" style={{ color: SDLC_TAB_COLOR }} />
       <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-micro font-medium uppercase tracking-wide text-zinc-300">
-        {stage?.label ?? ticket.stage}
+        {column.label}
       </span>
       <span className="min-w-0 truncate text-xs text-zinc-200" title={ticket.title}>
         {ticket.title}
@@ -92,40 +87,36 @@ export function SdlcStageBar({ tabId }: SdlcStageBarProps): React.ReactElement |
         >
           <ExternalLink size={12} />
         </ToolbarButton>
-        <ToolbarButton
-          onClick={() => void rerunStage(ticket.id)}
-          disabled={isRunning}
-          title="Run this stage again in a fresh tab"
-        >
-          <RotateCcw size={12} />
-        </ToolbarButton>
-        {isReview && (
+        {isAgent && (
           <ToolbarButton
-            onClick={() => void finishTicket(ticket.id)}
+            onClick={() => void rerunStage(ticket.id)}
             disabled={isRunning}
-            title="After the PR is open: remove the worktree and mark the ticket done"
+            title="Run this stage again in a fresh tab"
           >
-            <CheckCircle2 size={12} />
+            <RotateCcw size={12} />
           </ToolbarButton>
         )}
-        {target && (
+        {next && wrapsUp && (
+          <ToolbarButton
+            onClick={moveOn}
+            disabled={!!moveOnBlockedReason}
+            title={finishes ? 'After the PR is open: remove the worktree and mark the ticket done' : moveOnLabel}
+          >
+            {finishes ? <CheckCircle2 size={12} /> : <Play size={12} />}
+          </ToolbarButton>
+        )}
+        {next && (
           <button
-            onClick={handleAdvance}
-            disabled={isRunning || !stageOutputReady(ticket) || (isReview && !tab.worktree)}
+            onClick={wrapsUp ? () => setWrapUpOpen(true) : moveOn}
+            disabled={wrapsUp ? !!outputBlockedReason || !tab.worktree : !!moveOnBlockedReason}
             className={cn(
               'flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium text-white disabled:opacity-40',
               'bg-indigo-600 hover:bg-indigo-500'
             )}
-            title={
-              isRunning
-                ? 'The agent is still working'
-                : !stageOutputReady(ticket)
-                  ? "Waiting for the agent's result"
-                  : undefined
-            }
+            title={wrapsUp ? outputBlockedReason : moveOnBlockedReason}
           >
-            {isReview ? <GitPullRequest size={11} /> : <Play size={11} />}
-            {isReview ? 'Wrap up & open PR' : `Advance to ${SDLC_STAGES.find((s) => s.id === target)?.label ?? target}`}
+            {wrapsUp ? <GitPullRequest size={11} /> : finishes ? <CheckCircle2 size={11} /> : <Play size={11} />}
+            {wrapsUp ? WRAP_UP_LABEL : moveOnLabel}
           </button>
         )}
       </div>

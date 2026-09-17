@@ -1,24 +1,20 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { useLayoutStore } from '@/stores/layout-store'
-import {
-  DEFAULT_SDLC_STAGE_PROMPTS,
-  type SdlcHandoffStage,
-  type SdlcPromptResolution,
-  type SdlcStagePrompts
-} from '@/models/sdlc-prompts'
+import { sdlcColumns, upgradeLegacyPrompt } from '@/stores/sdlc-flow-store'
+import { findColumn } from '@/models/sdlc-flow'
+import type { SdlcPromptResolution } from '@/models/sdlc-prompts'
+
+type ColumnPrompts = Record<string, string>
 
 interface SdlcPromptsState {
-  promptsPerProject: Record<string, Partial<SdlcStagePrompts>>
-  setStagePrompt: (projectId: string, stage: SdlcHandoffStage, text: string) => void
-  clearStagePrompt: (projectId: string, stage: SdlcHandoffStage) => void
+  promptsPerProject: Record<string, ColumnPrompts>
+  setStagePrompt: (projectId: string, stage: string, text: string) => void
+  clearStagePrompt: (projectId: string, stage: string) => void
   removeProjectState: (projectId: string) => void
+  removeColumnState: (columnId: string) => void
 }
 
-function withoutStage(
-  prompts: Partial<SdlcStagePrompts> | undefined,
-  stage: SdlcHandoffStage
-): Partial<SdlcStagePrompts> {
+function withoutStage(prompts: ColumnPrompts | undefined, stage: string): ColumnPrompts {
   const next = { ...prompts }
   delete next[stage]
   return next
@@ -34,7 +30,7 @@ export const useSdlcPromptsStore = create<SdlcPromptsState>()(
     (set) => ({
       promptsPerProject: {},
 
-      setStagePrompt: (projectId: string, stage: SdlcHandoffStage, text: string) => {
+      setStagePrompt: (projectId: string, stage: string, text: string) => {
         const trimmed = text.trim()
         set((state) => ({
           promptsPerProject: {
@@ -46,7 +42,7 @@ export const useSdlcPromptsStore = create<SdlcPromptsState>()(
         }))
       },
 
-      clearStagePrompt: (projectId: string, stage: SdlcHandoffStage) => {
+      clearStagePrompt: (projectId: string, stage: string) => {
         set((state) => ({
           promptsPerProject: {
             ...state.promptsPerProject,
@@ -61,18 +57,39 @@ export const useSdlcPromptsStore = create<SdlcPromptsState>()(
           delete next[projectId]
           return { promptsPerProject: next }
         })
+      },
+
+      removeColumnState: (columnId: string) => {
+        set((state) => ({
+          promptsPerProject: Object.fromEntries(
+            Object.entries(state.promptsPerProject).map(([projectId, prompts]) => [
+              projectId,
+              withoutStage(prompts, columnId)
+            ])
+          )
+        }))
       }
     }),
     {
       name: 'vbcdr-sdlc-prompts',
+      version: 1,
+      migrate: (persisted: unknown) => {
+        const state = (persisted ?? {}) as { promptsPerProject?: Record<string, ColumnPrompts> }
+        const promptsPerProject = Object.fromEntries(
+          Object.entries(state.promptsPerProject ?? {}).map(([projectId, prompts]) => [
+            projectId,
+            Object.fromEntries(Object.entries(prompts).map(([stage, text]) => [stage, upgradeLegacyPrompt(text)]))
+          ])
+        )
+        return { ...state, promptsPerProject }
+      },
       partialize: (state) => ({ promptsPerProject: state.promptsPerProject })
     }
   )
 )
 
-export function resolveStagePrompt(projectId: string, stage: SdlcHandoffStage): SdlcPromptResolution {
+export function resolveStagePrompt(projectId: string, stage: string): SdlcPromptResolution {
   const override = useSdlcPromptsStore.getState().promptsPerProject[projectId]?.[stage]
   if (typeof override === 'string') return { text: override, overridden: true }
-  const global = useLayoutStore.getState().sdlcStagePrompts[stage]
-  return { text: global || DEFAULT_SDLC_STAGE_PROMPTS[stage], overridden: false }
+  return { text: findColumn(sdlcColumns(), stage)?.prompt ?? '', overridden: false }
 }

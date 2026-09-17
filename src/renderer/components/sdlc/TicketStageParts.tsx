@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, FileText, MessageSquare, Paperclip, RotateCcw, Check, X, ListChecks } from 'lucide-react'
+import { ChevronDown, ChevronRight, FileText, History, MessageSquare, Paperclip, RotateCcw, Check, X, ListChecks } from 'lucide-react'
 import { Markdown } from '@/components/ui/Markdown'
-import type { SdlcCheck, SdlcDiffFile, SdlcDiffLine, SdlcTicket } from '@/models/sdlc'
+import type { SdlcActivityEntry, SdlcCheck, SdlcDiffFile, SdlcDiffLine, SdlcTicket } from '@/models/sdlc'
 import { cn } from '@/lib/utils'
 
 export const SECTION_LABEL = 'mb-1.5 flex items-center gap-1.5 text-micro uppercase tracking-wide text-zinc-500'
@@ -149,10 +149,9 @@ export function CheckBadges({ checks }: { checks: SdlcCheck[] }): React.ReactEle
   )
 }
 
-/** Collapsible reference to the approved plan — used in implementing/review so the diff can be checked against intent. */
-export function PlanReferencePanel({ plan }: { plan: string | null }): React.ReactElement | null {
+/** Collapsible reference to an earlier column's result, so the work in front of you can be checked against intent. */
+export function OutputReferencePanel({ label, content }: { label: string; content: string }): React.ReactElement {
   const [open, setOpen] = useState(false)
-  if (!plan) return null
   return (
     <div className="rounded border border-zinc-800">
       <button
@@ -161,14 +160,34 @@ export function PlanReferencePanel({ plan }: { plan: string | null }): React.Rea
       >
         {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
         <ListChecks size={11} />
-        Approved plan
+        {label}
       </button>
       {open && (
         <Markdown
-          content={plan}
+          content={content}
           className="max-h-48 overflow-auto border-t border-zinc-800 bg-zinc-900/60 px-3 py-2"
         />
       )}
+    </div>
+  )
+}
+
+export function ActivityLog({ entries }: { entries: SdlcActivityEntry[] }): React.ReactElement | null {
+  if (entries.length === 0) return null
+  return (
+    <div>
+      <div className={SECTION_LABEL}>
+        <History size={11} />
+        Activity
+      </div>
+      <div className="space-y-1">
+        {entries.map((entry, i) => (
+          <div key={i} className="flex items-baseline gap-2 text-xs text-zinc-400">
+            <span className="shrink-0 text-micro text-zinc-600">{relativeTime(entry.at)}</span>
+            <span>{entry.text}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
