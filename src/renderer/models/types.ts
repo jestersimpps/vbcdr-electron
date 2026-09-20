@@ -29,8 +29,18 @@ export interface GhStatus {
   message: string | null
 }
 
+export interface WorktreeBase {
+  ref: string
+  syncError: string | null
+}
+
+export interface CreateWorktreeOptions {
+  fromLatestDefault?: boolean
+}
+
 export interface TrackedWorktree extends WorktreeInfo {
   projectId: string
+  base?: WorktreeBase | null
   label: string | null
   createdAt: number
   prUrl: string | null

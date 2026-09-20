@@ -1,7 +1,15 @@
 import Store from 'electron-store'
 import { v4 as uuid } from 'uuid'
-import type { GitOpResult, TrackedWorktree } from '@main/models/types'
-import { createWorktree, getWorktreeState, removeWorktree, renameBranch } from '@main/services/git-service'
+import type { CreateWorktreeOptions, GitOpResult, TrackedWorktree } from '@main/models/types'
+import {
+  commitWorktreeWork,
+  createWorktree,
+  getWorktreeState,
+  pointBranchAt,
+  removeWorktree,
+  renameBranch,
+  syncDefaultBranch
+} from '@main/services/git-service'
 import { getPrForBranch } from '@main/services/gh-service'
 
 const store = new Store<{ worktrees: TrackedWorktree[] }>({
@@ -36,14 +44,20 @@ export function getWorktree(id: string): TrackedWorktree | null {
   return all().find((w) => w.id === id) ?? null
 }
 
-export async function createTrackedWorktree(projectId: string, projectPath: string): Promise<TrackedWorktree> {
-  const created = await createWorktree(projectPath)
+export async function createTrackedWorktree(
+  projectId: string,
+  projectPath: string,
+  options: CreateWorktreeOptions = {}
+): Promise<TrackedWorktree> {
+  const base = options.fromLatestDefault ? await syncDefaultBranch(projectPath) : null
+  const created = await createWorktree(projectPath, undefined, base?.ref)
   const tracked: TrackedWorktree = {
     id: uuid(),
     projectId,
     projectPath,
     path: created.path,
     branch: created.branch,
+    base,
     label: null,
     createdAt: Date.now(),
     prUrl: null,
@@ -106,4 +120,17 @@ export async function removeTrackedWorktree(id: string): Promise<GitOpResult> {
   const result = await removeWorktree(worktree.projectPath, worktree.path, worktree.branch, true)
   if (result.ok) untrackWorktree(id)
   return result
+}
+
+/** Removes the folder but keeps the branch, with anything still uncommitted committed onto it first. */
+export async function finishTrackedWorktree(id: string, commitMessage: string): Promise<GitOpResult> {
+  const worktree = getWorktree(id)
+  if (!worktree) return { ok: false, output: '', error: 'Unknown worktree' }
+  const state = await getWorktreeState(worktree.path)
+  const committed = state.exists ? await commitWorktreeWork(worktree.path, commitMessage) : null
+  if (committed && !committed.ok) return committed
+  const removed = await removeWorktree(worktree.projectPath, worktree.path, worktree.branch, false)
+  if (!removed.ok) return removed
+  untrackWorktree(id)
+  return committed ? pointBranchAt(worktree.projectPath, worktree.branch, committed.output) : { ok: true, output: worktree.branch }
 }

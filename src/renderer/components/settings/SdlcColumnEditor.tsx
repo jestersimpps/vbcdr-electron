@@ -21,7 +21,7 @@ const SUBSECTION_TITLE = 'text-xs font-semibold text-zinc-300'
 
 const END_COLUMN_NOTE: Record<'first' | 'last', string> = {
   first: 'The first column is always a human one: tickets here have no worktree yet, and this is where new tickets land.',
-  last: 'The last column always ends the ticket: entering it removes the worktree and its branch.'
+  last: 'The last column always ends the ticket: entering it removes the worktree and keeps the work on its branch.'
 }
 
 function DeleteColumnConfirm({

@@ -144,7 +144,7 @@ export function TicketDetailModal({
   const moveOn: FooterAction | null = next && {
     label: transition.moveOnLabel,
     icon: transition.finishes ? 'done' : 'advance',
-    title: transition.finishes ? 'Remove the worktree and move the ticket on' : undefined,
+    title: transition.finishes ? 'Remove the worktree, keep the work on its branch and move the ticket on' : undefined,
     blockedReason: transition.moveOnBlockedReason,
     onClick: handleMoveOn
   }

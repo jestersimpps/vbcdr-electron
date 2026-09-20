@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { FileText, GitBranch, Paperclip, X } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { branchNameFrom, useSdlcStore } from '@/stores/sdlc-store'
+import { useProjectStore } from '@/stores/project-store'
 import { attachmentsFromFiles } from '@/lib/sdlc-attachments'
+import { prepareTicketWorktree } from '@/lib/sdlc-handover'
 import { cn } from '@/lib/utils'
 import type { SdlcAttachment } from '@/models/sdlc'
 
@@ -22,6 +24,8 @@ export function NewTicketModal({
   onClose
 }: NewTicketModalProps): React.ReactElement {
   const createTicket = useSdlcStore((s) => s.createTicket)
+  const projectPath = useProjectStore((s) => s.projects.find((p) => p.id === projectId)?.path)
+  const [defaultBranch, setDefaultBranch] = useState(baseBranch)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [description, setDescription] = useState('')
@@ -39,6 +43,11 @@ export function NewTicketModal({
     return (): void => clearTimeout(timer)
   }, [isOpen])
 
+  useEffect(() => {
+    if (!isOpen || !projectPath) return
+    void window.api.git.defaultBranch(projectPath).then(setDefaultBranch)
+  }, [isOpen, projectPath])
+
   const addFiles = async (files: FileList | File[]): Promise<void> => {
     const added = await attachmentsFromFiles(files)
     setAttachments((prev) => [...prev, ...added])
@@ -48,7 +57,8 @@ export function NewTicketModal({
 
   const handleSubmit = (): void => {
     if (!canSubmit) return
-    createTicket({ projectId, description, attachments, autoAdvance })
+    const ticket = createTicket({ projectId, description, attachments, autoAdvance })
+    void prepareTicketWorktree(ticket.id)
     onClose()
   }
 
@@ -162,7 +172,7 @@ export function NewTicketModal({
             <span className="block text-xs text-zinc-300">Run stages automatically</span>
             <span className="block text-micro leading-relaxed text-zinc-500">
               Planning, implementing and review hand off without waiting for approval, then the
-              ticket is finished and its worktree and branch are removed.
+              ticket is finished: its worktree is removed and the work stays on its branch.
             </span>
           </span>
         </label>
@@ -181,7 +191,7 @@ export function NewTicketModal({
             <span className="truncate rounded bg-green-400/15 px-1.5 py-px font-mono font-medium text-green-400">
               {branchNameFrom(description)}
             </span>
-            <span className="shrink-0">from {baseBranch}</span>
+            <span className="shrink-0">from the latest {defaultBranch}</span>
           </div>
         </div>
 

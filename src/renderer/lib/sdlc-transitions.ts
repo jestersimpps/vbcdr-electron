@@ -20,7 +20,7 @@ export interface TicketTransition {
   isAgent: boolean
   /** Leaving opens the commit, push and pull-request workflow in the agent's tab first. */
   wrapsUp: boolean
-  /** The next column is terminal: moving on removes the worktree and its branch. */
+  /** The next column is terminal: moving on removes the worktree and keeps the work on its branch. */
   finishes: boolean
   outputReady: boolean
   moveOnLabel: string

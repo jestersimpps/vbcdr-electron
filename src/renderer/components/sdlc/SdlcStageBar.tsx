@@ -100,7 +100,7 @@ export function SdlcStageBar({ tabId }: SdlcStageBarProps): React.ReactElement |
           <ToolbarButton
             onClick={moveOn}
             disabled={!!moveOnBlockedReason}
-            title={finishes ? 'After the PR is open: remove the worktree and mark the ticket done' : moveOnLabel}
+            title={finishes ? 'Remove the worktree, keep the work on its branch and mark the ticket done' : moveOnLabel}
           >
             {finishes ? <CheckCircle2 size={12} /> : <Play size={12} />}
           </ToolbarButton>

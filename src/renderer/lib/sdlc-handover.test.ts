@@ -6,6 +6,7 @@ import {
   autoAdvanceTicket,
   handOffStage,
   moveTicketOn,
+  prepareTicketWorktree,
   rerunStage,
   resumeStage,
   sendAttachmentsToAgent
@@ -17,7 +18,7 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { useQueueStore } from '@/stores/queue-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
 import { EMPTY_ARTIFACTS, type SdlcTicket } from '@/models/sdlc'
-import type { Project } from '@/models/types'
+import type { Project, TrackedWorktree } from '@/models/types'
 
 vi.mock('@/components/terminal/TerminalInstance', () => ({
   disposeTerminal: vi.fn(),
@@ -54,6 +55,24 @@ function ticket(overrides: Partial<SdlcTicket> = {}): SdlcTicket {
   }
 }
 
+function trackedWorktree(overrides: Partial<TrackedWorktree> = {}): TrackedWorktree {
+  return {
+    id: 'wt1',
+    projectId: 'p1',
+    projectPath: '/cwd',
+    path: '/cwd/.worktrees/llm/x',
+    branch: 'llm/add-auth',
+    label: null,
+    createdAt: 0,
+    prUrl: null,
+    prState: 'none',
+    hasChanges: false,
+    conflictPaths: [],
+    lastCheckedAt: null,
+    ...overrides
+  }
+}
+
 function current(): SdlcTicket {
   return useSdlcStore.getState().tickets[0]
 }
@@ -66,6 +85,7 @@ beforeEach(() => {
   useQueueStore.setState({ itemsPerTab: {} })
   useWorktreeStore.setState({ worktreesPerProject: {} })
   vi.mocked(window.api.git.isRepo).mockResolvedValue(true)
+  vi.mocked(window.api.worktrees.refresh).mockResolvedValue(null)
   vi.mocked(window.api.fs.readFile).mockResolvedValue({ content: '', isBinary: false })
   vi.mocked(window.api.fs.deleteFile).mockClear()
   vi.mocked(window.api.git.ensureInfoExclude).mockClear()
@@ -338,6 +358,135 @@ describe('rerunStage', () => {
   })
 })
 
+describe('default flow end to end', () => {
+  it('takes a new ticket from backlog to done: worktree off the latest main, one agent per stage, work kept on its branch', async () => {
+    useSdlcStore.setState({ tickets: [] })
+    vi.mocked(window.api.worktrees.create).mockClear()
+    vi.mocked(window.api.worktrees.finish).mockClear()
+    vi.mocked(window.api.worktrees.remove).mockClear()
+    vi.mocked(window.api.worktrees.create).mockResolvedValueOnce(
+      trackedWorktree({ base: { ref: 'main', syncError: null } })
+    )
+    vi.mocked(window.api.worktrees.refresh).mockImplementation(async () => trackedWorktree({ branch: current().branch }))
+
+    const created = useSdlcStore.getState().createTicket({ projectId: 'p1', description: 'Add auth', attachments: [] })
+    await prepareTicketWorktree(created.id)
+    expect(current()).toMatchObject({ stage: 'backlog', worktreeId: 'wt1', tabId: null })
+
+    const stages: string[] = []
+    for (const stage of ['planning', 'implementing', 'review']) {
+      await moveTicketOn(created.id)
+      expect(current()).toMatchObject({ stage, status: 'running', worktreeId: 'wt1' })
+      expect(useTerminalStore.getState().tabs).toHaveLength(1)
+      expect(useTerminalStore.getState().tabs[0].cwd).toBe('/cwd/.worktrees/llm/x')
+      stages.push(current().stage)
+      vi.mocked(window.api.fs.readFile).mockResolvedValue({ content: `${stage} result`, isBinary: false })
+    }
+
+    await moveTicketOn(created.id)
+
+    expect(stages).toEqual(['planning', 'implementing', 'review'])
+    expect(current()).toMatchObject({ stage: 'done', tabId: null, status: 'idle' })
+    expect(current().artifacts.outputs).toEqual({
+      planning: 'planning result',
+      implementing: 'implementing result',
+      review: 'review result'
+    })
+    expect(useTerminalStore.getState().tabs).toHaveLength(0)
+    expect(window.api.worktrees.create).toHaveBeenCalledTimes(1)
+    expect(window.api.worktrees.create).toHaveBeenCalledWith('p1', '/cwd', { fromLatestDefault: true })
+    expect(window.api.worktrees.finish).toHaveBeenCalledWith('wt1', current().title)
+    expect(window.api.worktrees.remove).not.toHaveBeenCalled()
+    expect(current().artifacts.activity.map((a) => a.text)).toEqual([
+      'Worktree created from the latest main',
+      'Handed Planning to the agent',
+      'Handed Implementing to the agent',
+      'Handed Review to the agent',
+      `Worktree removed, work kept on branch ${current().branch}`
+    ])
+  })
+})
+
+describe('prepareTicketWorktree', () => {
+  beforeEach(() => {
+    useSdlcStore.setState({ tickets: [ticket({ stage: 'backlog' })] })
+    vi.mocked(window.api.worktrees.create).mockClear()
+  })
+
+  it('cuts the worktree from the latest default branch and records it on the ticket', async () => {
+    vi.mocked(window.api.worktrees.create).mockResolvedValueOnce(
+      trackedWorktree({ branch: 'llm/x', base: { ref: 'main', syncError: null } })
+    )
+
+    await prepareTicketWorktree('t1')
+
+    expect(window.api.worktrees.create).toHaveBeenCalledWith('p1', '/cwd', { fromLatestDefault: true })
+    expect(current()).toMatchObject({ worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/x', branch: 'llm/add-auth' })
+    expect(current().stage).toBe('backlog')
+    expect(current().artifacts.activity.at(-1)?.text).toBe('Worktree created from the latest main')
+  })
+
+  it('still creates the worktree when pulling failed, and says so', async () => {
+    vi.mocked(window.api.worktrees.create).mockResolvedValueOnce(
+      trackedWorktree({ base: { ref: 'main', syncError: 'fatal: unable to access\nmore' } })
+    )
+    await prepareTicketWorktree('t1')
+    expect(current().artifacts.activity.at(-1)?.text).toBe(
+      'Worktree created from local main, pulling failed: fatal: unable to access'
+    )
+  })
+
+  it('a handoff started while the worktree is still being created joins it instead of making a second one', async () => {
+    useSdlcStore.setState({ tickets: [ticket()] })
+    const preparing = prepareTicketWorktree('t1')
+    await Promise.all([preparing, handOffStage(current(), project)])
+    expect(window.api.worktrees.create).toHaveBeenCalledTimes(1)
+    expect(current().artifacts.activity.map((a) => a.text)).toEqual(['Worktree created', 'Handed Planning to the agent'])
+  })
+
+  it('removes the worktree again when the ticket was deleted meanwhile', async () => {
+    vi.mocked(window.api.worktrees.remove).mockClear()
+    const preparing = prepareTicketWorktree('t1')
+    useSdlcStore.getState().deleteTicket('t1')
+    expect(await preparing).toBeNull()
+    expect(window.api.worktrees.remove).toHaveBeenCalledWith('wt1')
+  })
+})
+
+describe('finishTicket', () => {
+  beforeEach(() => {
+    useSdlcStore.setState({
+      tickets: [ticket({ stage: 'review', worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/x' })]
+    })
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValue(trackedWorktree())
+    vi.mocked(window.api.worktrees.finish).mockClear()
+    vi.mocked(window.api.worktrees.remove).mockClear()
+  })
+
+  it('keeps the work on the ticket branch and only removes the worktree', async () => {
+    useSdlcStore.getState().patchTicket('t1', { title: 'Review auth changes' })
+    await moveTicketOn('t1')
+    expect(window.api.worktrees.finish).toHaveBeenCalledWith('wt1', 'Add auth')
+    expect(window.api.worktrees.remove).not.toHaveBeenCalled()
+    expect(current().stage).toBe('done')
+    expect(current().artifacts.activity.at(-1)?.text).toBe('Worktree removed, work kept on branch llm/add-auth')
+  })
+
+  it('does not move a ticket whose work could not be kept', async () => {
+    vi.mocked(window.api.worktrees.finish).mockResolvedValueOnce({ ok: false, output: '', error: 'commit failed' })
+    await moveTicketOn('t1')
+    expect(current().stage).toBe('review')
+    expect(current()).toMatchObject({ status: 'blocked', blockedReason: expect.stringContaining('commit failed') })
+  })
+
+  it('finishes a ticket whose worktree is already gone', async () => {
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValue(null)
+    await moveTicketOn('t1')
+    expect(window.api.worktrees.finish).not.toHaveBeenCalled()
+    expect(current().stage).toBe('done')
+  })
+})
+
 describe('discardTicket', () => {
   it('removes the worktree, its tab and the ticket', async () => {
     await handOffStage(current(), project)
@@ -465,10 +614,12 @@ describe('custom columns', () => {
     useSdlcFlowStore.getState().removeColumn('review')
     useSdlcStore.setState({ tickets: [ticket({ stage: audit, worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/x' })] })
 
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValueOnce(trackedWorktree())
+
     await moveTicketOn('t1')
 
     expect(current().stage).toBe('done')
-    expect(window.api.worktrees.remove).toHaveBeenCalled()
+    expect(window.api.worktrees.finish).toHaveBeenCalledWith('wt1', 'Add auth')
   })
 
   it('holds an auto-advancing ticket in a column that always waits for approval', async () => {

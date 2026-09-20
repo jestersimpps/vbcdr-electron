@@ -1,24 +1,24 @@
-import { useSdlcStore } from '@/stores/sdlc-store'
+import { titleFromDescription, useSdlcStore } from '@/stores/sdlc-store'
 import { defaultLlmTab, useTerminalStore } from '@/stores/terminal-store'
 import { useQueueStore } from '@/stores/queue-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useEditorStore } from '@/stores/editor-store'
 import { useLayoutStore } from '@/stores/layout-store'
-import { createWorktreeForProject, toWorktreeInfo, useWorktreeStore } from '@/stores/worktree-store'
+import { createTrackedWorktreeForProject, toWorktreeInfo, useWorktreeStore } from '@/stores/worktree-store'
 import { resolveStagePrompt } from '@/stores/sdlc-prompts-store'
 import { sdlcColumns } from '@/stores/sdlc-flow-store'
 import { interpolatePrompt, promptUsesVariable, type SdlcPromptVariables } from '@/lib/llm-instructions'
 import { clearSentinel, readSentinel } from '@/lib/sdlc-sentinel'
 import { attachmentsInstruction, writeAttachmentsToWorktree } from '@/lib/sdlc-attachments'
 import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
-import { deleteWorktree } from '@/lib/worktree-tabs'
+import { deleteWorktree, finishWorktree } from '@/lib/worktree-tabs'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 import { EMPTY_PROMPT_VALUE, SDLC_SENTINEL_DIR, SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
 import { findColumn, isAgentColumn, nextColumn, type SdlcColumn } from '@/models/sdlc-flow'
 import type { SdlcAttachment, SdlcStage, SdlcTicket } from '@/models/sdlc'
 import { SDLC_PROFILE_ID, type TabProfileMeta } from '@/config/terminal-profiles'
 import { LLM_PROVIDERS, appendCompanionPrompt, type LlmProviderId } from '@/config/llm-provider-registry'
-import type { Project, TrackedWorktree, WorktreeInfo } from '@/models/types'
+import type { Project, TrackedWorktree, WorktreeBase, WorktreeInfo } from '@/models/types'
 
 export const SDLC_TAB_COLOR = '#2dd4bf'
 
@@ -107,11 +107,41 @@ function activityEntry(ticket: SdlcTicket, text: string): SdlcTicket['artifacts'
   return { ...ticket.artifacts, activity: [...ticket.artifacts.activity, { at: Date.now(), text }] }
 }
 
+function currentTicket(ticket: SdlcTicket): SdlcTicket {
+  return useSdlcStore.getState().tickets.find((t) => t.id === ticket.id) ?? ticket
+}
+
+function worktreeCreatedText(base: WorktreeBase | null | undefined): string {
+  if (!base) return 'Worktree created'
+  if (!base.syncError) return `Worktree created from the latest ${base.ref}`
+  return `Worktree created from local ${base.ref}, pulling failed: ${base.syncError.split('\n')[0]}`
+}
+
+/** A ticket deleted while its worktree was still being created would otherwise leave that worktree behind. */
+async function createTicketWorktree(ticket: SdlcTicket, project: Project): Promise<WorktreeInfo | null> {
+  const created = await createTrackedWorktreeForProject(project.id, project.path, { fromLatestDefault: true })
+  if (!created) return null
+  const renameError = await useWorktreeStore.getState().renameBranch(created.id, ticket.branch)
+  const worktree = toWorktreeInfo(renameError ? created : { ...created, branch: ticket.branch })
+  const { tickets, patchTicket } = useSdlcStore.getState()
+  if (!tickets.some((t) => t.id === ticket.id)) {
+    await deleteWorktree(created.id)
+    return null
+  }
+  patchTicket(ticket.id, {
+    worktreeId: worktree.id,
+    worktreePath: worktree.path,
+    branch: worktree.branch,
+    artifacts: activityEntry(currentTicket(ticket), worktreeCreatedText(created.base))
+  })
+  return worktree
+}
+
 /**
  * Tracked state is in-memory and empty after a reload, so an existing worktree
  * is confirmed through main rather than the store's list.
  */
-async function ensureTicketWorktree(ticket: SdlcTicket, project: Project): Promise<WorktreeInfo | null> {
+async function resolveTicketWorktree(ticket: SdlcTicket, project: Project): Promise<WorktreeInfo | null> {
   if (ticket.worktreeId) {
     const tracked = await useWorktreeStore.getState().refreshOne(ticket.worktreeId)
     if (tracked) return toWorktreeInfo(tracked)
@@ -119,10 +149,28 @@ async function ensureTicketWorktree(ticket: SdlcTicket, project: Project): Promi
   const tracked: TrackedWorktree[] = await window.api.worktrees.list(project.id)
   const onBranch = tracked.find((w) => w.branch === ticket.branch)
   if (onBranch) return toWorktreeInfo(onBranch)
-  const created = await createWorktreeForProject(project.id, project.path)
-  if (!created) return null
-  const renameError = await useWorktreeStore.getState().renameBranch(created.id, ticket.branch)
-  return renameError ? created : { ...created, branch: ticket.branch }
+  return createTicketWorktree(ticket, project)
+}
+
+const pendingWorktrees = new Map<string, Promise<WorktreeInfo | null>>()
+
+/** Creation pulls first and can take seconds, so a Start pressed meanwhile joins the running creation instead of making a second worktree. */
+function ensureTicketWorktree(ticket: SdlcTicket, project: Project): Promise<WorktreeInfo | null> {
+  const pending = pendingWorktrees.get(ticket.id)
+  if (pending) return pending
+  const resolving = resolveTicketWorktree(currentTicket(ticket), project).finally(() =>
+    pendingWorktrees.delete(ticket.id)
+  )
+  pendingWorktrees.set(ticket.id, resolving)
+  return resolving
+}
+
+/** A new ticket gets its worktree straight away, cut from the freshly pulled default branch. */
+export async function prepareTicketWorktree(ticketId: string): Promise<WorktreeInfo | null> {
+  const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
+  if (!ticket) return null
+  const project = findProject(ticket)
+  return project ? ensureTicketWorktree(ticket, project) : null
 }
 
 function promptVariables(
@@ -226,7 +274,7 @@ export async function handOffStage(
     tabId,
     status: 'running',
     blockedReason: null,
-    artifacts: activityEntry(ticket, `Handed ${stageLabel(stage)} to the agent`)
+    artifacts: activityEntry(currentTicket(ticket), `Handed ${stageLabel(stage)} to the agent`)
   })
   return { tabId, worktree }
 }
@@ -471,7 +519,7 @@ export async function discardTicket(ticketId: string): Promise<void> {
 }
 
 /**
- * Finishing deletes the branch as well as the worktree, so commits that exist
+ * Discarding deletes the branch as well as the worktree, so commits that exist
  * nowhere else would survive only as unreachable objects. Returns the commit
  * subjects that would be lost, for the caller to confirm first.
  */
@@ -490,20 +538,40 @@ export async function unmergedCommits(ticketId: string): Promise<string[]> {
   }
 }
 
-/** Into the terminal column: the worktree and its branch go, so any pull request has to be open by now. */
+/** The title follows whatever the last agent named its terminal, so the request itself is the stable description of the work. */
+function leftoverCommitMessage(ticket: SdlcTicket): string {
+  return titleFromDescription(ticket.description) || ticket.title
+}
+
+/**
+ * Into the terminal column: the worktree goes, the work stays. Anything still
+ * uncommitted is committed onto the ticket's branch first, and a ticket whose
+ * work could not be kept does not move.
+ */
 export async function finishTicket(ticketId: string): Promise<void> {
   const store = useSdlcStore.getState()
   const ticket = store.tickets.find((t) => t.id === ticketId)
   if (!ticket || nextColumn(sdlcColumns(), ticket.stage)?.kind !== 'terminal') return
   const captured = await captureStageOutput(ticket)
-  if (captured.worktreeId) {
-    await deleteWorktree(captured.worktreeId)
+  const tracked = captured.worktreeId ? await useWorktreeStore.getState().refreshOne(captured.worktreeId) : null
+  if (tracked) {
+    const error = await finishWorktree(tracked.id, leftoverCommitMessage(captured))
+    if (error) {
+      store.patchTicket(ticketId, {
+        tabId: null,
+        status: 'blocked',
+        blockedReason: `Could not keep the work on branch ${tracked.branch}: ${error}`
+      })
+      return
+    }
   } else {
     await closeTicketTab(captured)
   }
   store.patchTicket(ticketId, {
     tabId: null,
-    artifacts: activityEntry(captured, 'Worktree removed')
+    status: 'idle',
+    blockedReason: null,
+    artifacts: activityEntry(currentTicket(captured), `Worktree removed, work kept on branch ${captured.branch}`)
   })
   store.advanceTicket(ticketId)
 }
