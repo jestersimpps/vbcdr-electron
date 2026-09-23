@@ -4,6 +4,7 @@ import { useLayoutStore } from '@/stores/layout-store'
 import {
   columnIdFrom,
   defaultSdlcColumns,
+  isMiddleColumn,
   newAgentColumn,
   sanitizeColumns,
   type SdlcColumn
@@ -15,7 +16,7 @@ interface SdlcFlowState {
   columns: SdlcColumn[]
   addColumn: (label: string, beforeId: string) => SdlcColumn
   updateColumn: (id: string, patch: SdlcColumnPatch) => void
-  moveColumn: (id: string, direction: -1 | 1) => void
+  reorderColumn: (id: string, toIndex: number) => void
   removeColumn: (id: string) => void
   resetColumns: () => void
 }
@@ -39,11 +40,6 @@ function seedColumns(): SdlcColumn[] {
   })
 }
 
-/** The ends are structural: the first column is where tickets have no worktree yet, the last is where it is gone. */
-function isMiddle(columns: SdlcColumn[], index: number): boolean {
-  return index > 0 && index < columns.length - 1
-}
-
 export const useSdlcFlowStore = create<SdlcFlowState>()(
   persist(
     (set, get) => ({
@@ -65,13 +61,15 @@ export const useSdlcFlowStore = create<SdlcFlowState>()(
         }))
       },
 
-      moveColumn: (id: string, direction: -1 | 1) => {
+      reorderColumn: (id: string, toIndex: number) => {
         set((state) => {
           const from = state.columns.findIndex((c) => c.id === id)
-          const to = from + direction
-          if (!isMiddle(state.columns, from) || !isMiddle(state.columns, to)) return state
+          if (from === toIndex || !isMiddleColumn(state.columns, from) || !isMiddleColumn(state.columns, toIndex)) {
+            return state
+          }
           const columns = [...state.columns]
-          ;[columns[from], columns[to]] = [columns[to], columns[from]]
+          const [moved] = columns.splice(from, 1)
+          columns.splice(toIndex, 0, moved)
           return { columns }
         })
       },
@@ -79,7 +77,7 @@ export const useSdlcFlowStore = create<SdlcFlowState>()(
       removeColumn: (id: string) => {
         set((state) => {
           const index = state.columns.findIndex((c) => c.id === id)
-          if (!isMiddle(state.columns, index)) return state
+          if (!isMiddleColumn(state.columns, index)) return state
           return { columns: state.columns.filter((c) => c.id !== id) }
         })
       },

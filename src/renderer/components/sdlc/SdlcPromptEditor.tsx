@@ -70,7 +70,6 @@ export function StagePromptField({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-meta text-zinc-500">{column.description}</span>
           {mode === 'project' && (
             <span
               className="shrink-0 rounded px-1.5 py-px text-micro font-medium"

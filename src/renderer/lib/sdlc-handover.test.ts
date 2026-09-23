@@ -3,18 +3,14 @@ import {
   advanceAndHandOff,
   applyStageOutput,
   discardTicket,
-  autoAdvanceTicket,
   handOffStage,
   moveTicketOn,
-  prepareTicketWorktree,
-  rerunStage,
-  resumeStage,
-  sendAttachmentsToAgent
+  rerunStage
 } from './sdlc-handover'
 import { useSdlcStore } from '@/stores/sdlc-store'
 import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useProjectStore } from '@/stores/project-store'
-import { useTerminalStore } from '@/stores/terminal-store'
+import { defaultLlmTab, useTerminalStore } from '@/stores/terminal-store'
 import { useQueueStore } from '@/stores/queue-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
 import { EMPTY_ARTIFACTS, type SdlcTicket } from '@/models/sdlc'
@@ -79,7 +75,7 @@ function current(): SdlcTicket {
 
 beforeEach(() => {
   useSdlcFlowStore.getState().resetColumns()
-  useSdlcStore.setState({ tickets: [ticket()], selectedTicketId: null, stageModels: {} })
+  useSdlcStore.setState({ tickets: [ticket()] })
   useProjectStore.setState({ projects: [project], activeProjectId: null })
   useTerminalStore.setState({ tabs: [], activeTabPerProject: {}, tabStatuses: {} })
   useQueueStore.setState({ itemsPerTab: {} })
@@ -199,72 +195,24 @@ describe('advanceAndHandOff', () => {
   })
 })
 
-describe('stage model', () => {
-  it('starts the CLI with the picked model', async () => {
-    useSdlcStore.getState().setStageAssignment('planning', 'anthropic', 'claude-sonnet-5')
+describe('startup command', () => {
+  it('starts the default columns unattended, since each one runs in a throwaway worktree', async () => {
     await handOffStage(current(), project)
-    expect(useTerminalStore.getState().tabs[0].initialCommand).toBe(
-      'claude --permission-mode bypassPermissions --model claude-sonnet-5'
-    )
+    expect(useTerminalStore.getState().tabs[0].initialCommand).toBe('claude --permission-mode bypassPermissions')
   })
 
-  it('maps an OpenAI pick to the codex CLI', async () => {
-    useSdlcStore.getState().setStageAssignment('planning', 'openai', 'gpt-5')
+  it("runs the column's command as typed and reads the provider from its first word", async () => {
+    useSdlcFlowStore.getState().updateColumn('planning', { command: 'codex --model gpt-5' })
     await handOffStage(current(), project)
     const tab = useTerminalStore.getState().tabs[0]
     expect(tab.initialCommand).toBe('codex --model gpt-5')
     expect(tab.providerId).toBe('codex')
   })
 
-  it('runs the default profile when nothing is picked for the stage', async () => {
+  it('runs the default profile when the column has no command', async () => {
+    useSdlcFlowStore.getState().updateColumn('planning', { command: '  ' })
     await handOffStage(current(), project)
-    expect(useTerminalStore.getState().tabs[0].initialCommand).toBe(
-      'claude --permission-mode bypassPermissions'
-    )
-  })
-})
-
-describe('unattended permissions', () => {
-  it('bypasses permission prompts, since each stage runs in a throwaway worktree', async () => {
-    useSdlcStore.getState().setStageAssignment('planning', 'anthropic', 'claude-sonnet-5')
-    await handOffStage(current(), project)
-    expect(useTerminalStore.getState().tabs[0].initialCommand).toContain(
-      '--permission-mode bypassPermissions'
-    )
-  })
-
-  it('does not pass the claude-only flag to codex', async () => {
-    useSdlcStore.getState().setStageAssignment('planning', 'openai', 'gpt-5')
-    await handOffStage(current(), project)
-    expect(useTerminalStore.getState().tabs[0].initialCommand).not.toContain('--permission-mode')
-  })
-})
-
-describe('resumeStage', () => {
-  it('reopens the worktree with --continue and does not re-send the prompt', async () => {
-    useSdlcStore.getState().setStageAssignment('planning', 'anthropic', 'claude-sonnet-5')
-    await handOffStage(current(), project)
-    useTerminalStore.getState().closeTab(current().tabId!)
-
-    expect(await resumeStage('t1')).toBe(true)
-    const tab = useTerminalStore.getState().tabs[0]
-    expect(tab.initialCommand).toBe(
-      'claude --continue --permission-mode bypassPermissions --model claude-sonnet-5'
-    )
-    expect(useQueueStore.getState().itemsPerTab[tab.id] ?? []).toHaveLength(0)
-    expect(current().status).toBe('running')
-    expect(current().tabId).toBe(tab.id)
-  })
-
-  it('refuses when the stage runs a CLI without session resume', async () => {
-    useSdlcStore.getState().setStageAssignment('planning', 'openai', 'gpt-5')
-    await handOffStage(current(), project)
-    useTerminalStore.getState().closeTab(current().tabId!)
-    expect(await resumeStage('t1')).toBe(false)
-  })
-
-  it('refuses for a ticket that never had a worktree', async () => {
-    expect(await resumeStage('t1')).toBe(false)
+    expect(useTerminalStore.getState().tabs[0].initialCommand).toBe(defaultLlmTab().command)
   })
 })
 
@@ -287,16 +235,6 @@ describe('attachments', () => {
     expect(useQueueStore.getState().itemsPerTab[current().tabId!][0].text).not.toContain('Attachments')
   })
 
-  it('sends late attachments to a live agent and logs it', async () => {
-    await handOffStage(current(), project)
-    expect(await sendAttachmentsToAgent(current(), [shot])).toBe(true)
-    expect(window.api.fs.writeDataUrl).toHaveBeenCalledWith('/cwd/.worktrees/llm/x/.vbcdr/attachments/shot.png', shot.dataUrl)
-    expect(current().artifacts.activity.at(-1)?.text).toContain('1 attachment')
-  })
-
-  it('does nothing when there is no live agent tab', async () => {
-    expect(await sendAttachmentsToAgent(current(), [shot])).toBe(false)
-  })
 })
 
 describe('agent tab titles', () => {
@@ -370,8 +308,7 @@ describe('default flow end to end', () => {
     vi.mocked(window.api.worktrees.refresh).mockImplementation(async () => trackedWorktree({ branch: current().branch }))
 
     const created = useSdlcStore.getState().createTicket({ projectId: 'p1', description: 'Add auth', attachments: [] })
-    await prepareTicketWorktree(created.id)
-    expect(current()).toMatchObject({ stage: 'backlog', worktreeId: 'wt1', tabId: null })
+    expect(current()).toMatchObject({ stage: 'backlog', worktreeId: null, tabId: null })
 
     const stages: string[] = []
     for (const stage of ['planning', 'implementing', 'review']) {
@@ -407,9 +344,8 @@ describe('default flow end to end', () => {
   })
 })
 
-describe('prepareTicketWorktree', () => {
+describe('ticket worktree', () => {
   beforeEach(() => {
-    useSdlcStore.setState({ tickets: [ticket({ stage: 'backlog' })] })
     vi.mocked(window.api.worktrees.create).mockClear()
   })
 
@@ -418,37 +354,28 @@ describe('prepareTicketWorktree', () => {
       trackedWorktree({ branch: 'llm/x', base: { ref: 'main', syncError: null } })
     )
 
-    await prepareTicketWorktree('t1')
+    await handOffStage(current(), project)
 
     expect(window.api.worktrees.create).toHaveBeenCalledWith('p1', '/cwd', { fromLatestDefault: true })
     expect(current()).toMatchObject({ worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/x', branch: 'llm/add-auth' })
-    expect(current().stage).toBe('backlog')
-    expect(current().artifacts.activity.at(-1)?.text).toBe('Worktree created from the latest main')
+    expect(current().artifacts.activity[0].text).toBe('Worktree created from the latest main')
   })
 
   it('still creates the worktree when pulling failed, and says so', async () => {
     vi.mocked(window.api.worktrees.create).mockResolvedValueOnce(
       trackedWorktree({ base: { ref: 'main', syncError: 'fatal: unable to access\nmore' } })
     )
-    await prepareTicketWorktree('t1')
-    expect(current().artifacts.activity.at(-1)?.text).toBe(
+    await handOffStage(current(), project)
+    expect(current().artifacts.activity[0].text).toBe(
       'Worktree created from local main, pulling failed: fatal: unable to access'
     )
   })
 
-  it('a handoff started while the worktree is still being created joins it instead of making a second one', async () => {
-    useSdlcStore.setState({ tickets: [ticket()] })
-    const preparing = prepareTicketWorktree('t1')
-    await Promise.all([preparing, handOffStage(current(), project)])
-    expect(window.api.worktrees.create).toHaveBeenCalledTimes(1)
-    expect(current().artifacts.activity.map((a) => a.text)).toEqual(['Worktree created', 'Handed Planning to the agent'])
-  })
-
   it('removes the worktree again when the ticket was deleted meanwhile', async () => {
     vi.mocked(window.api.worktrees.remove).mockClear()
-    const preparing = prepareTicketWorktree('t1')
+    const handing = handOffStage(current(), project)
     useSdlcStore.getState().deleteTicket('t1')
-    expect(await preparing).toBeNull()
+    expect(await handing).toBeNull()
     expect(window.api.worktrees.remove).toHaveBeenCalledWith('wt1')
   })
 })
@@ -587,28 +514,6 @@ describe('custom columns', () => {
     expect(window.api.fs.writeFile).toHaveBeenCalledWith('/cwd/.worktrees/llm/x/.vbcdr/audit.md', 'no findings')
   })
 
-  it('parks the ticket in a human column without opening an agent tab', async () => {
-    const flow = useSdlcFlowStore.getState()
-    const qa = flow.addColumn('Manual QA', 'review')
-    flow.updateColumn(qa.id, { kind: 'human' })
-    useSdlcStore.setState({
-      tickets: [ticket({ stage: 'implementing', artifacts: { ...EMPTY_ARTIFACTS, outputs: { implementing: 'done' } } })]
-    })
-
-    await advanceAndHandOff('t1')
-
-    expect(current().stage).toBe(qa.id)
-    expect(current().status).toBe('idle')
-    expect(useTerminalStore.getState().tabs).toHaveLength(0)
-  })
-
-  it('leaves the permission flag off for a column that is not unattended', async () => {
-    useSdlcStore.getState().setStageAssignment('planning', 'anthropic', 'claude-sonnet-5')
-    useSdlcFlowStore.getState().updateColumn('planning', { autonomous: false })
-    await handOffStage(current(), project)
-    expect(useTerminalStore.getState().tabs[0].initialCommand).not.toContain('--permission-mode')
-  })
-
   it('moving on from the column before the terminal one finishes the ticket, whatever it is called', async () => {
     const audit = addAudit()
     useSdlcFlowStore.getState().removeColumn('review')
@@ -620,19 +525,5 @@ describe('custom columns', () => {
 
     expect(current().stage).toBe('done')
     expect(window.api.worktrees.finish).toHaveBeenCalledWith('wt1', 'Add auth')
-  })
-
-  it('holds an auto-advancing ticket in a column that always waits for approval', async () => {
-    useSdlcFlowStore.getState().updateColumn('planning', { requiresApproval: true })
-    useSdlcStore.setState({
-      tickets: [ticket({ autoAdvance: true, artifacts: { ...EMPTY_ARTIFACTS, outputs: { planning: 'plan' } } })]
-    })
-
-    await autoAdvanceTicket('t1')
-    expect(current().stage).toBe('planning')
-
-    useSdlcFlowStore.getState().updateColumn('planning', { requiresApproval: false })
-    await autoAdvanceTicket('t1')
-    expect(current().stage).toBe('implementing')
   })
 })

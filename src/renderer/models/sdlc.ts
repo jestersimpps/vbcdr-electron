@@ -3,23 +3,6 @@ export type SdlcStage = string
 
 export type SdlcTicketStatus = 'idle' | 'running' | 'blocked' | 'awaiting-approval' | 'failed'
 
-export type ModelProviderId = 'anthropic' | 'openai'
-
-export interface ModelProviderDefinition {
-  id: ModelProviderId
-  label: string
-}
-
-export const MODEL_PROVIDERS: readonly ModelProviderDefinition[] = [
-  { id: 'anthropic', label: 'Anthropic' },
-  { id: 'openai', label: 'OpenAI' }
-] as const
-
-export interface StageModelAssignment {
-  provider: ModelProviderId
-  model: string | null
-}
-
 export interface SdlcCheck {
   name: string
   passed: boolean
@@ -93,8 +76,6 @@ export interface SdlcTicket {
   artifacts: SdlcArtifacts
   prUrl: string | null
   blockedReason: string | null
-  /** Advance through every stage without waiting for approval, chosen at creation. */
-  autoAdvance: boolean
 }
 
 export const EMPTY_ARTIFACTS: SdlcArtifacts = {
@@ -107,5 +88,4 @@ export interface NewSdlcTicketInput {
   projectId: string
   description: string
   attachments: SdlcAttachment[]
-  autoAdvance?: boolean
 }

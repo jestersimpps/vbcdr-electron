@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { SdlcFlowSection } from './SdlcFlowSection'
 import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
@@ -16,19 +16,13 @@ function selectColumn(label: string): void {
 beforeEach(() => {
   cleanup()
   useSdlcFlowStore.getState().resetColumns()
-  useSdlcStore.setState({ tickets: [], stageModels: {} })
-  vi.mocked(window.api.providerModels.list)
-    .mockReset()
-    .mockResolvedValue([
-      { provider: 'anthropic', models: [], error: null, source: 'catalogue' },
-      { provider: 'openai', models: [], error: null, source: 'catalogue' }
-    ])
+  useSdlcStore.setState({ tickets: [] })
 })
 
 describe('SdlcFlowSection', () => {
-  it('adds a column before the last one and opens it for editing', () => {
+  it('the plus tab adds a column before the last one and opens it for editing', () => {
     render(<SdlcFlowSection />)
-    fireEvent.click(screen.getByRole('button', { name: /add column before done/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add column' }))
 
     expect(columns().map((c) => c.id)).toEqual(['backlog', 'planning', 'implementing', 'review', 'new-column', 'done'])
     expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('New column')
@@ -42,26 +36,33 @@ describe('SdlcFlowSection', () => {
     expect(columns()[1]).toMatchObject({ id: 'planning', label: 'Design' })
   })
 
-  it('keeps the ends fixed: no kind picker, no reorder, no delete', () => {
+  it('keeps the ends fixed: no delete, no command, no prompt', () => {
     render(<SdlcFlowSection />)
-    expect(screen.queryByLabelText('Worked by')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Delete column' })).toBeNull()
+    expect(screen.queryByLabelText('Startup command')).toBeNull()
 
     selectColumn('Done')
-    expect(screen.queryByLabelText('Worked by')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Move column left' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Delete column' })).toBeNull()
+    expect(screen.queryByLabelText('Prompt for done')).toBeNull()
   })
 
-  it('turning a column human hides everything that only an agent needs', () => {
+  it('edits the startup command an agent column starts with', () => {
     render(<SdlcFlowSection />)
     selectColumn('Implementing')
-    expect(screen.getByLabelText('Prompt for implementing')).toBeTruthy()
+    const command = screen.getByLabelText('Startup command') as HTMLInputElement
+    expect(command.value).toBe('claude --permission-mode bypassPermissions')
 
-    fireEvent.change(screen.getByLabelText('Worked by'), { target: { value: 'human' } })
+    fireEvent.change(command, { target: { value: 'claude --model opus' } })
 
-    expect(columns()[2].kind).toBe('human')
-    expect(screen.queryByLabelText('Prompt for implementing')).toBeNull()
-    expect(screen.queryByRole('switch', { name: /run unattended/i })).toBeNull()
+    expect(columns()[2].command).toBe('claude --model opus')
+  })
+
+  it('shows no model picker or per-column switches any more', () => {
+    render(<SdlcFlowSection />)
+    selectColumn('Review')
+    expect(screen.queryByLabelText(/model/i)).toBeNull()
+    expect(screen.queryAllByRole('switch')).toHaveLength(0)
+    expect(screen.queryByLabelText('Description')).toBeNull()
   })
 
   it('edits the prompt on blur and resets it to the shipped text', () => {
@@ -82,20 +83,6 @@ describe('SdlcFlowSection', () => {
     expect(screen.getByText('{{output.planning}}')).toBeTruthy()
     expect(screen.getByText('{{output.implementing}}')).toBeTruthy()
     expect(screen.queryByText('{{output.review}}')).toBeNull()
-  })
-
-  it('adds, relabels and removes ticket-view panels', () => {
-    render(<SdlcFlowSection />)
-    selectColumn('Planning')
-
-    fireEvent.click(screen.getByRole('button', { name: 'Changed files' }))
-    expect(columns()[1].panels.map((p) => p.kind)).toEqual(['output', 'diff'])
-
-    fireEvent.change(screen.getByLabelText('Heading for the Output panel'), { target: { value: 'The plan' } })
-    expect(columns()[1].panels[0].label).toBe('The plan')
-
-    fireEvent.click(screen.getAllByRole('button', { name: 'Remove panel' })[0])
-    expect(columns()[1].panels.map((p) => p.kind)).toEqual(['diff'])
   })
 
   it('asks where the tickets go before deleting a column', () => {

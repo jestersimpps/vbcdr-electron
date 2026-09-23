@@ -45,8 +45,7 @@ export function buildSeedTickets(projectId: string): SdlcTicket[] {
     attachments: [],
     comments: [],
     prUrl: null,
-    blockedReason: null,
-    autoAdvance: false
+    blockedReason: null
   }
 
   return [

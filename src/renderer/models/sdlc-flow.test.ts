@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_AGENT_COMMAND,
+  NEW_AGENT_COLUMN_PROMPT,
   columnIdFrom,
-  columnLayout,
   defaultSdlcColumns,
   earlierAgentColumns,
   newAgentColumn,
-  sanitizeColumns,
-  sendBackTarget
+  sanitizeColumns
 } from './sdlc-flow'
 
 function flowWith(...ids: string[]): ReturnType<typeof defaultSdlcColumns> {
@@ -20,38 +20,6 @@ describe('columnIdFrom', () => {
     expect(columnIdFrom('Security Audit!', [])).toBe('security-audit')
     expect(columnIdFrom('Review', ['review', 'review-2'])).toBe('review-3')
     expect(columnIdFrom('???', [])).toBe('column')
-  })
-})
-
-describe('sendBackTarget', () => {
-  it('defaults to the column on the left', () => {
-    expect(sendBackTarget(defaultSdlcColumns(), 'review')?.id).toBe('implementing')
-  })
-
-  it('honours a configured target that still sits to the left', () => {
-    const columns = defaultSdlcColumns().map((c) => (c.id === 'review' ? { ...c, sendBackTo: 'planning' } : c))
-    expect(sendBackTarget(columns, 'review')?.id).toBe('planning')
-  })
-
-  it('falls back to the neighbour when the target was deleted or moved to the right', () => {
-    const columns = defaultSdlcColumns().map((c) => (c.id === 'planning' ? { ...c, sendBackTo: 'review' } : c))
-    expect(sendBackTarget(columns, 'planning')?.id).toBe('backlog')
-    const gone = defaultSdlcColumns().map((c) => (c.id === 'review' ? { ...c, sendBackTo: 'deleted' } : c))
-    expect(sendBackTarget(gone, 'review')?.id).toBe('implementing')
-  })
-
-  it('has nowhere to go from the first column or the terminal one', () => {
-    expect(sendBackTarget(defaultSdlcColumns(), 'backlog')).toBeNull()
-    expect(sendBackTarget(defaultSdlcColumns(), 'done')).toBeNull()
-  })
-})
-
-describe('columnLayout', () => {
-  it('derives the modal layout from where the column sits', () => {
-    const columns = flowWith('audit')
-    expect(columnLayout(columns, 'backlog')).toBe('form')
-    expect(columnLayout(columns, 'audit')).toBe('workspace')
-    expect(columnLayout(columns, 'done')).toBe('summary')
   })
 })
 
@@ -72,24 +40,36 @@ describe('sanitizeColumns', () => {
     expect(sanitizeColumns([{ id: 'only', kind: 'human' }])).toHaveLength(5)
   })
 
-  it('forces the ends back into shape: human first, terminal last and nowhere else', () => {
+  it('forces the flow into shape: human first, terminal last, agents between', () => {
     const columns = sanitizeColumns([
       { id: 'a', kind: 'agent' },
       { id: 'b', kind: 'terminal' },
-      { id: 'c', kind: 'agent' }
+      { id: 'c', kind: 'human' },
+      { id: 'd', kind: 'agent' }
     ])
-    expect(columns.map((c) => c.kind)).toEqual(['human', 'human', 'terminal'])
+    expect(columns.map((c) => c.kind)).toEqual(['human', 'agent', 'agent', 'terminal'])
+    expect(columns[2]).toMatchObject({ command: DEFAULT_AGENT_COMMAND, prompt: NEW_AGENT_COLUMN_PROMPT })
   })
 
-  it('drops duplicate ids, unknown kinds and unknown panels', () => {
+  it('drops duplicate ids and unknown kinds', () => {
     const columns = sanitizeColumns([
       { id: 'a', kind: 'human' },
       { id: 'a', kind: 'agent' },
       { id: 'x', kind: 'robot' },
-      { id: 'b', kind: 'agent', panels: [{ kind: 'diff' }, { kind: 'hologram' }] },
+      { id: 'b', kind: 'agent' },
       { id: 'z', kind: 'terminal' }
     ])
     expect(columns.map((c) => c.id)).toEqual(['a', 'b', 'z'])
-    expect(columns[1].panels.map((p) => p.kind)).toEqual(['diff'])
+  })
+
+  it('turns the old unattended switch into a startup command', () => {
+    const columns = sanitizeColumns([
+      { id: 'a', kind: 'human' },
+      { id: 'b', kind: 'agent', autonomous: true },
+      { id: 'c', kind: 'agent', autonomous: false },
+      { id: 'd', kind: 'agent', command: 'codex' },
+      { id: 'z', kind: 'terminal' }
+    ])
+    expect(columns.map((c) => c.command)).toEqual(['', DEFAULT_AGENT_COMMAND, 'claude', 'codex', ''])
   })
 })

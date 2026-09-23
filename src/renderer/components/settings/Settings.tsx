@@ -104,7 +104,7 @@ export function Settings(): React.ReactElement {
         )}
 
         {tab === 'sdlc' && (
-          <Section title="Agent SDLC">
+          <Section title="Full auto agent SDLC">
             <SdlcFlowSection />
           </Section>
         )}

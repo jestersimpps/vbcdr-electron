@@ -40,12 +40,18 @@ describe('sdlc flow store', () => {
 
   it('reorders only among the middle columns', () => {
     const flow = useSdlcFlowStore.getState()
-    flow.moveColumn('planning', 1)
-    expect(ids()).toEqual(['backlog', 'implementing', 'planning', 'review', 'done'])
-    flow.moveColumn('implementing', -1)
-    flow.moveColumn('review', 1)
-    flow.moveColumn('backlog', 1)
-    expect(ids()).toEqual(['backlog', 'implementing', 'planning', 'review', 'done'])
+    flow.reorderColumn('planning', 3)
+    expect(ids()).toEqual(['backlog', 'implementing', 'review', 'planning', 'done'])
+    flow.reorderColumn('planning', 0)
+    flow.reorderColumn('planning', 4)
+    flow.reorderColumn('backlog', 2)
+    flow.reorderColumn('done', 1)
+    expect(ids()).toEqual(['backlog', 'implementing', 'review', 'planning', 'done'])
+  })
+
+  it('keeps every column between the ends an agent, since nothing would move a ticket out of a human one', () => {
+    useSdlcFlowStore.getState().updateColumn('planning', { kind: 'human' })
+    expect(useSdlcFlowStore.getState().columns[1].kind).toBe('agent')
   })
 
   it('refuses to remove or retype the ends', () => {

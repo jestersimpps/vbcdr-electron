@@ -10,14 +10,13 @@ import { sdlcColumns } from '@/stores/sdlc-flow-store'
 import { interpolatePrompt, promptUsesVariable, type SdlcPromptVariables } from '@/lib/llm-instructions'
 import { clearSentinel, readSentinel } from '@/lib/sdlc-sentinel'
 import { attachmentsInstruction, writeAttachmentsToWorktree } from '@/lib/sdlc-attachments'
-import { sendToTerminalViaPty } from '@/lib/send-to-terminal'
 import { deleteWorktree, finishWorktree } from '@/lib/worktree-tabs'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 import { EMPTY_PROMPT_VALUE, SDLC_SENTINEL_DIR, SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
 import { findColumn, isAgentColumn, nextColumn, type SdlcColumn } from '@/models/sdlc-flow'
-import type { SdlcAttachment, SdlcStage, SdlcTicket } from '@/models/sdlc'
+import type { SdlcStage, SdlcTicket } from '@/models/sdlc'
 import { SDLC_PROFILE_ID, type TabProfileMeta } from '@/config/terminal-profiles'
-import { LLM_PROVIDERS, appendCompanionPrompt, type LlmProviderId } from '@/config/llm-provider-registry'
+import { appendCompanionPrompt, providerIdForCommand, type LlmProviderId } from '@/config/llm-provider-registry'
 import type { Project, TrackedWorktree, WorktreeBase, WorktreeInfo } from '@/models/types'
 
 export const SDLC_TAB_COLOR = '#2dd4bf'
@@ -44,63 +43,27 @@ export function sdlcProfileMeta(stage: SdlcStage, ticket: SdlcTicket, providerId
   }
 }
 
-const RESUME_FLAG: Partial<Record<LlmProviderId, string>> = { claude: '--continue' }
-
-/**
- * A stage runs in a fresh worktree, and `.claude/settings.local.json` is
- * gitignored, so the project's own permission mode never reaches the agent and
- * it would stop for an approval prompt on its first tool call. A column runs
- * unattended unless it says otherwise, so the mode is set on the command line.
- */
-const AUTONOMOUS_FLAG: Partial<Record<LlmProviderId, string>> = {
-  claude: '--permission-mode bypassPermissions'
-}
-
 interface StageCommand {
   command: string
   providerId: LlmProviderId
 }
 
-function withResume(command: string, providerId: LlmProviderId): string {
-  const flag = RESUME_FLAG[providerId]
-  return flag ? command.replace(/^(\S+)/, `$1 ${flag}`) : command
+/** Flags follow the binary, so the provider is read from the command's first word. */
+function providerOf(command: string): LlmProviderId {
+  return providerIdForCommand(command.trim().split(/\s+/)[0] ?? '')
 }
 
-function withAutonomy(command: string, providerId: LlmProviderId): string {
-  const flag = AUTONOMOUS_FLAG[providerId]
-  if (!flag || command.includes('--permission-mode')) return command
-  return command.replace(/^(\S+)/, `$1 ${flag}`)
-}
-
-/**
- * The stage's picked model decides which CLI runs and its --model flag; a stage
- * with nothing picked runs the default profile exactly as a manual tab would.
- * Sessions live per working directory, so resuming is just the CLI's own
- * "continue the latest session here" flag inside the ticket's worktree.
- */
-function stageCommand(stage: SdlcStage, resume: boolean): StageCommand {
-  const assignment = useSdlcStore.getState().stageModels[stage]
+/** The column's startup command runs as typed; a column without one runs the default profile exactly as a manual tab would. */
+function stageCommand(stage: SdlcStage): StageCommand {
+  const configured = findColumn(sdlcColumns(), stage)?.command.trim()
   const layout = useLayoutStore.getState()
-  let base: StageCommand
-  if (assignment) {
-    const providerId: LlmProviderId = assignment.provider === 'openai' ? 'codex' : 'claude'
-    const parts = [LLM_PROVIDERS[providerId].command]
-    if (assignment.model) parts.push('--model', assignment.model)
-    const promptPath = layout.companionEnabled ? layout.companionPromptPath : null
-    base = { command: appendCompanionPrompt(parts.join(' '), providerId, promptPath), providerId }
-  } else {
+  if (!configured) {
     const { command, profile } = defaultLlmTab()
-    base = { command, providerId: profile?.providerId ?? layout.llmProviderId }
+    return { command, providerId: profile?.providerId ?? layout.llmProviderId }
   }
-  const unattended = findColumn(sdlcColumns(), stage)?.autonomous ?? true
-  const autonomous = unattended ? { ...base, command: withAutonomy(base.command, base.providerId) } : base
-  return resume
-    ? { ...autonomous, command: withResume(autonomous.command, autonomous.providerId) }
-    : autonomous
-}
-
-export function canResumeStage(stage: SdlcStage): boolean {
-  return !!RESUME_FLAG[stageCommand(stage, false).providerId]
+  const providerId = providerOf(configured)
+  const promptPath = layout.companionEnabled ? layout.companionPromptPath : null
+  return { command: appendCompanionPrompt(configured, providerId, promptPath), providerId }
 }
 
 function activityEntry(ticket: SdlcTicket, text: string): SdlcTicket['artifacts'] {
@@ -165,14 +128,6 @@ function ensureTicketWorktree(ticket: SdlcTicket, project: Project): Promise<Wor
   return resolving
 }
 
-/** A new ticket gets its worktree straight away, cut from the freshly pulled default branch. */
-export async function prepareTicketWorktree(ticketId: string): Promise<WorktreeInfo | null> {
-  const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
-  if (!ticket) return null
-  const project = findProject(ticket)
-  return project ? ensureTicketWorktree(ticket, project) : null
-}
-
 function promptVariables(
   ticket: SdlcTicket,
   project: Project,
@@ -223,11 +178,7 @@ async function diffForReview(worktree: WorktreeInfo, project: Project): Promise<
   return window.api.git.diffSummary(worktree.path, base)
 }
 
-export async function handOffStage(
-  ticket: SdlcTicket,
-  project: Project,
-  note?: string
-): Promise<StageHandoverResult | null> {
+export async function handOffStage(ticket: SdlcTicket, project: Project): Promise<StageHandoverResult | null> {
   if (!isAgentColumn(ticketColumn(ticket))) return null
   const stage = ticket.stage
   const { patchTicket } = useSdlcStore.getState()
@@ -252,7 +203,6 @@ export async function handOffStage(
     prompt = interpolatePrompt(template, promptVariables(ticket, project, worktree, diff))
     const attached = await writeAttachmentsToWorktree(worktree.path, ticket.attachments)
     if (attached.length > 0) prompt = `${prompt}\n\n${attachmentsInstruction(attached)}`
-    if (note?.trim()) prompt = `${prompt}\n\n${note.trim()}`
   } catch (err) {
     patchTicket(ticket.id, {
       ...worktreeFields,
@@ -262,7 +212,7 @@ export async function handOffStage(
     return null
   }
 
-  const { command, providerId } = stageCommand(stage, false)
+  const { command, providerId } = stageCommand(stage)
   const tabId = useTerminalStore
     .getState()
     .createTab(project.id, worktree.path, command, worktree, sdlcProfileMeta(stage, ticket, providerId))
@@ -324,7 +274,7 @@ export async function mergeIntoTicketBranch(ticketId: string, target: string): P
 
   await closeTicketTab(ticket)
 
-  const { command, providerId } = stageCommand(ticket.stage, false)
+  const { command, providerId } = stageCommand(ticket.stage)
   const tabId = useTerminalStore
     .getState()
     .createTab(project.id, worktree.path, command, worktree, sdlcProfileMeta(ticket.stage, ticket, providerId))
@@ -339,22 +289,6 @@ export async function mergeIntoTicketBranch(ticketId: string, target: string): P
     status: 'running',
     blockedReason: null,
     artifacts: activityEntry(ticket, `Merging ${cleanTarget} into ${worktree.branch}`)
-  })
-  return true
-}
-
-/**
- * Adding an attachment while the agent is live behaves like pasting into
- * Claude Code: the files land in the worktree and the agent is told where.
- */
-export async function sendAttachmentsToAgent(ticket: SdlcTicket, attachments: SdlcAttachment[]): Promise<boolean> {
-  if (!ticket.tabId || ticket.worktreePath === '—') return false
-  if (!useTerminalStore.getState().tabs.some((t) => t.id === ticket.tabId)) return false
-  const written = await writeAttachmentsToWorktree(ticket.worktreePath, attachments)
-  if (written.length === 0) return false
-  sendToTerminalViaPty(ticket.tabId, attachmentsInstruction(written))
-  useSdlcStore.getState().patchTicket(ticket.id, {
-    artifacts: activityEntry(ticket, `Sent ${written.length} attachment${written.length === 1 ? '' : 's'} to the agent`)
   })
   return true
 }
@@ -388,7 +322,7 @@ export async function recordStageOutput(ticket: SdlcTicket, output: string): Pro
   return patch
 }
 
-/** Re-reads the sentinel so an Advance pressed before the watcher's next tick still captures the output. */
+/** Re-reads the sentinel so a move pressed before the watcher's next tick still captures the output. */
 export async function captureStageOutput(ticket: SdlcTicket): Promise<SdlcTicket> {
   if (ticket.worktreePath === '—') return ticket
   const output = await readSentinel(ticket.worktreePath)
@@ -402,7 +336,7 @@ function findProject(ticket: SdlcTicket): Project | undefined {
   return useProjectStore.getState().projects.find((p) => p.id === ticket.projectId)
 }
 
-/** The human's Advance: capture, close the finished tab, then hand the next stage to a fresh one. */
+/** Capture, close the finished tab, then hand the next stage to a fresh one. */
 export async function advanceAndHandOff(ticketId: string): Promise<void> {
   const store = useSdlcStore.getState()
   const current = store.tickets.find((t) => t.id === ticketId)
@@ -433,44 +367,6 @@ export async function moveTicketOn(ticketId: string): Promise<void> {
   await advanceAndHandOff(ticketId)
 }
 
-/**
- * An auto-advancing ticket takes the same route a human would click, so output
- * is still captured and worktrees are still cleaned up. Only invoked for a stage
- * that has written its sentinel, and never for one whose agent is blocked or
- * failed — those still need a person, as does a column that asks for approval.
- */
-export async function autoAdvanceTicket(ticketId: string): Promise<void> {
-  const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
-  if (!ticket || !ticket.autoAdvance || ticketColumn(ticket)?.requiresApproval) return
-  await moveTicketOn(ticketId)
-}
-
-/** Picks the ticket's last session back up in a fresh tab: no prompt is re-sent, the session already has it. */
-export async function resumeStage(ticketId: string): Promise<boolean> {
-  const store = useSdlcStore.getState()
-  const ticket = store.tickets.find((t) => t.id === ticketId)
-  if (!ticket || !isAgentColumn(ticketColumn(ticket)) || !ticket.worktreeId) return false
-  const project = findProject(ticket)
-  if (!project) return false
-  const { command, providerId } = stageCommand(ticket.stage, true)
-  if (!RESUME_FLAG[providerId]) return false
-  const worktree = await ensureTicketWorktree(ticket, project)
-  if (!worktree) return false
-
-  await closeTicketTab(ticket)
-  const tabId = useTerminalStore
-    .getState()
-    .createTab(project.id, worktree.path, command, worktree, sdlcProfileMeta(ticket.stage, ticket, providerId))
-  activateTab(project.id, tabId)
-  store.patchTicket(ticket.id, {
-    tabId,
-    status: 'running',
-    blockedReason: null,
-    artifacts: activityEntry(ticket, `Resumed the ${stageLabel(ticket.stage)} session`)
-  })
-  return true
-}
-
 /** Fires the current stage again in a fresh tab, without moving the ticket. */
 export async function rerunStage(ticketId: string): Promise<void> {
   const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
@@ -479,31 +375,6 @@ export async function rerunStage(ticketId: string): Promise<void> {
   if (!project) return
   await closeTicketTab(ticket)
   await handOffStage(ticket, project)
-}
-
-/**
- * Refining is feedback aimed at the agent, not just a note: if the stage is
- * still live, it's pasted straight into that session; otherwise the stage is
- * rerun from scratch with the note folded into the fresh prompt.
- */
-export async function refineTicket(ticketId: string, note: string): Promise<boolean> {
-  if (!note.trim()) return false
-  const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
-  if (!ticket) return false
-
-  if (ticket.tabId && useTerminalStore.getState().tabs.some((t) => t.id === ticket.tabId)) {
-    sendToTerminalViaPty(ticket.tabId, note)
-    useSdlcStore.getState().patchTicket(ticket.id, {
-      artifacts: activityEntry(ticket, 'Sent a refinement to the agent')
-    })
-    return true
-  }
-
-  const project = findProject(ticket)
-  if (!project) return false
-  await closeTicketTab(ticket)
-  const result = await handOffStage(ticket, project, note)
-  return !!result
 }
 
 /** Removes the ticket with everything it owns: the agent tab, the worktree and its branch. */

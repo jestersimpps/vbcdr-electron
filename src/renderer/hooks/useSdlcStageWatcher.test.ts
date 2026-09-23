@@ -7,10 +7,10 @@ vi.mock('@/lib/sdlc-sentinel', () => ({
 }))
 
 const recordStageOutputMock = vi.fn(async () => ({ artifacts: undefined }) as never)
-const autoAdvanceMock = vi.fn(async () => undefined)
+const moveTicketOnMock = vi.fn(async () => undefined)
 vi.mock('@/lib/sdlc-handover', () => ({
   recordStageOutput: (...a: unknown[]) => recordStageOutputMock(...(a as [])),
-  autoAdvanceTicket: (...a: unknown[]) => autoAdvanceMock(...(a as [])),
+  moveTicketOn: (...a: unknown[]) => moveTicketOnMock(...(a as [])),
   applyStageOutput: () => ({})
 }))
 
@@ -45,7 +45,6 @@ const ticket = (over: Partial<SdlcTicket> = {}): SdlcTicket => ({
   artifacts: EMPTY_ARTIFACTS,
   prUrl: null,
   blockedReason: null,
-  autoAdvance: false,
   ...over
 })
 
@@ -73,7 +72,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   readSentinelMock.mockReset().mockResolvedValue(null)
   recordStageOutputMock.mockClear()
-  autoAdvanceMock.mockClear()
+  moveTicketOnMock.mockClear()
 })
 
 afterEach(() => {
@@ -148,42 +147,33 @@ describe('useSdlcStageWatcher', () => {
     expect(status()).toBe('awaiting-approval')
   })
 
-  it('hands off the next stage itself when the ticket is set to auto-advance', async () => {
-    setup(ticket({ autoAdvance: true }))
+  it('moves the ticket on as soon as the agent writes its result', async () => {
+    setup(ticket())
     readSentinelMock.mockResolvedValue('# Plan')
     renderHook(() => useSdlcStageWatcher())
     await tick()
     expect(status()).toBe('awaiting-approval')
-    expect(autoAdvanceMock).toHaveBeenCalledWith('t1')
+    expect(moveTicketOnMock).toHaveBeenCalledWith('t1')
   })
 
-  it('waits for a human when the ticket is not set to auto-advance', async () => {
-    setup(ticket({ autoAdvance: false }))
-    readSentinelMock.mockResolvedValue('# Plan')
-    renderHook(() => useSdlcStageWatcher())
-    await tick()
-    expect(status()).toBe('awaiting-approval')
-    expect(autoAdvanceMock).not.toHaveBeenCalled()
-  })
-
-  it('does not advance an auto-advance ticket whose agent is blocked on a prompt', async () => {
-    setup(ticket({ autoAdvance: true }), true)
+  it('does not move on a ticket whose agent is blocked on a prompt', async () => {
+    setup(ticket(), true)
     renderHook(() => useSdlcStageWatcher())
     await tick()
     expect(status()).toBe('blocked')
-    expect(autoAdvanceMock).not.toHaveBeenCalled()
+    expect(moveTicketOnMock).not.toHaveBeenCalled()
   })
 
-  it('only hands off once while the advance is still in flight', async () => {
-    setup(ticket({ autoAdvance: true }))
+  it('only moves on once while the move is still in flight', async () => {
+    setup(ticket())
     readSentinelMock.mockResolvedValue('# Plan')
     let release = (): void => {}
-    autoAdvanceMock.mockImplementation(() => new Promise<undefined>((r) => { release = () => r(undefined) }))
+    moveTicketOnMock.mockImplementation(() => new Promise<undefined>((r) => { release = () => r(undefined) }))
     renderHook(() => useSdlcStageWatcher())
     await tick()
     await tick()
     await tick()
-    expect(autoAdvanceMock).toHaveBeenCalledTimes(1)
+    expect(moveTicketOnMock).toHaveBeenCalledTimes(1)
     release()
   })
 
