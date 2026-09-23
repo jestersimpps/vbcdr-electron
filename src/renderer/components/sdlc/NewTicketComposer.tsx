@@ -82,11 +82,14 @@ export function NewTicketComposer({ projectId, projectName }: { projectId: strin
           void addFiles(files)
         }}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit()
+          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+            e.preventDefault()
+            handleSubmit()
+          }
           if (e.key === 'Escape') close()
         }}
         rows={4}
-        placeholder="What should the agents do? Paste a screenshot to add context."
+        placeholder="What should the agents do? Enter starts it, Shift+Enter adds a line. Paste a screenshot to add context."
         className={cn(
           'w-full resize-none rounded border bg-zinc-950/60 px-2 py-1.5 text-xs leading-relaxed text-zinc-200 outline-none placeholder:text-zinc-600',
           isDragging ? 'border-indigo-500' : 'border-zinc-800 focus:border-zinc-600'
@@ -133,7 +136,7 @@ export function NewTicketComposer({ projectId, projectName }: { projectId: strin
           disabled={!canSubmit}
           onClick={handleSubmit}
           className="rounded bg-indigo-600 px-2 py-1 text-micro font-medium text-white hover:bg-indigo-500 disabled:pointer-events-none disabled:opacity-40"
-          title="⌘↵"
+          title="↵"
         >
           Start
         </button>
