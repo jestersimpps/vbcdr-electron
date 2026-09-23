@@ -23,7 +23,7 @@ describe('sdlc flow store', () => {
   it('adds a column before the given one, never outside the fixed ends', () => {
     const flow = useSdlcFlowStore.getState()
     flow.addColumn('Audit', 'review')
-    expect(ids()).toEqual(['backlog', 'planning', 'implementing', 'audit', 'review', 'done'])
+    expect(ids()).toEqual(['backlog', 'planning', 'implementing', 'audit', 'review', 'pull-request', 'done'])
     flow.addColumn('Triage', 'backlog')
     expect(ids()[0]).toBe('backlog')
     expect(ids()[1]).toBe('triage')
@@ -40,13 +40,13 @@ describe('sdlc flow store', () => {
 
   it('reorders only among the middle columns', () => {
     const flow = useSdlcFlowStore.getState()
-    flow.reorderColumn('planning', 3)
-    expect(ids()).toEqual(['backlog', 'implementing', 'review', 'planning', 'done'])
-    flow.reorderColumn('planning', 0)
     flow.reorderColumn('planning', 4)
+    expect(ids()).toEqual(['backlog', 'implementing', 'review', 'pull-request', 'planning', 'done'])
+    flow.reorderColumn('planning', 0)
+    flow.reorderColumn('planning', 5)
     flow.reorderColumn('backlog', 2)
     flow.reorderColumn('done', 1)
-    expect(ids()).toEqual(['backlog', 'implementing', 'review', 'planning', 'done'])
+    expect(ids()).toEqual(['backlog', 'implementing', 'review', 'pull-request', 'planning', 'done'])
   })
 
   it('keeps every column between the ends an agent, since nothing would move a ticket out of a human one', () => {
@@ -61,9 +61,9 @@ describe('sdlc flow store', () => {
     flow.updateColumn('backlog', { kind: 'agent' })
     flow.updateColumn('done', { kind: 'human' })
     const { columns } = useSdlcFlowStore.getState()
-    expect(columns).toHaveLength(5)
+    expect(columns).toHaveLength(6)
     expect(columns[0].kind).toBe('human')
-    expect(columns[4].kind).toBe('terminal')
+    expect(columns[5].kind).toBe('terminal')
   })
 })
 
@@ -74,7 +74,7 @@ describe('deleteColumn', () => {
 
     expect(deleteColumn('planning', 'backlog')).toBe(true)
 
-    expect(ids()).toEqual(['backlog', 'implementing', 'review', 'done'])
+    expect(ids()).toEqual(['backlog', 'implementing', 'review', 'pull-request', 'done'])
     const moved = useSdlcStore.getState().tickets.find((t) => t.id === 'a')
     expect(moved?.stage).toBe('backlog')
     expect(moved?.status).toBe('idle')
@@ -101,7 +101,7 @@ describe('resetFlow', () => {
 
     expect(resetFlow()).toBe(true)
 
-    expect(ids()).toEqual(['backlog', 'planning', 'implementing', 'review', 'done'])
+    expect(ids()).toEqual(['backlog', 'planning', 'implementing', 'review', 'pull-request', 'done'])
     expect(useSdlcStore.getState().tickets.map((t) => t.stage)).toEqual(['backlog', 'review'])
   })
 

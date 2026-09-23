@@ -24,7 +24,7 @@ describe('SdlcFlowSection', () => {
     render(<SdlcFlowSection />)
     fireEvent.click(screen.getByRole('button', { name: 'Add column' }))
 
-    expect(columns().map((c) => c.id)).toEqual(['backlog', 'planning', 'implementing', 'review', 'new-column', 'done'])
+    expect(columns().map((c) => c.id)).toEqual(['backlog', 'planning', 'implementing', 'review', 'pull-request', 'new-column', 'done'])
     expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('New column')
   })
 

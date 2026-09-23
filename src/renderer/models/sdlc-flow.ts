@@ -1,4 +1,9 @@
-import { DEFAULT_SDLC_STAGE_PROMPTS, SDLC_PLAN_RELATIVE, SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
+import {
+  DEFAULT_SDLC_STAGE_PROMPTS,
+  PULL_REQUEST_PROMPT,
+  SDLC_PLAN_RELATIVE,
+  SENTINEL_CLAUSE
+} from '@/models/sdlc-prompts'
 
 /** Human: the ticket waits. Agent: entering hands the column's prompt to a CLI agent. Terminal: the ticket ends and its worktree is gone. */
 export type SdlcColumnKind = 'human' | 'agent' | 'terminal'
@@ -43,6 +48,7 @@ export function defaultSdlcColumns(): SdlcColumn[] {
     agentColumn('planning', 'Planning', DEFAULT_SDLC_STAGE_PROMPTS.planning, SDLC_PLAN_RELATIVE),
     agentColumn('implementing', 'Implementing', DEFAULT_SDLC_STAGE_PROMPTS.implementing),
     agentColumn('review', 'Review', DEFAULT_SDLC_STAGE_PROMPTS.review),
+    agentColumn('pull-request', 'Pull request', PULL_REQUEST_PROMPT),
     endColumn('done', 'Done', 'terminal')
   ]
 }

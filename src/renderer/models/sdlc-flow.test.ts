@@ -28,7 +28,8 @@ describe('earlierAgentColumns', () => {
     expect(earlierAgentColumns(flowWith('audit'), 'audit').map((c) => c.id)).toEqual([
       'planning',
       'implementing',
-      'review'
+      'review',
+      'pull-request'
     ])
     expect(earlierAgentColumns(defaultSdlcColumns(), 'planning')).toEqual([])
   })
@@ -37,7 +38,7 @@ describe('earlierAgentColumns', () => {
 describe('sanitizeColumns', () => {
   it('returns the default flow for anything that is not a usable list', () => {
     expect(sanitizeColumns(undefined).map((c) => c.id)).toEqual(defaultSdlcColumns().map((c) => c.id))
-    expect(sanitizeColumns([{ id: 'only', kind: 'human' }])).toHaveLength(5)
+    expect(sanitizeColumns([{ id: 'only', kind: 'human' }])).toHaveLength(6)
   })
 
   it('forces the flow into shape: human first, terminal last, agents between', () => {

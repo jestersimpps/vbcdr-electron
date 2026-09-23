@@ -188,10 +188,10 @@ describe('advanceAndHandOff', () => {
     expect(useTerminalStore.getState().tabs[0].title).toBe('Planning · Add auth')
   })
 
-  it('does not chain past review: done is reached through the wrap-up flow', async () => {
-    useSdlcStore.setState({ tickets: [ticket({ stage: 'review' })] })
+  it('does not chain past the pull request: done is reached through the wrap-up flow', async () => {
+    useSdlcStore.setState({ tickets: [ticket({ stage: 'pull-request' })] })
     await advanceAndHandOff('t1')
-    expect(current().stage).toBe('review')
+    expect(current().stage).toBe('pull-request')
   })
 })
 
@@ -311,7 +311,7 @@ describe('default flow end to end', () => {
     expect(current()).toMatchObject({ stage: 'backlog', worktreeId: null, tabId: null })
 
     const stages: string[] = []
-    for (const stage of ['planning', 'implementing', 'review']) {
+    for (const stage of ['planning', 'implementing', 'review', 'pull-request']) {
       await moveTicketOn(created.id)
       expect(current()).toMatchObject({ stage, status: 'running', worktreeId: 'wt1' })
       expect(useTerminalStore.getState().tabs).toHaveLength(1)
@@ -322,12 +322,13 @@ describe('default flow end to end', () => {
 
     await moveTicketOn(created.id)
 
-    expect(stages).toEqual(['planning', 'implementing', 'review'])
+    expect(stages).toEqual(['planning', 'implementing', 'review', 'pull-request'])
     expect(current()).toMatchObject({ stage: 'done', tabId: null, status: 'idle' })
     expect(current().artifacts.outputs).toEqual({
       planning: 'planning result',
       implementing: 'implementing result',
-      review: 'review result'
+      review: 'review result',
+      'pull-request': 'pull-request result'
     })
     expect(useTerminalStore.getState().tabs).toHaveLength(0)
     expect(window.api.worktrees.create).toHaveBeenCalledTimes(1)
@@ -339,6 +340,7 @@ describe('default flow end to end', () => {
       'Handed Planning to the agent',
       'Handed Implementing to the agent',
       'Handed Review to the agent',
+      'Handed Pull request to the agent',
       `Worktree removed, work kept on branch ${current().branch}`
     ])
   })
@@ -383,7 +385,7 @@ describe('ticket worktree', () => {
 describe('finishTicket', () => {
   beforeEach(() => {
     useSdlcStore.setState({
-      tickets: [ticket({ stage: 'review', worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/x' })]
+      tickets: [ticket({ stage: 'pull-request', worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/x' })]
     })
     vi.mocked(window.api.worktrees.refresh).mockResolvedValue(trackedWorktree())
     vi.mocked(window.api.worktrees.finish).mockClear()
@@ -402,7 +404,7 @@ describe('finishTicket', () => {
   it('does not move a ticket whose work could not be kept', async () => {
     vi.mocked(window.api.worktrees.finish).mockResolvedValueOnce({ ok: false, output: '', error: 'commit failed' })
     await moveTicketOn('t1')
-    expect(current().stage).toBe('review')
+    expect(current().stage).toBe('pull-request')
     expect(current()).toMatchObject({ status: 'blocked', blockedReason: expect.stringContaining('commit failed') })
   })
 
@@ -517,6 +519,7 @@ describe('custom columns', () => {
   it('moving on from the column before the terminal one finishes the ticket, whatever it is called', async () => {
     const audit = addAudit()
     useSdlcFlowStore.getState().removeColumn('review')
+    useSdlcFlowStore.getState().removeColumn('pull-request')
     useSdlcStore.setState({ tickets: [ticket({ stage: audit, worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/x' })] })
 
     vi.mocked(window.api.worktrees.refresh).mockResolvedValueOnce(trackedWorktree())

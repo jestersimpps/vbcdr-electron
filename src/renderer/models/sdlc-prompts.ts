@@ -70,3 +70,18 @@ Check it against the ticket's intent: correctness, missed edge cases, anything t
 
 ${SENTINEL_CLAUSE}`
 }
+
+export const PULL_REQUEST_PROMPT = `Open a pull request for this ticket from the worktree at {{worktreePath}} (branch {{branch}}). The main checkout is at {{projectPath}}: do not change anything there.
+
+Title: {{title}}
+Description:
+{{description}}
+
+Changes on this branch:
+{{diff}}
+
+First check with \`gh pr view {{branch}}\` whether a pull request already exists for this branch. If one does, change nothing and report its URL.
+
+Otherwise commit anything still uncommitted with a clear one-line message, push {{branch}} to origin, and open a pull request against the project's default branch with \`gh pr create\`, titled after the ticket and describing what changed and why. If gh is missing or not authenticated, or the push is rejected, stop and say so instead of guessing. Report the pull request URL.
+
+${SENTINEL_CLAUSE}`
