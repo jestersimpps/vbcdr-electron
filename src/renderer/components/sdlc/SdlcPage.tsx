@@ -24,6 +24,7 @@ import { isAgentColumn, type SdlcColumn } from '@/models/sdlc-flow'
 import { useProjectStore } from '@/stores/project-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
 import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { useNow } from '@/hooks/useNow'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { discardTicket, focusTicketTab, moveTicketOn, rerunStage } from '@/lib/sdlc-handover'
 import { useAccent } from '@/components/settings/SettingsControls'
@@ -33,14 +34,19 @@ import { cn } from '@/lib/utils'
 
 const LANE_MIN_WIDTH = 'min-w-[220px]'
 
-function relativeTime(timestamp: number): string {
-  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
+function relativeTime(timestamp: number, now: number): string {
+  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000))
   if (seconds < 60) return `${seconds}s ago`
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes}m ago`
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return `${hours}h ago`
   return `${Math.floor(hours / 24)}d ago`
+}
+
+function RelativeTime({ timestamp }: { timestamp: number }): React.ReactElement {
+  const now = useNow()
+  return <span className="text-micro text-zinc-600">{relativeTime(timestamp, now)}</span>
 }
 
 function StatusBadge({ status }: { status: SdlcTicketStatus }): React.ReactElement | null {
@@ -204,7 +210,7 @@ function TicketCard({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace 
       </div>
 
       <div className="mt-1.5 flex items-end justify-between gap-2">
-        <span className="text-micro text-zinc-600">{relativeTime(ticket.updatedAt)}</span>
+        <RelativeTime timestamp={ticket.updatedAt} />
         {ticket.tabId && (
           <button
             onClick={() => focusTicketTab(ticket)}
