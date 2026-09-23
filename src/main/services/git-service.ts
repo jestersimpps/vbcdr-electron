@@ -564,9 +564,14 @@ export async function getConflicts(cwd: string): Promise<ConflictInfo[]> {
 }
 
 function gitErrorMessage(err: unknown): string {
-  const e = err as { stderr?: string; stdout?: string; message?: string }
+  const e = err as { stderr?: string; stdout?: string; message?: string; killed?: boolean }
   const stderr = (e.stderr ?? '').trim()
   const stdout = (e.stdout ?? '').trim()
+  // A command killed on its timeout says nothing on either stream, so its
+  // message is the bare command line and the failure reads as unexplained.
+  if (e.killed && !stderr && !stdout) {
+    return `timed out running ${(e.message ?? '').replace(/^Command failed: /, '') || 'a git command'}`
+  }
   return stderr || stdout || e.message || 'git command failed'
 }
 
@@ -909,6 +914,9 @@ export async function addWorktreeForBranch(projectPath: string, branch: string):
   return { path: worktreePath, branch }
 }
 
+/** A monorepo checkout takes tens of seconds to walk, and the default budget is five. */
+const STATUS_TIMEOUT_MS = 60_000
+
 /**
  * Commits whatever the worktree still holds and returns the resulting HEAD.
  * Hooks are skipped: this is a safety net for work about to lose its folder,
@@ -916,7 +924,7 @@ export async function addWorktreeForBranch(projectPath: string, branch: string):
  */
 export async function commitWorktreeWork(worktreePath: string, message: string): Promise<GitOpResult> {
   try {
-    const dirty = await runGit(worktreePath, ['status', '--porcelain'])
+    const dirty = await runGit(worktreePath, ['status', '--porcelain'], STATUS_TIMEOUT_MS)
     if (dirty) {
       await runGit(worktreePath, ['add', '-A'], 15000)
       await runGit(worktreePath, ['commit', '--no-verify', '-m', message], 30000)
@@ -960,20 +968,48 @@ function isConflictStatusLine(line: string): boolean {
 export async function getWorktreeState(worktreePath: string): Promise<WorktreeState> {
   if (!fs.existsSync(worktreePath)) return { exists: false, hasChanges: false, conflictPaths: [] }
   try {
-    const raw = await runGit(worktreePath, ['status', '--porcelain'])
+    const raw = await runGit(worktreePath, ['status', '--porcelain'], STATUS_TIMEOUT_MS)
     const lines = raw ? raw.split('\n') : []
     const conflictPaths = lines.filter(isConflictStatusLine).map((line) => line.slice(3).split(' -> ').pop()!)
     return { exists: true, hasChanges: lines.length > 0, conflictPaths }
   } catch {
-    return { exists: false, hasChanges: false, conflictPaths: [] }
+    // A status that failed is not evidence the worktree is gone: callers untrack
+    // what does not exist, and one that still has a folder has work to keep.
+    return { exists: fs.existsSync(worktreePath), hasChanges: true, conflictPaths: [] }
+  }
+}
+
+/**
+ * Deleting a checkout is minutes of work, not seconds: a monorepo worktree with
+ * its dependencies installed is hundreds of megabytes of small files. A removal
+ * killed partway leaves the worktree half deleted, which git then refuses to
+ * finish, so the budget has to cover the slowest real case.
+ */
+const WORKTREE_REMOVE_TIMEOUT_MS = 10 * 60_000
+
+/**
+ * Both callers have already decided the folder goes, so a git removal that
+ * bails — on a worktree an earlier attempt left half deleted, or one git will
+ * not touch — falls back to deleting the folder and pruning the metadata.
+ */
+async function removeWorktreeFolder(projectPath: string, worktreePath: string): Promise<void> {
+  try {
+    await runGit(projectPath, ['worktree', 'remove', '--force', worktreePath], WORKTREE_REMOVE_TIMEOUT_MS)
+  } catch (err) {
+    if (!fs.existsSync(worktreePath)) return
+    try {
+      await fs.promises.rm(worktreePath, { recursive: true, force: true })
+    } catch {
+      // The folder is what stands in the way, so its own error is the honest
+      // one only when git had nothing to say.
+      throw err
+    }
   }
 }
 
 export async function removeWorktree(projectPath: string, worktreePath: string, branch: string, deleteBranch: boolean): Promise<GitOpResult> {
   try {
-    if (fs.existsSync(worktreePath)) {
-      await runGit(projectPath, ['worktree', 'remove', '--force', worktreePath], 30000)
-    }
+    if (fs.existsSync(worktreePath)) await removeWorktreeFolder(projectPath, worktreePath)
     await runGit(projectPath, ['worktree', 'prune'], 15000)
     if (deleteBranch) await runGit(projectPath, ['branch', '-D', branch], 15000)
     return { ok: true, output: '' }
