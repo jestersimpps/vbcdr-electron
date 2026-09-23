@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import { earlierAgentColumns, isAgentColumn, type SdlcColumn } from '@/models/sdlc-flow'
 import type { SdlcPromptResolution } from '@/models/sdlc-prompts'
-import { OUTPUT_VARIABLE_PREFIX, SDLC_PROMPT_VARIABLES } from '@/lib/llm-instructions'
+import { OUTPUT_VARIABLE_PREFIX, SDLC_PROMPT_VARIABLES, promptSegments } from '@/lib/llm-instructions'
 import { useAccent } from '@/components/settings/SettingsControls'
 import { cn } from '@/lib/utils'
 
@@ -17,11 +17,12 @@ export interface SdlcPromptEditorProps {
 }
 
 /** A prompt can read the results of the agent columns before it, which is why the list depends on the column. */
+function availableVariables(columns: SdlcColumn[], columnId: string): string[] {
+  return [...SDLC_PROMPT_VARIABLES, ...earlierAgentColumns(columns, columnId).map((c) => `${OUTPUT_VARIABLE_PREFIX}${c.id}`)]
+}
+
 export function PromptVariables({ columns, columnId }: { columns: SdlcColumn[]; columnId: string }): React.ReactElement {
-  const variables = [
-    ...SDLC_PROMPT_VARIABLES,
-    ...earlierAgentColumns(columns, columnId).map((c) => `${OUTPUT_VARIABLE_PREFIX}${c.id}`)
-  ]
+  const variables = availableVariables(columns, columnId)
   return (
     <>
       Variables:{' '}
@@ -34,8 +35,68 @@ export function PromptVariables({ columns, columnId }: { columns: SdlcColumn[]; 
   )
 }
 
+const PROMPT_BOX_CLASS =
+  'w-full whitespace-pre-wrap break-words rounded border px-3 py-2 font-mono text-xs leading-relaxed [scrollbar-gutter:stable]'
+
+/**
+ * Painted behind a transparent-text textarea with identical metrics, so the
+ * tokens light up while the caret and selection stay native.
+ */
+function HighlightedPrompt({
+  text,
+  variables,
+  dimmed,
+  accent,
+  scrollRef
+}: {
+  text: string
+  variables: string[]
+  dimmed: boolean
+  accent: string
+  scrollRef: React.RefObject<HTMLDivElement>
+}): React.ReactElement {
+  return (
+    <div
+      ref={scrollRef}
+      aria-hidden
+      data-testid="prompt-highlight"
+      className={cn(
+        PROMPT_BOX_CLASS,
+        'pointer-events-none absolute inset-0 overflow-hidden border-transparent bg-zinc-900/80',
+        dimmed ? 'text-zinc-600' : 'text-zinc-200'
+      )}
+    >
+      {promptSegments(text, variables).map((segment, i) =>
+        segment.variable === 'known' ? (
+          <mark
+            key={i}
+            data-variable="known"
+            className="rounded-sm"
+            style={{ color: accent, backgroundColor: `${accent}${dimmed ? '14' : '26'}`, opacity: dimmed ? 0.7 : 1 }}
+          >
+            {segment.text}
+          </mark>
+        ) : segment.variable === 'unknown' ? (
+          <mark
+            key={i}
+            data-variable="unknown"
+            title="Not a variable this column can read: sent verbatim"
+            className="rounded-sm bg-red-500/15 text-red-400 underline decoration-red-400/70 decoration-wavy"
+          >
+            {segment.text}
+          </mark>
+        ) : (
+          <span key={i}>{segment.text}</span>
+        )
+      )}
+      {' '}
+    </div>
+  )
+}
+
 export function StagePromptField({
   column,
+  columns,
   resolution,
   mode,
   onChange,
@@ -43,6 +104,7 @@ export function StagePromptField({
   accent
 }: {
   column: SdlcColumn
+  columns: SdlcColumn[]
   resolution: SdlcPromptResolution
   mode: SdlcPromptEditorMode
   onChange: (text: string) => void
@@ -52,6 +114,7 @@ export function StagePromptField({
   const inheriting = mode === 'project' && !resolution.overridden
   const stored = inheriting ? '' : resolution.text
   const [draft, setDraft] = useState(stored)
+  const highlightRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setDraft(stored)
@@ -93,15 +156,30 @@ export function StagePromptField({
           Reset
         </button>
       </div>
-      <textarea
-        aria-label={`Prompt for ${column.id}`}
-        value={draft}
-        placeholder={inheriting ? resolution.text : undefined}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        spellCheck={false}
-        className="min-h-[28rem] w-full flex-1 resize-y rounded border border-zinc-800 bg-zinc-900/80 px-3 py-2 font-mono text-xs leading-relaxed text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
-      />
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <HighlightedPrompt
+          text={draft || (inheriting ? resolution.text : '')}
+          variables={availableVariables(columns, column.id)}
+          dimmed={!draft}
+          accent={accent}
+          scrollRef={highlightRef}
+        />
+        <textarea
+          aria-label={`Prompt for ${column.id}`}
+          value={draft}
+          placeholder={inheriting ? resolution.text : undefined}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onScroll={(e) => {
+            if (highlightRef.current) highlightRef.current.scrollTop = e.currentTarget.scrollTop
+          }}
+          spellCheck={false}
+          className={cn(
+            PROMPT_BOX_CLASS,
+            'relative min-h-[28rem] flex-1 resize-y overflow-y-auto border-zinc-800 bg-transparent text-transparent caret-zinc-200 outline-none selection:bg-zinc-500/40 placeholder:text-transparent focus:border-zinc-600'
+          )}
+        />
+      </div>
     </div>
   )
 }
@@ -146,6 +224,7 @@ export function SdlcPromptEditor({ columns, values, onChange, onReset }: SdlcPro
       <StagePromptField
         key={active.id}
         column={active}
+        columns={columns}
         resolution={values[active.id]}
         mode="project"
         onChange={(text) => onChange(active.id, text)}

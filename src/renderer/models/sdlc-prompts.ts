@@ -8,6 +8,12 @@ export interface SdlcPromptResolution {
   overridden: boolean
 }
 
+/** A run of prompt text; `variable` marks a `{{...}}` token and whether this column can resolve it. */
+export interface SdlcPromptSegment {
+  text: string
+  variable?: 'known' | 'unknown'
+}
+
 const DEFAULT_PROMPT_STAGES: readonly SdlcDefaultPromptStage[] = ['planning', 'implementing', 'review']
 
 export const SDLC_SENTINEL_DIR = '.vbcdr'
