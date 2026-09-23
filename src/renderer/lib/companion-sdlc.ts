@@ -69,6 +69,12 @@ export function sdlcAnnouncements(
     const prior = before.get(after.id)
     if (!prior || prior === after) continue
     const who = ticketIn(after, projectName(after.projectId))
+    // The one thing she must not sit on: a blocked ticket moves nowhere and
+    // nothing else will announce it. The reason itself stays on the card — it
+    // is a git command line as often as a sentence.
+    if (after.blockedReason && after.blockedReason !== prior.blockedReason) {
+      out.push({ emote: 'hurt', text: `heads up, ${who} is blocked and needs you` })
+    }
     if (prior.stage !== after.stage) out.push(moveAnnouncement(prior, after, columns, who))
     if (after.doneActionAt && after.doneActionAt !== prior.doneActionAt) {
       out.push({ emote: 'thinking', text: doneActionText(after.doneActionBy, who) })
