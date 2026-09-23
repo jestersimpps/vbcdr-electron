@@ -1,4 +1,5 @@
 import type { SdlcPromptSegment } from '@/models/sdlc-prompts'
+import type { PrState } from '@/models/types'
 
 export function conflictResolutionInstruction(paths: string[]): string {
   const files = paths.join(', ')
@@ -16,7 +17,7 @@ export interface SdlcPromptVariables {
   worktreePath: string
   projectPath: string
   diff: string
-  /** The branch's pull request as `<url> (<state>)`, so a prompt can skip work a PR already covers. */
+  /** The branch's pull request state in words, with its link where there is one, so a prompt can skip work a PR already covers. */
   pr: string
   /** Earlier columns' results, read as `{{output.<columnId>}}`. */
   outputs: Record<string, string>
@@ -25,6 +26,23 @@ export interface SdlcPromptVariables {
 export const SDLC_PROMPT_VARIABLES = ['title', 'description', 'branch', 'worktreePath', 'projectPath', 'diff', 'pr'] as const
 
 export const OUTPUT_VARIABLE_PREFIX = 'output.'
+
+/** Written for the agent to branch on, so every state reads as a plain statement with the link where there is one. */
+export function prPromptValue(state: PrState, url: string | null): string {
+  const link = url ? `: ${url}` : ''
+  switch (state) {
+    case 'open':
+      return `open${link}`
+    case 'merged':
+      return `merged${link}`
+    case 'closed':
+      return `closed without merging${link}`
+    case 'none':
+      return 'none, no pull request exists for this branch yet'
+    default:
+      return 'unknown, the GitHub CLI (gh) could not report on this branch'
+  }
+}
 
 const PROMPT_VARIABLE = /\{\{([\w.-]+)\}\}/g
 

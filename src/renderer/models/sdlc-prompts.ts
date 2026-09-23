@@ -22,7 +22,6 @@ export const SDLC_SENTINEL_RELATIVE = `${SDLC_SENTINEL_DIR}/${SDLC_SENTINEL_FILE
 export const SDLC_PLAN_RELATIVE = `${SDLC_SENTINEL_DIR}/plan.md`
 
 export const EMPTY_PROMPT_VALUE = '(none)'
-export const PR_UNKNOWN_VALUE = '(unknown: gh could not check)'
 
 /**
  * Global prompts lived on the layout store before columns owned them; this reads

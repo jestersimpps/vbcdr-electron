@@ -524,23 +524,24 @@ describe('custom columns', () => {
     vi.mocked(window.api.worktrees.refresh).mockResolvedValue(
       trackedWorktree({ prUrl: 'https://github.com/o/r/pull/7', prState: 'open' })
     )
-    reviewPrompt('If {{pr}} already exists, do nothing.')
+    reviewPrompt('PR: {{pr}}')
     await handOffStage(current(), project)
-    expect(queuedPrompt()).toBe('If https://github.com/o/r/pull/7 (open) already exists, do nothing.')
+    expect(queuedPrompt()).toBe('PR: open: https://github.com/o/r/pull/7')
+    expect(current()).toMatchObject({ prUrl: 'https://github.com/o/r/pull/7', prState: 'open' })
   })
 
-  it('reads a branch without a pull request as (none)', async () => {
+  it('says plainly when the branch has no pull request yet', async () => {
     vi.mocked(window.api.worktrees.refresh).mockResolvedValue(trackedWorktree())
     reviewPrompt('PR: {{pr}}')
     await handOffStage(current(), project)
-    expect(queuedPrompt()).toBe('PR: (none)')
+    expect(queuedPrompt()).toBe('PR: none, no pull request exists for this branch yet')
   })
 
   it('says so when gh could not check, instead of claiming there is no pull request', async () => {
     vi.mocked(window.api.worktrees.refresh).mockResolvedValue(trackedWorktree({ prState: 'unknown' }))
     reviewPrompt('PR: {{pr}}')
     await handOffStage(current(), project)
-    expect(queuedPrompt()).toBe('PR: (unknown: gh could not check)')
+    expect(queuedPrompt()).toBe('PR: unknown, the GitHub CLI (gh) could not report on this branch')
   })
 
   it('stores the result under the column id and saves it where the column says', async () => {
@@ -585,6 +586,7 @@ describe('done prompt', () => {
 
   it("reopens the ticket's branch and sends the column's prompt with every variable filled in", async () => {
     useSdlcStore.setState({ tickets: [finished()] })
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValue(trackedWorktree({ path: '/cwd/.worktrees/llm/add-auth' }))
 
     expect(await runDoneAction('t1')).toBe(true)
 
@@ -594,7 +596,7 @@ describe('done prompt', () => {
     const prompt = useQueueStore.getState().itemsPerTab[tab.id][0].text
     expect(prompt).toContain('gh pr create')
     expect(prompt).toContain('llm/add-auth')
-    expect(prompt).toContain('Pull request for this branch: (none)')
+    expect(prompt).toContain('Pull request for this branch: none, no pull request exists for this branch yet')
     expect(prompt).not.toContain('{{')
     expect(prompt).not.toContain('stage-output.md')
     expect(current()).toMatchObject({ stage: 'done', status: 'idle', tabId: tab.id, worktreeId: 'wt1' })

@@ -7,12 +7,12 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { createTrackedWorktreeForProject, toWorktreeInfo, useWorktreeStore } from '@/stores/worktree-store'
 import { resolveStagePrompt } from '@/stores/sdlc-prompts-store'
 import { sdlcColumns } from '@/stores/sdlc-flow-store'
-import { interpolatePrompt, promptUsesVariable, type SdlcPromptVariables } from '@/lib/llm-instructions'
+import { interpolatePrompt, prPromptValue, promptUsesVariable, type SdlcPromptVariables } from '@/lib/llm-instructions'
 import { clearSentinel, readSentinel } from '@/lib/sdlc-sentinel'
 import { attachmentsInstruction, writeAttachmentsToWorktree } from '@/lib/sdlc-attachments'
 import { deleteWorktree, finishWorktree } from '@/lib/worktree-tabs'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
-import { EMPTY_PROMPT_VALUE, PR_UNKNOWN_VALUE, SDLC_SENTINEL_DIR, SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
+import { EMPTY_PROMPT_VALUE, SDLC_SENTINEL_DIR, SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
 import { findColumn, isAgentColumn, nextColumn, type SdlcColumn } from '@/models/sdlc-flow'
 import type { SdlcStage, SdlcTicket } from '@/models/sdlc'
 import { SDLC_PROFILE_ID, type TabProfileMeta } from '@/config/terminal-profiles'
@@ -180,12 +180,12 @@ async function diffForReview(worktree: WorktreeInfo, project: Project): Promise<
   return window.api.git.diffSummary(worktree.path, base)
 }
 
-/** Asks gh at handoff time, since the tracked PR state is only as fresh as the last worktree refresh. */
-async function prForPrompt(worktree: WorktreeInfo): Promise<string> {
+/** Asks gh at handoff time, since the tracked PR state is only as fresh as the last worktree refresh; a found PR lands on the card. */
+async function prForPrompt(ticket: SdlcTicket, worktree: WorktreeInfo): Promise<string> {
   const tracked = await useWorktreeStore.getState().refreshOne(worktree.id)
-  if (!tracked || tracked.prState === 'none') return EMPTY_PROMPT_VALUE
-  if (tracked.prState === 'unknown') return PR_UNKNOWN_VALUE
-  return tracked.prUrl ? `${tracked.prUrl} (${tracked.prState})` : `(${tracked.prState})`
+  if (!tracked) return prPromptValue('unknown', null)
+  if (tracked.prUrl) useSdlcStore.getState().patchTicket(ticket.id, { prUrl: tracked.prUrl, prState: tracked.prState })
+  return prPromptValue(tracked.prState, tracked.prUrl)
 }
 
 /** A fresh tab for the ticket's column, with the prompt queued for once the CLI is up, made the tab the queue runner drains. */
@@ -201,7 +201,7 @@ function openColumnTab(ticket: SdlcTicket, project: Project, worktree: WorktreeI
 
 async function renderPrompt(template: string, ticket: SdlcTicket, project: Project, worktree: WorktreeInfo): Promise<string> {
   const diff = promptUsesVariable(template, 'diff') ? await diffForReview(worktree, project) : ''
-  const pr = promptUsesVariable(template, 'pr') ? await prForPrompt(worktree) : ''
+  const pr = promptUsesVariable(template, 'pr') ? await prForPrompt(ticket, worktree) : ''
   return interpolatePrompt(template, promptVariables(ticket, project, worktree, diff, pr))
 }
 

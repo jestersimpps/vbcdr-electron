@@ -4,6 +4,7 @@ import {
   conflictResolutionInstruction,
   interpolatePrompt,
   promptSegments,
+  prPromptValue,
   type SdlcPromptVariables
 } from './llm-instructions'
 
@@ -14,7 +15,7 @@ const VARS: SdlcPromptVariables = {
   worktreePath: '/repo/.worktrees/llm/add-auth',
   projectPath: '/repo',
   diff: '(none)',
-  pr: 'https://github.com/o/r/pull/7 (open)',
+  pr: 'open: https://github.com/o/r/pull/7',
   outputs: { planning: '1. do it', 'security-audit': 'no findings' }
 }
 
@@ -24,10 +25,8 @@ describe('interpolatePrompt', () => {
     expect(out).toBe('Add auth on llm/add-auth in /repo/.worktrees/llm/add-auth (/repo): 1. do it / (none)')
   })
 
-  it('substitutes the pull request', () => {
-    expect(interpolatePrompt('if {{pr}} already exists, stop', VARS)).toBe(
-      'if https://github.com/o/r/pull/7 (open) already exists, stop'
-    )
+  it('substitutes the pull request status', () => {
+    expect(interpolatePrompt('PR: {{pr}}', VARS)).toBe('PR: open: https://github.com/o/r/pull/7')
   })
 
   it('reads an earlier column by its id, dashes included', () => {
@@ -49,6 +48,19 @@ describe('interpolatePrompt', () => {
 
   it('does not touch the single-brace close-workflow syntax', () => {
     expect(interpolatePrompt('push {branch}', VARS)).toBe('push {branch}')
+  })
+})
+
+describe('prPromptValue', () => {
+  it('leads with the state and follows with the link', () => {
+    expect(prPromptValue('open', 'https://x/pull/1')).toBe('open: https://x/pull/1')
+    expect(prPromptValue('merged', 'https://x/pull/1')).toBe('merged: https://x/pull/1')
+    expect(prPromptValue('closed', 'https://x/pull/1')).toBe('closed without merging: https://x/pull/1')
+  })
+
+  it('says plainly when there is no pull request or gh cannot tell', () => {
+    expect(prPromptValue('none', null)).toMatch(/^none/)
+    expect(prPromptValue('unknown', null)).toMatch(/^unknown/)
   })
 })
 
