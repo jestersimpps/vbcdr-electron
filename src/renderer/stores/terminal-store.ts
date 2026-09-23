@@ -4,7 +4,7 @@ import type { TerminalTab, WorktreeInfo } from '@/models/types'
 import { isSdlcTab, type TabProfileMeta } from '@/config/terminal-profiles'
 import { LLM_PROVIDERS, type LlmProviderId } from '@/config/llm-provider-registry'
 import { findColumn } from '@/models/sdlc-flow'
-import type { SdlcStage } from '@/models/sdlc'
+import type { SdlcTicket } from '@/models/sdlc'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
@@ -51,8 +51,8 @@ function isDescriptiveTitle(title: string): boolean {
   return !PRODUCT_NAMES.has(trimmed.toLowerCase().replace(/[^a-z0-9]/g, ''))
 }
 
-function stageLabelFor(stage: SdlcStage): string {
-  return findColumn(sdlcColumns(), stage)?.label ?? stage
+function stageLabelFor(ticket: SdlcTicket): string {
+  return findColumn(sdlcColumns(ticket.projectId), ticket.stage)?.label ?? ticket.stage
 }
 
 /**
@@ -277,7 +277,7 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       : undefined
     // The agent's own title is the best ticket title we get; the tab keeps its stage prefix.
     const ticketTitle = ticket ? cleanAgentTitle(title) : title
-    const tabTitle = ticket ? `${stageLabelFor(ticket.stage)} · ${title}` : title
+    const tabTitle = ticket ? `${stageLabelFor(ticket)} · ${title}` : title
     if (ticket) useSdlcStore.getState().patchTicket(ticket.id, { title: ticketTitle })
     set((state) => ({
       tabs: state.tabs.map((t) => (t.id === tabId ? { ...t, title: tabTitle } : t))

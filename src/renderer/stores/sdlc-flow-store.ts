@@ -1,24 +1,36 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
+  DEFAULT_FLOW_ID,
   columnIdFrom,
   defaultSdlcColumns,
+  defaultSdlcFlow,
+  findFlow,
   isAgentColumn,
   isMiddleColumn,
   newAgentColumn,
   sanitizeColumns,
-  type SdlcColumn
+  sanitizeFlows,
+  type SdlcColumn,
+  type SdlcFlow
 } from '@/models/sdlc-flow'
 
 export type SdlcColumnPatch = Partial<Omit<SdlcColumn, 'id'>>
 
 interface SdlcFlowState {
-  columns: SdlcColumn[]
-  addColumn: (label: string, beforeId: string) => SdlcColumn
-  updateColumn: (id: string, patch: SdlcColumnPatch) => void
-  reorderColumn: (id: string, toIndex: number) => void
-  removeColumn: (id: string) => void
-  resetColumns: () => void
+  flows: SdlcFlow[]
+  /** A missing entry, or one naming a deleted flow, means the default flow. */
+  flowPerProject: Record<string, string>
+  addColumn: (flowId: string, label: string, beforeId: string) => SdlcColumn
+  updateColumn: (flowId: string, id: string, patch: SdlcColumnPatch) => void
+  reorderColumn: (flowId: string, id: string, toIndex: number) => void
+  removeColumn: (flowId: string, id: string) => void
+  resetColumns: (flowId: string) => void
+  saveFlowAs: (fromFlowId: string, name: string) => SdlcFlow
+  renameFlow: (flowId: string, name: string) => void
+  removeFlow: (flowId: string) => void
+  setProjectFlow: (projectId: string, flowId: string) => void
+  removeProjectState: (projectId: string) => void
 }
 
 const LEGACY_PLAN_VARIABLE = /\{\{plan\}\}/g
@@ -28,64 +40,146 @@ export function upgradeLegacyPrompt(prompt: string): string {
   return prompt.replace(LEGACY_PLAN_VARIABLE, '{{output.planning}}')
 }
 
+function withColumns(
+  flows: readonly SdlcFlow[],
+  flowId: string,
+  update: (columns: SdlcColumn[]) => SdlcColumn[]
+): SdlcFlow[] {
+  return flows.map((f) => (f.id === flowId ? { ...f, columns: update(f.columns) } : f))
+}
+
+export function projectFlow(state: Pick<SdlcFlowState, 'flows' | 'flowPerProject'>, projectId: string): SdlcFlow {
+  const chosen = state.flowPerProject[projectId]
+  return (chosen && findFlow(state.flows, chosen)) || state.flows[0]
+}
+
+interface StoredFlowState {
+  flows?: unknown
+  flowPerProject?: Record<string, string>
+  /** One global flow was all there was before flows could be saved. */
+  columns?: unknown
+}
+
+function storedFlows(incoming: StoredFlowState): SdlcFlow[] {
+  if (incoming.flows) return sanitizeFlows(incoming.flows)
+  if (incoming.columns) return [{ ...defaultSdlcFlow(), columns: sanitizeColumns(incoming.columns) }]
+  return [defaultSdlcFlow()]
+}
+
 export const useSdlcFlowStore = create<SdlcFlowState>()(
   persist(
     (set, get) => ({
-      columns: defaultSdlcColumns(),
+      flows: [defaultSdlcFlow()],
+      flowPerProject: {},
 
-      addColumn: (label: string, beforeId: string) => {
-        const { columns } = get()
+      addColumn: (flowId: string, label: string, beforeId: string) => {
+        const columns = findFlow(get().flows, flowId)?.columns ?? []
         const name = label.trim() || 'New column'
         const found = columns.findIndex((c) => c.id === beforeId)
         const index = Math.min(Math.max(found < 0 ? columns.length - 1 : found, 1), columns.length - 1)
         const earlier = columns.slice(0, index).filter(isAgentColumn)
         const column = newAgentColumn(columnIdFrom(name, columns.map((c) => c.id)), name, earlier)
-        set({ columns: [...columns.slice(0, index), column, ...columns.slice(index)] })
+        set((state) => ({
+          flows: withColumns(state.flows, flowId, (current) => [
+            ...current.slice(0, index),
+            column,
+            ...current.slice(index)
+          ])
+        }))
         return column
       },
 
-      updateColumn: (id: string, patch: SdlcColumnPatch) => {
+      updateColumn: (flowId: string, id: string, patch: SdlcColumnPatch) => {
         set((state) => ({
-          columns: sanitizeColumns(state.columns.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+          flows: withColumns(state.flows, flowId, (columns) =>
+            sanitizeColumns(columns.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+          )
         }))
       },
 
-      reorderColumn: (id: string, toIndex: number) => {
-        set((state) => {
-          const from = state.columns.findIndex((c) => c.id === id)
-          if (from === toIndex || !isMiddleColumn(state.columns, from) || !isMiddleColumn(state.columns, toIndex)) {
-            return state
-          }
-          const columns = [...state.columns]
-          const [moved] = columns.splice(from, 1)
-          columns.splice(toIndex, 0, moved)
-          return { columns }
-        })
+      reorderColumn: (flowId: string, id: string, toIndex: number) => {
+        set((state) => ({
+          flows: withColumns(state.flows, flowId, (current) => {
+            const from = current.findIndex((c) => c.id === id)
+            if (from === toIndex || !isMiddleColumn(current, from) || !isMiddleColumn(current, toIndex)) {
+              return current
+            }
+            const columns = [...current]
+            const [moved] = columns.splice(from, 1)
+            columns.splice(toIndex, 0, moved)
+            return columns
+          })
+        }))
       },
 
-      removeColumn: (id: string) => {
-        set((state) => {
-          const index = state.columns.findIndex((c) => c.id === id)
-          if (!isMiddleColumn(state.columns, index)) return state
-          return { columns: state.columns.filter((c) => c.id !== id) }
-        })
+      removeColumn: (flowId: string, id: string) => {
+        set((state) => ({
+          flows: withColumns(state.flows, flowId, (columns) => {
+            const index = columns.findIndex((c) => c.id === id)
+            if (!isMiddleColumn(columns, index)) return columns
+            return columns.filter((c) => c.id !== id)
+          })
+        }))
       },
 
-      resetColumns: () => {
-        set({ columns: defaultSdlcColumns() })
+      resetColumns: (flowId: string) => {
+        set((state) => ({ flows: withColumns(state.flows, flowId, () => defaultSdlcColumns()) }))
+      },
+
+      saveFlowAs: (fromFlowId: string, name: string) => {
+        const { flows } = get()
+        const label = name.trim() || 'New flow'
+        const source = findFlow(flows, fromFlowId) ?? flows[0]
+        const flow: SdlcFlow = {
+          id: columnIdFrom(label, flows.map((f) => f.id)),
+          name: label,
+          columns: source.columns.map((c) => ({ ...c }))
+        }
+        set({ flows: [...flows, flow] })
+        return flow
+      },
+
+      renameFlow: (flowId: string, name: string) => {
+        set((state) => ({ flows: state.flows.map((f) => (f.id === flowId ? { ...f, name } : f)) }))
+      },
+
+      removeFlow: (flowId: string) => {
+        if (flowId === DEFAULT_FLOW_ID) return
+        set((state) => ({
+          flows: state.flows.filter((f) => f.id !== flowId),
+          flowPerProject: Object.fromEntries(
+            Object.entries(state.flowPerProject).filter(([, chosen]) => chosen !== flowId)
+          )
+        }))
+      },
+
+      setProjectFlow: (projectId: string, flowId: string) => {
+        set((state) => ({ flowPerProject: { ...state.flowPerProject, [projectId]: flowId } }))
+      },
+
+      removeProjectState: (projectId: string) => {
+        set((state) => {
+          const flowPerProject = { ...state.flowPerProject }
+          delete flowPerProject[projectId]
+          return { flowPerProject }
+        })
       }
     }),
     {
       name: 'vbcdr-sdlc-flow',
-      partialize: (state) => ({ columns: state.columns }),
+      partialize: (state) => ({ flows: state.flows, flowPerProject: state.flowPerProject }),
       merge: (persisted, current) => {
-        const incoming = (persisted ?? {}) as Partial<SdlcFlowState>
-        return { ...current, columns: incoming.columns ? sanitizeColumns(incoming.columns) : current.columns }
+        const incoming = (persisted ?? {}) as StoredFlowState
+        return { ...current, flows: storedFlows(incoming), flowPerProject: incoming.flowPerProject ?? {} }
       }
     }
   )
 )
 
-export function sdlcColumns(): SdlcColumn[] {
-  return useSdlcFlowStore.getState().columns
+export function sdlcColumns(projectId: string): SdlcColumn[] {
+  return projectFlow(useSdlcFlowStore.getState(), projectId).columns
+}
+
+export function useProjectColumns(projectId: string): SdlcColumn[] {
+  return useSdlcFlowStore((s) => projectFlow(s, projectId).columns)
 }

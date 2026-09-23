@@ -14,6 +14,16 @@ export interface SdlcColumn {
   outputFile: string | null
 }
 
+/** A saved flow: projects pick one, and editing it changes the board of every project that uses it. */
+export interface SdlcFlow {
+  id: string
+  name: string
+  columns: SdlcColumn[]
+}
+
+/** The flow every project uses until it picks another. It always exists, so it cannot be deleted. */
+export const DEFAULT_FLOW_ID = 'default'
+
 /** A column runs in a fresh worktree whose gitignored settings never carry the project's permission mode, so it would stop on its first tool call. */
 export const DEFAULT_AGENT_COMMAND = 'claude --permission-mode bypassPermissions'
 
@@ -82,6 +92,10 @@ export function defaultSdlcColumns(): SdlcColumn[] {
     build,
     { ...build, id: 'done', label: 'Done', kind: 'terminal', prompt: DONE_COLUMN_PROMPT }
   ]
+}
+
+export function defaultSdlcFlow(): SdlcFlow {
+  return { id: DEFAULT_FLOW_ID, name: 'Default', columns: defaultSdlcColumns() }
 }
 
 /** `earlier` is the agent columns to its left, whose results the new column's prompt reads. */
@@ -194,4 +208,29 @@ export function sanitizeColumns(value: unknown): SdlcColumn[] {
         }
       : column
   )
+}
+
+function sanitizeFlow(value: unknown): SdlcFlow | null {
+  const raw = (value ?? {}) as Partial<SdlcFlow>
+  if (typeof raw.id !== 'string' || !raw.id) return null
+  return {
+    id: raw.id,
+    name: typeof raw.name === 'string' && raw.name.trim() ? raw.name : raw.id,
+    columns: sanitizeColumns(raw.columns)
+  }
+}
+
+/** The default flow is what a project without a choice falls back to, so a stored list without it gets it back first. */
+export function sanitizeFlows(value: unknown): SdlcFlow[] {
+  const seen = new Set<string>()
+  const flows = (Array.isArray(value) ? value : [])
+    .map(sanitizeFlow)
+    .filter((f): f is SdlcFlow => f !== null)
+    .filter((f) => (seen.has(f.id) ? false : !!seen.add(f.id)))
+  const fallback = flows.find((f) => f.id === DEFAULT_FLOW_ID) ?? defaultSdlcFlow()
+  return [fallback, ...flows.filter((f) => f.id !== DEFAULT_FLOW_ID)]
+}
+
+export function findFlow(flows: readonly SdlcFlow[], id: string): SdlcFlow | undefined {
+  return flows.find((f) => f.id === id)
 }

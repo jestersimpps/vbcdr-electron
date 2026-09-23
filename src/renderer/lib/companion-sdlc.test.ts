@@ -37,7 +37,7 @@ const ticket = (over: Partial<SdlcTicket> = {}): SdlcTicket => ({
 })
 
 const texts = (before: SdlcTicket[], after: SdlcTicket[]): string[] =>
-  sdlcAnnouncements(before, after, COLUMNS, projectName).map((a) => a.text)
+  sdlcAnnouncements(before, after, () => COLUMNS, projectName).map((a) => a.text)
 
 describe('sdlcAnnouncements', () => {
   it('announces the flow starting when a ticket leaves the first column', () => {
@@ -47,7 +47,7 @@ describe('sdlcAnnouncements', () => {
   it('names the next agent column for a move further along', () => {
     const review = { ...COLUMNS[1], id: 'review', label: 'Review' }
     const columns = [COLUMNS[0], COLUMNS[1], review, COLUMNS[2]]
-    const moved = sdlcAnnouncements([ticket({ stage: 'build' })], [ticket({ stage: 'review' })], columns, projectName)
+    const moved = sdlcAnnouncements([ticket({ stage: 'build' })], [ticket({ stage: 'review' })], () => columns, projectName)
     expect(moved.map((a) => a.text)).toEqual(['"Add a scoreboard" in vbcdr is on to Review now'])
   })
 
@@ -87,7 +87,7 @@ describe('sdlcAnnouncements', () => {
 
   it('speaks up when a ticket becomes blocked, without reading out the reason', () => {
     const stuck = ticket({ stage: 'done', blockedReason: 'Could not keep the work on branch llm/x: timed out' })
-    const announced = sdlcAnnouncements([ticket({ stage: 'done' })], [stuck], COLUMNS, projectName)
+    const announced = sdlcAnnouncements([ticket({ stage: 'done' })], [stuck], () => COLUMNS, projectName)
     expect(announced).toEqual([{ emote: 'hurt', text: 'heads up, "Add a scoreboard" in vbcdr is blocked and needs you' }])
   })
 
