@@ -95,6 +95,36 @@ function removeTicket(ticket: SdlcTicket, place: TicketPlace): void {
   else void discardTicket(ticket.id)
 }
 
+function AccentButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>): React.ReactElement {
+  const accent = useAccent()
+  return (
+    <button
+      {...props}
+      className="flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+      style={{ borderColor: accent, color: accent }}
+    />
+  )
+}
+
+function prLabel(url: string): string {
+  const number = url.match(/\/pull\/(\d+)/)?.[1]
+  return number ? `PR #${number}` : 'PR'
+}
+
+function PrLink({ url }: { url: string }): React.ReactElement {
+  return (
+    <button
+      onClick={() => window.api.worktrees.openUrl(url)}
+      className="flex items-center gap-0.5 rounded px-1 text-micro text-sky-400 transition-colors hover:bg-zinc-800 hover:text-sky-300"
+      title={url}
+      aria-label={`Open the pull request ${url}`}
+    >
+      <ExternalLink size={9} />
+      {prLabel(url)}
+    </button>
+  )
+}
+
 function TicketActions({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace }): React.ReactElement {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const stalled = ticket.status === 'blocked' || ticket.status === 'failed'
@@ -147,7 +177,6 @@ function TicketActions({ ticket, place }: { ticket: SdlcTicket; place: TicketPla
 function TicketCard({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace }): React.ReactElement {
   const hasDiff = ticket.filesChanged > 0
   const hasTab = useTerminalStore((s) => !!ticket.tabId && s.tabs.some((t) => t.id === ticket.tabId))
-  const accent = useAccent()
   return (
     <div className="w-full rounded-md border border-zinc-800 bg-zinc-900/60 p-2 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-900">
       <div className="mb-1.5 line-clamp-2 text-xs font-medium leading-snug text-zinc-200">{ticket.title}</div>
@@ -199,24 +228,22 @@ function TicketCard({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace 
               <span className="text-red-500">-{ticket.linesRemoved}</span>
             </span>
           )}
-          {ticket.prUrl && <ExternalLink size={10} className="text-zinc-600" />}
+          {ticket.prUrl && <PrLink url={ticket.prUrl} />}
         </div>
       </div>
 
       <div className="mt-1.5 flex items-end justify-between gap-2">
         <span className="text-micro text-zinc-600">{relativeTime(ticket.updatedAt)}</span>
         {ticket.tabId && (
-          <button
+          <AccentButton
             onClick={() => focusTicketTab(ticket)}
             disabled={!hasTab}
-            className="flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ borderColor: accent, color: accent }}
             title={hasTab ? 'Switch to the agent tab' : 'The agent tab is no longer open. Run the stage again.'}
             aria-label={`Open the agent tab for ${ticket.title}`}
           >
             <Terminal size={13} />
             Open tab
-          </button>
+          </AccentButton>
         )}
       </div>
 
