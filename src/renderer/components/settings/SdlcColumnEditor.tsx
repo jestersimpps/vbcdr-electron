@@ -101,6 +101,7 @@ function AgentSettings({
         <StagePromptField
           key={column.id}
           column={column}
+          columns={columns}
           resolution={{ text: column.prompt, overridden: column.prompt !== defaultPrompt }}
           mode="global"
           onChange={(prompt) => onPatch({ prompt })}

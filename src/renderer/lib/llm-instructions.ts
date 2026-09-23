@@ -1,3 +1,5 @@
+import type { SdlcPromptSegment } from '@/models/sdlc-prompts'
+
 export function conflictResolutionInstruction(paths: string[]): string {
   const files = paths.join(', ')
   return `Resolve the merge conflicts in these files: ${files}. Read each file, understand both sides, and apply the correct resolution. Then mark them as resolved with git add.`
@@ -31,6 +33,20 @@ function promptValue(key: string, vars: SdlcPromptVariables): string | undefined
   return (SDLC_PROMPT_VARIABLES as readonly string[]).includes(key)
     ? vars[key as (typeof SDLC_PROMPT_VARIABLES)[number]]
     : undefined
+}
+
+/** Splits a template so an editor can colour the tokens `interpolatePrompt` would fill and flag the ones it would leave verbatim. */
+export function promptSegments(template: string, available: readonly string[]): SdlcPromptSegment[] {
+  const segments: SdlcPromptSegment[] = []
+  let last = 0
+  for (const match of template.matchAll(PROMPT_VARIABLE)) {
+    const start = match.index ?? 0
+    if (start > last) segments.push({ text: template.slice(last, start) })
+    segments.push({ text: match[0], variable: available.includes(match[1]) ? 'known' : 'unknown' })
+    last = start + match[0].length
+  }
+  if (last < template.length) segments.push({ text: template.slice(last) })
+  return segments
 }
 
 export function promptUsesVariable(template: string, name: string): boolean {

@@ -3,6 +3,7 @@ import {
   closeWorkflowInstruction,
   conflictResolutionInstruction,
   interpolatePrompt,
+  promptSegments,
   type SdlcPromptVariables
 } from './llm-instructions'
 
@@ -60,5 +61,23 @@ describe('llm-instructions', () => {
 
   it('substitutes every {branch} placeholder', () => {
     expect(closeWorkflowInstruction('push {branch}, then PR {branch}', 'llm/x')).toBe('push llm/x, then PR llm/x')
+  })
+})
+
+describe('promptSegments', () => {
+  it('splits known and unknown variables out of the surrounding text', () => {
+    expect(promptSegments('Fix {{title}} on {{brnch}}\n{{output.planning}}', ['title', 'output.planning'])).toEqual([
+      { text: 'Fix ' },
+      { text: '{{title}}', variable: 'known' },
+      { text: ' on ' },
+      { text: '{{brnch}}', variable: 'unknown' },
+      { text: '\n' },
+      { text: '{{output.planning}}', variable: 'known' }
+    ])
+  })
+
+  it('returns plain text untouched and nothing for an empty prompt', () => {
+    expect(promptSegments('no tokens {here}', ['title'])).toEqual([{ text: 'no tokens {here}' }])
+    expect(promptSegments('', ['title'])).toEqual([])
   })
 })
