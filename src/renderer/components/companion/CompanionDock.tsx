@@ -5,63 +5,44 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { useVoiceStore, type MicStatus } from '@/services/voice/voice-controller'
 import { createCompanionStage, type CompanionMood, type CompanionStage } from './companion-stage'
 import { GESTURES, IDLE_GESTURES, type CompanionGesture } from './companion-gestures'
-import { CompanionMarkerScanner } from '@/lib/companion-marker'
 import { speak, stopSpeech, onSpeechLevel } from '@/lib/companion-speech'
-import { CompanionMatcher } from '@/lib/companion-triggers'
-import { CompanionLineFeed } from '@/lib/companion-buffer-lines'
-import { onCompanionRows } from '@/lib/companion-buffer-feed'
-import {
-  renderLine,
-  ProjectVoice,
-  projectNameForTab,
-  activeProjectName
-} from '@/lib/companion-attribution'
-import type { CompanionEmote, CompanionLine } from '@/config/companion-trigger-registry'
-import { playSound } from '@/lib/sound'
+import { CompanionPoker } from '@/lib/companion-poke'
+import { sdlcAnnouncements } from '@/lib/companion-sdlc'
+import { renderLine, ProjectVoice, projectNameFor, activeProjectName } from '@/lib/companion-attribution'
+import { useSdlcStore } from '@/stores/sdlc-store'
+import { sdlcColumns } from '@/stores/sdlc-flow-store'
+import type { CompanionEmote } from '@/models/companion'
 
 const COMPANION_DEMO = false
 const BUBBLE_MS = 6000
 
 const GESTURE_BY_EMOTE: Record<CompanionEmote, CompanionGesture> = {
   thinking: 'consider',
-  reading: 'thinkingAside',
-  writing: 'acknowledge',
-  searching: 'thinkingAside',
   running: 'acknowledge',
   happy: 'affirm',
   proud: 'affirm',
   confused: 'wince',
   hurt: 'wince',
-  sheepish: 'wince',
-  waiting: 'perkUp',
-  sleeping: 'consider'
+  waiting: 'perkUp'
 }
 
 /**
- * What she settles into while the agent works, held for a few seconds after a
- * trigger fires. The gesture is the reaction; this is the mood it leaves her in.
+ * What she settles into after a line, held for a few seconds. The gesture is
+ * the reaction; this is the mood it leaves her in.
  */
 const MOOD_BY_EMOTE: Record<CompanionEmote, CompanionMood> = {
   thinking: 'thinking',
-  reading: 'attentive',
-  writing: 'busy',
-  searching: 'thinking',
   running: 'busy',
   happy: 'attentive',
   proud: 'attentive',
   confused: 'error',
   hurt: 'error',
-  sheepish: 'error',
-  waiting: 'attentive',
-  sleeping: 'idle'
+  waiting: 'attentive'
 }
 
 const EMOTE_MOOD_MS = 6000
 
-/**
- * How long nothing may happen before she fidgets. Read off the matcher's own
- * quiet clock, so a fidget never lands on top of a line that just fired.
- */
+/** How long nothing may happen before she fidgets. */
 const IDLE_AFTER_MS = 5000
 /** Well under the gap, or the tick rounds a 5s fidget up to the next poll. */
 const IDLE_POLL_MS = 1000
@@ -73,13 +54,19 @@ function nextIdleGap(): number {
   return IDLE_GAP_MIN_MS + Math.random() * (IDLE_GAP_MAX_MS - IDLE_GAP_MIN_MS)
 }
 
-/**
- * How long the agent must produce nothing before she says so out loud. Long
- * enough that a slow build or a long thinking pause is not mistaken for the run
- * being over, since saying "done" mid-task is worse than saying nothing.
- */
-const IDLE_SPEECH_AFTER_MS = 45_000
-const IDLE_SPEECH_POLL_MS = 5000
+/** Several tickets can move at once; each line stays up at least this long so none is lost to the next. */
+const MIN_LINE_MS = 3000
+/** A column deleted under a full board moves every ticket in it; past this, the oldest lines are dropped. */
+const MAX_QUEUED_LINES = 8
+
+interface Utterance {
+  text: string
+  emote: CompanionEmote
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 const MOOD_BY_MIC: Record<MicStatus, CompanionMood> = {
   off: 'idle',
@@ -141,19 +128,12 @@ export function CompanionDock(): React.ReactElement {
   }, [micStatus])
 
   useEffect(() => {
-    const scanner = new CompanionMarkerScanner()
-    const matcher = new CompanionMatcher()
-    const feed = new CompanionLineFeed()
+    const poker = new CompanionPoker()
     const voice = new ProjectVoice()
-    // Hard backstop, independent of source: the prompt tells the LLM not to
-    // repeat a marker line, and nextFrom() only dodges an immediate re-pick
-    // for the registry side — neither stops the same exact line from landing
-    // twice via a different path (marker vs. regex match) or a stale pick.
-    // This is keyed on the bare text so it catches every caller of say().
-    const recentLines = new Map<string, number>()
-    const RECENT_LINE_MS = 5 * 60_000
-    /** When the agent last produced anything. 0 until it first does. */
-    let sawOutput = 0
+    const queue: Utterance[] = []
+    let draining = false
+    let disposed = false
+    let lastSpokeAt = -Infinity
 
     const feelEmote = (emote: CompanionEmote): void => {
       stageRef.current?.setMood(MOOD_BY_EMOTE[emote])
@@ -164,116 +144,59 @@ export function CompanionDock(): React.ReactElement {
       }, EMOTE_MOOD_MS)
     }
 
-    /**
-     * Two agents run side by side and she speaks for both, so a line has to say
-     * whose work it is. The voice decides when that is worth doing: naming the
-     * project on every utterance turns the name into the loudest part of it.
-     */
-    const say = (
-      phrase: CompanionLine,
-      gesture: CompanionGesture | null,
-      project: string | null,
-      soundId?: string
-    ): void => {
-      const key = phrase.bare.trim().toLowerCase()
-      const now = Date.now()
-      if (key) {
-        const last = recentLines.get(key)
-        if (last !== undefined && now - last < RECENT_LINE_MS) return
-        recentLines.set(key, now)
-      }
-      if (gesture) stageRef.current?.playGesture(gesture)
-      if (soundId) playSound(soundId)
-      const line = renderLine(phrase, voice.nameFor(project))
-      setBubble(line)
+    const deliver = async ({ text, emote }: Utterance): Promise<void> => {
+      lastSpokeAt = Date.now()
+      feelEmote(emote)
+      stageRef.current?.playGesture(GESTURE_BY_EMOTE[emote])
+      setBubble(text)
       if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current)
       bubbleTimerRef.current = setTimeout(() => setBubble(null), BUBBLE_MS)
       const { companionSpeechEnabled, companionVoiceId } = useLayoutStore.getState()
-      if (companionSpeechEnabled) void speak(line, companionVoiceId)
+      await Promise.all([companionSpeechEnabled ? speak(text, companionVoiceId) : undefined, wait(MIN_LINE_MS)])
     }
 
-    const unsubMarkers = window.api.terminal.onData((tabId: string, data: string) => {
-      for (const marker of scanner.push(data)) {
-        sawOutput = Date.now()
-        // An authored line always wins, and buys silence from the regex side.
-        matcher.suppress()
-        if (marker.gesture) stageRef.current?.playGesture(marker.gesture)
-        if (!marker.text) continue
-        // The agent wrote this one itself, so there is no authored second
-        // phrasing to pick from. Naming the project after it keeps the
-        // attribution without touching the sentence she was given.
-        say(
-          { bare: marker.text, named: `${marker.text}, in {project}` },
-          marker.gesture,
-          projectNameForTab(tabId)
-        )
-      }
-    })
+    const drain = async (): Promise<void> => {
+      if (draining) return
+      draining = true
+      while (queue.length > 0 && !disposed) await deliver(queue.shift()!)
+      draining = false
+    }
 
-    const unsubRows = onCompanionRows((tabId: string, rows: string[]) => {
-      for (const line of feed.push(tabId, rows)) {
-        const reaction = matcher.match(line)
-        if (!reaction) continue
-        sawOutput = Date.now()
-        feelEmote(reaction.emote)
-        // Below the chattiness floor she reacts without narrating: the gesture
-        // and the mood still land, the bubble and the voice do not.
-        if (reaction.silent) {
-          stageRef.current?.playGesture(GESTURE_BY_EMOTE[reaction.emote])
-          continue
-        }
-        say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], projectNameForTab(tabId), reaction.soundId)
-        // One line per tick, except an attention line: the prompt usually lands
-        // last in the tick, so breaking on the tool chatter above it would drop
-        // the one line that actually needed saying.
-        if (!reaction.attention) break
+    const say = (utterance: Utterance): void => {
+      queue.push(utterance)
+      if (queue.length > MAX_QUEUED_LINES) queue.splice(0, queue.length - MAX_QUEUED_LINES)
+      void drain()
+    }
+
+    const unsubSdlc = useSdlcStore.subscribe((state, previous) => {
+      if (state.tickets === previous.tickets) return
+      for (const announcement of sdlcAnnouncements(previous.tickets, state.tickets, sdlcColumns(), projectNameFor)) {
+        say(announcement)
       }
     })
 
     pokeRef.current = () => {
-      const reaction = matcher.poke()
-      feelEmote(reaction.emote)
-      say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], activeProjectName())
+      const reaction = poker.poke()
+      say({ text: renderLine(reaction.line, voice.nameFor(activeProjectName())), emote: reaction.emote })
     }
 
     // Silent on purpose: no bubble, no speech, no mood change. She is just not
-    // a statue between tasks. The matcher's quiet clock starts at -Infinity, so
-    // the mount time floors it and she does not fidget the instant she loads.
+    // a statue between tickets. The mount time floors the quiet clock so she
+    // does not fidget the instant she loads.
     const mountedAt = Date.now()
     let idleDue = nextIdleGap()
     const idleTimer = setInterval(() => {
-      if (pausedRef.current) return
-      const quiet = Math.min(matcher.quietForMs(), Date.now() - mountedAt)
+      if (pausedRef.current || draining) return
+      const quiet = Date.now() - Math.max(lastSpokeAt, mountedAt)
       if (quiet < IDLE_AFTER_MS || quiet < idleDue) return
       idleDue = quiet + nextIdleGap()
       stageRef.current?.playGesture(IDLE_GESTURES[Math.floor(Math.random() * IDLE_GESTURES.length)])
     }, IDLE_POLL_MS)
 
-    // The run going quiet is the other thing worth interrupting for, and it is
-    // the absence of output rather than a line of it, so no pattern can catch
-    // it. Measured from the last row the agent produced, not from the last time
-    // she spoke: staying quiet under a low chattiness floor is not the agent
-    // being done. Fires once per lull, since sawOutput only moves on new output.
-    const idleSpeechTimer = setInterval(() => {
-      if (pausedRef.current || sawOutput === 0) return
-      if (Date.now() - sawOutput < IDLE_SPEECH_AFTER_MS) return
-      const reaction = matcher.idleLine()
-      if (!reaction) return
-      feelEmote(reaction.emote)
-      say(reaction.line, GESTURE_BY_EMOTE[reaction.emote], activeProjectName(), reaction.soundId)
-    }, IDLE_SPEECH_POLL_MS)
-
-    const unsubChattiness = useLayoutStore.subscribe((s) =>
-      matcher.setChattiness(s.companionChattiness)
-    )
-    matcher.setChattiness(useLayoutStore.getState().companionChattiness)
-
     return () => {
+      disposed = true
       clearInterval(idleTimer)
-      clearInterval(idleSpeechTimer)
-      unsubChattiness()
-      unsubMarkers()
-      unsubRows()
+      unsubSdlc()
       stopSpeech()
       if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current)
       bubbleTimerRef.current = null

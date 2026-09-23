@@ -1,6 +1,5 @@
-import type { CompanionLine } from '@/config/companion-trigger-registry'
+import type { CompanionLine } from '@/models/companion'
 import { useProjectStore } from '@/stores/project-store'
-import { useTerminalStore, GLOBAL_TERMINAL_OWNER } from '@/stores/terminal-store'
 
 /**
  * How long one project may keep talking before she names it again. A run of
@@ -51,23 +50,11 @@ export class ProjectVoice {
   }
 }
 
-/**
- * Which project produced the line. Resolved from the tab rather than from the
- * active project: a background tab finishing is exactly the case where the name
- * is worth saying, and attributing that to whatever you happen to be looking at
- * would be a lie.
- */
-export function projectNameForTab(tabId: string | null): string | null {
-  if (!tabId) return activeProjectName()
-
-  const tab = useTerminalStore.getState().tabs.find((t) => t.id === tabId)
-  if (!tab || tab.projectId === GLOBAL_TERMINAL_OWNER) return activeProjectName()
-
-  const project = useProjectStore.getState().projects.find((p) => p.id === tab.projectId)
-  return project?.name ?? null
+export function projectNameFor(projectId: string): string | null {
+  return useProjectStore.getState().projects.find((p) => p.id === projectId)?.name ?? null
 }
 
-/** A poke has no originating tab: the click means the project you are looking at. */
+/** A poke has no ticket behind it: the click means the project you are looking at. */
 export function activeProjectName(): string | null {
   return useProjectStore.getState().activeProject()?.name ?? null
 }

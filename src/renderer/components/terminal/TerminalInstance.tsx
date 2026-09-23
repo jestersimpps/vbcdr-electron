@@ -24,7 +24,6 @@ import {
 } from '@/lib/terminal-text'
 import { isTranscriptDriven, unmarkTranscriptDriven } from '@/lib/transcript-driven-tabs'
 import { IMAGE_EXTENSIONS, relativeToCwd, resolveAgainstCwd, shellEscape } from '@/lib/terminal-paths'
-import { emitCompanionRows } from '@/lib/companion-buffer-feed'
 import { ImageThumbnail } from '@/components/terminal/ImageThumbnail'
 
 interface TerminalInstanceProps {
@@ -342,10 +341,7 @@ export function TerminalInstance({ tabId, projectId, cwd, initialCommand }: Term
               const tokens = parseTokenCount(stripAnsi(text))
               if (tokens !== null) latestTokens = tokens
             }
-            if (extracted.length > 0) {
-              useTerminalStore.getState().setOutput(projectId, extracted)
-              emitCompanionRows(tabId, extracted)
-            }
+            if (extracted.length > 0) useTerminalStore.getState().setOutput(projectId, extracted)
             const providerId = providerIdForTab(tabId)
             const usageSupported = capabilitiesFor(providerId).usage
             if (latestTokens !== null && usageSupported && !isTranscriptDriven(tabId)) {

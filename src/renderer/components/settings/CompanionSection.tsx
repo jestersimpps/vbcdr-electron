@@ -2,13 +2,6 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { SectionCard, PrefToggle, useAccent } from '@/components/settings/SettingsControls'
 import { COMPANION_VOICES } from '@/config/companion-voices'
 import { speak } from '@/lib/companion-speech'
-import type { CompanionChattiness } from '@/lib/companion-triggers'
-
-const CHATTINESS_OPTIONS: { id: CompanionChattiness; label: string; note: string }[] = [
-  { id: 'attention', label: 'Essential', note: 'only when she needs you, or has gone quiet' },
-  { id: 'outcome', label: 'Balanced', note: 'that, plus tests, builds and commits' },
-  { id: 'chatter', label: 'Everything', note: 'also narrates each read, search and edit' }
-]
 
 export function CompanionSection(): React.ReactElement {
   const companionEnabled = useLayoutStore((s) => s.companionEnabled)
@@ -17,14 +10,12 @@ export function CompanionSection(): React.ReactElement {
   const setCompanionSpeechEnabled = useLayoutStore((s) => s.setCompanionSpeechEnabled)
   const companionVoiceId = useLayoutStore((s) => s.companionVoiceId)
   const setCompanionVoiceId = useLayoutStore((s) => s.setCompanionVoiceId)
-  const companionChattiness = useLayoutStore((s) => s.companionChattiness)
-  const setCompanionChattiness = useLayoutStore((s) => s.setCompanionChattiness)
   const accent = useAccent()
 
   return (
     <SectionCard
       title="Companion"
-      description="Show an animated character that reacts to what the agent is doing."
+      description="Show an animated character that tells you when an SDLC ticket moves and what the Done prompt did with it."
     >
       <PrefToggle
         label="Show companion"
@@ -33,26 +24,6 @@ export function CompanionSection(): React.ReactElement {
         onToggle={() => setCompanionEnabled(!companionEnabled)}
         accent={accent}
       />
-
-      <div className="flex items-center justify-between gap-2 py-1.5">
-        <div className="min-w-0">
-          <div className="text-body text-zinc-200">Chattiness</div>
-          <div className="text-micro text-zinc-500">
-            What she speaks up for. She still reacts to everything, quietly.
-          </div>
-        </div>
-        <select
-          value={companionChattiness}
-          onChange={(e) => setCompanionChattiness(e.target.value as CompanionChattiness)}
-          className="shrink-0 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-meta text-zinc-200 outline-none focus:border-zinc-600"
-        >
-          {CHATTINESS_OPTIONS.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.label} — {o.note}
-            </option>
-          ))}
-        </select>
-      </div>
 
       <PrefToggle
         label="Speak out loud"
