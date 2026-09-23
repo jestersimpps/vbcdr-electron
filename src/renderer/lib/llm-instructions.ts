@@ -1,3 +1,5 @@
+import type { PrState } from '@/models/types'
+
 export function conflictResolutionInstruction(paths: string[]): string {
   const files = paths.join(', ')
   return `Resolve the merge conflicts in these files: ${files}. Read each file, understand both sides, and apply the correct resolution. Then mark them as resolved with git add.`
@@ -14,13 +16,31 @@ export interface SdlcPromptVariables {
   worktreePath: string
   projectPath: string
   diff: string
+  pr: string
   /** Earlier columns' results, read as `{{output.<columnId>}}`. */
   outputs: Record<string, string>
 }
 
-export const SDLC_PROMPT_VARIABLES = ['title', 'description', 'branch', 'worktreePath', 'projectPath', 'diff'] as const
+export const SDLC_PROMPT_VARIABLES = ['title', 'description', 'branch', 'worktreePath', 'projectPath', 'diff', 'pr'] as const
 
 export const OUTPUT_VARIABLE_PREFIX = 'output.'
+
+/** Written for the agent to branch on, so every state reads as a plain statement with the link where there is one. */
+export function prPromptValue(state: PrState, url: string | null): string {
+  const link = url ? `: ${url}` : ''
+  switch (state) {
+    case 'open':
+      return `open${link}`
+    case 'merged':
+      return `merged${link}`
+    case 'closed':
+      return `closed without merging${link}`
+    case 'none':
+      return 'none, no pull request exists for this branch yet'
+    default:
+      return 'unknown, the GitHub CLI (gh) could not report on this branch'
+  }
+}
 
 const PROMPT_VARIABLE = /\{\{([\w.-]+)\}\}/g
 

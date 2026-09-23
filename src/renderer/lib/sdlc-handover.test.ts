@@ -497,6 +497,24 @@ describe('custom columns', () => {
     expect(window.api.git.diffSummary).toHaveBeenCalled()
   })
 
+  it('only asks gh about the pull request for a prompt that reads {{pr}}, and puts the link on the card', async () => {
+    const refresh = vi.mocked(window.api.worktrees.refresh)
+    refresh.mockClear()
+    await handOffStage(current(), project)
+    expect(refresh).not.toHaveBeenCalled()
+
+    useSdlcFlowStore.getState().updateColumn('review', { prompt: 'PR is {{pr}}' })
+    refresh.mockResolvedValue(trackedWorktree({ prUrl: 'https://github.com/o/r/pull/7', prState: 'open' }))
+    useSdlcStore.setState({ tickets: [ticket({ stage: 'review' })] })
+    const result = await handOffStage(current(), project)
+
+    expect(refresh).toHaveBeenCalledWith('wt1')
+    expect(useQueueStore.getState().itemsPerTab[result!.tabId][0].text).toContain(
+      'PR is open: https://github.com/o/r/pull/7'
+    )
+    expect(current().prUrl).toBe('https://github.com/o/r/pull/7')
+  })
+
   it('stores the result under the column id and saves it where the column says', async () => {
     const audit = addAudit()
     useSdlcStore.setState({ tickets: [ticket({ stage: 'implementing' })] })
