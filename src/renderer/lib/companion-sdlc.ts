@@ -60,7 +60,7 @@ function moveAnnouncement(before: SdlcTicket, after: SdlcTicket, columns: readon
 export function sdlcAnnouncements(
   previous: readonly SdlcTicket[],
   next: readonly SdlcTicket[],
-  columns: readonly SdlcColumn[],
+  columnsFor: (projectId: string) => readonly SdlcColumn[],
   projectName: ProjectNameLookup
 ): CompanionAnnouncement[] {
   const before = new Map(previous.map((t) => [t.id, t]))
@@ -75,7 +75,7 @@ export function sdlcAnnouncements(
     if (after.blockedReason && after.blockedReason !== prior.blockedReason) {
       out.push({ emote: 'hurt', text: `heads up, ${who} is blocked and needs you` })
     }
-    if (prior.stage !== after.stage) out.push(moveAnnouncement(prior, after, columns, who))
+    if (prior.stage !== after.stage) out.push(moveAnnouncement(prior, after, columnsFor(after.projectId), who))
     if (after.doneActionAt && after.doneActionAt !== prior.doneActionAt) {
       out.push({ emote: 'thinking', text: doneActionText(after.doneActionBy, who) })
     }

@@ -9,7 +9,7 @@ import {
 } from '@/models/sdlc-flow'
 import { useSdlcStore } from '@/stores/sdlc-store'
 import { useSdlcFlowStore, type SdlcColumnPatch } from '@/stores/sdlc-flow-store'
-import { columnHasRunningTickets, deleteColumn, ticketsInColumn } from '@/lib/sdlc-flow'
+import { columnHasRunningTickets, deleteColumn, ticketsInColumn, ticketsOnFlow } from '@/lib/sdlc-flow'
 import { PromptVariables, StagePromptField } from '@/components/sdlc/SdlcPromptEditor'
 import { useAccent } from '@/components/settings/SettingsControls'
 import { FLOW_INPUT_CLASS, Field, IconButton } from '@/components/settings/SdlcFlowControls'
@@ -20,17 +20,19 @@ const END_COLUMN_NOTE: Record<'first' | 'last', string> = {
 }
 
 function DeleteColumnConfirm({
+  flowId,
   column,
   columns,
   onCancel,
   onDeleted
 }: {
+  flowId: string
   column: SdlcColumn
   columns: SdlcColumn[]
   onCancel: () => void
   onDeleted: () => void
 }): React.ReactElement {
-  const ticketCount = useSdlcStore((s) => ticketsInColumn(s.tickets, column.id).length)
+  const ticketCount = useSdlcStore((s) => ticketsInColumn(ticketsOnFlow(s.tickets, flowId), column.id).length)
   const index = columns.findIndex((c) => c.id === column.id)
   const [moveTo, setMoveTo] = useState(columns[index - 1].id)
 
@@ -61,7 +63,7 @@ function DeleteColumnConfirm({
       </button>
       <button
         onClick={() => {
-          if (deleteColumn(column.id, moveTo)) onDeleted()
+          if (deleteColumn(flowId, column.id, moveTo)) onDeleted()
         }}
         className="rounded bg-red-600 px-2.5 py-1 font-medium text-white hover:bg-red-500"
       >
@@ -119,15 +121,24 @@ function AgentSettings({
   )
 }
 
-export function SdlcColumnEditor({ column, onDeleted }: { column: SdlcColumn; onDeleted: () => void }): React.ReactElement {
-  const columns = useSdlcFlowStore((s) => s.columns)
+export function SdlcColumnEditor({
+  flowId,
+  columns,
+  column,
+  onDeleted
+}: {
+  flowId: string
+  columns: SdlcColumn[]
+  column: SdlcColumn
+  onDeleted: () => void
+}): React.ReactElement {
   const updateColumn = useSdlcFlowStore((s) => s.updateColumn)
-  const hasRunning = useSdlcStore((s) => columnHasRunningTickets(s.tickets, column.id))
+  const hasRunning = useSdlcStore((s) => columnHasRunningTickets(ticketsOnFlow(s.tickets, flowId), column.id))
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const index = columns.findIndex((c) => c.id === column.id)
   const isMiddle = isMiddleColumn(columns, index)
-  const onPatch = (patch: SdlcColumnPatch): void => updateColumn(column.id, patch)
+  const onPatch = (patch: SdlcColumnPatch): void => updateColumn(flowId, column.id, patch)
 
   return (
     <div className="space-y-4">
@@ -151,6 +162,7 @@ export function SdlcColumnEditor({ column, onDeleted }: { column: SdlcColumn; on
 
       {confirmDelete && (
         <DeleteColumnConfirm
+          flowId={flowId}
           column={column}
           columns={columns}
           onCancel={() => setConfirmDelete(false)}

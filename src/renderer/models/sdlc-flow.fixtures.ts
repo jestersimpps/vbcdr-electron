@@ -1,4 +1,4 @@
-import { DEFAULT_AGENT_COMMAND, defaultSdlcColumns, type SdlcColumn } from '@/models/sdlc-flow'
+import { DEFAULT_AGENT_COMMAND, defaultSdlcColumns, defaultSdlcFlow, type SdlcColumn, type SdlcFlow } from '@/models/sdlc-flow'
 import { DEFAULT_SDLC_STAGE_PROMPTS, SDLC_PLAN_RELATIVE } from '@/models/sdlc-prompts'
 
 function stage(id: 'planning' | 'implementing' | 'review', label: string, outputFile: string | null = null): SdlcColumn {
@@ -14,4 +14,9 @@ export function threeStageFlow(): SdlcColumn[] {
     stage('review', 'Review')
   ]
   return [backlog, ...stages, done]
+}
+
+/** Test-only: flow store state where the default flow, and so every project, runs `threeStageFlow()`. */
+export function threeStageFlowState(): { flows: SdlcFlow[]; flowPerProject: Record<string, string> } {
+  return { flows: [{ ...defaultSdlcFlow(), columns: threeStageFlow() }], flowPerProject: {} }
 }

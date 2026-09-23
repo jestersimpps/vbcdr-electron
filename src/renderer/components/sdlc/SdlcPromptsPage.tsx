@@ -1,6 +1,6 @@
 import { ArrowLeft, FolderOpen } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
-import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { projectFlow, useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useSdlcPromptsStore } from '@/stores/sdlc-prompts-store'
 import type { SdlcPromptResolution } from '@/models/sdlc-prompts'
 import { SdlcPromptEditor } from '@/components/sdlc/SdlcPromptEditor'
@@ -12,7 +12,8 @@ export function SdlcPromptsPage(): React.ReactElement {
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const project = useProjectStore((s) => s.projects.find((p) => p.id === activeProjectId))
   const showSdlcPage = useProjectStore((s) => s.showSdlcPage)
-  const columns = useSdlcFlowStore((s) => s.columns)
+  const flow = useSdlcFlowStore((s) => projectFlow(s, activeProjectId ?? ''))
+  const columns = flow.columns
   const overrides = useSdlcPromptsStore((s) =>
     activeProjectId ? s.promptsPerProject[activeProjectId] ?? EMPTY_OVERRIDES : EMPTY_OVERRIDES
   )
@@ -55,7 +56,7 @@ export function SdlcPromptsPage(): React.ReactElement {
         {project ? (
           <SectionCard
             title={`Overrides for ${project.name}`}
-            description="Only the stages you edit here differ from the global defaults in Settings. Everything else follows Settings, including later edits."
+            description={`Only the stages you edit here differ from the ${flow.name} flow in Settings. Everything else follows that flow, including later edits.`}
           >
             <SdlcPromptEditor
               columns={columns}

@@ -7,6 +7,7 @@ import { useGitStore } from './git-store'
 import { useQueueStore } from './queue-store'
 import { useSearchPrefsStore } from './search-prefs-store'
 import { useSdlcStore } from './sdlc-store'
+import { useSdlcFlowStore } from './sdlc-flow-store'
 import { useSdlcPromptsStore } from './sdlc-prompts-store'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 import type { Project } from '@/models/types'
@@ -115,6 +116,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     useSearchPrefsStore.getState().removeProjectExcludes(id)
     useSdlcStore.getState().removeProjectState(id)
     useSdlcPromptsStore.getState().removeProjectState(id)
+    useSdlcFlowStore.getState().removeProjectState(id)
 
     await Promise.all(allTabs.map((tab) => window.api.terminal.kill(tab.id)))
     await window.api.projects.remove(id)

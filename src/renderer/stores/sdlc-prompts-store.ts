@@ -11,7 +11,7 @@ interface SdlcPromptsState {
   setStagePrompt: (projectId: string, stage: string, text: string) => void
   clearStagePrompt: (projectId: string, stage: string) => void
   removeProjectState: (projectId: string) => void
-  removeColumnState: (columnId: string) => void
+  removeColumnState: (columnId: string, inProject: (projectId: string) => boolean) => void
 }
 
 function withoutStage(prompts: ColumnPrompts | undefined, stage: string): ColumnPrompts {
@@ -21,7 +21,7 @@ function withoutStage(prompts: ColumnPrompts | undefined, stage: string): Column
 }
 
 /**
- * A missing key means "inherit the global prompt". Presence is what makes a
+ * A missing key means "inherit the prompt of the project's flow". Presence is what makes a
  * stage overridden, so an override that happens to equal the default still
  * counts as one.
  */
@@ -59,12 +59,12 @@ export const useSdlcPromptsStore = create<SdlcPromptsState>()(
         })
       },
 
-      removeColumnState: (columnId: string) => {
+      removeColumnState: (columnId: string, inProject: (projectId: string) => boolean) => {
         set((state) => ({
           promptsPerProject: Object.fromEntries(
             Object.entries(state.promptsPerProject).map(([projectId, prompts]) => [
               projectId,
-              withoutStage(prompts, columnId)
+              inProject(projectId) ? withoutStage(prompts, columnId) : prompts
             ])
           )
         }))
@@ -91,5 +91,5 @@ export const useSdlcPromptsStore = create<SdlcPromptsState>()(
 export function resolveStagePrompt(projectId: string, stage: string): SdlcPromptResolution {
   const override = useSdlcPromptsStore.getState().promptsPerProject[projectId]?.[stage]
   if (typeof override === 'string') return { text: override, overridden: true }
-  return { text: findColumn(sdlcColumns(), stage)?.prompt ?? '', overridden: false }
+  return { text: findColumn(sdlcColumns(projectId), stage)?.prompt ?? '', overridden: false }
 }

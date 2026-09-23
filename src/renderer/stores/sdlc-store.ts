@@ -9,7 +9,7 @@ interface SdlcStore {
   collapsedProjectIds: Record<string, boolean>
   createTicket: (input: NewSdlcTicketInput) => SdlcTicket
   moveTicket: (id: string, stage: SdlcStage) => void
-  reassignStage: (from: SdlcStage, to: SdlcStage) => void
+  reassignStage: (from: SdlcStage, to: SdlcStage, inProject: (projectId: string) => boolean) => void
   advanceTicket: (id: string) => void
   patchTicket: (id: string, patch: Partial<Omit<SdlcTicket, 'id' | 'projectId'>>) => void
   deleteTicket: (id: string) => void
@@ -74,7 +74,7 @@ export const useSdlcStore = create<SdlcStore>()(
           projectId: input.projectId,
           title: titleFromDescription(description),
           description,
-          stage: sdlcColumns()[0].id,
+          stage: sdlcColumns(input.projectId)[0].id,
           status: 'idle',
           branch: branchNameFrom(description),
           worktreePath: '—',
@@ -109,10 +109,10 @@ export const useSdlcStore = create<SdlcStore>()(
       },
 
       /** A deleted column's tickets land idle: whatever ran there says nothing about the column they arrive in. */
-      reassignStage: (from: SdlcStage, to: SdlcStage) => {
+      reassignStage: (from: SdlcStage, to: SdlcStage, inProject: (projectId: string) => boolean) => {
         set((state) => ({
           tickets: state.tickets.map((t) =>
-            t.stage === from ? { ...t, stage: to, status: 'idle', blockedReason: null, updatedAt: Date.now() } : t
+            t.stage === from && inProject(t.projectId) ? { ...t, stage: to, status: 'idle', blockedReason: null, updatedAt: Date.now() } : t
           )
         }))
       },
@@ -121,7 +121,7 @@ export const useSdlcStore = create<SdlcStore>()(
         set((state) => ({
           tickets: state.tickets.map((t) => {
             if (t.id !== id) return t
-            const stage = nextColumn(sdlcColumns(), t.stage)?.id
+            const stage = nextColumn(sdlcColumns(t.projectId), t.stage)?.id
             if (!stage) return t
             return {
               ...t,

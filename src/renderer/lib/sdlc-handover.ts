@@ -28,18 +28,18 @@ export interface StageHandoverResult {
 }
 
 export function ticketColumn(ticket: SdlcTicket): SdlcColumn | undefined {
-  return findColumn(sdlcColumns(), ticket.stage)
+  return findColumn(sdlcColumns(ticket.projectId), ticket.stage)
 }
 
-export function stageLabel(stage: SdlcStage): string {
-  return findColumn(sdlcColumns(), stage)?.label ?? stage
+export function stageLabel(ticket: SdlcTicket, stage: SdlcStage = ticket.stage): string {
+  return findColumn(sdlcColumns(ticket.projectId), stage)?.label ?? stage
 }
 
 export function sdlcProfileMeta(stage: SdlcStage, ticket: SdlcTicket, providerId: LlmProviderId): TabProfileMeta {
   return {
     profileId: SDLC_PROFILE_ID,
     providerId,
-    label: `${stageLabel(stage)} · ${ticket.title}`,
+    label: `${stageLabel(ticket, stage)} · ${ticket.title}`,
     color: SDLC_TAB_COLOR
   }
 }
@@ -55,8 +55,8 @@ function providerOf(command: string): LlmProviderId {
 }
 
 /** The column's startup command runs as typed; a column without one runs the default profile exactly as a manual tab would. */
-function stageCommand(stage: SdlcStage): StageCommand {
-  const configured = findColumn(sdlcColumns(), stage)?.command.trim()
+function stageCommand(ticket: SdlcTicket): StageCommand {
+  const configured = ticketColumn(ticket)?.command.trim()
   const layout = useLayoutStore.getState()
   if (!configured) {
     const { command, profile } = defaultLlmTab()
@@ -143,7 +143,7 @@ function promptVariables(
     diff: diff || EMPTY_PROMPT_VALUE,
     pr: pr || EMPTY_PROMPT_VALUE,
     outputs: Object.fromEntries(
-      sdlcColumns().map((c) => [c.id, ticket.artifacts.outputs[c.id] || EMPTY_PROMPT_VALUE])
+      sdlcColumns(ticket.projectId).map((c) => [c.id, ticket.artifacts.outputs[c.id] || EMPTY_PROMPT_VALUE])
     )
   }
 }
@@ -189,7 +189,7 @@ async function prForPrompt(ticket: SdlcTicket, worktree: WorktreeInfo): Promise<
 
 /** A fresh tab for the ticket's column, with the prompt queued for once the CLI is up, made the tab the queue runner drains. */
 function openColumnTab(ticket: SdlcTicket, project: Project, worktree: WorktreeInfo, prompt: string): string {
-  const { command, providerId } = stageCommand(ticket.stage)
+  const { command, providerId } = stageCommand(ticket)
   const tabId = useTerminalStore
     .getState()
     .createTab(project.id, worktree.path, command, worktree, sdlcProfileMeta(ticket.stage, ticket, providerId))
@@ -243,7 +243,7 @@ export async function handOffStage(ticket: SdlcTicket, project: Project): Promis
     tabId,
     status: 'running',
     blockedReason: null,
-    artifacts: activityEntry(currentTicket(ticket), `Handed ${stageLabel(stage)} to the agent`)
+    artifacts: activityEntry(currentTicket(ticket), `Handed ${stageLabel(ticket, stage)} to the agent`)
   })
   return { tabId, worktree }
 }
@@ -359,7 +359,7 @@ export async function advanceAndHandOff(ticketId: string): Promise<void> {
   if (!project) return
 
   const captured = await captureStageOutput(current)
-  const next = nextColumn(sdlcColumns(), captured.stage)
+  const next = nextColumn(sdlcColumns(captured.projectId), captured.stage)
   if (!next || next.kind === 'terminal') return
 
   await closeTicketTab(captured)
@@ -374,7 +374,7 @@ export async function advanceAndHandOff(ticketId: string): Promise<void> {
 export async function moveTicketOn(ticketId: string): Promise<void> {
   const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
   if (!ticket) return
-  if (nextColumn(sdlcColumns(), ticket.stage)?.kind === 'terminal') {
+  if (nextColumn(sdlcColumns(ticket.projectId), ticket.stage)?.kind === 'terminal') {
     await finishTicket(ticketId)
     return
   }
@@ -436,7 +436,7 @@ function leftoverCommitMessage(ticket: SdlcTicket): string {
 export async function finishTicket(ticketId: string): Promise<void> {
   const store = useSdlcStore.getState()
   const ticket = store.tickets.find((t) => t.id === ticketId)
-  if (!ticket || nextColumn(sdlcColumns(), ticket.stage)?.kind !== 'terminal') return
+  if (!ticket || nextColumn(sdlcColumns(ticket.projectId), ticket.stage)?.kind !== 'terminal') return
   const captured = await captureStageOutput(ticket)
   const tracked = captured.worktreeId ? await useWorktreeStore.getState().refreshOne(captured.worktreeId) : null
   if (tracked) {
@@ -508,7 +508,7 @@ async function launchDoneAction(ticketId: string, trigger: SdlcDoneTrigger): Pro
     doneActionAt: Date.now(),
     doneActionBy: trigger,
     doneOutcome: null,
-    artifacts: activityEntry(currentTicket(ticket), `Ran the ${stageLabel(ticket.stage)} prompt`)
+    artifacts: activityEntry(currentTicket(ticket), `Ran the ${stageLabel(ticket)} prompt`)
   })
   return tabId
 }
@@ -533,7 +533,7 @@ export async function recordDoneOutcome(ticket: SdlcTicket, report: string): Pro
     doneOutcome: outcome,
     prState,
     prUrl: tracked?.prUrl ?? ticket.prUrl,
-    artifacts: activityEntry(currentTicket(ticket), `${stageLabel(ticket.stage)} prompt finished: ${DONE_OUTCOME_LABELS[outcome]}`)
+    artifacts: activityEntry(currentTicket(ticket), `${stageLabel(ticket)} prompt finished: ${DONE_OUTCOME_LABELS[outcome]}`)
   })
 }
 
@@ -576,7 +576,7 @@ export async function runDoneActions(ticketIds: readonly string[], trigger: Sdlc
 
 /** Finished tickets whose last-column prompt has never run: what the column button and the project timer act on. */
 export function pendingDoneTicketIds(projectId: string): string[] {
-  const last = sdlcColumns().at(-1)
+  const last = sdlcColumns(projectId).at(-1)
   return useSdlcStore
     .getState()
     .tickets.filter((t) => t.projectId === projectId && t.stage === last?.id && !t.doneActionAt)

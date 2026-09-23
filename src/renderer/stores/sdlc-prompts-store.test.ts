@@ -2,22 +2,23 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { resolveStagePrompt, useSdlcPromptsStore } from './sdlc-prompts-store'
 import { useSdlcFlowStore } from './sdlc-flow-store'
 import { DEFAULT_SDLC_STAGE_PROMPTS } from '@/models/sdlc-prompts'
-import { threeStageFlow } from '@/models/sdlc-flow.fixtures'
+import { threeStageFlowState } from '@/models/sdlc-flow.fixtures'
+import { DEFAULT_FLOW_ID } from '@/models/sdlc-flow'
 
 beforeEach(() => {
   useSdlcPromptsStore.setState({ promptsPerProject: {} })
-  useSdlcFlowStore.setState({ columns: threeStageFlow() })
+  useSdlcFlowStore.setState(threeStageFlowState())
 })
 
 describe('resolveStagePrompt', () => {
   it('inherits the global prompt when the project has no override', () => {
-    useSdlcFlowStore.getState().updateColumn('planning', { prompt: 'global planning' })
+    useSdlcFlowStore.getState().updateColumn(DEFAULT_FLOW_ID, 'planning', { prompt: 'global planning' })
     expect(resolveStagePrompt('p1', 'planning')).toEqual({ text: 'global planning', overridden: false })
   })
 
   it('follows later global edits while inheriting', () => {
     expect(resolveStagePrompt('p1', 'review').text).toBe(DEFAULT_SDLC_STAGE_PROMPTS.review)
-    useSdlcFlowStore.getState().updateColumn('review', { prompt: 'stricter review' })
+    useSdlcFlowStore.getState().updateColumn(DEFAULT_FLOW_ID, 'review', { prompt: 'stricter review' })
     expect(resolveStagePrompt('p1', 'review').text).toBe('stricter review')
   })
 
@@ -60,8 +61,8 @@ describe('resolveStagePrompt', () => {
 
 describe('column prompts', () => {
   it('resolves a custom column to its own prompt', () => {
-    const column = useSdlcFlowStore.getState().addColumn('Security audit', 'review')
-    useSdlcFlowStore.getState().updateColumn(column.id, { prompt: 'audit it' })
+    const column = useSdlcFlowStore.getState().addColumn(DEFAULT_FLOW_ID, 'Security audit', 'review')
+    useSdlcFlowStore.getState().updateColumn(DEFAULT_FLOW_ID, column.id, { prompt: 'audit it' })
     expect(resolveStagePrompt('p1', column.id)).toEqual({ text: 'audit it', overridden: false })
   })
 
@@ -69,7 +70,7 @@ describe('column prompts', () => {
     const store = useSdlcPromptsStore.getState()
     store.setStagePrompt('p1', 'planning', 'a')
     store.setStagePrompt('p1', 'review', 'b')
-    store.removeColumnState('planning')
+    store.removeColumnState('planning', () => true)
     expect(resolveStagePrompt('p1', 'planning').overridden).toBe(false)
     expect(resolveStagePrompt('p1', 'review')).toEqual({ text: 'b', overridden: true })
   })

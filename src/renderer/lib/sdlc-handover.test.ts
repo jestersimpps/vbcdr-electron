@@ -21,7 +21,8 @@ import { useQueueStore } from '@/stores/queue-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
 import { EMPTY_ARTIFACTS, type SdlcTicket } from '@/models/sdlc'
 import type { Project, TrackedWorktree } from '@/models/types'
-import { threeStageFlow } from '@/models/sdlc-flow.fixtures'
+import { threeStageFlowState } from '@/models/sdlc-flow.fixtures'
+import { DEFAULT_FLOW_ID } from '@/models/sdlc-flow'
 import { DONE_REPORT_CLAUSE } from '@/models/sdlc-done-outcome'
 
 vi.mock('@/components/terminal/TerminalInstance', () => ({
@@ -84,7 +85,7 @@ function current(): SdlcTicket {
 }
 
 beforeEach(() => {
-  useSdlcFlowStore.setState({ columns: threeStageFlow() })
+  useSdlcFlowStore.setState(threeStageFlowState())
   useSdlcStore.setState({ tickets: [ticket()] })
   useProjectStore.setState({ projects: [project], activeProjectId: null })
   useTerminalStore.setState({ tabs: [], activeTabPerProject: {}, tabStatuses: {} })
@@ -212,7 +213,7 @@ describe('startup command', () => {
   })
 
   it("runs the column's command as typed and reads the provider from its first word", async () => {
-    useSdlcFlowStore.getState().updateColumn('planning', { command: 'codex --model gpt-5' })
+    useSdlcFlowStore.getState().updateColumn(DEFAULT_FLOW_ID, 'planning', { command: 'codex --model gpt-5' })
     await handOffStage(current(), project)
     const tab = useTerminalStore.getState().tabs[0]
     expect(tab.initialCommand).toBe('codex --model gpt-5')
@@ -220,7 +221,7 @@ describe('startup command', () => {
   })
 
   it('runs the default profile when the column has no command', async () => {
-    useSdlcFlowStore.getState().updateColumn('planning', { command: '  ' })
+    useSdlcFlowStore.getState().updateColumn(DEFAULT_FLOW_ID, 'planning', { command: '  ' })
     await handOffStage(current(), project)
     expect(useTerminalStore.getState().tabs[0].initialCommand).toBe(defaultLlmTab().command)
   })
@@ -463,8 +464,8 @@ describe('applyStageOutput', () => {
 describe('custom columns', () => {
   function addAudit(): string {
     const flow = useSdlcFlowStore.getState()
-    const column = flow.addColumn('Security audit', 'review')
-    flow.updateColumn(column.id, {
+    const column = flow.addColumn(DEFAULT_FLOW_ID, 'Security audit', 'review')
+    flow.updateColumn(DEFAULT_FLOW_ID, column.id, {
       prompt: 'Audit {{branch}} against the plan:\n{{output.planning}}\nChanges:\n{{output.implementing}}',
       outputFile: '.vbcdr/audit.md'
     })
@@ -508,7 +509,7 @@ describe('custom columns', () => {
   })
 
   function reviewPrompt(prompt: string): void {
-    useSdlcFlowStore.getState().updateColumn('review', { prompt })
+    useSdlcFlowStore.getState().updateColumn(DEFAULT_FLOW_ID, 'review', { prompt })
     useSdlcStore.setState({ tickets: [ticket({ stage: 'review' })] })
   }
 
@@ -566,7 +567,7 @@ describe('custom columns', () => {
 
   it('moving on from the column before the terminal one finishes the ticket, whatever it is called', async () => {
     const audit = addAudit()
-    useSdlcFlowStore.getState().removeColumn('review')
+    useSdlcFlowStore.getState().removeColumn(DEFAULT_FLOW_ID, 'review')
     useSdlcStore.setState({ tickets: [ticket({ stage: audit, worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/x' })] })
 
     vi.mocked(window.api.worktrees.refresh).mockResolvedValueOnce(trackedWorktree())
