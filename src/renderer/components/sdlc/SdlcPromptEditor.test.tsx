@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { StagePromptField } from './SdlcPromptEditor'
-import { defaultSdlcColumns } from '@/models/sdlc-flow'
+import { threeStageFlow } from '@/models/sdlc-flow.fixtures'
 
-const COLUMNS = defaultSdlcColumns()
+const COLUMNS = threeStageFlow()
 const REVIEW = COLUMNS.find((c) => c.id === 'review')!
 
 function renderField(text: string, mode: 'global' | 'project' = 'global', overridden = true): void {

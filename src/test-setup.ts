@@ -82,7 +82,9 @@ const api = {
     readFile: fn(async () => ({ content: '', isBinary: false })),
     deleteFile: fn(async () => undefined),
     writeFile: fn(async () => undefined),
-    writeDataUrl: fn(async () => undefined)
+    writeDataUrl: fn(async () => undefined),
+    readImageAsDataUrl: fn(async () => null),
+    openFolder: fn(async () => '')
   },
   worktrees: {
     list: fn(async () => []),

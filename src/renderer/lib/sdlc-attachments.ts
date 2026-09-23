@@ -32,6 +32,14 @@ function safeFileName(name: string): string {
   return base.replace(/[^\w.\-]+/g, '_') || 'attachment'
 }
 
+function attachmentRelativePath(attachment: SdlcAttachment): string {
+  return `${ATTACHMENTS_DIR}/${safeFileName(attachment.name)}`
+}
+
+export function attachmentPathInWorktree(worktreePath: string, attachment: SdlcAttachment): string {
+  return `${worktreePath}/${attachmentRelativePath(attachment)}`
+}
+
 /** Writes every attachment that still has bytes into the worktree; returns their worktree-relative paths. */
 export async function writeAttachmentsToWorktree(
   worktreePath: string,
@@ -40,7 +48,7 @@ export async function writeAttachmentsToWorktree(
   const written: string[] = []
   for (const attachment of attachments) {
     if (!attachment.dataUrl) continue
-    const relative = `${ATTACHMENTS_DIR}/${safeFileName(attachment.name)}`
+    const relative = attachmentRelativePath(attachment)
     await window.api.fs.writeDataUrl(`${worktreePath}/${relative}`, attachment.dataUrl)
     written.push(relative)
   }
