@@ -9,7 +9,6 @@ import {
   FolderOpen,
   GitBranch,
   Loader2,
-  Paperclip,
   Play,
   RotateCcw,
   Settings2,
@@ -28,6 +27,7 @@ import { useTerminalStore } from '@/stores/terminal-store'
 import { discardTicket, focusTicketTab, moveTicketOn, rerunStage } from '@/lib/sdlc-handover'
 import { useAccent } from '@/components/settings/SettingsControls'
 import { NewTicketComposer } from '@/components/sdlc/NewTicketComposer'
+import { TicketAttachments } from '@/components/sdlc/TicketAttachments'
 import { buildSeedTickets } from '@/lib/dev-seed-tickets'
 import { cn } from '@/lib/utils'
 
@@ -159,6 +159,8 @@ function TicketCard({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace 
         </div>
       )}
 
+      <TicketAttachments ticket={ticket} />
+
       {ticket.blockedReason && (
         <div className="mb-1.5 rounded border border-orange-900/60 bg-orange-950/30 px-1.5 py-1 text-micro leading-snug text-orange-300">
           {ticket.blockedReason}
@@ -187,12 +189,6 @@ function TicketCard({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace 
       <div className="flex items-center justify-between gap-2">
         <StatusBadge status={ticket.status} />
         <div className="flex items-center gap-2">
-          {ticket.attachments.length > 0 && (
-            <span className="flex items-center gap-0.5 text-micro text-zinc-600">
-              <Paperclip size={9} />
-              {ticket.attachments.length}
-            </span>
-          )}
           {hasDiff && (
             <span className="font-mono text-micro tabular-nums">
               <span className="text-emerald-500">+{ticket.linesAdded}</span>{' '}
