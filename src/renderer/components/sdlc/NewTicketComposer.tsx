@@ -82,7 +82,10 @@ export function NewTicketComposer({ projectId, projectName }: { projectId: strin
           void addFiles(files)
         }}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit()
+          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+            e.preventDefault()
+            handleSubmit()
+          }
           if (e.key === 'Escape') close()
         }}
         rows={4}
@@ -133,7 +136,7 @@ export function NewTicketComposer({ projectId, projectName }: { projectId: strin
           disabled={!canSubmit}
           onClick={handleSubmit}
           className="rounded bg-indigo-600 px-2 py-1 text-micro font-medium text-white hover:bg-indigo-500 disabled:pointer-events-none disabled:opacity-40"
-          title="⌘↵"
+          title="↵ · ⇧↵ for a new line"
         >
           Start
         </button>

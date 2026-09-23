@@ -28,6 +28,23 @@ describe('NewTicketComposer', () => {
     expect(screen.queryByLabelText('New ticket in vbcdr')).toBeNull()
   })
 
+  it('starts the flow on Enter and keeps Shift+Enter for a new line', () => {
+    render(<NewTicketComposer projectId="p1" projectName="vbcdr" />)
+    fireEvent.click(screen.getByRole('button', { name: /new ticket/i }))
+    const textarea = screen.getByLabelText('New ticket in vbcdr')
+    fireEvent.change(textarea, { target: { value: 'Add a scoreboard' } })
+
+    fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: true })
+    expect(useSdlcStore.getState().tickets).toHaveLength(0)
+
+    fireEvent.keyDown(textarea, { key: 'Enter' })
+
+    const [ticket] = useSdlcStore.getState().tickets
+    expect(ticket).toMatchObject({ projectId: 'p1', title: 'Add a scoreboard', stage: 'backlog' })
+    expect(moveTicketOnMock).toHaveBeenCalledWith(ticket.id)
+    expect(screen.queryByLabelText('New ticket in vbcdr')).toBeNull()
+  })
+
   it('will not start an empty ticket, and Escape closes it', () => {
     render(<NewTicketComposer projectId="p1" projectName="vbcdr" />)
     fireEvent.click(screen.getByRole('button', { name: /new ticket/i }))
