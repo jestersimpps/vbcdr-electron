@@ -85,6 +85,19 @@ describe('sdlcAnnouncements', () => {
     expect(texts([running], [{ ...running, doneOutcome: outcome }])).toEqual([expected])
   })
 
+  it('speaks up when a ticket becomes blocked, without reading out the reason', () => {
+    const stuck = ticket({ stage: 'done', blockedReason: 'Could not keep the work on branch llm/x: timed out' })
+    const announced = sdlcAnnouncements([ticket({ stage: 'done' })], [stuck], COLUMNS, projectName)
+    expect(announced).toEqual([{ emote: 'hurt', text: 'heads up, "Add a scoreboard" in vbcdr is blocked and needs you' }])
+  })
+
+  it('announces a block once, and again when a fresh one replaces it', () => {
+    const stuck = ticket({ blockedReason: 'first' })
+    expect(texts([stuck], [{ ...stuck, updatedAt: 9 }])).toEqual([])
+    expect(texts([stuck], [{ ...stuck, blockedReason: 'second' }])).toHaveLength(1)
+    expect(texts([stuck], [{ ...stuck, blockedReason: null }])).toEqual([])
+  })
+
   it('stays quiet for a ticket that is new, deleted or only patched', () => {
     const base = ticket()
     expect(texts([], [base])).toEqual([])
