@@ -1,4 +1,4 @@
-import type { CompanionEmote, CompanionLine } from '@/config/companion-trigger-registry'
+import type { CompanionEmote, CompanionLine } from '@/models/companion'
 
 export interface CompanionPoke {
   emote: CompanionEmote

@@ -94,6 +94,15 @@ function attachAnalyser(audio: HTMLAudioElement): void {
   }
 }
 
+/** Stopping pauses the element, so a line cut short settles the same as one that ran out. */
+function untilSilent(audio: HTMLAudioElement): Promise<void> {
+  return new Promise((resolve) => {
+    audio.addEventListener('ended', () => resolve(), { once: true })
+    audio.addEventListener('pause', () => resolve(), { once: true })
+  })
+}
+
+/** Resolves once the line has finished playing, so callers can keep lines from talking over each other. */
 export async function speak(text: string, voice: string, volume = 0.7): Promise<void> {
   try {
     const bytes = await window.api.companion.speak(text, voice)
@@ -112,8 +121,10 @@ export async function speak(text: string, voice: string, volume = 0.7): Promise<
 
     attachAnalyser(audio)
     audio.addEventListener('ended', release, { once: true })
+    const finished = untilSilent(audio)
     await audio.play()
     if (analyser) startLevelLoop()
+    await finished
   } catch (e) {
     console.warn('[companion-tts] speak failed:', e)
     stopSpeech()

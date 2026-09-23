@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   advanceAndHandOff,
   applyStageOutput,
+  awaitingDoneReport,
   discardTicket,
   handOffStage,
   moveTicketOn,
   pendingDoneTicketIds,
+  recordDoneOutcome,
   removeFinishedTicket,
   rerunStage,
   runDoneAction,
@@ -20,6 +22,7 @@ import { useWorktreeStore } from '@/stores/worktree-store'
 import { EMPTY_ARTIFACTS, type SdlcTicket } from '@/models/sdlc'
 import type { Project, TrackedWorktree } from '@/models/types'
 import { threeStageFlow } from '@/models/sdlc-flow.fixtures'
+import { DONE_REPORT_CLAUSE } from '@/models/sdlc-done-outcome'
 
 vi.mock('@/components/terminal/TerminalInstance', () => ({
   disposeTerminal: vi.fn(),
@@ -598,9 +601,51 @@ describe('done prompt', () => {
     expect(prompt).toContain('llm/add-auth')
     expect(prompt).toContain('Pull request for this branch: none, no pull request exists for this branch yet')
     expect(prompt).not.toContain('{{')
-    expect(prompt).not.toContain('stage-output.md')
-    expect(current()).toMatchObject({ stage: 'done', status: 'idle', tabId: tab.id, worktreeId: 'wt1' })
+    expect(prompt.endsWith(DONE_REPORT_CLAUSE)).toBe(true)
+    expect(current()).toMatchObject({ stage: 'done', status: 'idle', tabId: tab.id, worktreeId: 'wt1', doneOutcome: null, doneActionBy: 'manual' })
     expect(current().doneActionAt).toBeGreaterThan(0)
+  })
+
+  it('forgets the last outcome when the prompt runs again, so the next report is news', async () => {
+    useSdlcStore.setState({ tickets: [finished({ doneActionAt: 1, doneOutcome: 'pr' })] })
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValue(trackedWorktree({ path: '/cwd/.worktrees/llm/add-auth' }))
+    expect(await runDoneAction('t1')).toBe(true)
+    expect(current().doneOutcome).toBeNull()
+    expect(awaitingDoneReport(current())).toBe(true)
+  })
+
+  it('waits for a report only after the prompt ran and until it has been read', () => {
+    const reopened = { worktreePath: '/cwd/.worktrees/llm/add-auth' }
+    expect(awaitingDoneReport(finished({ ...reopened, doneActionAt: 1 }))).toBe(true)
+    expect(awaitingDoneReport(finished({ ...reopened }))).toBe(false)
+    expect(awaitingDoneReport(finished({ ...reopened, doneActionAt: 1, doneOutcome: 'merged' }))).toBe(false)
+    expect(awaitingDoneReport(finished({ doneActionAt: 1 }))).toBe(false)
+    expect(awaitingDoneReport(ticket({ ...reopened, doneActionAt: 1 }))).toBe(false)
+  })
+
+  it('records the outcome with the pull request gh sees and clears the report', async () => {
+    vi.mocked(window.api.fs.deleteFile).mockClear()
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValueOnce(
+      trackedWorktree({ prState: 'open', prUrl: 'https://github.com/o/r/pull/7' })
+    )
+    const running = finished({ worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/add-auth', doneActionAt: 1 })
+    useSdlcStore.setState({ tickets: [running] })
+
+    await recordDoneOutcome(running, 'OUTCOME: branch\npushed')
+
+    expect(current()).toMatchObject({ doneOutcome: 'pr', prState: 'open', prUrl: 'https://github.com/o/r/pull/7' })
+    expect(current().artifacts.activity.at(-1)?.text).toBe('Done prompt finished: pull request open')
+    expect(window.api.fs.deleteFile).toHaveBeenCalledWith('/cwd/.worktrees/llm/add-auth/.vbcdr/stage-output.md')
+  })
+
+  it('takes the report at its word when gh knows of no pull request', async () => {
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValueOnce(trackedWorktree())
+    const running = finished({ worktreeId: 'wt1', worktreePath: '/cwd/.worktrees/llm/add-auth', doneActionAt: 1 })
+    useSdlcStore.setState({ tickets: [running] })
+
+    await recordDoneOutcome(running, 'OUTCOME: branch\npushed')
+
+    expect(current().doneOutcome).toBe('branch')
   })
 
   it('does nothing for a ticket that is not finished', async () => {
@@ -618,7 +663,7 @@ describe('done prompt', () => {
   it('opens the next tab only once the previous one has its prompt, since only the active tab is fed', async () => {
     useSdlcStore.setState({ tickets: [finished(), finished({ id: 't2', title: 'Add billing', branch: 'llm/billing' })] })
 
-    const running = runDoneActions(['t1', 't2'])
+    const running = runDoneActions(['t1', 't2'], 'timer')
     await vi.waitFor(() => expect(useTerminalStore.getState().tabs).toHaveLength(1))
     const first = useTerminalStore.getState().tabs[0].id
     await new Promise((r) => setTimeout(r, 20))
@@ -629,7 +674,7 @@ describe('done prompt', () => {
     useQueueStore.getState().dequeue(useTerminalStore.getState().tabs[1].id)
     await running
 
-    expect(useSdlcStore.getState().tickets.every((t) => t.doneActionAt)).toBe(true)
+    expect(useSdlcStore.getState().tickets.every((t) => t.doneActionAt && t.doneActionBy === 'timer')).toBe(true)
   })
 
   it('lists only the finished tickets that have not had the prompt yet', () => {

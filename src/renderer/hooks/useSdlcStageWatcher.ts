@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useSdlcStore } from '@/stores/sdlc-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { readSentinel } from '@/lib/sdlc-sentinel'
-import { moveTicketOn, recordStageOutput } from '@/lib/sdlc-handover'
+import { awaitingDoneReport, moveTicketOn, recordDoneOutcome, recordStageOutput } from '@/lib/sdlc-handover'
 
 const POLL_MS = 3000
 const QUIET_BEFORE_BLOCKED_MS = 45_000
@@ -28,6 +28,8 @@ interface TabRun {
  * false positive cannot strand a stage that actually finished. Both of this
  * hook's own timeout verdicts are inferences that have proven wrong in
  * practice, so neither is allowed to be the last word.
+ * The last column's prompt reports through the same file once it has run,
+ * which is the only way to learn whether it opened a PR, merged or stopped.
  * Mounted once at the app root: the board itself unmounts when a handoff
  * navigates to the terminal.
  */
@@ -49,6 +51,11 @@ export function useSdlcStageWatcher(): void {
         const liveTabIds = new Set(tabs.map((t) => t.id))
 
         for (const ticket of tickets) {
+          if (awaitingDoneReport(ticket)) {
+            const report = await readSentinel(ticket.worktreePath)
+            if (report) await recordDoneOutcome(ticket, report)
+            continue
+          }
           const settled = ticket.status === 'blocked' || ticket.status === 'failed'
           if (ticket.status !== 'running' && !settled) continue
           if (!ticket.tabId) {

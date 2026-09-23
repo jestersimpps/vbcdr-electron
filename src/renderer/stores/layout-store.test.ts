@@ -267,7 +267,7 @@ describe('layout-store', () => {
       expect(two.command).toBe('aider')
     })
 
-    it('getProfileStartupCommand keeps custom flags and adds the companion prompt for claude-like commands', () => {
+    it('getProfileStartupCommand keeps custom flags as typed', () => {
       expect(useLayoutStore.getState().getProfileStartupCommand('claude')).toBe('claude')
       expect(useLayoutStore.getState().getProfileStartupCommand('codex')).toBe('codex')
       const claudeId = useLayoutStore.getState().addCustomProfile()
@@ -275,13 +275,8 @@ describe('layout-store', () => {
       useLayoutStore.getState().updateCustomProfile(claudeId, { command: 'claude --model opus' })
       useLayoutStore.getState().updateCustomProfile(geminiId, { command: 'gemini' })
       expect(useLayoutStore.getState().getProfileStartupCommand(claudeId)).toBe('claude --model opus')
-      useLayoutStore.setState({ companionEnabled: true, companionPromptPath: '/tmp/prompt.md' })
-      expect(useLayoutStore.getState().getProfileStartupCommand(claudeId)).toBe(
-        'claude --model opus --append-system-prompt "$(cat /tmp/prompt.md)"'
-      )
       expect(useLayoutStore.getState().getProfileStartupCommand(geminiId)).toBe('gemini')
       expect(useLayoutStore.getState().getProfileStartupCommand('codex')).toBe('codex')
-      useLayoutStore.setState({ companionEnabled: false, companionPromptPath: null })
     })
 
     it('getDefaultProfileId maps the built-in providers and returns null for custom', () => {

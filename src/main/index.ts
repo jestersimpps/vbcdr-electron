@@ -12,7 +12,6 @@ import { registerClaudeSessionsHandlers } from '@main/ipc/claude-sessions'
 import { registerSkillsHandlers } from '@main/ipc/skills'
 import { registerMcpHandlers } from '@main/ipc/mcp'
 import { registerCompanionHandlers } from '@main/ipc/companion'
-import { ensureCompanionPrompt } from '@main/services/companion-prompt'
 import { registerActivityHandlers } from '@main/ipc/activity'
 import { registerSessionSummaryHandlers } from '@main/ipc/session-summary'
 import { registerTokenUsageHandlers } from '@main/ipc/token-usage'
@@ -154,7 +153,6 @@ registerClaudeSessionsHandlers()
 registerSkillsHandlers()
 registerMcpHandlers()
 registerCompanionHandlers()
-ensureCompanionPrompt()
 registerUpdaterHandlers()
 registerActivityHandlers()
 registerSessionSummaryHandlers()

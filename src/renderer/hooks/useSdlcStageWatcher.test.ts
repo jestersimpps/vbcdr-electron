@@ -8,10 +8,13 @@ vi.mock('@/lib/sdlc-sentinel', () => ({
 
 const recordStageOutputMock = vi.fn(async () => ({ artifacts: undefined }) as never)
 const moveTicketOnMock = vi.fn(async () => undefined)
+const recordDoneOutcomeMock = vi.fn(async () => undefined)
 vi.mock('@/lib/sdlc-handover', () => ({
   recordStageOutput: (...a: unknown[]) => recordStageOutputMock(...(a as [])),
   moveTicketOn: (...a: unknown[]) => moveTicketOnMock(...(a as [])),
-  applyStageOutput: () => ({})
+  applyStageOutput: () => ({}),
+  awaitingDoneReport: (t: { doneActionAt: number | null; doneOutcome?: string | null }) => !!t.doneActionAt && !t.doneOutcome,
+  recordDoneOutcome: (...a: unknown[]) => recordDoneOutcomeMock(...(a as []))
 }))
 
 import { useSdlcStageWatcher } from './useSdlcStageWatcher'
@@ -75,6 +78,7 @@ beforeEach(() => {
   readSentinelMock.mockReset().mockResolvedValue(null)
   recordStageOutputMock.mockClear()
   moveTicketOnMock.mockClear()
+  recordDoneOutcomeMock.mockClear()
 })
 
 afterEach(() => {
@@ -185,5 +189,22 @@ describe('useSdlcStageWatcher', () => {
     renderHook(() => useSdlcStageWatcher())
     await tick()
     expect(status()).toBe('awaiting-approval')
+  })
+
+  it('records the done prompt outcome once its report appears, without moving the ticket', async () => {
+    setup(ticket({ stage: 'done', status: 'idle', doneActionAt: 1, doneOutcome: null }))
+    readSentinelMock.mockResolvedValue('OUTCOME: pr\nopened it')
+    renderHook(() => useSdlcStageWatcher())
+    await tick()
+    expect(recordDoneOutcomeMock).toHaveBeenCalledTimes(1)
+    expect(moveTicketOnMock).not.toHaveBeenCalled()
+    expect(status()).toBe('idle')
+  })
+
+  it('keeps waiting on a done prompt that has not reported yet', async () => {
+    setup(ticket({ stage: 'done', status: 'idle', doneActionAt: 1, doneOutcome: null }))
+    renderHook(() => useSdlcStageWatcher())
+    await tick()
+    expect(recordDoneOutcomeMock).not.toHaveBeenCalled()
   })
 })

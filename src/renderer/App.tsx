@@ -118,27 +118,6 @@ export function App(): React.ReactElement {
     return useGitStore.getState().initFetchListener()
   }, [])
 
-  /**
-   * Resolved here rather than in CompanionDock: every new LLM tab reads this
-   * path through getLlmStartupCommand, and tabs can be opened before (or
-   * without) the dock ever mounting. Owning it at app level means a companion
-   * session always starts with the prompt appended.
-   */
-  useEffect(() => {
-    let cancelled = false
-    window.api.companion
-      .ensurePrompt()
-      .then((path: string) => {
-        if (!cancelled) useLayoutStore.getState().setCompanionPromptPath(path)
-      })
-      .catch(() => {
-        if (!cancelled) useLayoutStore.getState().setCompanionPromptPath(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const activeProjectPath = useProjectStore((s) =>
     s.activeProjectId ? s.projects.find((p) => p.id === s.activeProjectId)?.path : undefined

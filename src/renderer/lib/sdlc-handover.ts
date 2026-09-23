@@ -13,10 +13,11 @@ import { attachmentsInstruction, writeAttachmentsToWorktree } from '@/lib/sdlc-a
 import { deleteWorktree, finishWorktree } from '@/lib/worktree-tabs'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 import { EMPTY_PROMPT_VALUE, SDLC_SENTINEL_DIR, SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
+import { DONE_OUTCOME_LABELS, DONE_REPORT_CLAUSE, resolveDoneOutcome } from '@/models/sdlc-done-outcome'
 import { findColumn, isAgentColumn, nextColumn, type SdlcColumn } from '@/models/sdlc-flow'
-import type { SdlcStage, SdlcTicket } from '@/models/sdlc'
+import type { SdlcDoneTrigger, SdlcStage, SdlcTicket } from '@/models/sdlc'
 import { SDLC_PROFILE_ID, type TabProfileMeta } from '@/config/terminal-profiles'
-import { appendCompanionPrompt, providerIdForCommand, type LlmProviderId } from '@/config/llm-provider-registry'
+import { providerIdForCommand, type LlmProviderId } from '@/config/llm-provider-registry'
 import type { Project, TrackedWorktree, WorktreeBase, WorktreeInfo } from '@/models/types'
 
 export const SDLC_TAB_COLOR = '#2dd4bf'
@@ -61,9 +62,7 @@ function stageCommand(stage: SdlcStage): StageCommand {
     const { command, profile } = defaultLlmTab()
     return { command, providerId: profile?.providerId ?? layout.llmProviderId }
   }
-  const providerId = providerOf(configured)
-  const promptPath = layout.companionEnabled ? layout.companionPromptPath : null
-  return { command: appendCompanionPrompt(configured, providerId, promptPath), providerId }
+  return { command: configured, providerId: providerOf(configured) }
 }
 
 function activityEntry(ticket: SdlcTicket, text: string): SdlcTicket['artifacts'] {
@@ -477,7 +476,7 @@ async function reopenTicketWorktree(ticket: SdlcTicket, project: Project): Promi
   return reopened ? toWorktreeInfo(reopened) : null
 }
 
-async function launchDoneAction(ticketId: string): Promise<string | null> {
+async function launchDoneAction(ticketId: string, trigger: SdlcDoneTrigger): Promise<string | null> {
   const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
   if (!ticket || ticketColumn(ticket)?.kind !== 'terminal') return null
   const project = findProject(ticket)
@@ -491,23 +490,56 @@ async function launchDoneAction(ticketId: string): Promise<string | null> {
     patchTicket(ticket.id, { blockedReason: `Could not check out branch ${ticket.branch} again. Was it deleted?` })
     return null
   }
+  try {
+    await window.api.git.ensureInfoExclude(project.path, `${SDLC_SENTINEL_DIR}/`)
+  } catch (err) {
+    patchTicket(ticket.id, { blockedReason: `Could not prepare the report file: ${err instanceof Error ? err.message : String(err)}` })
+    return null
+  }
+  await clearSentinel(worktree.path)
   await closeTicketTab(currentTicket(ticket))
   const prompt = await renderPrompt(template, currentTicket(ticket), project, worktree)
-  const tabId = openColumnTab(ticket, project, worktree, prompt)
+  const tabId = openColumnTab(ticket, project, worktree, `${prompt}\n\n${DONE_REPORT_CLAUSE}`)
   patchTicket(ticket.id, {
     worktreeId: worktree.id,
     worktreePath: worktree.path,
     tabId,
     blockedReason: null,
     doneActionAt: Date.now(),
+    doneActionBy: trigger,
+    doneOutcome: null,
     artifacts: activityEntry(currentTicket(ticket), `Ran the ${stageLabel(ticket.stage)} prompt`)
   })
   return tabId
 }
 
+/** The last column's prompt has run and its report has not been read yet. */
+export function awaitingDoneReport(ticket: SdlcTicket): boolean {
+  return (
+    !!ticket.doneActionAt &&
+    !ticket.doneOutcome &&
+    ticket.worktreePath !== '—' &&
+    ticketColumn(ticket)?.kind === 'terminal'
+  )
+}
+
+/** Reads what the last column's prompt did from its report, checked against the pull request gh can see. */
+export async function recordDoneOutcome(ticket: SdlcTicket, report: string): Promise<void> {
+  const tracked = ticket.worktreeId ? await useWorktreeStore.getState().refreshOne(ticket.worktreeId) : null
+  const prState = tracked?.prState ?? ticket.prState
+  const outcome = resolveDoneOutcome(report, prState)
+  await clearSentinel(ticket.worktreePath)
+  useSdlcStore.getState().patchTicket(ticket.id, {
+    doneOutcome: outcome,
+    prState,
+    prUrl: tracked?.prUrl ?? ticket.prUrl,
+    artifacts: activityEntry(currentTicket(ticket), `${stageLabel(ticket.stage)} prompt finished: ${DONE_OUTCOME_LABELS[outcome]}`)
+  })
+}
+
 /** Runs the last column's prompt, such as opening a pull request, for a ticket that finished. */
 export async function runDoneAction(ticketId: string): Promise<boolean> {
-  return !!(await launchDoneAction(ticketId))
+  return !!(await launchDoneAction(ticketId, 'manual'))
 }
 
 const PROMPT_DELIVERY_TIMEOUT_MS = 120_000
@@ -535,9 +567,9 @@ function untilPromptDelivered(tabId: string): Promise<void> {
 }
 
 /** One ticket at a time: each tab has to be the active one until its prompt is sent. */
-export async function runDoneActions(ticketIds: readonly string[]): Promise<void> {
+export async function runDoneActions(ticketIds: readonly string[], trigger: SdlcDoneTrigger = 'manual'): Promise<void> {
   for (const id of ticketIds) {
-    const tabId = await launchDoneAction(id)
+    const tabId = await launchDoneAction(id, trigger)
     if (tabId) await untilPromptDelivered(tabId)
   }
 }

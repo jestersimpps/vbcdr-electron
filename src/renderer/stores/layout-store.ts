@@ -8,13 +8,7 @@ import {
   type SdlcStagePrompts
 } from '@/models/sdlc-prompts'
 import {
-  DEFAULT_CHATTINESS,
-  CHATTINESS_LEVELS,
-  type CompanionChattiness
-} from '@/lib/companion-triggers'
-import {
   DEFAULT_LLM_PROVIDER_ID,
-  appendCompanionPrompt,
   isLlmProviderId,
   providerIdForCommand,
   resolveStartupCommand,
@@ -84,15 +78,11 @@ interface LayoutState {
   voiceVadSilenceMs: number
   voiceConfirmDestructive: boolean
   companionEnabled: boolean
-  companionPromptPath: string | null
   companionSpeechEnabled: boolean
   companionVoiceId: string
-  companionChattiness: CompanionChattiness
   setCompanionEnabled: (enabled: boolean) => void
-  setCompanionPromptPath: (path: string | null) => void
   setCompanionSpeechEnabled: (enabled: boolean) => void
   setCompanionVoiceId: (id: string) => void
-  setCompanionChattiness: (level: CompanionChattiness) => void
   setVoiceEnabled: (enabled: boolean) => void
   setVoiceAgentProviderId: (id: LlmProviderId | null) => void
   setVoiceAgentCustomCommand: (cmd: string) => void
@@ -188,10 +178,8 @@ export const useLayoutStore = create<LayoutState>()(
       resetVersion: 0,
       voiceEnabled: false,
       companionEnabled: false,
-      companionPromptPath: null,
       companionSpeechEnabled: false,
       companionVoiceId: DEFAULT_COMPANION_VOICE,
-      companionChattiness: DEFAULT_CHATTINESS,
       voiceAgentProviderId: null,
       voiceAgentCustomCommand: '',
       voiceVadSilenceMs: DEFAULT_VAD_SILENCE_MS,
@@ -199,13 +187,9 @@ export const useLayoutStore = create<LayoutState>()(
 
       setCompanionEnabled: (enabled: boolean) => set({ companionEnabled: enabled }),
 
-      setCompanionPromptPath: (path: string | null) => set({ companionPromptPath: path }),
-
       setCompanionSpeechEnabled: (enabled: boolean) => set({ companionSpeechEnabled: enabled }),
 
       setCompanionVoiceId: (id: string) => set({ companionVoiceId: id }),
-
-      setCompanionChattiness: (level: CompanionChattiness) => set({ companionChattiness: level }),
 
       setVoiceEnabled: (enabled: boolean) => set({ voiceEnabled: enabled }),
 
@@ -293,11 +277,10 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       getLlmStartupCommand: () => {
-        const { llmProviderId, llmCustomCommand, companionEnabled, companionPromptPath } = get()
+        const { llmProviderId, llmCustomCommand } = get()
         const profileId = get().getDefaultProfileId()
         if (profileId) return get().getProfileStartupCommand(profileId)
-        const promptPath = companionEnabled ? companionPromptPath : null
-        const resolved = resolveStartupCommand(llmProviderId, llmCustomCommand, promptPath)
+        const resolved = resolveStartupCommand(llmProviderId, llmCustomCommand)
         return resolved.length > 0 ? resolved : DEFAULT_LLM_STARTUP_COMMAND
       },
 
@@ -393,12 +376,7 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       getProfileStartupCommand: (id: TerminalProfileId) => {
-        const profile = get().getTerminalProfile(id)
-        const { companionEnabled, companionPromptPath } = get()
-        const promptPath = companionEnabled ? companionPromptPath : null
-        // A custom slot keeps its own flags (`claude --resume`) and still gets
-        // the companion prompt when its binary behaves like a known provider.
-        return appendCompanionPrompt(profile.command, profile.providerId, promptPath)
+        return get().getTerminalProfile(id).command.trim()
       },
 
       getDefaultProfileId: () => {
@@ -465,7 +443,6 @@ export const useLayoutStore = create<LayoutState>()(
         companionEnabled: state.companionEnabled,
         companionSpeechEnabled: state.companionSpeechEnabled,
         companionVoiceId: state.companionVoiceId,
-        companionChattiness: state.companionChattiness,
         voiceAgentProviderId: state.voiceAgentProviderId,
         voiceAgentCustomCommand: state.voiceAgentCustomCommand,
         voiceVadSilenceMs: state.voiceVadSilenceMs,
@@ -508,11 +485,6 @@ export const useLayoutStore = create<LayoutState>()(
               : DEFAULT_CLOSE_TAB_WORKFLOW_PROMPT,
           sdlcStagePrompts: sanitizeStagePrompts(incoming.sdlcStagePrompts),
           voiceEnabled: typeof incoming.voiceEnabled === 'boolean' ? incoming.voiceEnabled : false,
-          companionChattiness: CHATTINESS_LEVELS.includes(
-            incoming.companionChattiness as CompanionChattiness
-          )
-            ? (incoming.companionChattiness as CompanionChattiness)
-            : DEFAULT_CHATTINESS,
           companionEnabled:
             typeof incoming.companionEnabled === 'boolean' ? incoming.companionEnabled : false,
           companionSpeechEnabled:
