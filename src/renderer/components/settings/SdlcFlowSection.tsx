@@ -3,11 +3,12 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ChevronRight, Plus, RotateCcw } from 'lucide-react'
-import { isMiddleColumn, type SdlcColumn } from '@/models/sdlc-flow'
+import { DEFAULT_FLOW_ID, findFlow, isMiddleColumn, type SdlcColumn } from '@/models/sdlc-flow'
 import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { resetFlow } from '@/lib/sdlc-flow'
 import { SectionCard, useAccent } from '@/components/settings/SettingsControls'
 import { SdlcColumnEditor } from '@/components/settings/SdlcColumnEditor'
+import { SdlcFlowPicker } from '@/components/settings/SdlcFlowPicker'
 import { cn } from '@/lib/utils'
 
 const TAB_CLASS = 'flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-xs font-medium transition-colors'
@@ -60,7 +61,9 @@ function FlowTab({
 
 export function SdlcFlowSection(): React.ReactElement {
   const accent = useAccent()
-  const columns = useSdlcFlowStore((s) => s.columns)
+  const [flowId, setFlowId] = useState(DEFAULT_FLOW_ID)
+  const flow = useSdlcFlowStore((s) => findFlow(s.flows, flowId) ?? s.flows[0])
+  const columns = flow.columns
   const addColumn = useSdlcFlowStore((s) => s.addColumn)
   const reorderColumn = useSdlcFlowStore((s) => s.reorderColumn)
   const [selectedId, setSelectedId] = useState(columns[0].id)
@@ -72,21 +75,35 @@ export function SdlcFlowSection(): React.ReactElement {
 
   const handleDragEnd = ({ active, over }: DragEndEvent): void => {
     if (!over || active.id === over.id) return
-    reorderColumn(String(active.id), columns.findIndex((c) => c.id === over.id))
+    reorderColumn(flow.id, String(active.id), columns.findIndex((c) => c.id === over.id))
   }
 
   const handleReset = (): void => {
-    const done = resetFlow()
+    const done = resetFlow(flow.id)
     setResetBlocked(!done)
     setConfirmReset(false)
-    if (done) setSelectedId(useSdlcFlowStore.getState().columns[0].id)
+    if (done) setSelectedId(columns[0].id)
+  }
+
+  const selectFlow = (id: string): void => {
+    setFlowId(id)
+    setConfirmReset(false)
+    setResetBlocked(false)
+    setSelectedId(findFlow(useSdlcFlowStore.getState().flows, id)?.columns[0].id ?? columns[0].id)
   }
 
   return (
     <>
       <SectionCard
-        title="Flow"
-        description="The columns every project's board uses, left to right. Each column between the first and the last starts an agent with its command and prompt, and a ticket moves on by itself when the agent is done. Drag to reorder."
+        title="Flows"
+        description="Saved flows. Each project runs one of them, and editing a flow changes the board of every project that uses it. Save a flow as a new one to start a variant from it."
+      >
+        <SdlcFlowPicker flow={flow} onSelect={selectFlow} />
+      </SectionCard>
+
+      <SectionCard
+        title={`${flow.name} columns`}
+        description="The columns of this flow, left to right. Each column between the first and the last starts an agent with its command and prompt, and a ticket moves on by itself when the agent is done. Drag to reorder."
       >
         <div className="flex flex-wrap items-center gap-1" role="tablist" aria-label="Flow columns">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -105,7 +122,7 @@ export function SdlcFlowSection(): React.ReactElement {
             </SortableContext>
           </DndContext>
           <button
-            onClick={() => setSelectedId(addColumn('New column', last.id).id)}
+            onClick={() => setSelectedId(addColumn(flow.id, 'New column', last.id).id)}
             className={cn(TAB_CLASS, 'ml-1 border-dashed border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-200')}
             title={`Add a column before ${last.label}`}
             aria-label="Add column"
@@ -114,7 +131,7 @@ export function SdlcFlowSection(): React.ReactElement {
           </button>
           {confirmReset ? (
             <span className="ml-auto flex items-center gap-2 text-xs text-zinc-400">
-              Replace the flow with the default Backlog, Build, Done? Tickets in other columns go back to the start.
+              Replace this flow's columns with the default Backlog, Build, Done? Tickets in other columns go back to the start.
               <button onClick={() => setConfirmReset(false)} className="rounded px-2 py-1 hover:bg-zinc-800 hover:text-zinc-200">
                 Cancel
               </button>
@@ -128,7 +145,7 @@ export function SdlcFlowSection(): React.ReactElement {
               className="ml-auto flex items-center gap-1 rounded px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-200"
             >
               <RotateCcw size={11} />
-              Reset to default flow
+              Reset to default columns
             </button>
           )}
         </div>
@@ -140,7 +157,13 @@ export function SdlcFlowSection(): React.ReactElement {
       </SectionCard>
 
       <SectionCard title={selected.label}>
-        <SdlcColumnEditor key={selected.id} column={selected} onDeleted={() => setSelectedId(columns[0].id)} />
+        <SdlcColumnEditor
+          key={`${flow.id}:${selected.id}`}
+          flowId={flow.id}
+          columns={columns}
+          column={selected}
+          onDeleted={() => setSelectedId(columns[0].id)}
+        />
       </SectionCard>
     </>
   )

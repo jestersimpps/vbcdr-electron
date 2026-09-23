@@ -22,7 +22,8 @@ import type { SdlcTicket, SdlcTicketStatus } from '@/models/sdlc'
 import { hasCommand, type SdlcColumn } from '@/models/sdlc-flow'
 import { useProjectStore } from '@/stores/project-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
-import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { projectFlow, useProjectColumns, useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { canSwitchProjectFlow, switchProjectFlow } from '@/lib/sdlc-flow'
 import { useNow } from '@/hooks/useNow'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
@@ -355,6 +356,34 @@ function DoneTimerSelect({ projectId, columnLabel }: { projectId: string; column
   )
 }
 
+function FlowSelect({ projectId, projectName }: { projectId: string; projectName: string }): React.ReactElement {
+  const flows = useSdlcFlowStore((s) => s.flows)
+  const flowId = useSdlcFlowStore((s) => projectFlow(s, projectId).id)
+  return (
+    <label
+      className="mr-1 flex items-center gap-1 rounded px-1 text-micro text-zinc-500"
+      title="The flow this project's board runs. Tickets in columns the new flow lacks go back to the start."
+    >
+      <Workflow size={12} />
+      <select
+        value={flowId}
+        onChange={(e) => switchProjectFlow(projectId, e.target.value)}
+        aria-label={`Flow for ${projectName}`}
+        className="max-w-[120px] cursor-pointer truncate bg-transparent outline-none"
+      >
+        {flows.map((flow) => {
+          const blocked = flow.id !== flowId && !canSwitchProjectFlow(projectId, flow.id)
+          return (
+            <option key={flow.id} value={flow.id} disabled={blocked}>
+              {blocked ? `${flow.name} (agent running)` : flow.name}
+            </option>
+          )
+        })}
+      </select>
+    </label>
+  )
+}
+
 function ProjectSwimlane({
   projectId,
   projectName,
@@ -369,7 +398,7 @@ function ProjectSwimlane({
   const toggleProjectCollapsed = useSdlcStore((s) => s.toggleProjectCollapsed)
   const setActiveProject = useProjectStore((s) => s.setActiveProject)
   const showSdlcPromptsPage = useProjectStore((s) => s.showSdlcPromptsPage)
-  const columns = useSdlcFlowStore((s) => s.columns)
+  const columns = useProjectColumns(projectId)
   const firstColumnId = columns[0].id
 
   useEffect(() => {
@@ -437,6 +466,7 @@ function ProjectSwimlane({
       >
         <Settings2 size={13} />
       </button>
+      <FlowSelect projectId={projectId} projectName={projectName} />
       <DoneTimerSelect projectId={projectId} columnLabel={columns[columns.length - 1].label} />
       </div>
 

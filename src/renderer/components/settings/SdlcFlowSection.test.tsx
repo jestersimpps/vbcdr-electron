@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { SdlcFlowSection } from './SdlcFlowSection'
-import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { sdlcColumns, useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
-import { columnPrompt } from '@/models/sdlc-flow'
-import { threeStageFlow } from '@/models/sdlc-flow.fixtures'
+import { columnPrompt, type SdlcColumn } from '@/models/sdlc-flow'
+import { threeStageFlowState } from '@/models/sdlc-flow.fixtures'
 
-function columns(): ReturnType<typeof useSdlcFlowStore.getState>['columns'] {
-  return useSdlcFlowStore.getState().columns
+function columns(): SdlcColumn[] {
+  return sdlcColumns('p1')
 }
 
 function selectColumn(label: string): void {
@@ -16,7 +16,7 @@ function selectColumn(label: string): void {
 
 beforeEach(() => {
   cleanup()
-  useSdlcFlowStore.setState({ columns: threeStageFlow() })
+  useSdlcFlowStore.setState(threeStageFlowState())
   useSdlcStore.setState({ tickets: [] })
 })
 
@@ -111,5 +111,23 @@ describe('SdlcFlowSection', () => {
     selectColumn('Planning')
 
     expect((screen.getByRole('button', { name: /an agent is running/i }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('saves the flow as a new one and edits that copy from then on', () => {
+    render(<SdlcFlowSection />)
+    fireEvent.click(screen.getByRole('button', { name: 'Save as a new flow' }))
+    fireEvent.change(screen.getByLabelText('New flow name'), { target: { value: 'Careful' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save flow' }))
+
+    selectColumn('Planning')
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Think' } })
+
+    expect(columns()[1].label).toBe('Planning')
+    expect(useSdlcFlowStore.getState().flows.find((f) => f.id === 'careful')?.columns[1].label).toBe('Think')
+  })
+
+  it('offers no delete for the default flow', () => {
+    render(<SdlcFlowSection />)
+    expect(screen.queryByRole('button', { name: 'Delete flow' })).toBeNull()
   })
 })

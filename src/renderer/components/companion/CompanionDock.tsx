@@ -170,7 +170,7 @@ export function CompanionDock(): React.ReactElement {
 
     const unsubSdlc = useSdlcStore.subscribe((state, previous) => {
       if (state.tickets === previous.tickets) return
-      for (const announcement of sdlcAnnouncements(previous.tickets, state.tickets, sdlcColumns(), projectNameFor)) {
+      for (const announcement of sdlcAnnouncements(previous.tickets, state.tickets, sdlcColumns, projectNameFor)) {
         say(announcement)
       }
     })
