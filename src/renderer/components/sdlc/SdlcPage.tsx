@@ -189,8 +189,16 @@ function TicketCard({
   const hasDiff = ticket.filesChanged > 0
   const hasTab = useTerminalStore((s) => !!ticket.tabId && s.tabs.some((t) => t.id === ticket.tabId))
   const accent = useAccent()
+  const startable = place === 'start' && ticket.status === 'idle'
   return (
-    <div className="w-full rounded-md border border-zinc-800 bg-zinc-900/60 p-2 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-900">
+    <div
+      tabIndex={startable ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (startable && e.key === 'Enter' && e.target === e.currentTarget) void moveTicketOn(ticket.id)
+      }}
+      title={startable ? 'Press Enter to start the flow' : undefined}
+      className="w-full rounded-md border border-zinc-800 bg-zinc-900/60 p-2 text-left outline-none transition-colors hover:border-zinc-700 hover:bg-zinc-900 focus-visible:border-zinc-500"
+    >
       <div className="mb-1.5 line-clamp-2 text-xs font-medium leading-snug text-zinc-200">{ticket.title}</div>
 
       <TicketLocation ticket={ticket} />
