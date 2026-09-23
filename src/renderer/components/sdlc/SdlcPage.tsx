@@ -110,6 +110,17 @@ function removeTicket(ticket: SdlcTicket, place: TicketPlace): void {
   void (place === 'end' ? removeFinishedTicket(ticket.id) : discardTicket(ticket.id))
 }
 
+function AccentButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>): React.ReactElement {
+  const accent = useAccent()
+  return (
+    <button
+      {...props}
+      className="flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+      style={{ borderColor: accent, color: accent }}
+    />
+  )
+}
+
 function TicketActions({
   ticket,
   place,
@@ -158,14 +169,13 @@ function TicketActions({
         </button>
       )}
       {place === 'end' && column.prompt.trim() && (
-        <button
+        <AccentButton
           onClick={() => void runDoneAction(ticket.id)}
-          className={CARD_BUTTON}
           title={`Run the ${column.label} prompt for this ticket`}
         >
-          <Send size={11} />
+          <Send size={12} />
           {ticket.doneActionAt ? 'Run again' : 'Run'}
-        </button>
+        </AccentButton>
       )}
       {place === 'agent' && stalled && (
         <button onClick={() => void rerunStage(ticket.id)} className={CARD_BUTTON} title="Run this stage again in a fresh tab">
@@ -188,7 +198,6 @@ function TicketCard({
 }): React.ReactElement {
   const hasDiff = ticket.filesChanged > 0
   const hasTab = useTerminalStore((s) => !!ticket.tabId && s.tabs.some((t) => t.id === ticket.tabId))
-  const accent = useAccent()
   const startable = place === 'start' && ticket.status === 'idle'
   return (
     <div
@@ -249,17 +258,15 @@ function TicketCard({
       <div className="mt-1.5 flex items-end justify-between gap-2">
         <RelativeTime timestamp={ticket.updatedAt} />
         {ticket.tabId && (
-          <button
+          <AccentButton
             onClick={() => focusTicketTab(ticket)}
             disabled={!hasTab}
-            className="flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ borderColor: accent, color: accent }}
             title={hasTab ? 'Switch to the agent tab' : 'The agent tab is no longer open. Run the stage again.'}
             aria-label={`Open the agent tab for ${ticket.title}`}
           >
             <Terminal size={13} />
             Open tab
-          </button>
+          </AccentButton>
         )}
       </div>
 
