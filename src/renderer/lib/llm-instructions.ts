@@ -14,11 +14,13 @@ export interface SdlcPromptVariables {
   worktreePath: string
   projectPath: string
   diff: string
+  /** The branch's pull request as `<url> (<state>)`, so a prompt can skip work a PR already covers. */
+  pr: string
   /** Earlier columns' results, read as `{{output.<columnId>}}`. */
   outputs: Record<string, string>
 }
 
-export const SDLC_PROMPT_VARIABLES = ['title', 'description', 'branch', 'worktreePath', 'projectPath', 'diff'] as const
+export const SDLC_PROMPT_VARIABLES = ['title', 'description', 'branch', 'worktreePath', 'projectPath', 'diff', 'pr'] as const
 
 export const OUTPUT_VARIABLE_PREFIX = 'output.'
 

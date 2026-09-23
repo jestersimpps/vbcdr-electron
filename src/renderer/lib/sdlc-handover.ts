@@ -12,7 +12,7 @@ import { clearSentinel, readSentinel } from '@/lib/sdlc-sentinel'
 import { attachmentsInstruction, writeAttachmentsToWorktree } from '@/lib/sdlc-attachments'
 import { deleteWorktree, finishWorktree } from '@/lib/worktree-tabs'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
-import { EMPTY_PROMPT_VALUE, SDLC_SENTINEL_DIR, SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
+import { EMPTY_PROMPT_VALUE, PR_UNKNOWN_VALUE, SDLC_SENTINEL_DIR, SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
 import { findColumn, isAgentColumn, nextColumn, type SdlcColumn } from '@/models/sdlc-flow'
 import type { SdlcStage, SdlcTicket } from '@/models/sdlc'
 import { SDLC_PROFILE_ID, type TabProfileMeta } from '@/config/terminal-profiles'
@@ -132,7 +132,8 @@ function promptVariables(
   ticket: SdlcTicket,
   project: Project,
   worktree: WorktreeInfo,
-  diff: string
+  diff: string,
+  pr: string
 ): SdlcPromptVariables {
   return {
     title: ticket.title || EMPTY_PROMPT_VALUE,
@@ -141,6 +142,7 @@ function promptVariables(
     worktreePath: worktree.path,
     projectPath: project.path,
     diff: diff || EMPTY_PROMPT_VALUE,
+    pr: pr || EMPTY_PROMPT_VALUE,
     outputs: Object.fromEntries(
       sdlcColumns().map((c) => [c.id, ticket.artifacts.outputs[c.id] || EMPTY_PROMPT_VALUE])
     )
@@ -178,6 +180,14 @@ async function diffForReview(worktree: WorktreeInfo, project: Project): Promise<
   return window.api.git.diffSummary(worktree.path, base)
 }
 
+/** Asks gh at handoff time, since the tracked PR state is only as fresh as the last worktree refresh. */
+async function prForPrompt(worktree: WorktreeInfo): Promise<string> {
+  const tracked = await useWorktreeStore.getState().refreshOne(worktree.id)
+  if (!tracked || tracked.prState === 'none') return EMPTY_PROMPT_VALUE
+  if (tracked.prState === 'unknown') return PR_UNKNOWN_VALUE
+  return tracked.prUrl ? `${tracked.prUrl} (${tracked.prState})` : `(${tracked.prState})`
+}
+
 export async function handOffStage(ticket: SdlcTicket, project: Project): Promise<StageHandoverResult | null> {
   if (!isAgentColumn(ticketColumn(ticket))) return null
   const stage = ticket.stage
@@ -200,7 +210,8 @@ export async function handOffStage(ticket: SdlcTicket, project: Project): Promis
     await clearSentinel(worktree.path)
     const template = resolveStagePrompt(project.id, stage).text
     const diff = promptUsesVariable(template, 'diff') ? await diffForReview(worktree, project) : ''
-    prompt = interpolatePrompt(template, promptVariables(ticket, project, worktree, diff))
+    const pr = promptUsesVariable(template, 'pr') ? await prForPrompt(worktree) : ''
+    prompt = interpolatePrompt(template, promptVariables(ticket, project, worktree, diff, pr))
     const attached = await writeAttachmentsToWorktree(worktree.path, ticket.attachments)
     if (attached.length > 0) prompt = `${prompt}\n\n${attachmentsInstruction(attached)}`
   } catch (err) {

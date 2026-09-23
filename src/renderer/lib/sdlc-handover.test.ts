@@ -497,6 +497,45 @@ describe('custom columns', () => {
     expect(window.api.git.diffSummary).toHaveBeenCalled()
   })
 
+  function reviewPrompt(prompt: string): void {
+    useSdlcFlowStore.getState().updateColumn('review', { prompt })
+    useSdlcStore.setState({ tickets: [ticket({ stage: 'review' })] })
+  }
+
+  function queuedPrompt(): string {
+    const tab = useTerminalStore.getState().tabs[0]
+    return useQueueStore.getState().itemsPerTab[tab.id][0].text
+  }
+
+  it('only asks gh for the pull request when the prompt reads it', async () => {
+    vi.mocked(window.api.worktrees.refresh).mockClear()
+    await handOffStage(current(), project)
+    expect(window.api.worktrees.refresh).not.toHaveBeenCalled()
+  })
+
+  it('hands the prompt the branch pull request with its state', async () => {
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValue(
+      trackedWorktree({ prUrl: 'https://github.com/o/r/pull/7', prState: 'open' })
+    )
+    reviewPrompt('If {{pr}} already exists, do nothing.')
+    await handOffStage(current(), project)
+    expect(queuedPrompt()).toBe('If https://github.com/o/r/pull/7 (open) already exists, do nothing.')
+  })
+
+  it('reads a branch without a pull request as (none)', async () => {
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValue(trackedWorktree())
+    reviewPrompt('PR: {{pr}}')
+    await handOffStage(current(), project)
+    expect(queuedPrompt()).toBe('PR: (none)')
+  })
+
+  it('says so when gh could not check, instead of claiming there is no pull request', async () => {
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValue(trackedWorktree({ prState: 'unknown' }))
+    reviewPrompt('PR: {{pr}}')
+    await handOffStage(current(), project)
+    expect(queuedPrompt()).toBe('PR: (unknown: gh could not check)')
+  })
+
   it('stores the result under the column id and saves it where the column says', async () => {
     const audit = addAudit()
     useSdlcStore.setState({ tickets: [ticket({ stage: 'implementing' })] })
