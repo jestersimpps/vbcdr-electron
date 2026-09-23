@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { resolveStagePrompt, useSdlcPromptsStore } from './sdlc-prompts-store'
 import { useSdlcFlowStore } from './sdlc-flow-store'
 import { DEFAULT_SDLC_STAGE_PROMPTS } from '@/models/sdlc-prompts'
+import { threeStageFlow } from '@/models/sdlc-flow.fixtures'
 
 beforeEach(() => {
   useSdlcPromptsStore.setState({ promptsPerProject: {} })
-  useSdlcFlowStore.getState().resetColumns()
+  useSdlcFlowStore.setState({ columns: threeStageFlow() })
 })
 
 describe('resolveStagePrompt', () => {

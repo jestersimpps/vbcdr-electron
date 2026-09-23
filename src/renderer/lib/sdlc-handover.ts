@@ -188,6 +188,23 @@ async function prForPrompt(worktree: WorktreeInfo): Promise<string> {
   return tracked.prUrl ? `${tracked.prUrl} (${tracked.prState})` : `(${tracked.prState})`
 }
 
+/** A fresh tab for the ticket's column, with the prompt queued for once the CLI is up, made the tab the queue runner drains. */
+function openColumnTab(ticket: SdlcTicket, project: Project, worktree: WorktreeInfo, prompt: string): string {
+  const { command, providerId } = stageCommand(ticket.stage)
+  const tabId = useTerminalStore
+    .getState()
+    .createTab(project.id, worktree.path, command, worktree, sdlcProfileMeta(ticket.stage, ticket, providerId))
+  useQueueStore.getState().addItem(tabId, prompt)
+  activateTab(project.id, tabId)
+  return tabId
+}
+
+async function renderPrompt(template: string, ticket: SdlcTicket, project: Project, worktree: WorktreeInfo): Promise<string> {
+  const diff = promptUsesVariable(template, 'diff') ? await diffForReview(worktree, project) : ''
+  const pr = promptUsesVariable(template, 'pr') ? await prForPrompt(worktree) : ''
+  return interpolatePrompt(template, promptVariables(ticket, project, worktree, diff, pr))
+}
+
 export async function handOffStage(ticket: SdlcTicket, project: Project): Promise<StageHandoverResult | null> {
   if (!isAgentColumn(ticketColumn(ticket))) return null
   const stage = ticket.stage
@@ -208,10 +225,7 @@ export async function handOffStage(ticket: SdlcTicket, project: Project): Promis
   try {
     await window.api.git.ensureInfoExclude(project.path, `${SDLC_SENTINEL_DIR}/`)
     await clearSentinel(worktree.path)
-    const template = resolveStagePrompt(project.id, stage).text
-    const diff = promptUsesVariable(template, 'diff') ? await diffForReview(worktree, project) : ''
-    const pr = promptUsesVariable(template, 'pr') ? await prForPrompt(worktree) : ''
-    prompt = interpolatePrompt(template, promptVariables(ticket, project, worktree, diff, pr))
+    prompt = await renderPrompt(resolveStagePrompt(project.id, stage).text, ticket, project, worktree)
     const attached = await writeAttachmentsToWorktree(worktree.path, ticket.attachments)
     if (attached.length > 0) prompt = `${prompt}\n\n${attachmentsInstruction(attached)}`
   } catch (err) {
@@ -223,12 +237,7 @@ export async function handOffStage(ticket: SdlcTicket, project: Project): Promis
     return null
   }
 
-  const { command, providerId } = stageCommand(stage)
-  const tabId = useTerminalStore
-    .getState()
-    .createTab(project.id, worktree.path, command, worktree, sdlcProfileMeta(stage, ticket, providerId))
-  useQueueStore.getState().addItem(tabId, prompt)
-  activateTab(project.id, tabId)
+  const tabId = openColumnTab(ticket, project, worktree, prompt)
 
   patchTicket(ticket.id, {
     ...worktreeFields,
@@ -285,12 +294,7 @@ export async function mergeIntoTicketBranch(ticketId: string, target: string): P
 
   await closeTicketTab(ticket)
 
-  const { command, providerId } = stageCommand(ticket.stage)
-  const tabId = useTerminalStore
-    .getState()
-    .createTab(project.id, worktree.path, command, worktree, sdlcProfileMeta(ticket.stage, ticket, providerId))
-  useQueueStore.getState().addItem(tabId, mergePrompt(cleanTarget, worktree.branch, worktree.path))
-  activateTab(project.id, tabId)
+  const tabId = openColumnTab(ticket, project, worktree, mergePrompt(cleanTarget, worktree.branch, worktree.path))
 
   store.patchTicket(ticket.id, {
     worktreeId: worktree.id,
@@ -451,9 +455,115 @@ export async function finishTicket(ticketId: string): Promise<void> {
   }
   store.patchTicket(ticketId, {
     tabId: null,
+    worktreeId: null,
+    worktreePath: '—',
     status: 'idle',
     blockedReason: null,
     artifacts: activityEntry(currentTicket(captured), `Worktree removed, work kept on branch ${captured.branch}`)
   })
   store.advanceTicket(ticketId)
+}
+
+/** The branch outlived its folder when the ticket finished, so the last column's prompt gets the branch checked out again. */
+async function reopenTicketWorktree(ticket: SdlcTicket, project: Project): Promise<WorktreeInfo | null> {
+  if (ticket.worktreeId) {
+    const tracked = await useWorktreeStore.getState().refreshOne(ticket.worktreeId)
+    if (tracked) return toWorktreeInfo(tracked)
+  }
+  const tracked: TrackedWorktree[] = await window.api.worktrees.list(project.id)
+  const onBranch = tracked.find((w) => w.branch === ticket.branch)
+  if (onBranch) return toWorktreeInfo(onBranch)
+  const reopened = await createTrackedWorktreeForProject(project.id, project.path, { existingBranch: ticket.branch })
+  return reopened ? toWorktreeInfo(reopened) : null
+}
+
+async function launchDoneAction(ticketId: string): Promise<string | null> {
+  const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
+  if (!ticket || ticketColumn(ticket)?.kind !== 'terminal') return null
+  const project = findProject(ticket)
+  if (!project) return null
+  const template = resolveStagePrompt(project.id, ticket.stage).text
+  if (!template.trim()) return null
+  const { patchTicket } = useSdlcStore.getState()
+
+  const worktree = await reopenTicketWorktree(ticket, project)
+  if (!worktree) {
+    patchTicket(ticket.id, { blockedReason: `Could not check out branch ${ticket.branch} again. Was it deleted?` })
+    return null
+  }
+  await closeTicketTab(currentTicket(ticket))
+  const prompt = await renderPrompt(template, currentTicket(ticket), project, worktree)
+  const tabId = openColumnTab(ticket, project, worktree, prompt)
+  patchTicket(ticket.id, {
+    worktreeId: worktree.id,
+    worktreePath: worktree.path,
+    tabId,
+    blockedReason: null,
+    doneActionAt: Date.now(),
+    artifacts: activityEntry(currentTicket(ticket), `Ran the ${stageLabel(ticket.stage)} prompt`)
+  })
+  return tabId
+}
+
+/** Runs the last column's prompt, such as opening a pull request, for a ticket that finished. */
+export async function runDoneAction(ticketId: string): Promise<boolean> {
+  return !!(await launchDoneAction(ticketId))
+}
+
+const PROMPT_DELIVERY_TIMEOUT_MS = 120_000
+
+/** The queue runner only feeds the active tab, so the next tab may not take focus until this one has its prompt. */
+function untilPromptDelivered(tabId: string): Promise<void> {
+  return new Promise((resolve) => {
+    const delivered = (): boolean =>
+      !(useQueueStore.getState().itemsPerTab[tabId]?.length) ||
+      !useTerminalStore.getState().tabs.some((t) => t.id === tabId)
+    if (delivered()) return resolve()
+    const finish = (): void => {
+      clearTimeout(timer)
+      unsubscribeQueue()
+      unsubscribeTabs()
+      resolve()
+    }
+    const check = (): void => {
+      if (delivered()) finish()
+    }
+    const timer = setTimeout(finish, PROMPT_DELIVERY_TIMEOUT_MS)
+    const unsubscribeQueue = useQueueStore.subscribe(check)
+    const unsubscribeTabs = useTerminalStore.subscribe(check)
+  })
+}
+
+/** One ticket at a time: each tab has to be the active one until its prompt is sent. */
+export async function runDoneActions(ticketIds: readonly string[]): Promise<void> {
+  for (const id of ticketIds) {
+    const tabId = await launchDoneAction(id)
+    if (tabId) await untilPromptDelivered(tabId)
+  }
+}
+
+/** Finished tickets whose last-column prompt has never run: what the column button and the project timer act on. */
+export function pendingDoneTicketIds(projectId: string): string[] {
+  const last = sdlcColumns().at(-1)
+  return useSdlcStore
+    .getState()
+    .tickets.filter((t) => t.projectId === projectId && t.stage === last?.id && !t.doneActionAt)
+    .map((t) => t.id)
+}
+
+/** A finished ticket only loses its card; a worktree reopened for its prompt goes too, with any new work kept on the branch. */
+export async function removeFinishedTicket(ticketId: string): Promise<void> {
+  const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
+  if (!ticket) return
+  const tracked = ticket.worktreeId ? await useWorktreeStore.getState().refreshOne(ticket.worktreeId) : null
+  if (tracked) {
+    const error = await finishWorktree(tracked.id, leftoverCommitMessage(ticket))
+    if (error) {
+      useSdlcStore.getState().patchTicket(ticketId, { blockedReason: `Could not clean up the worktree: ${error}` })
+      return
+    }
+  } else {
+    await closeTicketTab(ticket)
+  }
+  useSdlcStore.getState().deleteTicket(ticketId)
 }

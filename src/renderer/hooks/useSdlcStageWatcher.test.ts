@@ -44,7 +44,9 @@ const ticket = (over: Partial<SdlcTicket> = {}): SdlcTicket => ({
   comments: [],
   artifacts: EMPTY_ARTIFACTS,
   prUrl: null,
+    prState: 'none',
   blockedReason: null,
+  doneActionAt: null,
   ...over
 })
 

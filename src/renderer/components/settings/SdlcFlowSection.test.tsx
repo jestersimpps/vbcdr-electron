@@ -3,7 +3,8 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { SdlcFlowSection } from './SdlcFlowSection'
 import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
-import { DEFAULT_SDLC_STAGE_PROMPTS } from '@/models/sdlc-prompts'
+import { columnPrompt } from '@/models/sdlc-flow'
+import { threeStageFlow } from '@/models/sdlc-flow.fixtures'
 
 function columns(): ReturnType<typeof useSdlcFlowStore.getState>['columns'] {
   return useSdlcFlowStore.getState().columns
@@ -15,7 +16,7 @@ function selectColumn(label: string): void {
 
 beforeEach(() => {
   cleanup()
-  useSdlcFlowStore.getState().resetColumns()
+  useSdlcFlowStore.setState({ columns: threeStageFlow() })
   useSdlcStore.setState({ tickets: [] })
 })
 
@@ -36,14 +37,17 @@ describe('SdlcFlowSection', () => {
     expect(columns()[1]).toMatchObject({ id: 'planning', label: 'Design' })
   })
 
-  it('keeps the ends fixed: no delete, no command, no prompt', () => {
+  it('keeps the ends fixed: no delete, and only the last one runs a command', () => {
     render(<SdlcFlowSection />)
     expect(screen.queryByRole('button', { name: 'Delete column' })).toBeNull()
     expect(screen.queryByLabelText('Startup command')).toBeNull()
 
     selectColumn('Done')
     expect(screen.queryByRole('button', { name: 'Delete column' })).toBeNull()
-    expect(screen.queryByLabelText('Prompt for done')).toBeNull()
+    expect((screen.getByLabelText('Startup command') as HTMLInputElement).value).toBe(
+      'claude --permission-mode bypassPermissions'
+    )
+    expect((screen.getByLabelText('Prompt for done') as HTMLTextAreaElement).value).toContain('gh pr create')
   })
 
   it('edits the startup command an agent column starts with', () => {
@@ -65,7 +69,7 @@ describe('SdlcFlowSection', () => {
     expect(screen.queryByLabelText('Description')).toBeNull()
   })
 
-  it('edits the prompt on blur and resets it to the shipped text', () => {
+  it('edits the prompt on blur and resets it to the handover template for its place', () => {
     render(<SdlcFlowSection />)
     selectColumn('Planning')
     const prompt = screen.getByLabelText('Prompt for planning')
@@ -74,7 +78,7 @@ describe('SdlcFlowSection', () => {
     expect(columns()[1].prompt).toBe('plan differently')
 
     fireEvent.click(screen.getByRole('button', { name: /^reset$/i }))
-    expect(columns()[1].prompt).toBe(DEFAULT_SDLC_STAGE_PROMPTS.planning)
+    expect(columns()[1].prompt).toBe(columnPrompt([]))
   })
 
   it('lists the outputs a prompt can read: only the agent columns before it', () => {

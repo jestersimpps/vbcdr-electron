@@ -5,7 +5,11 @@ import {
   discardTicket,
   handOffStage,
   moveTicketOn,
-  rerunStage
+  pendingDoneTicketIds,
+  removeFinishedTicket,
+  rerunStage,
+  runDoneAction,
+  runDoneActions
 } from './sdlc-handover'
 import { useSdlcStore } from '@/stores/sdlc-store'
 import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
@@ -15,6 +19,7 @@ import { useQueueStore } from '@/stores/queue-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
 import { EMPTY_ARTIFACTS, type SdlcTicket } from '@/models/sdlc'
 import type { Project, TrackedWorktree } from '@/models/types'
+import { threeStageFlow } from '@/models/sdlc-flow.fixtures'
 
 vi.mock('@/components/terminal/TerminalInstance', () => ({
   disposeTerminal: vi.fn(),
@@ -46,7 +51,9 @@ function ticket(overrides: Partial<SdlcTicket> = {}): SdlcTicket {
     comments: [],
     artifacts: EMPTY_ARTIFACTS,
     prUrl: null,
+    prState: 'none',
     blockedReason: null,
+    doneActionAt: null,
     ...overrides
   }
 }
@@ -74,7 +81,7 @@ function current(): SdlcTicket {
 }
 
 beforeEach(() => {
-  useSdlcFlowStore.getState().resetColumns()
+  useSdlcFlowStore.setState({ columns: threeStageFlow() })
   useSdlcStore.setState({ tickets: [ticket()] })
   useProjectStore.setState({ projects: [project], activeProjectId: null })
   useTerminalStore.setState({ tabs: [], activeTabPerProject: {}, tabStatuses: {} })
@@ -564,5 +571,91 @@ describe('custom columns', () => {
 
     expect(current().stage).toBe('done')
     expect(window.api.worktrees.finish).toHaveBeenCalledWith('wt1', 'Add auth')
+  })
+})
+
+describe('done prompt', () => {
+  const finished = (overrides: Partial<SdlcTicket> = {}): SdlcTicket =>
+    ticket({ stage: 'done', branch: 'llm/add-auth', artifacts: { ...EMPTY_ARTIFACTS, outputs: { review: 'lgtm' } }, ...overrides })
+
+  beforeEach(() => {
+    vi.mocked(window.api.worktrees.create).mockClear()
+    vi.mocked(window.api.worktrees.create).mockImplementation(async () => trackedWorktree({ path: '/cwd/.worktrees/llm/add-auth' }))
+  })
+
+  it("reopens the ticket's branch and sends the column's prompt with every variable filled in", async () => {
+    useSdlcStore.setState({ tickets: [finished()] })
+
+    expect(await runDoneAction('t1')).toBe(true)
+
+    expect(window.api.worktrees.create).toHaveBeenCalledWith('p1', '/cwd', { existingBranch: 'llm/add-auth' })
+    const tab = useTerminalStore.getState().tabs[0]
+    expect(tab).toMatchObject({ cwd: '/cwd/.worktrees/llm/add-auth', title: 'Done · Add auth' })
+    const prompt = useQueueStore.getState().itemsPerTab[tab.id][0].text
+    expect(prompt).toContain('gh pr create')
+    expect(prompt).toContain('llm/add-auth')
+    expect(prompt).toContain('Pull request for this branch: (none)')
+    expect(prompt).not.toContain('{{')
+    expect(prompt).not.toContain('stage-output.md')
+    expect(current()).toMatchObject({ stage: 'done', status: 'idle', tabId: tab.id, worktreeId: 'wt1' })
+    expect(current().doneActionAt).toBeGreaterThan(0)
+  })
+
+  it('does nothing for a ticket that is not finished', async () => {
+    expect(await runDoneAction('t1')).toBe(false)
+    expect(useTerminalStore.getState().tabs).toHaveLength(0)
+  })
+
+  it('says so when the branch cannot be checked out again', async () => {
+    useSdlcStore.setState({ tickets: [finished()] })
+    vi.mocked(window.api.worktrees.create).mockRejectedValueOnce(new Error("invalid reference: llm/add-auth"))
+    expect(await runDoneAction('t1')).toBe(false)
+    expect(current().blockedReason).toContain('llm/add-auth')
+  })
+
+  it('opens the next tab only once the previous one has its prompt, since only the active tab is fed', async () => {
+    useSdlcStore.setState({ tickets: [finished(), finished({ id: 't2', title: 'Add billing', branch: 'llm/billing' })] })
+
+    const running = runDoneActions(['t1', 't2'])
+    await vi.waitFor(() => expect(useTerminalStore.getState().tabs).toHaveLength(1))
+    const first = useTerminalStore.getState().tabs[0].id
+    await new Promise((r) => setTimeout(r, 20))
+    expect(useTerminalStore.getState().tabs).toHaveLength(1)
+
+    useQueueStore.getState().dequeue(first)
+    await vi.waitFor(() => expect(useTerminalStore.getState().tabs).toHaveLength(2))
+    useQueueStore.getState().dequeue(useTerminalStore.getState().tabs[1].id)
+    await running
+
+    expect(useSdlcStore.getState().tickets.every((t) => t.doneActionAt)).toBe(true)
+  })
+
+  it('lists only the finished tickets that have not had the prompt yet', () => {
+    useSdlcStore.setState({
+      tickets: [finished(), finished({ id: 't2', doneActionAt: 1 }), ticket({ id: 't3' }), finished({ id: 't4', projectId: 'p2' })]
+    })
+    expect(pendingDoneTicketIds('p1')).toEqual(['t1'])
+  })
+
+  it('removing a finished ticket cleans up a reopened worktree and keeps the branch', async () => {
+    vi.mocked(window.api.worktrees.finish).mockClear()
+    vi.mocked(window.api.worktrees.remove).mockClear()
+    vi.mocked(window.api.worktrees.refresh).mockResolvedValueOnce(trackedWorktree())
+    useSdlcStore.setState({ tickets: [finished({ worktreeId: 'wt1' })] })
+
+    await removeFinishedTicket('t1')
+
+    expect(window.api.worktrees.finish).toHaveBeenCalledWith('wt1', 'Add auth')
+    expect(window.api.worktrees.remove).not.toHaveBeenCalled()
+    expect(useSdlcStore.getState().tickets).toHaveLength(0)
+  })
+  it('removing a finished ticket whose worktree is already gone just takes the card off', async () => {
+    vi.mocked(window.api.worktrees.finish).mockClear()
+    useSdlcStore.setState({ tickets: [finished({ worktreeId: 'gone' })] })
+
+    await removeFinishedTicket('t1')
+
+    expect(window.api.worktrees.finish).not.toHaveBeenCalled()
+    expect(useSdlcStore.getState().tickets).toHaveLength(0)
   })
 })

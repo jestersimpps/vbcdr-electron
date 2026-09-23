@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { useLayoutStore } from '@/stores/layout-store'
 import {
   columnIdFrom,
   defaultSdlcColumns,
+  isAgentColumn,
   isMiddleColumn,
   newAgentColumn,
   sanitizeColumns,
@@ -28,29 +28,18 @@ export function upgradeLegacyPrompt(prompt: string): string {
   return prompt.replace(LEGACY_PLAN_VARIABLE, '{{output.planning}}')
 }
 
-/**
- * Global prompts used to live on the layout store. A flow that was never saved
- * starts from those, so a prompt edited before columns existed carries over.
- */
-function seedColumns(): SdlcColumn[] {
-  const legacy: Record<string, string> = useLayoutStore.getState().sdlcStagePrompts
-  return defaultSdlcColumns().map((column) => {
-    const prompt = legacy[column.id]
-    return prompt ? { ...column, prompt: upgradeLegacyPrompt(prompt) } : column
-  })
-}
-
 export const useSdlcFlowStore = create<SdlcFlowState>()(
   persist(
     (set, get) => ({
-      columns: seedColumns(),
+      columns: defaultSdlcColumns(),
 
       addColumn: (label: string, beforeId: string) => {
         const { columns } = get()
         const name = label.trim() || 'New column'
-        const column = newAgentColumn(columnIdFrom(name, columns.map((c) => c.id)), name)
         const found = columns.findIndex((c) => c.id === beforeId)
         const index = Math.min(Math.max(found < 0 ? columns.length - 1 : found, 1), columns.length - 1)
+        const earlier = columns.slice(0, index).filter(isAgentColumn)
+        const column = newAgentColumn(columnIdFrom(name, columns.map((c) => c.id)), name, earlier)
         set({ columns: [...columns.slice(0, index), column, ...columns.slice(index)] })
         return column
       },

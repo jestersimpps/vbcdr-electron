@@ -1,34 +1,44 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   Check,
   ChevronDown,
   ChevronRight,
   CircleDot,
-  ExternalLink,
   FolderOpen,
-  GitBranch,
   Loader2,
   Paperclip,
   Play,
   RotateCcw,
+  Send,
   Settings2,
   Terminal,
+  Timer,
   Trash2,
   UserCheck,
   Workflow,
   X
 } from 'lucide-react'
 import type { SdlcTicket, SdlcTicketStatus } from '@/models/sdlc'
-import { isAgentColumn, type SdlcColumn } from '@/models/sdlc-flow'
+import { hasCommand, type SdlcColumn } from '@/models/sdlc-flow'
 import { useProjectStore } from '@/stores/project-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
 import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { discardTicket, focusTicketTab, moveTicketOn, rerunStage } from '@/lib/sdlc-handover'
+import { useWorktreeStore } from '@/stores/worktree-store'
+import { DONE_TIMER_OPTIONS, useSdlcScheduleStore } from '@/stores/sdlc-schedule-store'
+import {
+  discardTicket,
+  focusTicketTab,
+  moveTicketOn,
+  removeFinishedTicket,
+  rerunStage,
+  runDoneAction,
+  runDoneActions
+} from '@/lib/sdlc-handover'
 import { useAccent } from '@/components/settings/SettingsControls'
 import { NewTicketComposer } from '@/components/sdlc/NewTicketComposer'
-import { buildSeedTickets } from '@/lib/dev-seed-tickets'
+import { TicketLocation } from '@/components/sdlc/TicketLocation'
 import { cn } from '@/lib/utils'
 
 const LANE_MIN_WIDTH = 'min-w-[220px]'
@@ -89,13 +99,20 @@ type TicketPlace = 'start' | 'agent' | 'end'
 const CARD_BUTTON =
   'flex items-center gap-1 rounded px-1.5 py-0.5 text-micro text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200'
 
-/** A finished ticket's worktree is already gone and its branch holds the work, so removing it only takes it off the board. */
+/** A finished ticket's branch holds the work, so removing it only takes it off the board. */
 function removeTicket(ticket: SdlcTicket, place: TicketPlace): void {
-  if (place === 'end') useSdlcStore.getState().deleteTicket(ticket.id)
-  else void discardTicket(ticket.id)
+  void (place === 'end' ? removeFinishedTicket(ticket.id) : discardTicket(ticket.id))
 }
 
-function TicketActions({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace }): React.ReactElement {
+function TicketActions({
+  ticket,
+  place,
+  column
+}: {
+  ticket: SdlcTicket
+  place: TicketPlace
+  column: SdlcColumn
+}): React.ReactElement {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const stalled = ticket.status === 'blocked' || ticket.status === 'failed'
 
@@ -134,6 +151,16 @@ function TicketActions({ ticket, place }: { ticket: SdlcTicket; place: TicketPla
           Start
         </button>
       )}
+      {place === 'end' && column.prompt.trim() && (
+        <button
+          onClick={() => void runDoneAction(ticket.id)}
+          className={CARD_BUTTON}
+          title={`Run the ${column.label} prompt for this ticket`}
+        >
+          <Send size={11} />
+          {ticket.doneActionAt ? 'Run again' : 'Run'}
+        </button>
+      )}
       {place === 'agent' && stalled && (
         <button onClick={() => void rerunStage(ticket.id)} className={CARD_BUTTON} title="Run this stage again in a fresh tab">
           <RotateCcw size={11} />
@@ -144,7 +171,15 @@ function TicketActions({ ticket, place }: { ticket: SdlcTicket; place: TicketPla
   )
 }
 
-function TicketCard({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace }): React.ReactElement {
+function TicketCard({
+  ticket,
+  place,
+  column
+}: {
+  ticket: SdlcTicket
+  place: TicketPlace
+  column: SdlcColumn
+}): React.ReactElement {
   const hasDiff = ticket.filesChanged > 0
   const hasTab = useTerminalStore((s) => !!ticket.tabId && s.tabs.some((t) => t.id === ticket.tabId))
   const accent = useAccent()
@@ -152,12 +187,7 @@ function TicketCard({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace 
     <div className="w-full rounded-md border border-zinc-800 bg-zinc-900/60 p-2 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-900">
       <div className="mb-1.5 line-clamp-2 text-xs font-medium leading-snug text-zinc-200">{ticket.title}</div>
 
-      {ticket.branch !== '—' && (
-        <div className="mb-1.5 flex items-center gap-1 text-micro text-zinc-500">
-          <GitBranch size={10} className="shrink-0" />
-          <span className="truncate font-mono">{ticket.branch}</span>
-        </div>
-      )}
+      <TicketLocation ticket={ticket} />
 
       {ticket.blockedReason && (
         <div className="mb-1.5 rounded border border-orange-900/60 bg-orange-950/30 px-1.5 py-1 text-micro leading-snug text-orange-300">
@@ -199,7 +229,6 @@ function TicketCard({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace 
               <span className="text-red-500">-{ticket.linesRemoved}</span>
             </span>
           )}
-          {ticket.prUrl && <ExternalLink size={10} className="text-zinc-600" />}
         </div>
       </div>
 
@@ -221,7 +250,7 @@ function TicketCard({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace 
       </div>
 
       <div className="mt-1.5 border-t border-zinc-800/80 pt-1.5">
-        <TicketActions ticket={ticket} place={place} />
+        <TicketActions ticket={ticket} place={place} column={column} />
       </div>
     </div>
   )
@@ -232,23 +261,80 @@ function placeOf(columns: readonly SdlcColumn[], index: number): TicketPlace {
   return index === columns.length - 1 ? 'end' : 'agent'
 }
 
+/** The last column's prompt runs on demand, for the finished tickets that have not had it yet. */
+function RunPendingButton({ column, tickets }: { column: SdlcColumn; tickets: SdlcTicket[] }): React.ReactElement {
+  const pending = tickets.filter((t) => !t.doneActionAt).map((t) => t.id)
+  return (
+    <button
+      onClick={() => void runDoneActions(pending)}
+      disabled={pending.length === 0 || !column.prompt.trim()}
+      className="flex items-center gap-1 rounded px-1 text-micro text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+      title={
+        pending.length
+          ? `Run the ${column.label} prompt for ${pending.length} ticket${pending.length === 1 ? '' : 's'} that have not had it`
+          : `Every ticket here has had the ${column.label} prompt`
+      }
+      aria-label={`Run the ${column.label} prompt`}
+    >
+      <Send size={10} />
+      {pending.length > 0 && pending.length}
+    </button>
+  )
+}
+
 /** Every column's top has the command line, blank or not, so the lanes below line up. */
-function ColumnHeader({ column, count }: { column: SdlcColumn; count: number }): React.ReactElement {
-  const isAgent = isAgentColumn(column)
+function ColumnHeader({
+  column,
+  tickets,
+  isLast
+}: {
+  column: SdlcColumn
+  tickets: SdlcTicket[]
+  isLast: boolean
+}): React.ReactElement {
+  const runs = hasCommand(column)
   const command = column.command.trim() || 'default agent'
   return (
     <div className="flex flex-col gap-0.5 px-0.5">
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-micro font-medium uppercase tracking-wide text-zinc-400">{column.label}</span>
-        <span className="font-mono text-micro text-zinc-600">{count}</span>
+        <div className="flex items-center gap-1">
+          {isLast && <RunPendingButton column={column} tickets={tickets} />}
+          <span className="font-mono text-micro text-zinc-600">{tickets.length}</span>
+        </div>
       </div>
       <span
-        className={cn('truncate font-mono text-micro text-amber-400/70', !isAgent && 'invisible')}
-        title={isAgent ? command : undefined}
+        className={cn('truncate font-mono text-micro text-amber-400/70', !runs && 'invisible')}
+        title={runs ? command : undefined}
       >
-        {isAgent ? `$ ${command}` : '—'}
+        {runs ? `$ ${command}` : '—'}
       </span>
     </div>
+  )
+}
+
+function DoneTimerSelect({ projectId, columnLabel }: { projectId: string; columnLabel: string }): React.ReactElement {
+  const minutes = useSdlcScheduleStore((s) => s.schedulePerProject[projectId]?.intervalMinutes ?? 0)
+  const setDoneInterval = useSdlcScheduleStore((s) => s.setDoneInterval)
+  return (
+    <label
+      className={cn('mr-2 flex items-center gap-1 rounded px-1 text-micro', minutes ? 'text-amber-400' : 'text-zinc-500')}
+      title={`Run the ${columnLabel} prompt on a timer, for finished tickets that have not had it yet`}
+    >
+      <Timer size={12} />
+      <select
+        value={minutes}
+        onChange={(e) => setDoneInterval(projectId, Number(e.target.value))}
+        aria-label={`${columnLabel} prompt timer`}
+        className="cursor-pointer bg-transparent outline-none"
+      >
+        {DONE_TIMER_OPTIONS.map((option) => (
+          <option key={option.minutes} value={option.minutes}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
@@ -268,6 +354,10 @@ function ProjectSwimlane({
   const showSdlcPromptsPage = useProjectStore((s) => s.showSdlcPromptsPage)
   const columns = useSdlcFlowStore((s) => s.columns)
   const firstColumnId = columns[0].id
+
+  useEffect(() => {
+    void useWorktreeStore.getState().load(projectId)
+  }, [projectId])
 
   // A ticket whose column no longer exists shows at the start rather than vanishing from the board.
   const byStage = useMemo(() => {
@@ -330,19 +420,7 @@ function ProjectSwimlane({
       >
         <Settings2 size={13} />
       </button>
-      {import.meta.env.DEV && (
-        <button
-          onClick={() =>
-            useSdlcStore.setState((state) => ({
-              tickets: [...state.tickets, ...buildSeedTickets(projectId)]
-            }))
-          }
-          className="mr-2 rounded px-1.5 py-1 text-micro text-zinc-600 hover:bg-zinc-800 hover:text-zinc-300"
-          title="Dev only: add one demo ticket per stage to inspect the cards"
-        >
-          Seed demo tickets
-        </button>
-      )}
+      <DoneTimerSelect projectId={projectId} columnLabel={columns[columns.length - 1].label} />
       </div>
 
       {!collapsed && (
@@ -352,7 +430,7 @@ function ProjectSwimlane({
               const stageTickets = byStage.get(stage.id) ?? []
               return (
                 <div key={stage.id} className={cn('flex flex-1 flex-col gap-1.5', LANE_MIN_WIDTH)}>
-                  <ColumnHeader column={stage} count={stageTickets.length} />
+                  <ColumnHeader column={stage} tickets={stageTickets} isLast={index === columns.length - 1} />
 
                   <div className="flex min-h-[60px] flex-col gap-1.5 rounded-md bg-zinc-950/40 p-1.5">
                     {index === 0 && <NewTicketComposer projectId={projectId} projectName={projectName} />}
@@ -363,7 +441,7 @@ function ProjectSwimlane({
                           </div>
                         )
                       : stageTickets.map((ticket) => (
-                          <TicketCard key={ticket.id} ticket={ticket} place={placeOf(columns, index)} />
+                          <TicketCard key={ticket.id} ticket={ticket} place={placeOf(columns, index)} column={stage} />
                         ))}
                   </div>
                 </div>

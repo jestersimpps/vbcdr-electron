@@ -91,7 +91,9 @@ export const useSdlcStore = create<SdlcStore>()(
           comments: [],
           artifacts: EMPTY_ARTIFACTS,
           prUrl: null,
-          blockedReason: null
+          prState: 'none',
+          blockedReason: null,
+          doneActionAt: null
         }
         set((state) => ({ tickets: [...state.tickets, ticket] }))
         return ticket

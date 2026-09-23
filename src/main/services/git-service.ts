@@ -900,6 +900,15 @@ export async function createWorktree(projectPath: string, branchName?: string, b
   return { path: worktreePath, branch }
 }
 
+/** A finished ticket keeps its branch but not its folder; this gives the branch a folder again. */
+export async function addWorktreeForBranch(projectPath: string, branch: string): Promise<CreatedWorktree> {
+  const worktreePath = path.join(projectPath, WORKTREES_DIR, branch)
+  await ensureWorktreesGitignored(projectPath)
+  await runGit(projectPath, ['worktree', 'prune'], 15000)
+  await runGit(projectPath, ['worktree', 'add', worktreePath, branch], 30000)
+  return { path: worktreePath, branch }
+}
+
 /**
  * Commits whatever the worktree still holds and returns the resulting HEAD.
  * Hooks are skipped: this is a safety net for work about to lose its folder,

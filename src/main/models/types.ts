@@ -155,6 +155,8 @@ export interface WorktreeBase {
 
 export interface CreateWorktreeOptions {
   fromLatestDefault?: boolean
+  /** Check out a branch that already exists instead of cutting a new one. */
+  existingBranch?: string
 }
 
 export interface TrackedWorktree extends WorktreeInfo {

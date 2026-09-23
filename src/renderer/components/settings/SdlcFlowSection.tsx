@@ -114,7 +114,7 @@ export function SdlcFlowSection(): React.ReactElement {
           </button>
           {confirmReset ? (
             <span className="ml-auto flex items-center gap-2 text-xs text-zinc-400">
-              Replace the flow with the default five columns? Tickets in custom columns go back to the start.
+              Replace the flow with the default Backlog, Build, Done? Tickets in other columns go back to the start.
               <button onClick={() => setConfirmReset(false)} className="rounded px-2 py-1 hover:bg-zinc-800 hover:text-zinc-200">
                 Cancel
               </button>

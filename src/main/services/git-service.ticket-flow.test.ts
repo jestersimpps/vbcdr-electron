@@ -4,6 +4,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import {
+  addWorktreeForBranch,
   commitWorktreeWork,
   createWorktree,
   ensureInfoExclude,
@@ -148,6 +149,18 @@ describe('ticket done: the work stays on a branch', () => {
     expect(files.some((f) => f.startsWith('.vbcdr'))).toBe(false)
     expect(git(project, 'log', '-1', '--format=%s', 'llm/add-auth')).toBe('Add auth')
     expect(git(project, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('main')
+  })
+
+  it('reopens the kept branch in a fresh worktree for the done prompt', async () => {
+    const worktree = await createWorktree(project, 'llm/reopen', 'main')
+    commitFile(worktree.path, 'work.txt', 'done')
+    await removeWorktree(project, worktree.path, worktree.branch, false)
+
+    const reopened = await addWorktreeForBranch(project, 'llm/reopen')
+
+    expect(reopened.path).toBe(worktree.path)
+    expect(fs.readFileSync(path.join(reopened.path, 'work.txt'), 'utf8')).toBe('done')
+    expect(git(reopened.path, 'rev-parse', '--abbrev-ref', 'HEAD')).toBe('llm/reopen')
   })
 
   it('adds no commit when the worktree is already clean', async () => {

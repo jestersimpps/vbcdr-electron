@@ -40,7 +40,7 @@ describe('advanceTicket', () => {
     const ticket = useSdlcStore.getState().createTicket({ projectId: 'p1', description: 'Add auth', attachments: [] })
     useSdlcStore.getState().advanceTicket(ticket.id)
     const updated = useSdlcStore.getState().tickets[0]
-    expect(updated.stage).toBe('planning')
+    expect(updated.stage).toBe('build')
     expect(updated.status).toBe('idle')
   })
 })

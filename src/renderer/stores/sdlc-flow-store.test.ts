@@ -4,6 +4,7 @@ import { upgradeLegacyArtifacts, useSdlcStore } from './sdlc-store'
 import { useSdlcPromptsStore } from './sdlc-prompts-store'
 import { deleteColumn, resetFlow } from '@/lib/sdlc-flow'
 import { EMPTY_ARTIFACTS, type SdlcTicket } from '@/models/sdlc'
+import { threeStageFlow } from '@/models/sdlc-flow.fixtures'
 
 function ids(): string[] {
   return useSdlcFlowStore.getState().columns.map((c) => c.id)
@@ -14,7 +15,7 @@ function ticket(id: string, stage: string, status: SdlcTicket['status'] = 'idle'
 }
 
 beforeEach(() => {
-  useSdlcFlowStore.getState().resetColumns()
+  useSdlcFlowStore.setState({ columns: threeStageFlow() })
   useSdlcStore.setState({ tickets: [] })
   useSdlcPromptsStore.setState({ promptsPerProject: {} })
 })
@@ -29,6 +30,14 @@ describe('sdlc flow store', () => {
     expect(ids()[1]).toBe('triage')
     flow.addColumn('Nowhere', 'missing')
     expect(ids()[ids().length - 1]).toBe('done')
+  })
+
+  it('gives a new column the handover template, reading the agent columns to its left', () => {
+    const column = useSdlcFlowStore.getState().addColumn('Audit', 'review')
+    expect(column.prompt).toContain('{{output.planning}}')
+    expect(column.prompt).toContain('{{output.implementing}}')
+    expect(column.prompt).not.toContain('{{output.review}}')
+    expect(column.prompt).toContain('{{diff}}')
   })
 
   it('keeps the id when a column is renamed, so tickets and prompt variables still find it', () => {
@@ -95,14 +104,13 @@ describe('deleteColumn', () => {
 })
 
 describe('resetFlow', () => {
-  it('returns tickets in custom columns to the start and leaves the rest where they are', () => {
-    const audit = useSdlcFlowStore.getState().addColumn('Audit', 'review')
-    useSdlcStore.setState({ tickets: [ticket('a', audit.id), ticket('b', 'review')] })
+  it('returns tickets in columns the default flow lacks to the start and leaves the rest where they are', () => {
+    useSdlcStore.setState({ tickets: [ticket('a', 'review'), ticket('b', 'done')] })
 
     expect(resetFlow()).toBe(true)
 
-    expect(ids()).toEqual(['backlog', 'planning', 'implementing', 'review', 'done'])
-    expect(useSdlcStore.getState().tickets.map((t) => t.stage)).toEqual(['backlog', 'review'])
+    expect(ids()).toEqual(['backlog', 'build', 'done'])
+    expect(useSdlcStore.getState().tickets.map((t) => t.stage)).toEqual(['backlog', 'done'])
   })
 
   it('refuses while an agent runs in a column that would disappear', () => {

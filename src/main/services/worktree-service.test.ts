@@ -18,6 +18,7 @@ vi.mock('electron-store', () => ({ default: FakeStore }))
 
 const git = {
   createWorktree: vi.fn(async () => ({ path: '/p/.worktrees/llm/x', branch: 'llm/x' })),
+  addWorktreeForBranch: vi.fn(async (_p: string, branch: string) => ({ path: `/p/.worktrees/${branch}`, branch })),
   renameBranch: vi.fn(async () => ({ ok: true, output: '' })),
   getWorktreeState: vi.fn(async () => ({ exists: true, hasChanges: false, conflictPaths: [] as string[] })),
   removeWorktree: vi.fn(async () => ({ ok: true, output: '' })),
@@ -109,6 +110,13 @@ describe('worktree-service', () => {
     expect(git.syncDefaultBranch).toHaveBeenCalledWith('/p')
     expect(git.createWorktree).toHaveBeenCalledWith('/p', undefined, 'main')
     expect(created.base).toEqual({ ref: 'main', syncError: 'offline' })
+  })
+
+  it('reopens an existing branch in a worktree instead of cutting a new one', async () => {
+    const created = await mod.createTrackedWorktree('p1', '/p', { existingBranch: 'llm/add-auth' })
+    expect(git.addWorktreeForBranch).toHaveBeenCalledWith('/p', 'llm/add-auth')
+    expect(git.createWorktree).not.toHaveBeenCalled()
+    expect(created).toMatchObject({ path: '/p/.worktrees/llm/add-auth', branch: 'llm/add-auth' })
   })
 
   it('finish commits leftover work, removes the folder, keeps the branch and points it at the work', async () => {

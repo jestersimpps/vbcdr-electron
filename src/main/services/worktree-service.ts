@@ -2,6 +2,7 @@ import Store from 'electron-store'
 import { v4 as uuid } from 'uuid'
 import type { CreateWorktreeOptions, GitOpResult, TrackedWorktree } from '@main/models/types'
 import {
+  addWorktreeForBranch,
   commitWorktreeWork,
   createWorktree,
   getWorktreeState,
@@ -50,7 +51,9 @@ export async function createTrackedWorktree(
   options: CreateWorktreeOptions = {}
 ): Promise<TrackedWorktree> {
   const base = options.fromLatestDefault ? await syncDefaultBranch(projectPath) : null
-  const created = await createWorktree(projectPath, undefined, base?.ref)
+  const created = options.existingBranch
+    ? await addWorktreeForBranch(projectPath, options.existingBranch)
+    : await createWorktree(projectPath, undefined, base?.ref)
   const tracked: TrackedWorktree = {
     id: uuid(),
     projectId,

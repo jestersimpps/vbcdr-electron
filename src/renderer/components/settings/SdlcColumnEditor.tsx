@@ -3,7 +3,7 @@ import { Trash2 } from 'lucide-react'
 import {
   DEFAULT_AGENT_COMMAND,
   defaultColumnPrompt,
-  isAgentColumn,
+  hasCommand,
   isMiddleColumn,
   type SdlcColumn
 } from '@/models/sdlc-flow'
@@ -16,7 +16,7 @@ import { FLOW_INPUT_CLASS, Field, IconButton } from '@/components/settings/SdlcF
 
 const END_COLUMN_NOTE: Record<'first' | 'last', string> = {
   first: 'New tickets land here and start the flow straight away. The first column never runs an agent.',
-  last: 'The last column ends the ticket: entering it commits leftover work, removes the worktree and keeps the branch.'
+  last: 'The last column ends the ticket: entering it commits leftover work, removes the worktree and keeps the branch. Its prompt runs on demand, from the button on a ticket or the column, or on the project timer, in a worktree reopened on that branch.'
 }
 
 function DeleteColumnConfirm({
@@ -81,7 +81,7 @@ function AgentSettings({
   onPatch: (patch: SdlcColumnPatch) => void
 }): React.ReactElement {
   const accent = useAccent()
-  const defaultPrompt = defaultColumnPrompt(column.id)
+  const defaultPrompt = defaultColumnPrompt(columns, column.id)
 
   return (
     <>
@@ -108,8 +108,9 @@ function AgentSettings({
           accent={accent}
         />
         <p className="text-meta text-zinc-500">
-          Sent to the agent when a ticket enters the column. Projects can override it from the board. Keep the closing
-          instruction about the result file: writing it is what moves the ticket on.{' '}
+          {column.kind === 'terminal'
+            ? 'Sent when you run it for a finished ticket. Nothing waits for it, so it needs no result file.'
+            : 'Sent to the agent when a ticket enters the column. Projects can override it from the board. Keep the closing instruction about the result file: writing it is what moves the ticket on.'}{' '}
           <PromptVariables columns={columns} columnId={column.id} />
         </p>
       </div>
@@ -158,7 +159,7 @@ export function SdlcColumnEditor({ column, onDeleted }: { column: SdlcColumn; on
 
       {!isMiddle && <p className="text-meta text-zinc-500">{END_COLUMN_NOTE[index === 0 ? 'first' : 'last']}</p>}
 
-      {isAgentColumn(column) && <AgentSettings column={column} columns={columns} onPatch={onPatch} />}
+      {hasCommand(column) && <AgentSettings column={column} columns={columns} onPatch={onPatch} />}
     </div>
   )
 }

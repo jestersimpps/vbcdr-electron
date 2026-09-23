@@ -1,4 +1,4 @@
-import { DEFAULT_SDLC_STAGE_PROMPTS, SDLC_PLAN_RELATIVE, SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
+import { SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
 
 /** Human: the ticket waits. Agent: entering hands the column's prompt to a CLI agent. Terminal: the ticket ends and its worktree is gone. */
 export type SdlcColumnKind = 'human' | 'agent' | 'terminal'
@@ -7,7 +7,7 @@ export interface SdlcColumn {
   id: string
   label: string
   kind: SdlcColumnKind
-  /** The CLI an agent column starts in the ticket's worktree. Empty runs the default LLM tab. */
+  /** The CLI an agent column, or the last column's on-demand prompt, starts in the ticket's worktree. Empty runs the default LLM tab. */
   command: string
   prompt: string
   /** Also keep the output as a document in the worktree, for later columns' agents to open. */
@@ -19,41 +19,87 @@ export const DEFAULT_AGENT_COMMAND = 'claude --permission-mode bypassPermissions
 
 const ATTENDED_AGENT_COMMAND = 'claude'
 
-export const NEW_AGENT_COLUMN_PROMPT = `Work on this ticket in the worktree at {{worktreePath}} (branch {{branch}}).
+const NEW_COLUMN_TASK = "Describe here what this column's agent should do and what it should report."
+
+const BUILD_TASK = `Implement the ticket. Match the conventions of the surrounding code. When the code is complete, run the project's typecheck, lint and tests, and fix what you broke. Commit your work on this branch with clear messages, but do not push and do not open a pull request. Report what you changed and the final state of the checks.`
+
+/** The last column finishes a ticket off: nothing waits for it, so it writes no result file. */
+export const DONE_COLUMN_PROMPT = `Work on this ticket in the worktree at {{worktreePath}} on branch {{branch}}. The main checkout is at {{projectPath}}: do not change anything there.
 
 Title: {{title}}
 Description:
 {{description}}
 
-Describe here what this column's agent should do and what it should report.
+Pull request for this branch: {{pr}}
 
-${SENTINEL_CLAUSE}`
+If there is no pull request yet:
+1. Commit anything still uncommitted with a clear message that describes the change.
+2. Push the branch to origin and open a pull request against master with the GitHub CLI (\`gh pr create --base master\`), with a title and body written from the ticket and the changes.
 
-function endColumn(id: string, label: string, kind: 'human' | 'terminal'): SdlcColumn {
-  return { id, label, kind, command: '', prompt: '', outputFile: null }
+If the pull request already exists:
+1. Fetch origin and check whether the branch is behind master. If it is, rebase it onto origin/master and resolve every conflict, keeping the intent of both sides.
+2. Run the project's typecheck, lint and tests, and fix anything the rebase broke.
+3. Push the result to the pull request with \`git push --force-with-lease\`.
+
+Do not merge the pull request. Finish by printing its URL.`
+
+function earlierOutputSections(earlier: readonly SdlcColumn[]): string[] {
+  return earlier.map((c) => `Result of ${c.label}:\n{{output.${c.id}}}\n`)
 }
 
-function agentColumn(id: string, label: string, prompt: string, outputFile: string | null = null): SdlcColumn {
-  return { id, label, kind: 'agent', command: DEFAULT_AGENT_COMMAND, prompt, outputFile }
+/**
+ * Hands the agent everything the handover carries: the ticket, where it lives,
+ * what earlier agent columns reported and what is already committed on the branch.
+ */
+export function columnPrompt(earlier: readonly SdlcColumn[], task: string = NEW_COLUMN_TASK): string {
+  return [
+    'Work on this ticket in the worktree at {{worktreePath}} on branch {{branch}}. The main checkout is at {{projectPath}}: do not change anything there.',
+    '',
+    'Title: {{title}}',
+    'Description:',
+    '{{description}}',
+    '',
+    ...earlierOutputSections(earlier),
+    'Changes committed on this branch so far:',
+    '{{diff}}',
+    '',
+    task,
+    '',
+    SENTINEL_CLAUSE
+  ].join('\n')
+}
+
+
+
+function agentColumn(id: string, label: string, prompt: string): SdlcColumn {
+  return { id, label, kind: 'agent', command: DEFAULT_AGENT_COMMAND, prompt, outputFile: null }
 }
 
 export function defaultSdlcColumns(): SdlcColumn[] {
+  const build = agentColumn('build', 'Build', columnPrompt([], BUILD_TASK))
   return [
-    endColumn('backlog', 'Backlog', 'human'),
-    agentColumn('planning', 'Planning', DEFAULT_SDLC_STAGE_PROMPTS.planning, SDLC_PLAN_RELATIVE),
-    agentColumn('implementing', 'Implementing', DEFAULT_SDLC_STAGE_PROMPTS.implementing),
-    agentColumn('review', 'Review', DEFAULT_SDLC_STAGE_PROMPTS.review),
-    endColumn('done', 'Done', 'terminal')
+    { id: 'backlog', label: 'Backlog', kind: 'human', command: '', prompt: '', outputFile: null },
+    build,
+    { ...build, id: 'done', label: 'Done', kind: 'terminal', prompt: DONE_COLUMN_PROMPT }
   ]
 }
 
-export function newAgentColumn(id: string, label: string): SdlcColumn {
-  return agentColumn(id, label, NEW_AGENT_COLUMN_PROMPT)
+/** `earlier` is the agent columns to its left, whose results the new column's prompt reads. */
+export function newAgentColumn(id: string, label: string, earlier: readonly SdlcColumn[]): SdlcColumn {
+  return agentColumn(id, label, columnPrompt(earlier))
 }
 
-/** What "reset" means for a column's prompt: the shipped one for a default column, the starter template for a custom one. */
-export function defaultColumnPrompt(id: string): string {
-  return findColumn(defaultSdlcColumns(), id)?.prompt || NEW_AGENT_COLUMN_PROMPT
+/** What "reset" means for a column's prompt: the pull-request prompt for the last column, the shipped Build prompt, or the template for its place. */
+export function defaultColumnPrompt(columns: readonly SdlcColumn[], id: string): string {
+  const earlier = earlierAgentColumns(columns, id)
+  if (findColumn(columns, id)?.kind === 'terminal') return DONE_COLUMN_PROMPT
+  if (id === 'build') return columnPrompt(earlier, BUILD_TASK)
+  return columnPrompt(earlier)
+}
+
+/** Every column but the first starts a CLI: the middle ones as tickets arrive, the last one on demand. */
+export function hasCommand(column: SdlcColumn): boolean {
+  return column.kind !== 'human'
 }
 
 /** Ticket stages and prompt variables are keyed by this, so it must survive a rename: derived once, never recomputed. */
@@ -99,7 +145,7 @@ const COLUMN_KINDS: readonly SdlcColumnKind[] = ['human', 'agent', 'terminal']
 /** Flows saved before columns had a command carried an "unattended" switch instead, which the command now spells out. */
 function storedCommand(raw: Partial<SdlcColumn> & { autonomous?: unknown }): string {
   if (typeof raw.command === 'string') return raw.command
-  if (raw.kind !== 'agent') return ''
+  if (raw.kind === 'human') return ''
   return raw.autonomous === false ? ATTENDED_AGENT_COMMAND : DEFAULT_AGENT_COMMAND
 }
 
@@ -133,15 +179,19 @@ export function sanitizeColumns(value: unknown): SdlcColumn[] {
     .filter((c) => (seen.has(c.id) ? false : !!seen.add(c.id)))
   if (columns.length < 2) return defaultSdlcColumns()
   const last = columns.length - 1
-  return columns.map((column, index) => {
+  const shaped = columns.map((column, index): SdlcColumn => {
     if (index === 0) return { ...column, kind: 'human' }
     if (index === last) return { ...column, kind: 'terminal' }
     if (column.kind === 'agent') return column
-    return {
-      ...column,
-      kind: 'agent',
-      command: column.command || DEFAULT_AGENT_COMMAND,
-      prompt: column.prompt || NEW_AGENT_COLUMN_PROMPT
-    }
+    return { ...column, kind: 'agent', command: column.command || DEFAULT_AGENT_COMMAND }
   })
+  return shaped.map((column) =>
+    hasCommand(column) && !column.prompt
+      ? {
+          ...column,
+          command: column.command || DEFAULT_AGENT_COMMAND,
+          prompt: defaultColumnPrompt(shaped, column.id)
+        }
+      : column
+  )
 }

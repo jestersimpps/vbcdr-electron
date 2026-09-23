@@ -1,3 +1,5 @@
+import type { PrState } from '@/models/types'
+
 /** A column id from the user's flow; see models/sdlc-flow. */
 export type SdlcStage = string
 
@@ -75,7 +77,10 @@ export interface SdlcTicket {
   comments: SdlcComment[]
   artifacts: SdlcArtifacts
   prUrl: string | null
+  prState: PrState
   blockedReason: string | null
+  /** When the last column's prompt was last run for this ticket; null until it has been. */
+  doneActionAt: number | null
 }
 
 export const EMPTY_ARTIFACTS: SdlcArtifacts = {

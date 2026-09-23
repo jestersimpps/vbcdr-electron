@@ -19,6 +19,8 @@ import { useLayoutStore } from '@/stores/layout-store'
 import { applyFontToAll, applyThemeToAll } from '@/components/terminal/TerminalInstance'
 import { useTerminalPrefsStore } from '@/stores/terminal-prefs-store'
 import { useSdlcStageWatcher } from '@/hooks/useSdlcStageWatcher'
+import { useSdlcDoneScheduler } from '@/hooks/useSdlcDoneScheduler'
+import { useMergedPrCleanup } from '@/hooks/useMergedPrCleanup'
 import type { CustomThemeUI } from '@/models/custom-theme'
 import type { FileNode } from '@/models/types'
 
@@ -60,6 +62,8 @@ function applyCustomVars(ui: CustomThemeUI): void {
 
 export function App(): React.ReactElement {
   useSdlcStageWatcher()
+  useSdlcDoneScheduler()
+  useMergedPrCleanup()
   const themeName = useThemeStore((s) => s.themeName)
   const variant = useThemeStore((s) => s.variant)
   const customDark = useThemeStore((s) => s.customDark)
