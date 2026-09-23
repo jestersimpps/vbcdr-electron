@@ -93,7 +93,8 @@ export const useSdlcStore = create<SdlcStore>()(
           prUrl: null,
           prState: 'none',
           blockedReason: null,
-          doneActionAt: null
+          doneActionAt: null,
+          doneOutcome: null
         }
         set((state) => ({ tickets: [...state.tickets, ticket] }))
         return ticket

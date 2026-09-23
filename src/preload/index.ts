@@ -238,7 +238,6 @@ const api = {
   },
 
   companion: {
-    ensurePrompt: () => ipcRenderer.invoke('companion:ensure-prompt') as Promise<string>,
     speak: (text: string, voice?: string) =>
       ipcRenderer.invoke('companion:speak', text, voice) as Promise<Uint8Array | null>
   },
