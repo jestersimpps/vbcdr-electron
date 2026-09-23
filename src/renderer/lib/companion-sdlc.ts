@@ -1,5 +1,5 @@
 import { findColumn, type SdlcColumn } from '@/models/sdlc-flow'
-import type { SdlcDoneOutcome, SdlcTicket } from '@/models/sdlc'
+import type { SdlcDoneOutcome, SdlcDoneTrigger, SdlcTicket } from '@/models/sdlc'
 import type { CompanionAnnouncement, CompanionEmote } from '@/models/companion'
 
 export type ProjectNameLookup = (projectId: string) => string | null
@@ -19,23 +19,37 @@ function columnLabel(columns: readonly SdlcColumn[], id: string): string {
   return findColumn(columns, id)?.label ?? id
 }
 
+function columnIndex(columns: readonly SdlcColumn[], id: string): number {
+  return columns.findIndex((c) => c.id === id)
+}
+
 function outcomeText(outcome: SdlcDoneOutcome, who: string, branch: string): string {
   switch (outcome) {
     case 'pr':
-      return `${who} has a pull request open`
+      return `the pull request for ${who} is up, ready for your review`
     case 'merged':
-      return `${who} is merged`
+      return `${who} is merged. Shipped!`
     case 'branch':
-      return `${who} was pushed to ${branch}, no pull request`
+      return `${who} is pushed to ${branch}, no pull request this time`
     case 'no-pr':
-      return `no pull request for ${who}, the work stays on ${branch}`
+      return `heads up, nothing was pushed for ${who}, it's still sitting on ${branch}`
   }
 }
 
+function doneActionText(trigger: SdlcDoneTrigger | null | undefined, who: string): string {
+  if (trigger === 'timer') return `timer went off, running the final prompt for ${who}`
+  return `${who} is done, now finalizing it`
+}
+
 function moveAnnouncement(before: SdlcTicket, after: SdlcTicket, columns: readonly SdlcColumn[], who: string): CompanionAnnouncement {
-  const to = columnLabel(columns, after.stage)
-  if (before.stage === columns[0]?.id) return { emote: 'thinking', text: `starting the flow for ${who}, it moved to ${to}` }
-  return { emote: 'running', text: `${who} moved from ${columnLabel(columns, before.stage)} to ${to}` }
+  const to = findColumn(columns, after.stage)
+  const label = columnLabel(columns, after.stage)
+  if (before.stage === columns[0]?.id) return { emote: 'thinking', text: `kicking off ${who}, ${label} has it now` }
+  if (columnIndex(columns, after.stage) < columnIndex(columns, before.stage)) {
+    return { emote: 'confused', text: `${who} went back to ${label} for another pass` }
+  }
+  if (to?.kind === 'terminal') return { emote: 'happy', text: `nice, ${who} made it all the way to ${label}!` }
+  return { emote: 'running', text: `${who} is on to ${label} now` }
 }
 
 /**
@@ -57,7 +71,7 @@ export function sdlcAnnouncements(
     const who = ticketIn(after, projectName(after.projectId))
     if (prior.stage !== after.stage) out.push(moveAnnouncement(prior, after, columns, who))
     if (after.doneActionAt && after.doneActionAt !== prior.doneActionAt) {
-      out.push({ emote: 'thinking', text: `running the ${columnLabel(columns, after.stage)} prompt for ${who}` })
+      out.push({ emote: 'thinking', text: doneActionText(after.doneActionBy, who) })
     }
     if (after.doneOutcome && after.doneOutcome !== prior.doneOutcome) {
       out.push({ emote: OUTCOME_EMOTES[after.doneOutcome], text: outcomeText(after.doneOutcome, who, after.branch) })

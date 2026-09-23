@@ -15,7 +15,7 @@ import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 import { EMPTY_PROMPT_VALUE, SDLC_SENTINEL_DIR, SENTINEL_CLAUSE } from '@/models/sdlc-prompts'
 import { DONE_OUTCOME_LABELS, DONE_REPORT_CLAUSE, resolveDoneOutcome } from '@/models/sdlc-done-outcome'
 import { findColumn, isAgentColumn, nextColumn, type SdlcColumn } from '@/models/sdlc-flow'
-import type { SdlcStage, SdlcTicket } from '@/models/sdlc'
+import type { SdlcDoneTrigger, SdlcStage, SdlcTicket } from '@/models/sdlc'
 import { SDLC_PROFILE_ID, type TabProfileMeta } from '@/config/terminal-profiles'
 import { providerIdForCommand, type LlmProviderId } from '@/config/llm-provider-registry'
 import type { Project, TrackedWorktree, WorktreeBase, WorktreeInfo } from '@/models/types'
@@ -476,7 +476,7 @@ async function reopenTicketWorktree(ticket: SdlcTicket, project: Project): Promi
   return reopened ? toWorktreeInfo(reopened) : null
 }
 
-async function launchDoneAction(ticketId: string): Promise<string | null> {
+async function launchDoneAction(ticketId: string, trigger: SdlcDoneTrigger): Promise<string | null> {
   const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
   if (!ticket || ticketColumn(ticket)?.kind !== 'terminal') return null
   const project = findProject(ticket)
@@ -506,6 +506,7 @@ async function launchDoneAction(ticketId: string): Promise<string | null> {
     tabId,
     blockedReason: null,
     doneActionAt: Date.now(),
+    doneActionBy: trigger,
     doneOutcome: null,
     artifacts: activityEntry(currentTicket(ticket), `Ran the ${stageLabel(ticket.stage)} prompt`)
   })
@@ -538,7 +539,7 @@ export async function recordDoneOutcome(ticket: SdlcTicket, report: string): Pro
 
 /** Runs the last column's prompt, such as opening a pull request, for a ticket that finished. */
 export async function runDoneAction(ticketId: string): Promise<boolean> {
-  return !!(await launchDoneAction(ticketId))
+  return !!(await launchDoneAction(ticketId, 'manual'))
 }
 
 const PROMPT_DELIVERY_TIMEOUT_MS = 120_000
@@ -566,9 +567,9 @@ function untilPromptDelivered(tabId: string): Promise<void> {
 }
 
 /** One ticket at a time: each tab has to be the active one until its prompt is sent. */
-export async function runDoneActions(ticketIds: readonly string[]): Promise<void> {
+export async function runDoneActions(ticketIds: readonly string[], trigger: SdlcDoneTrigger = 'manual'): Promise<void> {
   for (const id of ticketIds) {
-    const tabId = await launchDoneAction(id)
+    const tabId = await launchDoneAction(id, trigger)
     if (tabId) await untilPromptDelivered(tabId)
   }
 }

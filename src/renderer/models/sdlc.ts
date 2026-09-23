@@ -5,6 +5,7 @@ export type SdlcStage = string
 
 /** What the last column's prompt left behind for the branch. */
 export type SdlcDoneOutcome = 'pr' | 'merged' | 'branch' | 'no-pr'
+export type SdlcDoneTrigger = 'manual' | 'timer'
 
 export type SdlcTicketStatus = 'idle' | 'running' | 'blocked' | 'awaiting-approval' | 'failed'
 
@@ -84,6 +85,8 @@ export interface SdlcTicket {
   blockedReason: string | null
   /** When the last column's prompt was last run for this ticket; null until it has been. */
   doneActionAt: number | null
+  /** Whether the last column's prompt was started from the board or by the project's timer. */
+  doneActionBy?: SdlcDoneTrigger | null
   /** Null while the last column's prompt is still running, or until it has run; tickets saved before it existed lack it. */
   doneOutcome?: SdlcDoneOutcome | null
 }

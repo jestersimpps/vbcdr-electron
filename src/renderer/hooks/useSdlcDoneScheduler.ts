@@ -23,7 +23,7 @@ export function useSdlcDoneScheduler(): void {
       try {
         for (const projectId of due) {
           markRun(projectId, now)
-          await runDoneActions(pendingDoneTicketIds(projectId))
+          await runDoneActions(pendingDoneTicketIds(projectId), 'timer')
         }
       } finally {
         inFlight.current = false

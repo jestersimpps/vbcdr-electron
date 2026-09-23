@@ -602,7 +602,7 @@ describe('done prompt', () => {
     expect(prompt).toContain('Pull request for this branch: none, no pull request exists for this branch yet')
     expect(prompt).not.toContain('{{')
     expect(prompt.endsWith(DONE_REPORT_CLAUSE)).toBe(true)
-    expect(current()).toMatchObject({ stage: 'done', status: 'idle', tabId: tab.id, worktreeId: 'wt1', doneOutcome: null })
+    expect(current()).toMatchObject({ stage: 'done', status: 'idle', tabId: tab.id, worktreeId: 'wt1', doneOutcome: null, doneActionBy: 'manual' })
     expect(current().doneActionAt).toBeGreaterThan(0)
   })
 
@@ -663,7 +663,7 @@ describe('done prompt', () => {
   it('opens the next tab only once the previous one has its prompt, since only the active tab is fed', async () => {
     useSdlcStore.setState({ tickets: [finished(), finished({ id: 't2', title: 'Add billing', branch: 'llm/billing' })] })
 
-    const running = runDoneActions(['t1', 't2'])
+    const running = runDoneActions(['t1', 't2'], 'timer')
     await vi.waitFor(() => expect(useTerminalStore.getState().tabs).toHaveLength(1))
     const first = useTerminalStore.getState().tabs[0].id
     await new Promise((r) => setTimeout(r, 20))
@@ -674,7 +674,7 @@ describe('done prompt', () => {
     useQueueStore.getState().dequeue(useTerminalStore.getState().tabs[1].id)
     await running
 
-    expect(useSdlcStore.getState().tickets.every((t) => t.doneActionAt)).toBe(true)
+    expect(useSdlcStore.getState().tickets.every((t) => t.doneActionAt && t.doneActionBy === 'timer')).toBe(true)
   })
 
   it('lists only the finished tickets that have not had the prompt yet', () => {
