@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { DevServer } from '../main/models/types'
+import type { CreateWorktreeOptions, DevServer } from '../main/models/types'
 import type { KeybindingOverrides } from '../main/models/keybindings'
 
 const api = {
@@ -191,13 +191,15 @@ const api = {
   },
   worktrees: {
     list: (projectId?: string) => ipcRenderer.invoke('worktrees:list', projectId),
-    create: (projectId: string, projectPath: string) => ipcRenderer.invoke('worktrees:create', projectId, projectPath),
+    create: (projectId: string, projectPath: string, options?: CreateWorktreeOptions) =>
+      ipcRenderer.invoke('worktrees:create', projectId, projectPath, options),
     renameBranch: (id: string, newBranch: string) => ipcRenderer.invoke('worktrees:rename-branch', id, newBranch),
     setLabel: (id: string, label: string) => ipcRenderer.invoke('worktrees:set-label', id, label),
     refresh: (id: string) => ipcRenderer.invoke('worktrees:refresh', id),
     refreshProject: (projectId: string) => ipcRenderer.invoke('worktrees:refresh-project', projectId),
     untrack: (id: string) => ipcRenderer.invoke('worktrees:untrack', id),
     remove: (id: string) => ipcRenderer.invoke('worktrees:remove', id),
+    finish: (id: string, commitMessage: string) => ipcRenderer.invoke('worktrees:finish', id, commitMessage),
     ghStatus: () => ipcRenderer.invoke('worktrees:gh-status'),
     openUrl: (url: string) => ipcRenderer.invoke('worktrees:open-url', url)
   },

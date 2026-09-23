@@ -20,7 +20,10 @@ const git = {
   createWorktree: vi.fn(async () => ({ path: '/p/.worktrees/llm/x', branch: 'llm/x' })),
   renameBranch: vi.fn(async () => ({ ok: true, output: '' })),
   getWorktreeState: vi.fn(async () => ({ exists: true, hasChanges: false, conflictPaths: [] as string[] })),
-  removeWorktree: vi.fn(async () => ({ ok: true, output: '' }))
+  removeWorktree: vi.fn(async () => ({ ok: true, output: '' })),
+  syncDefaultBranch: vi.fn(async () => ({ ref: 'main', syncError: null as string | null })),
+  commitWorktreeWork: vi.fn(async () => ({ ok: true, output: 'abc123' })),
+  pointBranchAt: vi.fn(async () => ({ ok: true, output: 'llm/x' }))
 }
 vi.mock('@main/services/git-service', () => git)
 
@@ -40,7 +43,8 @@ beforeEach(async () => {
 describe('worktree-service', () => {
   it('creates and tracks a worktree scoped to its project', async () => {
     const created = await mod.createTrackedWorktree('p1', '/p')
-    expect(git.createWorktree).toHaveBeenCalledWith('/p')
+    expect(git.createWorktree).toHaveBeenCalledWith('/p', undefined, undefined)
+    expect(git.syncDefaultBranch).not.toHaveBeenCalled()
     expect(created).toMatchObject({ projectId: 'p1', projectPath: '/p', path: '/p/.worktrees/llm/x', branch: 'llm/x', prState: 'none' })
     expect(mod.listWorktrees('p1')).toHaveLength(1)
     expect(mod.listWorktrees('other')).toHaveLength(0)
@@ -97,5 +101,30 @@ describe('worktree-service', () => {
     expect(await mod.removeTrackedWorktree(a.id)).toEqual({ ok: true, output: '' })
     expect(git.removeWorktree).toHaveBeenLastCalledWith('/p', '/p/.worktrees/llm/x', 'llm/x', true)
     expect(mod.listWorktrees('p1')).toHaveLength(0)
+  })
+
+  it('a worktree asked to start from the latest default branch syncs first and is cut from that ref', async () => {
+    git.syncDefaultBranch.mockResolvedValueOnce({ ref: 'main', syncError: 'offline' })
+    const created = await mod.createTrackedWorktree('p1', '/p', { fromLatestDefault: true })
+    expect(git.syncDefaultBranch).toHaveBeenCalledWith('/p')
+    expect(git.createWorktree).toHaveBeenCalledWith('/p', undefined, 'main')
+    expect(created.base).toEqual({ ref: 'main', syncError: 'offline' })
+  })
+
+  it('finish commits leftover work, removes the folder, keeps the branch and points it at the work', async () => {
+    const a = await mod.createTrackedWorktree('p1', '/p')
+    expect(await mod.finishTrackedWorktree(a.id, 'Add auth')).toEqual({ ok: true, output: 'llm/x' })
+    expect(git.commitWorktreeWork).toHaveBeenCalledWith('/p/.worktrees/llm/x', 'Add auth')
+    expect(git.removeWorktree).toHaveBeenLastCalledWith('/p', '/p/.worktrees/llm/x', 'llm/x', false)
+    expect(git.pointBranchAt).toHaveBeenCalledWith('/p', 'llm/x', 'abc123')
+    expect(mod.listWorktrees('p1')).toHaveLength(0)
+  })
+
+  it('finish leaves the worktree alone when its work cannot be committed', async () => {
+    const a = await mod.createTrackedWorktree('p1', '/p')
+    git.commitWorktreeWork.mockResolvedValueOnce({ ok: false, output: '', error: 'nope' } as never)
+    expect((await mod.finishTrackedWorktree(a.id, 'Add auth')).ok).toBe(false)
+    expect(git.removeWorktree).not.toHaveBeenCalled()
+    expect(mod.listWorktrees('p1')).toHaveLength(1)
   })
 })

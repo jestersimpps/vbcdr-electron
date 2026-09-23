@@ -24,13 +24,21 @@ export function openWorktreeTab(worktree: TrackedWorktree, instruction?: string)
   return tabId
 }
 
-export async function deleteWorktree(worktreeId: string): Promise<string | null> {
+function closeLiveWorktreeTab(worktreeId: string): void {
   const liveTab = findLiveWorktreeTab(worktreeId)
-  if (liveTab) {
-    window.api.terminal.kill(liveTab.id)
-    disposeTerminal(liveTab.id)
-    useTerminalStore.getState().closeTab(liveTab.id)
-    useQueueStore.getState().clearTab(liveTab.id)
-  }
+  if (!liveTab) return
+  window.api.terminal.kill(liveTab.id)
+  disposeTerminal(liveTab.id)
+  useTerminalStore.getState().closeTab(liveTab.id)
+  useQueueStore.getState().clearTab(liveTab.id)
+}
+
+export async function deleteWorktree(worktreeId: string): Promise<string | null> {
+  closeLiveWorktreeTab(worktreeId)
   return useWorktreeStore.getState().remove(worktreeId)
+}
+
+export async function finishWorktree(worktreeId: string, commitMessage: string): Promise<string | null> {
+  closeLiveWorktreeTab(worktreeId)
+  return useWorktreeStore.getState().finish(worktreeId, commitMessage)
 }

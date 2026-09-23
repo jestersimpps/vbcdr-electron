@@ -461,7 +461,7 @@ export function AppLayoutGrid(): React.ReactElement {
                   ? 'text-zinc-200 bg-zinc-800'
                   : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60'
               )}
-              title="Agent SDLC"
+              title="Full auto agent SDLC"
             >
               <Workflow size={18} />
             </button>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Palette, Sliders, Code, Shield, Bot, Keyboard, Workflow, type LucideIcon } from 'lucide-react'
-import { SdlcPromptsSection } from '@/components/settings/SdlcPromptsSection'
+import { SdlcFlowSection } from '@/components/settings/SdlcFlowSection'
 import { PermissionPresetsSection } from '@/components/settings/PermissionPresetsSection'
 import { TerminalProfilesSection } from '@/components/settings/TerminalProfilesSection'
 import { GlobalTerminalFolderSection } from '@/components/settings/GlobalTerminalFolderSection'
@@ -10,6 +10,7 @@ import { SoundSection } from '@/components/settings/SoundSection'
 import { CompanionSection } from '@/components/settings/CompanionSection'
 import { EditorSection } from '@/components/settings/EditorSection'
 import { ThemeSection } from '@/components/settings/ThemeSection'
+import { TerminalAppearanceSection } from '@/components/settings/TerminalAppearanceSection'
 import { KeybindingsSection } from '@/components/settings/KeybindingsSection'
 import { Section, useAccent } from '@/components/settings/SettingsControls'
 import { cn } from '@/lib/utils'
@@ -103,8 +104,8 @@ export function Settings(): React.ReactElement {
         )}
 
         {tab === 'sdlc' && (
-          <Section title="Agent SDLC">
-            <SdlcPromptsSection />
+          <Section title="Full auto agent SDLC">
+            <SdlcFlowSection />
           </Section>
         )}
 
@@ -115,9 +116,14 @@ export function Settings(): React.ReactElement {
         )}
 
         {tab === 'theme' && (
-          <Section title="Theme">
-            <ThemeSection />
-          </Section>
+          <>
+            <Section title="Theme">
+              <ThemeSection />
+            </Section>
+            <Section title="Terminal">
+              <TerminalAppearanceSection />
+            </Section>
+          </>
         )}
 
         {tab === 'keybindings' && (

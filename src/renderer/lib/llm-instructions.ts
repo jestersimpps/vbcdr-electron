@@ -13,14 +13,28 @@ export interface SdlcPromptVariables {
   branch: string
   worktreePath: string
   projectPath: string
-  plan: string
   diff: string
+  /** The branch's pull request as `<url> (<state>)`, so a prompt can skip work a PR already covers. */
+  pr: string
+  /** Earlier columns' results, read as `{{output.<columnId>}}`. */
+  outputs: Record<string, string>
 }
 
-const PROMPT_VARIABLE = /\{\{(\w+)\}\}/g
+export const SDLC_PROMPT_VARIABLES = ['title', 'description', 'branch', 'worktreePath', 'projectPath', 'diff', 'pr'] as const
 
-function isPromptVariable(key: string, vars: SdlcPromptVariables): key is keyof SdlcPromptVariables {
-  return Object.prototype.hasOwnProperty.call(vars, key)
+export const OUTPUT_VARIABLE_PREFIX = 'output.'
+
+const PROMPT_VARIABLE = /\{\{([\w.-]+)\}\}/g
+
+function promptValue(key: string, vars: SdlcPromptVariables): string | undefined {
+  if (key.startsWith(OUTPUT_VARIABLE_PREFIX)) return vars.outputs[key.slice(OUTPUT_VARIABLE_PREFIX.length)]
+  return (SDLC_PROMPT_VARIABLES as readonly string[]).includes(key)
+    ? vars[key as (typeof SDLC_PROMPT_VARIABLES)[number]]
+    : undefined
+}
+
+export function promptUsesVariable(template: string, name: string): boolean {
+  return template.includes(`{{${name}}}`)
 }
 
 /**
@@ -29,7 +43,5 @@ function isPromptVariable(key: string, vars: SdlcPromptVariables): key is keyof 
  * visible in the terminal, not silently become a hole.
  */
 export function interpolatePrompt(template: string, vars: SdlcPromptVariables): string {
-  return template.replace(PROMPT_VARIABLE, (token: string, key: string) =>
-    isPromptVariable(key, vars) ? vars[key] : token
-  )
+  return template.replace(PROMPT_VARIABLE, (token: string, key: string) => promptValue(key, vars) ?? token)
 }

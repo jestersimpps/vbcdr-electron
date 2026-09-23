@@ -1,45 +1,23 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import {
-  EMPTY_ARTIFACTS,
-  nextStage,
-  previousStage,
-  type ModelProviderId,
-  type NewSdlcTicketInput,
-  type SdlcComment,
-  type SdlcStage,
-  type SdlcTicket,
-  type StageModelAssignment
-} from '@/models/sdlc'
-
-function makeComment(text: string, sentBack: boolean): SdlcComment {
-  const at = Date.now()
-  return { id: `c-${at}-${Math.random().toString(36).slice(2, 8)}`, author: 'you', text, at, sentBack }
-}
+import { sdlcColumns } from '@/stores/sdlc-flow-store'
+import { nextColumn } from '@/models/sdlc-flow'
+import { EMPTY_ARTIFACTS, type NewSdlcTicketInput, type SdlcStage, type SdlcTicket } from '@/models/sdlc'
 
 interface SdlcStore {
   tickets: SdlcTicket[]
   collapsedProjectIds: Record<string, boolean>
-  selectedTicketId: string | null
   createTicket: (input: NewSdlcTicketInput) => SdlcTicket
   moveTicket: (id: string, stage: SdlcStage) => void
+  reassignStage: (from: SdlcStage, to: SdlcStage) => void
   advanceTicket: (id: string) => void
-  sendTicketBack: (id: string, reason: string) => void
-  addComment: (id: string, text: string) => void
-  stageModels: Partial<Record<SdlcStage, StageModelAssignment>>
-  setStageProvider: (stage: SdlcStage, provider: ModelProviderId) => void
-  setStageModel: (stage: SdlcStage, model: string | null) => void
-  setStageAssignment: (stage: SdlcStage, provider: ModelProviderId, model: string | null) => void
-  updateTicket: (id: string, patch: Pick<SdlcTicket, 'description' | 'attachments'>) => void
   patchTicket: (id: string, patch: Partial<Omit<SdlcTicket, 'id' | 'projectId'>>) => void
   deleteTicket: (id: string) => void
-  selectTicket: (id: string | null) => void
   toggleProjectCollapsed: (projectId: string) => void
   removeProjectState: (projectId: string) => void
   pruneOrphans: (keepProjectIds: string[]) => void
   ticketsFor: (projectId: string, stage: SdlcStage) => SdlcTicket[]
   ticketForTab: (tabId: string) => SdlcTicket | undefined
-  selectedTicket: () => SdlcTicket | undefined
 }
 
 export function titleFromDescription(description: string): string {
@@ -63,13 +41,30 @@ function stripAttachmentData(ticket: SdlcTicket): SdlcTicket {
   return { ...ticket, attachments: ticket.attachments.map((a) => ({ ...a, dataUrl: null })) }
 }
 
+interface LegacyArtifacts {
+  plan?: string | null
+  checkOutput?: string | null
+  prSummary?: string | null
+}
+
+/** Outputs were three named fields while the flow was fixed; they are keyed by the column that wrote them now. */
+export function upgradeLegacyArtifacts(ticket: SdlcTicket): SdlcTicket {
+  const { plan, checkOutput, prSummary, ...artifacts } = ticket.artifacts as SdlcTicket['artifacts'] & LegacyArtifacts
+  if (artifacts.outputs) return ticket
+  const legacy: [string, string | null | undefined][] = [
+    ['planning', plan],
+    ['implementing', checkOutput],
+    ['review', prSummary]
+  ]
+  const outputs = Object.fromEntries(legacy.filter((entry): entry is [string, string] => !!entry[1]))
+  return { ...ticket, artifacts: { ...artifacts, outputs } }
+}
+
 export const useSdlcStore = create<SdlcStore>()(
   persist(
     (set, get) => ({
       tickets: [],
       collapsedProjectIds: {},
-      selectedTicketId: null,
-      stageModels: {},
 
       createTicket: (input: NewSdlcTicketInput) => {
         const description = input.description.trim()
@@ -79,7 +74,7 @@ export const useSdlcStore = create<SdlcStore>()(
           projectId: input.projectId,
           title: titleFromDescription(description),
           description,
-          stage: 'backlog',
+          stage: sdlcColumns()[0].id,
           status: 'idle',
           branch: branchNameFrom(description),
           worktreePath: '—',
@@ -96,8 +91,7 @@ export const useSdlcStore = create<SdlcStore>()(
           comments: [],
           artifacts: EMPTY_ARTIFACTS,
           prUrl: null,
-          blockedReason: null,
-          autoAdvance: input.autoAdvance ?? false
+          blockedReason: null
         }
         set((state) => ({ tickets: [...state.tickets, ticket] }))
         return ticket
@@ -111,11 +105,20 @@ export const useSdlcStore = create<SdlcStore>()(
         }))
       },
 
+      /** A deleted column's tickets land idle: whatever ran there says nothing about the column they arrive in. */
+      reassignStage: (from: SdlcStage, to: SdlcStage) => {
+        set((state) => ({
+          tickets: state.tickets.map((t) =>
+            t.stage === from ? { ...t, stage: to, status: 'idle', blockedReason: null, updatedAt: Date.now() } : t
+          )
+        }))
+      },
+
       advanceTicket: (id: string) => {
         set((state) => ({
           tickets: state.tickets.map((t) => {
             if (t.id !== id) return t
-            const stage = nextStage(t.stage)
+            const stage = nextColumn(sdlcColumns(), t.stage)?.id
             if (!stage) return t
             return {
               ...t,
@@ -128,83 +131,6 @@ export const useSdlcStore = create<SdlcStore>()(
         }))
       },
 
-      sendTicketBack: (id: string, reason: string) => {
-        set((state) => ({
-          tickets: state.tickets.map((t) => {
-            if (t.id !== id) return t
-            const stage = previousStage(t.stage)
-            if (!stage) return t
-            const text = reason.trim()
-            return {
-              ...t,
-              stage,
-              status: 'blocked',
-              blockedReason: text || 'Sent back for changes',
-              comments: text ? [...t.comments, makeComment(text, true)] : t.comments,
-              updatedAt: Date.now()
-            }
-          })
-        }))
-      },
-
-      /**
-       * Switching provider clears the model: an Anthropic model id is not a valid
-       * selection under OpenAI, so carrying it over would leave the pair incoherent.
-       */
-      setStageProvider: (stage: SdlcStage, provider: ModelProviderId) => {
-        set((state) => {
-          if (state.stageModels[stage]?.provider === provider) return state
-          return { stageModels: { ...state.stageModels, [stage]: { provider, model: null } } }
-        })
-      },
-
-      setStageModel: (stage: SdlcStage, model: string | null) => {
-        set((state) => {
-          const current = state.stageModels[stage]
-          if (!current) return state
-          if (current.model === model) return state
-          return { stageModels: { ...state.stageModels, [stage]: { ...current, model } } }
-        })
-      },
-
-      setStageAssignment: (stage: SdlcStage, provider: ModelProviderId, model: string | null) => {
-        set((state) => {
-          const current = state.stageModels[stage]
-          if (current?.provider === provider && current.model === model) return state
-          return { stageModels: { ...state.stageModels, [stage]: { provider, model } } }
-        })
-      },
-
-      addComment: (id: string, text: string) => {
-        const trimmed = text.trim()
-        if (!trimmed) return
-        set((state) => ({
-          tickets: state.tickets.map((t) =>
-            t.id === id
-              ? { ...t, comments: [...t.comments, makeComment(trimmed, false)], updatedAt: Date.now() }
-              : t
-          )
-        }))
-      },
-
-      updateTicket: (id: string, patch: Pick<SdlcTicket, 'description' | 'attachments'>) => {
-        const description = patch.description.trim()
-        set((state) => ({
-          tickets: state.tickets.map((t) =>
-            t.id === id
-              ? {
-                  ...t,
-                  description,
-                  attachments: patch.attachments,
-                  title: titleFromDescription(description),
-                  branch: t.stage === 'backlog' && !t.worktreeId ? branchNameFrom(description) : t.branch,
-                  updatedAt: Date.now()
-                }
-              : t
-          )
-        }))
-      },
-
       patchTicket: (id: string, patch: Partial<Omit<SdlcTicket, 'id' | 'projectId'>>) => {
         set((state) => ({
           tickets: state.tickets.map((t) =>
@@ -214,19 +140,7 @@ export const useSdlcStore = create<SdlcStore>()(
       },
 
       deleteTicket: (id: string) => {
-        set((state) => ({
-          tickets: state.tickets.filter((t) => t.id !== id),
-          selectedTicketId: state.selectedTicketId === id ? null : state.selectedTicketId
-        }))
-      },
-
-      selectTicket: (id: string | null) => {
-        set({ selectedTicketId: id })
-      },
-
-      selectedTicket: () => {
-        const { tickets, selectedTicketId } = get()
-        return tickets.find((t) => t.id === selectedTicketId)
+        set((state) => ({ tickets: state.tickets.filter((t) => t.id !== id) }))
       },
 
       toggleProjectCollapsed: (projectId: string) => {
@@ -243,10 +157,7 @@ export const useSdlcStore = create<SdlcStore>()(
           const collapsedProjectIds = { ...state.collapsedProjectIds }
           delete collapsedProjectIds[projectId]
           const tickets = state.tickets.filter((t) => t.projectId !== projectId)
-          const selectedTicketId = tickets.some((t) => t.id === state.selectedTicketId)
-            ? state.selectedTicketId
-            : null
-          return { tickets, collapsedProjectIds, selectedTicketId }
+          return { tickets, collapsedProjectIds }
         })
       },
 
@@ -271,9 +182,13 @@ export const useSdlcStore = create<SdlcStore>()(
     }),
     {
       name: 'vbcdr-sdlc',
+      version: 1,
+      migrate: (persisted: unknown) => {
+        const state = (persisted ?? {}) as { tickets?: SdlcTicket[] }
+        return { ...state, tickets: (state.tickets ?? []).map(upgradeLegacyArtifacts) }
+      },
       partialize: (state) => ({
         tickets: state.tickets.map(stripAttachmentData),
-        stageModels: state.stageModels,
         collapsedProjectIds: state.collapsedProjectIds
       })
     }

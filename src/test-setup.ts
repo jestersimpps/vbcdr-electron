@@ -106,6 +106,7 @@ const api = {
     refreshProject: fn(async () => []),
     untrack: fn(async () => undefined),
     remove: fn(async () => ({ ok: true, output: '' })),
+    finish: fn(async () => ({ ok: true, output: '' })),
     ghStatus: fn(async () => ({ available: true, authenticated: true, message: null })),
     openUrl: fn(async () => undefined)
   },

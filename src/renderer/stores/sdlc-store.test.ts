@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useSdlcStore } from './sdlc-store'
 
-function persisted(): { tickets: Array<{ id: string; attachments: Array<{ dataUrl: string | null }> }>; stageModels: Record<string, unknown> } {
+function persisted(): { tickets: Array<{ id: string; attachments: Array<{ dataUrl: string | null }> }> } {
   const raw = localStorage.getItem('vbcdr-sdlc')
   expect(raw).not.toBeNull()
   return JSON.parse(raw!).state
 }
 
 beforeEach(() => {
-  useSdlcStore.setState({ tickets: [], stageModels: {}, selectedTicketId: null })
+  useSdlcStore.setState({ tickets: [] })
 })
 
 describe('sdlc-store persistence', () => {
@@ -32,22 +32,6 @@ describe('sdlc-store persistence', () => {
     })
     expect(persisted().tickets[0].attachments[0].dataUrl).toBeNull()
     expect(useSdlcStore.getState().tickets[0].attachments[0].dataUrl).toBe('data:image/png;base64,AAAA')
-  })
-
-  it('persists stage model assignments', () => {
-    useSdlcStore.getState().setStageAssignment('planning', 'anthropic', 'claude-sonnet-5')
-    expect(persisted().stageModels).toEqual({ planning: { provider: 'anthropic', model: 'claude-sonnet-5' } })
-  })
-})
-
-describe('setStageAssignment', () => {
-  it('sets provider and model together and is a no-op when unchanged', () => {
-    const store = useSdlcStore.getState()
-    store.setStageAssignment('implementing', 'openai', 'gpt-5')
-    const before = useSdlcStore.getState().stageModels
-    store.setStageAssignment('implementing', 'openai', 'gpt-5')
-    expect(useSdlcStore.getState().stageModels).toBe(before)
-    expect(before.implementing).toEqual({ provider: 'openai', model: 'gpt-5' })
   })
 })
 

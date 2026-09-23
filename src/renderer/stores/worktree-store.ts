@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { GhStatus, TrackedWorktree, WorktreeInfo } from '@/models/types'
+import type { CreateWorktreeOptions, GhStatus, TrackedWorktree, WorktreeInfo } from '@/models/types'
 
 interface WorktreeStore {
   worktreesPerProject: Record<string, TrackedWorktree[]>
@@ -8,10 +8,11 @@ interface WorktreeStore {
   load: (projectId: string) => Promise<void>
   refreshProject: (projectId: string) => Promise<void>
   refreshOne: (id: string) => Promise<TrackedWorktree | null>
-  create: (projectId: string, projectPath: string) => Promise<TrackedWorktree>
+  create: (projectId: string, projectPath: string, options?: CreateWorktreeOptions) => Promise<TrackedWorktree>
   renameBranch: (id: string, newBranch: string) => Promise<string | null>
   setLabel: (id: string, label: string) => Promise<void>
   remove: (id: string) => Promise<string | null>
+  finish: (id: string, commitMessage: string) => Promise<string | null>
   loadGhStatus: () => Promise<GhStatus>
   find: (id: string) => TrackedWorktree | undefined
 }
@@ -32,18 +33,32 @@ function upsert(list: TrackedWorktree[], worktree: TrackedWorktree): TrackedWork
   return next
 }
 
+function withoutWorktree(state: WorktreeStore, worktree: TrackedWorktree): Pick<WorktreeStore, 'worktreesPerProject'> {
+  const list = state.worktreesPerProject[worktree.projectId] ?? []
+  return replaceProjectList(state, worktree.projectId, list.filter((w) => w.id !== worktree.id))
+}
+
 export function toWorktreeInfo(worktree: TrackedWorktree): WorktreeInfo {
   return { id: worktree.id, path: worktree.path, branch: worktree.branch, projectPath: worktree.projectPath }
 }
 
-export async function createWorktreeForProject(projectId: string, projectPath: string): Promise<WorktreeInfo | null> {
+export async function createTrackedWorktreeForProject(
+  projectId: string,
+  projectPath: string,
+  options?: CreateWorktreeOptions
+): Promise<TrackedWorktree | null> {
   try {
     if (!(await window.api.git.isRepo(projectPath))) return null
-    return toWorktreeInfo(await useWorktreeStore.getState().create(projectId, projectPath))
+    return await useWorktreeStore.getState().create(projectId, projectPath, options)
   } catch (err) {
     console.error('Failed to create worktree, falling back to project folder', err)
     return null
   }
+}
+
+export async function createWorktreeForProject(projectId: string, projectPath: string): Promise<WorktreeInfo | null> {
+  const tracked = await createTrackedWorktreeForProject(projectId, projectPath)
+  return tracked ? toWorktreeInfo(tracked) : null
 }
 
 export const useWorktreeStore = create<WorktreeStore>((set, get) => ({
@@ -79,8 +94,8 @@ export const useWorktreeStore = create<WorktreeStore>((set, get) => ({
     return refreshed
   },
 
-  create: async (projectId: string, projectPath: string) => {
-    const worktree = await window.api.worktrees.create(projectId, projectPath)
+  create: async (projectId: string, projectPath: string, options?: CreateWorktreeOptions) => {
+    const worktree = await window.api.worktrees.create(projectId, projectPath, options)
     set((state) => replaceProjectList(state, projectId, upsert(state.worktreesPerProject[projectId] ?? [], worktree)))
     return worktree
   },
@@ -111,15 +126,15 @@ export const useWorktreeStore = create<WorktreeStore>((set, get) => ({
     const result = await window.api.worktrees.remove(id)
     if (!result.ok) return result.error ?? 'Remove failed'
     const existing = get().find(id)
-    if (existing) {
-      set((state) =>
-        replaceProjectList(
-          state,
-          existing.projectId,
-          (state.worktreesPerProject[existing.projectId] ?? []).filter((w) => w.id !== id)
-        )
-      )
-    }
+    if (existing) set((state) => withoutWorktree(state, existing))
+    return null
+  },
+
+  finish: async (id: string, commitMessage: string) => {
+    const result = await window.api.worktrees.finish(id, commitMessage)
+    if (!result.ok) return result.error ?? 'Finish failed'
+    const existing = get().find(id)
+    if (existing) set((state) => withoutWorktree(state, existing))
     return null
   },
 

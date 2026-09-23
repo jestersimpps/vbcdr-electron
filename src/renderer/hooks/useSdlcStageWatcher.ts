@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useSdlcStore } from '@/stores/sdlc-store'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { readSentinel } from '@/lib/sdlc-sentinel'
-import { autoAdvanceTicket, recordStageOutput } from '@/lib/sdlc-handover'
+import { moveTicketOn, recordStageOutput } from '@/lib/sdlc-handover'
 
 const POLL_MS = 3000
 const QUIET_BEFORE_BLOCKED_MS = 45_000
@@ -15,7 +15,8 @@ interface TabRun {
 }
 
 /**
- * The sentinel file is the only real completion signal. Terminal idle/busy is
+ * The sentinel file is the only real completion signal, and writing it moves
+ * the ticket straight on to the next column. Terminal idle/busy is
  * inferred from output timing and cannot tell "done" from "asked a question",
  * so it only ever demotes a ticket to needing attention, never promotes it.
  * A pattern match against known interactive-prompt text (trust dialogs,
@@ -33,8 +34,8 @@ interface TabRun {
 export function useSdlcStageWatcher(): void {
   const runs = useRef(new Map<string, TabRun>())
   const inFlight = useRef(false)
-  // A handoff outlives the tick that started it; without this an auto-advancing
-  // ticket would be handed off again on every poll until its stage went busy.
+  // A handoff outlives the tick that started it; without this a ticket would be
+  // handed off again on every poll until its next stage went busy.
   const advancing = useRef(new Set<string>())
 
   useEffect(() => {
@@ -65,9 +66,9 @@ export function useSdlcStageWatcher(): void {
             runs.current.delete(tabId)
             const patch = await recordStageOutput(ticket, output)
             patchTicket(ticket.id, { ...patch, status: 'awaiting-approval', blockedReason: null })
-            if (ticket.autoAdvance && !advancing.current.has(ticket.id)) {
+            if (!advancing.current.has(ticket.id)) {
               advancing.current.add(ticket.id)
-              void autoAdvanceTicket(ticket.id).finally(() => advancing.current.delete(ticket.id))
+              void moveTicketOn(ticket.id).finally(() => advancing.current.delete(ticket.id))
             }
             continue
           }

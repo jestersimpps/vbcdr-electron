@@ -649,6 +649,11 @@ function loadStoredTerminal(key: string, fallback: ITheme): ITheme {
 TERMINAL_THEMES['custom-dark'] = loadStoredTerminal('customDark', DEFAULT_CUSTOM_DARK.terminal)
 TERMINAL_THEMES['custom-light'] = loadStoredTerminal('customLight', DEFAULT_CUSTOM_LIGHT.terminal)
 
+export const TERMINAL_THEME_OPTIONS: { id: string; label: string }[] = [
+  { id: '', label: 'Auto' },
+  ...Object.keys(TERMINAL_THEMES).map((id) => ({ id, label: id }))
+]
+
 export function setCustomTerminalTheme(variant: 'dark' | 'light', theme: ITheme): void {
   TERMINAL_THEMES[`custom-${variant}`] = { ...theme }
 }

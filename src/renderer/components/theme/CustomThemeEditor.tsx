@@ -103,9 +103,10 @@ const TERMINAL_FIELDS: Array<{ key: keyof ITheme; label: string }> = [
 
 interface CustomThemeEditorProps {
   onClose: () => void
+  terminalOnly?: boolean
 }
 
-export function CustomThemeEditor({ onClose }: CustomThemeEditorProps): React.ReactElement {
+export function CustomThemeEditor({ onClose, terminalOnly = false }: CustomThemeEditorProps): React.ReactElement {
   const customDark = useThemeStore((s) => s.customDark)
   const customLight = useThemeStore((s) => s.customLight)
   const setCustomTheme = useThemeStore((s) => s.setCustomTheme)
@@ -150,7 +151,7 @@ export function CustomThemeEditor({ onClose }: CustomThemeEditorProps): React.Re
     >
       <div className="bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl w-[420px] max-w-[92vw] max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-          <span className="text-sm font-medium text-zinc-200">Custom Theme</span>
+          <span className="text-sm font-medium text-zinc-200">{terminalOnly ? 'Custom Terminal Colors' : 'Custom Theme'}</span>
           <button
             aria-label="Close theme editor"
             title="Close"
@@ -178,19 +179,21 @@ export function CustomThemeEditor({ onClose }: CustomThemeEditorProps): React.Re
         </div>
 
         <div className="overflow-y-auto flex-1 p-4 space-y-5">
-          <section>
-            <div className="text-xs font-medium text-zinc-400 mb-3">UI Colors</div>
-            <div className="space-y-2">
-              {UI_FIELDS.map(({ key, label }) => (
-                <ColorSwatch
-                  key={key}
-                  label={label}
-                  value={colors.ui[key]}
-                  onChange={(v) => updateUI(key, v)}
-                />
-              ))}
-            </div>
-          </section>
+          {!terminalOnly && (
+            <section>
+              <div className="text-xs font-medium text-zinc-400 mb-3">UI Colors</div>
+              <div className="space-y-2">
+                {UI_FIELDS.map(({ key, label }) => (
+                  <ColorSwatch
+                    key={key}
+                    label={label}
+                    value={colors.ui[key]}
+                    onChange={(v) => updateUI(key, v)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           <section>
             <div className="text-xs font-medium text-zinc-400 mb-3">Terminal Colors</div>

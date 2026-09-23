@@ -71,8 +71,10 @@ export function buildSeedTickets(projectId: string): SdlcTicket[] {
       worktreeId: 'wt-seed-1',
       artifacts: {
         ...EMPTY_ARTIFACTS,
-        plan:
-          '## Plan\n\n1. Wrap `git worktree add` in `git-service.ts` with a retry helper (3 attempts, exponential backoff starting at 250ms).\n2. Only retry on transient errors (lock file contention), not on `already exists` or auth failures.\n3. Add a unit test simulating two failures then a success.\n4. Log each retry attempt at debug level.',
+        outputs: {
+          planning:
+            '## Plan\n\n1. Wrap `git worktree add` in `git-service.ts` with a retry helper (3 attempts, exponential backoff starting at 250ms).\n2. Only retry on transient errors (lock file contention), not on `already exists` or auth failures.\n3. Add a unit test simulating two failures then a success.\n4. Log each retry attempt at debug level.'
+        },
         activity: [{ at: now - 1000 * 60 * 12, text: 'Agent explored git-service.ts and worktree store' }]
       }
     },
@@ -96,8 +98,10 @@ export function buildSeedTickets(projectId: string): SdlcTicket[] {
       ],
       artifacts: {
         ...EMPTY_ARTIFACTS,
-        plan: '## Plan\n\nSplit into TicketStageParts, stages/*, TicketStageFooter, with a thin router.',
-        checkOutput: 'lint: 2 warnings in TicketStageFooter.tsx (unused import)\ntypecheck: clean\nvitest: 26 passed',
+        outputs: {
+          planning: '## Plan\n\nSplit into TicketStageParts, stages/*, TicketStageFooter, with a thin router.',
+          implementing: 'lint: 2 warnings in TicketStageFooter.tsx (unused import)\ntypecheck: clean\nvitest: 26 passed'
+        },
         diffFiles: DIFF_FILES,
         activity: [
           { at: now - 1000 * 60 * 40, text: 'Extracted TicketStageParts.tsx' },
@@ -127,8 +131,10 @@ export function buildSeedTickets(projectId: string): SdlcTicket[] {
       ],
       artifacts: {
         ...EMPTY_ARTIFACTS,
-        prSummary:
-          '## Summary\n\nAdds a collapsible `PlanReferencePanel` shown above checks/diff in the implementing stage body, so reviewers can compare the diff against the approved plan without leaving the modal.\n\n### Testing\n- `npx vitest run` — 1203 passed\n- `npx tsc --noEmit` — clean',
+        outputs: {
+          review:
+            '## Summary\n\nAdds a collapsible `PlanReferencePanel` shown above checks/diff in the implementing stage body, so reviewers can compare the diff against the approved plan without leaving the modal.\n\n### Testing\n- `npx vitest run` — 1203 passed\n- `npx tsc --noEmit` — clean'
+        },
         diffFiles: DIFF_FILES.slice(0, 1),
         activity: [{ at: now - 1000 * 60 * 3, text: 'Opened PR #482' }]
       },

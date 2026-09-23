@@ -12,14 +12,29 @@ const VARS: SdlcPromptVariables = {
   branch: 'llm/add-auth',
   worktreePath: '/repo/.worktrees/llm/add-auth',
   projectPath: '/repo',
-  plan: '1. do it',
-  diff: '(none)'
+  diff: '(none)',
+  pr: 'https://github.com/o/r/pull/7 (open)',
+  outputs: { planning: '1. do it', 'security-audit': 'no findings' }
 }
 
 describe('interpolatePrompt', () => {
   it('substitutes every known variable', () => {
-    const out = interpolatePrompt('{{title}} on {{branch}} in {{worktreePath}} ({{projectPath}}): {{plan}} / {{diff}}', VARS)
+    const out = interpolatePrompt('{{title}} on {{branch}} in {{worktreePath}} ({{projectPath}}): {{output.planning}} / {{diff}}', VARS)
     expect(out).toBe('Add auth on llm/add-auth in /repo/.worktrees/llm/add-auth (/repo): 1. do it / (none)')
+  })
+
+  it('substitutes the pull request', () => {
+    expect(interpolatePrompt('if {{pr}} already exists, stop', VARS)).toBe(
+      'if https://github.com/o/r/pull/7 (open) already exists, stop'
+    )
+  })
+
+  it('reads an earlier column by its id, dashes included', () => {
+    expect(interpolatePrompt('{{output.security-audit}}', VARS)).toBe('no findings')
+  })
+
+  it('leaves the output of a column that does not exist verbatim', () => {
+    expect(interpolatePrompt('{{output.gone}}', VARS)).toBe('{{output.gone}}')
   })
 
   it('leaves unknown tokens verbatim so typos stay visible', () => {

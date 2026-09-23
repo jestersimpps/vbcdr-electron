@@ -38,7 +38,7 @@ import {
 } from '@/config/terminal-profiles'
 import { cn } from '@/lib/utils'
 import type { TerminalTab } from '@/models/types'
-import { TERMINAL_THEMES, getTerminalTheme } from '@/config/terminal-theme-registry'
+import { TERMINAL_THEME_OPTIONS, getTerminalTheme } from '@/config/terminal-theme-registry'
 import { GitActions } from '@/components/git/GitActions'
 import { TaskQueuePanel } from './TaskQueuePanel'
 import { SdlcStageBar } from '@/components/sdlc/SdlcStageBar'
@@ -47,11 +47,6 @@ import { useQueueRunner } from '@/hooks/useQueueRunner'
 import { useTokenVelocity } from '@/hooks/useTokenVelocity'
 import { useContextUsage } from '@/hooks/useContextUsage'
 import { formatTokens, tokenBarFill } from '@/lib/token-display'
-
-const TERMINAL_THEME_OPTIONS = [
-  { id: '', label: 'Auto' },
-  ...Object.keys(TERMINAL_THEMES).map((id) => ({ id, label: id }))
-]
 
 const SortableTerminalTab = memo(function SortableTerminalTab({
   tab,

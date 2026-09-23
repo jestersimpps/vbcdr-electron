@@ -2,7 +2,7 @@ import { execFile as execFileCb } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
 import fs from 'fs'
-import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, GitOpResult, StatsCommit, LanguageTally, WorktreeState } from '@main/models/types'
+import type { GitCommit, GitBranch, GitFileStatus, GitCheckoutResult, GitCommitResult, BranchDriftInfo, ConflictInfo, GitOpResult, StatsCommit, LanguageTally, WorktreeBase, WorktreeState } from '@main/models/types'
 import { EXT_TO_LANGUAGE } from '@main/services/language-map'
 import { gitEnv } from '@main/services/git-env'
 
@@ -841,12 +841,95 @@ export interface CreatedWorktree {
   branch: string
 }
 
-export async function createWorktree(projectPath: string, branchName?: string): Promise<CreatedWorktree> {
+async function refExists(cwd: string, ref: string): Promise<boolean> {
+  try {
+    await runGit(cwd, ['rev-parse', '--verify', '--quiet', ref])
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function isAncestor(cwd: string, ancestor: string, descendant: string): Promise<boolean> {
+  try {
+    await runGit(cwd, ['merge-base', '--is-ancestor', ancestor, descendant])
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Fast-forward only, and through `fetch branch:branch` when the branch is not
+ * the one checked out, so the user's checkout is never switched, merged into or
+ * left mid-operation. A local branch that is merely ahead of origin counts as synced.
+ */
+async function fastForwardFromOrigin(projectPath: string, branch: string): Promise<string | null> {
+  try {
+    const remotes = await runGit(projectPath, ['remote'])
+    if (!remotes.split('\n').includes('origin')) return null
+    const current = await runGit(projectPath, ['rev-parse', '--abbrev-ref', 'HEAD'])
+    if (current === branch) {
+      await runGitRemote(projectPath, ['pull', '--ff-only', 'origin', branch], 30000)
+      return null
+    }
+    await runGitRemote(projectPath, ['fetch', 'origin', branch], 30000)
+    if (await isAncestor(projectPath, `origin/${branch}`, branch)) return null
+    await runGitRemote(projectPath, ['fetch', 'origin', `${branch}:${branch}`], 30000)
+    return null
+  } catch (err) {
+    return gitErrorMessage(err)
+  }
+}
+
+/** A failed sync is reported, not thrown: offline or diverged, the ticket still gets a worktree from the local branch. */
+export async function syncDefaultBranch(projectPath: string): Promise<WorktreeBase> {
+  const branch = await getDefaultBranch(projectPath)
+  const syncError = await fastForwardFromOrigin(projectPath, branch)
+  if (await refExists(projectPath, `refs/heads/${branch}`)) return { ref: branch, syncError }
+  if (await refExists(projectPath, `refs/remotes/origin/${branch}`)) return { ref: `origin/${branch}`, syncError }
+  return { ref: 'HEAD', syncError }
+}
+
+export async function createWorktree(projectPath: string, branchName?: string, baseRef?: string): Promise<CreatedWorktree> {
   const branch = branchName?.trim() || generateWorktreeBranchName()
   const worktreePath = path.join(projectPath, WORKTREES_DIR, branch)
   await ensureWorktreesGitignored(projectPath)
-  await runGit(projectPath, ['worktree', 'add', '-b', branch, worktreePath], 30000)
+  const args = ['worktree', 'add', '-b', branch, worktreePath]
+  await runGit(projectPath, baseRef ? [...args, baseRef] : args, 30000)
   return { path: worktreePath, branch }
+}
+
+/**
+ * Commits whatever the worktree still holds and returns the resulting HEAD.
+ * Hooks are skipped: this is a safety net for work about to lose its folder,
+ * and a failing lint hook must not be the reason it is lost.
+ */
+export async function commitWorktreeWork(worktreePath: string, message: string): Promise<GitOpResult> {
+  try {
+    const dirty = await runGit(worktreePath, ['status', '--porcelain'])
+    if (dirty) {
+      await runGit(worktreePath, ['add', '-A'], 15000)
+      await runGit(worktreePath, ['commit', '--no-verify', '-m', message], 30000)
+    }
+    return { ok: true, output: await runGit(worktreePath, ['rev-parse', 'HEAD']) }
+  } catch (err) {
+    return { ok: false, output: '', error: gitErrorMessage(err) }
+  }
+}
+
+/** The agent may have detached HEAD or switched branches inside the worktree; the ticket's branch must still end up holding its work. */
+export async function pointBranchAt(projectPath: string, branch: string, commit: string): Promise<GitOpResult> {
+  try {
+    if (await refExists(projectPath, `refs/heads/${branch}`)) {
+      const current = await runGit(projectPath, ['rev-parse', `refs/heads/${branch}`])
+      if (current === commit) return { ok: true, output: branch }
+    }
+    await runGit(projectPath, ['branch', '-f', branch, commit], 15000)
+    return { ok: true, output: branch }
+  } catch (err) {
+    return { ok: false, output: '', error: gitErrorMessage(err) }
+  }
 }
 
 export async function renameBranch(cwd: string, oldName: string, newName: string): Promise<GitOpResult> {

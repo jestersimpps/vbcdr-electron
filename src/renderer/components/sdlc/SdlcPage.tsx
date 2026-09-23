@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AlertTriangle,
   Check,
@@ -10,46 +10,28 @@ import {
   GitBranch,
   Loader2,
   Paperclip,
-  Plus,
+  Play,
+  RotateCcw,
   Settings2,
   Terminal,
+  Trash2,
   UserCheck,
   Workflow,
   X
 } from 'lucide-react'
-import {
-  MODEL_PROVIDERS,
-  SDLC_STAGES,
-  type ModelProviderId,
-  type SdlcStage,
-  type SdlcTicket,
-  type SdlcTicketStatus
-} from '@/models/sdlc'
-import { useProviderModels, type ProviderModel, type UseProviderModels } from '@/hooks/useProviderModels'
-import { isHandoffStage } from '@/models/sdlc-prompts'
+import type { SdlcTicket, SdlcTicketStatus } from '@/models/sdlc'
+import { isAgentColumn, type SdlcColumn } from '@/models/sdlc-flow'
 import { useProjectStore } from '@/stores/project-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
+import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { focusTicketTab } from '@/lib/sdlc-handover'
+import { discardTicket, focusTicketTab, moveTicketOn, rerunStage } from '@/lib/sdlc-handover'
 import { useAccent } from '@/components/settings/SettingsControls'
-import { NewTicketModal } from '@/components/sdlc/NewTicketModal'
-import { TicketDetailModal } from '@/components/sdlc/TicketDetailModal'
+import { NewTicketComposer } from '@/components/sdlc/NewTicketComposer'
 import { buildSeedTickets } from '@/lib/dev-seed-tickets'
 import { cn } from '@/lib/utils'
 
 const LANE_MIN_WIDTH = 'min-w-[220px]'
-
-/** Catalogues list small models first; a stage that writes code should not default to one. */
-const PREFERRED_MODEL_KEYWORDS = ['sonnet', 'opus', 'gpt-5']
-
-function preferredModelId(models: ProviderModel[] | undefined): string | null {
-  if (!models?.length) return null
-  for (const keyword of PREFERRED_MODEL_KEYWORDS) {
-    const match = models.find((m) => m.id.toLowerCase().includes(keyword))
-    if (match) return match.id
-  }
-  return models[0].id
-}
 
 function relativeTime(timestamp: number): string {
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
@@ -102,44 +84,73 @@ function StatusBadge({ status }: { status: SdlcTicketStatus }): React.ReactEleme
   )
 }
 
-function TicketCard({
-  ticket,
-  isSelected,
-  onSelect
-}: {
-  ticket: SdlcTicket
-  isSelected: boolean
-  onSelect: () => void
-}): React.ReactElement {
+type TicketPlace = 'start' | 'agent' | 'end'
+
+const CARD_BUTTON =
+  'flex items-center gap-1 rounded px-1.5 py-0.5 text-micro text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200'
+
+/** A finished ticket's worktree is already gone and its branch holds the work, so removing it only takes it off the board. */
+function removeTicket(ticket: SdlcTicket, place: TicketPlace): void {
+  if (place === 'end') useSdlcStore.getState().deleteTicket(ticket.id)
+  else void discardTicket(ticket.id)
+}
+
+function TicketActions({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace }): React.ReactElement {
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const stalled = ticket.status === 'blocked' || ticket.status === 'failed'
+
+  if (confirmDelete) {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="mr-auto text-micro text-zinc-400">
+          {place === 'end' ? 'Remove from the board?' : 'Delete ticket, worktree and branch?'}
+        </span>
+        <button onClick={() => setConfirmDelete(false)} className={CARD_BUTTON}>
+          Cancel
+        </button>
+        <button
+          onClick={() => removeTicket(ticket, place)}
+          className="rounded bg-red-600 px-1.5 py-0.5 text-micro font-medium text-white hover:bg-red-500"
+        >
+          {place === 'end' ? 'Remove' : 'Delete'}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-0.5">
+      <button
+        onClick={() => setConfirmDelete(true)}
+        className={cn(CARD_BUTTON, 'mr-auto hover:text-red-400')}
+        aria-label={`Delete ${ticket.title}`}
+        title={place === 'end' ? 'Remove from the board, keep the branch' : 'Delete the ticket, its worktree and branch'}
+      >
+        <Trash2 size={11} />
+      </button>
+      {place === 'start' && ticket.status === 'idle' && (
+        <button onClick={() => void moveTicketOn(ticket.id)} className={CARD_BUTTON} title="Start the flow">
+          <Play size={11} />
+          Start
+        </button>
+      )}
+      {place === 'agent' && stalled && (
+        <button onClick={() => void rerunStage(ticket.id)} className={CARD_BUTTON} title="Run this stage again in a fresh tab">
+          <RotateCcw size={11} />
+          Retry
+        </button>
+      )}
+    </div>
+  )
+}
+
+function TicketCard({ ticket, place }: { ticket: SdlcTicket; place: TicketPlace }): React.ReactElement {
   const hasDiff = ticket.filesChanged > 0
   const hasTab = useTerminalStore((s) => !!ticket.tabId && s.tabs.some((t) => t.id === ticket.tabId))
   const accent = useAccent()
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect()
-        }
-      }}
-      className={cn(
-        'w-full cursor-pointer rounded-md border bg-zinc-900/60 p-2 text-left transition-colors',
-        isSelected
-          ? 'border-indigo-500/70 bg-zinc-900'
-          : 'border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900'
-      )}
-    >
-      <div className="mb-1.5 flex items-start justify-between gap-2">
-        <span className="line-clamp-2 text-xs font-medium leading-snug text-zinc-200">
-          {ticket.title}
-        </span>
-        <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-px font-mono text-micro text-zinc-400">
-          {ticket.agent}
-        </span>
-      </div>
+    <div className="w-full rounded-md border border-zinc-800 bg-zinc-900/60 p-2 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-900">
+      <div className="mb-1.5 line-clamp-2 text-xs font-medium leading-snug text-zinc-200">{ticket.title}</div>
 
       {ticket.branch !== '—' && (
         <div className="mb-1.5 flex items-center gap-1 text-micro text-zinc-500">
@@ -196,10 +207,7 @@ function TicketCard({
         <span className="text-micro text-zinc-600">{relativeTime(ticket.updatedAt)}</span>
         {ticket.tabId && (
           <button
-            onClick={(e) => {
-              e.stopPropagation()
-              focusTicketTab(ticket)
-            }}
+            onClick={() => focusTicketTab(ticket)}
             disabled={!hasTab}
             className="flex items-center gap-1.5 rounded border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
             style={{ borderColor: accent, color: accent }}
@@ -211,105 +219,35 @@ function TicketCard({
           </button>
         )}
       </div>
-    </div>
-  )
-}
 
-const SELECT_CLASS =
-  'w-full truncate rounded border border-zinc-800 bg-zinc-900 px-1.5 py-1 text-micro text-zinc-400 outline-none hover:border-zinc-700 focus:border-zinc-600 disabled:opacity-40'
-
-function StageModelPicker({
-  stage,
-  label,
-  models
-}: {
-  stage: SdlcStage
-  label: string
-  models: UseProviderModels
-}): React.ReactElement {
-  const assignment = useSdlcStore((s) => s.stageModels[stage])
-  const setStageProvider = useSdlcStore((s) => s.setStageProvider)
-  const setStageModel = useSdlcStore((s) => s.setStageModel)
-  const setStageAssignment = useSdlcStore((s) => s.setStageAssignment)
-
-  const provider = assignment?.provider ?? MODEL_PROVIDERS[0].id
-  const result = models.byProvider[provider]
-  const error = result?.error ?? null
-  const preferred = preferredModelId(result?.models)
-  const model = assignment?.model ?? preferred
-
-  // An unset stage adopts the first provider and a sensible model once the list
-  // arrives, so the board never shows an empty picker that nothing would run with.
-  useEffect(() => {
-    if (assignment?.model || !preferred) return
-    setStageAssignment(stage, provider, preferred)
-  }, [assignment?.model, preferred, provider, stage, setStageAssignment])
-
-  return (
-    <div className={cn('flex flex-1 flex-col gap-1', LANE_MIN_WIDTH)}>
-      <span className="truncate px-0.5 text-micro font-medium uppercase tracking-wide text-zinc-500">
-        {label}
-      </span>
-      <select
-        value={provider}
-        aria-label={`Provider for ${stage}`}
-        onChange={(e) => setStageProvider(stage, e.target.value as ModelProviderId)}
-        className={SELECT_CLASS}
-      >
-        {MODEL_PROVIDERS.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.label}
-          </option>
-        ))}
-      </select>
-      <select
-        value={model ?? ''}
-        disabled={models.isLoading || !!error || !result?.models.length}
-        aria-label={`Model for ${stage}`}
-        onChange={(e) => setStageModel(stage, e.target.value || null)}
-        className={SELECT_CLASS}
-        title={error ?? undefined}
-      >
-        <option value="" disabled>
-          {models.isLoading ? 'loading…' : error ? error : result?.models.length ? 'pick a model' : 'no models'}
-        </option>
-        {result?.models.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  )
-}
-
-/**
- * Every stage takes a slot so this row lines up with the swimlane columns below.
- * Each stage that hands off to an agent gets a picker; done is the only one
- * where nothing runs.
- *
- * The padding mirrors the swimlane's own `p-4` page gutter plus its inner `p-2`,
- * so the slots sit over the columns rather than drifting by the difference.
- */
-function StageModelBar(): React.ReactElement {
-  const models = useProviderModels()
-
-  return (
-    <div className="shrink-0 border-b border-zinc-800 bg-zinc-900/30 px-4 pb-2 pt-2">
-      <div className="flex items-start gap-2 px-2">
-        {SDLC_STAGES.map((stage) =>
-          isHandoffStage(stage.id) ? (
-            <StageModelPicker
-              key={stage.id}
-              stage={stage.id}
-              label={stage.label}
-              models={models}
-            />
-          ) : (
-            <div key={stage.id} className={cn('flex-1', LANE_MIN_WIDTH)} aria-hidden />
-          )
-        )}
+      <div className="mt-1.5 border-t border-zinc-800/80 pt-1.5">
+        <TicketActions ticket={ticket} place={place} />
       </div>
+    </div>
+  )
+}
+
+function placeOf(columns: readonly SdlcColumn[], index: number): TicketPlace {
+  if (index === 0) return 'start'
+  return index === columns.length - 1 ? 'end' : 'agent'
+}
+
+/** Every column's top has the command line, blank or not, so the lanes below line up. */
+function ColumnHeader({ column, count }: { column: SdlcColumn; count: number }): React.ReactElement {
+  const isAgent = isAgentColumn(column)
+  const command = column.command.trim() || 'default agent'
+  return (
+    <div className="flex flex-col gap-0.5 px-0.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-micro font-medium uppercase tracking-wide text-zinc-400">{column.label}</span>
+        <span className="font-mono text-micro text-zinc-600">{count}</span>
+      </div>
+      <span
+        className={cn('truncate font-mono text-micro text-amber-400/70', !isAgent && 'invisible')}
+        title={isAgent ? command : undefined}
+      >
+        {isAgent ? `$ ${command}` : '—'}
+      </span>
     </div>
   )
 }
@@ -323,24 +261,24 @@ function ProjectSwimlane({
   projectName: string
   projectPath: string
 }): React.ReactElement {
-  const [modalOpen, setModalOpen] = useState(false)
   const tickets = useSdlcStore((s) => s.tickets)
   const collapsed = useSdlcStore((s) => !!s.collapsedProjectIds[projectId])
   const toggleProjectCollapsed = useSdlcStore((s) => s.toggleProjectCollapsed)
   const setActiveProject = useProjectStore((s) => s.setActiveProject)
   const showSdlcPromptsPage = useProjectStore((s) => s.showSdlcPromptsPage)
-  const selectedTicketId = useSdlcStore((s) => s.selectedTicketId)
-  const selectTicket = useSdlcStore((s) => s.selectTicket)
+  const columns = useSdlcFlowStore((s) => s.columns)
+  const firstColumnId = columns[0].id
 
+  // A ticket whose column no longer exists shows at the start rather than vanishing from the board.
   const byStage = useMemo(() => {
-    const map = new Map<SdlcStage, SdlcTicket[]>()
-    for (const stage of SDLC_STAGES) map.set(stage.id, [])
+    const map = new Map<string, SdlcTicket[]>()
+    for (const column of columns) map.set(column.id, [])
     for (const ticket of tickets) {
       if (ticket.projectId !== projectId) continue
-      map.get(ticket.stage)?.push(ticket)
+      ;(map.get(ticket.stage) ?? map.get(firstColumnId))?.push(ticket)
     }
     return map
-  }, [tickets, projectId])
+  }, [tickets, projectId, columns, firstColumnId])
 
   const totalCount = useMemo(
     () => tickets.filter((t) => t.projectId === projectId).length,
@@ -400,7 +338,7 @@ function ProjectSwimlane({
             }))
           }
           className="mr-2 rounded px-1.5 py-1 text-micro text-zinc-600 hover:bg-zinc-800 hover:text-zinc-300"
-          title="Dev only: add one demo ticket per stage to inspect the modals"
+          title="Dev only: add one demo ticket per stage to inspect the cards"
         >
           Seed demo tickets
         </button>
@@ -410,54 +348,22 @@ function ProjectSwimlane({
       {!collapsed && (
         <div className="overflow-x-auto border-t border-zinc-800">
           <div className="flex gap-2 p-2">
-            {SDLC_STAGES.map((stage) => {
+            {columns.map((stage, index) => {
               const stageTickets = byStage.get(stage.id) ?? []
               return (
-                <div
-                  key={stage.id}
-                  className={cn('flex flex-1 flex-col gap-1.5', LANE_MIN_WIDTH)}
-                >
-                  <div className="flex items-center justify-between px-0.5">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <span className="truncate text-micro font-medium uppercase tracking-wide text-zinc-400">
-                        {stage.label}
-                      </span>
-                      {stage.autonomous && (
-                        <span
-                          className="h-1 w-1 shrink-0 rounded-full bg-amber-400/70"
-                          title="Agent-driven stage"
-                        />
-                      )}
-                    </div>
-                    <span className="font-mono text-micro text-zinc-600">
-                      {stageTickets.length}
-                    </span>
-                  </div>
+                <div key={stage.id} className={cn('flex flex-1 flex-col gap-1.5', LANE_MIN_WIDTH)}>
+                  <ColumnHeader column={stage} count={stageTickets.length} />
 
                   <div className="flex min-h-[60px] flex-col gap-1.5 rounded-md bg-zinc-950/40 p-1.5">
-                    {stage.id === 'backlog' && (
-                      <button
-                        onClick={() => setModalOpen(true)}
-                        className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-zinc-800 py-2 text-micro text-zinc-500 transition-colors hover:border-zinc-600 hover:bg-zinc-900/60 hover:text-zinc-300"
-                        title={`New ticket in ${projectName}`}
-                      >
-                        <Plus size={11} />
-                        New ticket
-                      </button>
-                    )}
+                    {index === 0 && <NewTicketComposer projectId={projectId} projectName={projectName} />}
                     {stageTickets.length === 0
-                      ? stage.id !== 'backlog' && (
+                      ? index !== 0 && (
                           <div className="flex flex-1 items-center justify-center py-3 text-micro text-zinc-700">
                             empty
                           </div>
                         )
                       : stageTickets.map((ticket) => (
-                          <TicketCard
-                            key={ticket.id}
-                            ticket={ticket}
-                            isSelected={selectedTicketId === ticket.id}
-                            onSelect={() => selectTicket(ticket.id)}
-                          />
+                          <TicketCard key={ticket.id} ticket={ticket} place={placeOf(columns, index)} />
                         ))}
                   </div>
                 </div>
@@ -466,22 +372,12 @@ function ProjectSwimlane({
           </div>
         </div>
       )}
-
-      <NewTicketModal
-        isOpen={modalOpen}
-        projectId={projectId}
-        projectName={projectName}
-        onClose={() => setModalOpen(false)}
-      />
     </div>
   )
 }
 
 export function SdlcPage(): React.ReactElement {
   const tickets = useSdlcStore((s) => s.tickets)
-  const selectedTicketId = useSdlcStore((s) => s.selectedTicketId)
-  const selectTicket = useSdlcStore((s) => s.selectTicket)
-  const selectedTicket = tickets.find((t) => t.id === selectedTicketId)
 
   const runningCount = tickets.filter((t) => t.status === 'running').length
   const attentionCount = tickets.filter(
@@ -494,7 +390,7 @@ export function SdlcPage(): React.ReactElement {
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/60 px-4">
         <div className="flex items-center gap-2">
           <Workflow size={16} className="text-zinc-400" />
-          <h1 className="text-title font-semibold">Agent SDLC</h1>
+          <h1 className="text-title font-semibold">Full auto agent SDLC</h1>
           <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-micro text-zinc-400">
             {tickets.length}
           </span>
@@ -515,8 +411,6 @@ export function SdlcPage(): React.ReactElement {
         </div>
       </div>
 
-      <StageModelBar />
-
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-3">
           {projects.length === 0 && (
@@ -534,8 +428,6 @@ export function SdlcPage(): React.ReactElement {
           ))}
         </div>
       </div>
-
-      <TicketDetailModal ticket={selectedTicket} onClose={() => selectTicket(null)} />
     </div>
   )
 }

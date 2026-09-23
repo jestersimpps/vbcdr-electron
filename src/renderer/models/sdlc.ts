@@ -1,63 +1,7 @@
-export type SdlcStage = 'backlog' | 'planning' | 'implementing' | 'review' | 'done'
+/** A column id from the user's flow; see models/sdlc-flow. */
+export type SdlcStage = string
 
 export type SdlcTicketStatus = 'idle' | 'running' | 'blocked' | 'awaiting-approval' | 'failed'
-
-export interface SdlcStageDefinition {
-  id: SdlcStage
-  label: string
-  description: string
-  autonomous: boolean
-}
-
-export const SDLC_STAGES: readonly SdlcStageDefinition[] = [
-  {
-    id: 'backlog',
-    label: 'Backlog',
-    description: 'Queued tickets with no worktree yet',
-    autonomous: false
-  },
-  {
-    id: 'planning',
-    label: 'Planning',
-    description: 'Agent explores the repo and drafts a plan',
-    autonomous: true
-  },
-  {
-    id: 'implementing',
-    label: 'Implementing',
-    description: 'Agent writes code and runs checks in its worktree',
-    autonomous: true
-  },
-  {
-    id: 'review',
-    label: 'Review',
-    description: 'Human reviews the diff before merge',
-    autonomous: false
-  },
-  {
-    id: 'done',
-    label: 'Done',
-    description: 'Merged and worktree removed',
-    autonomous: false
-  }
-] as const
-
-export type ModelProviderId = 'anthropic' | 'openai'
-
-export interface ModelProviderDefinition {
-  id: ModelProviderId
-  label: string
-}
-
-export const MODEL_PROVIDERS: readonly ModelProviderDefinition[] = [
-  { id: 'anthropic', label: 'Anthropic' },
-  { id: 'openai', label: 'OpenAI' }
-] as const
-
-export interface StageModelAssignment {
-  provider: ModelProviderId
-  model: string | null
-}
 
 export interface SdlcCheck {
   name: string
@@ -94,11 +38,9 @@ export interface SdlcComment {
 }
 
 export interface SdlcArtifacts {
-  /** The planning agent's output, as the markdown document it wrote. */
-  plan: string | null
+  /** Each agent column's result as it wrote it, keyed by column id. */
+  outputs: Record<string, string>
   diffFiles: SdlcDiffFile[]
-  checkOutput: string | null
-  prSummary: string | null
   activity: SdlcActivityEntry[]
 }
 
@@ -134,31 +76,16 @@ export interface SdlcTicket {
   artifacts: SdlcArtifacts
   prUrl: string | null
   blockedReason: string | null
-  /** Advance through every stage without waiting for approval, chosen at creation. */
-  autoAdvance: boolean
 }
 
 export const EMPTY_ARTIFACTS: SdlcArtifacts = {
-  plan: null,
+  outputs: {},
   diffFiles: [],
-  checkOutput: null,
-  prSummary: null,
   activity: []
-}
-
-export function nextStage(stage: SdlcStage): SdlcStage | null {
-  const index = SDLC_STAGES.findIndex((s) => s.id === stage)
-  return SDLC_STAGES[index + 1]?.id ?? null
-}
-
-export function previousStage(stage: SdlcStage): SdlcStage | null {
-  const index = SDLC_STAGES.findIndex((s) => s.id === stage)
-  return index > 0 ? SDLC_STAGES[index - 1].id : null
 }
 
 export interface NewSdlcTicketInput {
   projectId: string
   description: string
   attachments: SdlcAttachment[]
-  autoAdvance?: boolean
 }
