@@ -9,6 +9,7 @@ vi.mock('@/lib/sdlc-handover', () => ({
 import { NewTicketComposer } from './NewTicketComposer'
 import { useSdlcStore } from '@/stores/sdlc-store'
 import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { DEFAULT_FLOW_ID } from '@/models/sdlc-flow'
 import type { Project } from '@/models/types'
 
 const projects: Project[] = [
@@ -20,7 +21,7 @@ beforeEach(() => {
   cleanup()
   moveTicketOnMock.mockClear()
   useSdlcStore.setState({ tickets: [] })
-  useSdlcFlowStore.setState({ autoStart: true })
+  useSdlcFlowStore.setState({ autoStart: true, flows: [useSdlcFlowStore.getState().flows[0]], flowPerProject: {} })
 })
 
 function open(defaultProjectId: string | null = 'p1'): void {
@@ -96,5 +97,17 @@ describe('NewTicketComposer', () => {
 
     expect(useSdlcStore.getState().tickets[0]).toMatchObject({ stage: 'backlog', status: 'idle' })
     expect(moveTicketOnMock).not.toHaveBeenCalled()
+  })
+
+  it('files the ticket under the flow picked here, defaulting to the project one', () => {
+    const other = useSdlcFlowStore.getState().saveFlowAs(DEFAULT_FLOW_ID, 'Quick')
+    open()
+    expect((screen.getByLabelText('Flow for the new ticket') as HTMLSelectElement).value).toBe(DEFAULT_FLOW_ID)
+
+    fireEvent.change(screen.getByLabelText('Flow for the new ticket'), { target: { value: other.id } })
+    fireEvent.change(screen.getByLabelText('New ticket'), { target: { value: 'Add a scoreboard' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }))
+
+    expect(useSdlcStore.getState().tickets[0]).toMatchObject({ flowId: other.id })
   })
 })

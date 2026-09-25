@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { ArrowLeft, FolderOpen } from 'lucide-react'
+import { ArrowLeft, FolderOpen, Workflow } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
-import { projectFlow, useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useSdlcPromptsStore } from '@/stores/sdlc-prompts-store'
 import type { SdlcPromptResolution } from '@/models/sdlc-prompts'
 import { SdlcPromptEditor } from '@/components/sdlc/SdlcPromptEditor'
@@ -17,7 +17,13 @@ export function SdlcPromptsPage(): React.ReactElement {
   // edited is a choice made here rather than whatever the app has open.
   const [picked, setPicked] = useState('')
   const project = projects.find((p) => p.id === picked) ?? projects.find((p) => p.id === activeProjectId) ?? projects[0]
-  const flow = useSdlcFlowStore((s) => projectFlow(s, project?.id ?? ''))
+  // A project's tickets can run different flows, so the columns being edited
+  // are a flow's, picked here, not the project's one board.
+  const flows = useSdlcFlowStore((s) => s.flows)
+  const flowPerProject = useSdlcFlowStore((s) => s.flowPerProject)
+  const [pickedFlow, setPickedFlow] = useState('')
+  const flow =
+    flows.find((f) => f.id === pickedFlow) ?? flows.find((f) => f.id === flowPerProject[project?.id ?? '']) ?? flows[0]
   const columns = flow.columns
   const overrides = useSdlcPromptsStore((s) =>
     project ? s.promptsPerProject[project.id] ?? EMPTY_OVERRIDES : EMPTY_OVERRIDES
@@ -67,11 +73,28 @@ export function SdlcPromptsPage(): React.ReactElement {
               <span className="truncate font-mono text-micro text-zinc-600">{project.path}</span>
             </label>
           )}
+          {project && (
+            <label className="flex min-w-0 items-center gap-1.5 rounded border border-zinc-800 px-2 py-1 text-xs text-zinc-400">
+              <Workflow size={13} className="shrink-0 text-zinc-500" />
+              <select
+                value={flow.id}
+                onChange={(e) => setPickedFlow(e.target.value)}
+                aria-label="Flow whose stage prompts are edited"
+                className="cursor-pointer bg-transparent outline-none"
+              >
+                {flows.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
 
         {project ? (
           <SectionCard
-            title={`Overrides for ${project.name}`}
+            title={`Overrides for ${project.name} on ${flow.name}`}
             description={`Only the stages you edit here differ from the ${flow.name} flow in Settings. Everything else follows that flow, including later edits.`}
           >
             <SdlcPromptEditor

@@ -62,6 +62,8 @@ export interface SdlcAttachment {
 export interface SdlcTicket {
   id: string
   projectId: string
+  /** The flow this ticket runs, picked when it was created; see models/sdlc-flow. Tickets saved before flows could be picked lack it and follow their project's. */
+  flowId?: string
   title: string
   description: string
   stage: SdlcStage
@@ -99,6 +101,8 @@ export const EMPTY_ARTIFACTS: SdlcArtifacts = {
 
 export interface NewSdlcTicketInput {
   projectId: string
+  /** Which flow the ticket runs. Left out, it takes the project's. */
+  flowId?: string
   description: string
   attachments: SdlcAttachment[]
 }

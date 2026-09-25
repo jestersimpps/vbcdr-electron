@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { FileText, FolderOpen, GitBranch, Paperclip, Plus, X } from 'lucide-react'
+import { FileText, FolderOpen, GitBranch, Paperclip, Plus, Workflow, X } from 'lucide-react'
 import { branchNameFrom, useSdlcStore } from '@/stores/sdlc-store'
 import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { attachmentsFromFiles } from '@/lib/sdlc-attachments'
@@ -24,11 +24,14 @@ interface NewTicketComposerProps {
 export function NewTicketComposer({ projects, defaultProjectId }: NewTicketComposerProps): React.ReactElement | null {
   const createTicket = useSdlcStore((s) => s.createTicket)
   const autoStart = useSdlcFlowStore((s) => s.autoStart)
+  const flows = useSdlcFlowStore((s) => s.flows)
+  const flowPerProject = useSdlcFlowStore((s) => s.flowPerProject)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [description, setDescription] = useState('')
   const [projectId, setProjectId] = useState('')
+  const [flowId, setFlowId] = useState('')
   const [attachments, setAttachments] = useState<SdlcAttachment[]>([])
   const [isDragging, setIsDragging] = useState(false)
 
@@ -43,9 +46,15 @@ export function NewTicketComposer({ projects, defaultProjectId }: NewTicketCompo
 
   if (!target) return null
 
+  // The flow follows the project's until the user picks another here, so
+  // switching project moves the picker with it rather than stranding a choice.
+  const flow =
+    flows.find((f) => f.id === flowId) ?? flows.find((f) => f.id === flowPerProject[target.id]) ?? flows[0]
+
   const close = (): void => {
     setIsOpen(false)
     setDescription('')
+    setFlowId('')
     setAttachments([])
     setIsDragging(false)
   }
@@ -59,7 +68,7 @@ export function NewTicketComposer({ projects, defaultProjectId }: NewTicketCompo
 
   const handleSubmit = (): void => {
     if (!canSubmit) return
-    const ticket = createTicket({ projectId: target.id, description, attachments })
+    const ticket = createTicket({ projectId: target.id, flowId: flow.id, description, attachments })
     if (autoStart) void moveTicketOn(ticket.id)
     close()
   }
@@ -72,9 +81,15 @@ export function NewTicketComposer({ projects, defaultProjectId }: NewTicketCompo
       >
         <Plus size={13} className="shrink-0" />
         New ticket
-        <span className="ml-auto flex min-w-0 items-center gap-1 text-micro text-zinc-600">
-          <FolderOpen size={11} className="shrink-0" />
-          <span className="truncate">{target.name}</span>
+        <span className="ml-auto flex min-w-0 items-center gap-2 text-micro text-zinc-600">
+          <span className="flex min-w-0 items-center gap-1">
+            <FolderOpen size={11} className="shrink-0" />
+            <span className="truncate">{target.name}</span>
+          </span>
+          <span className="flex min-w-0 items-center gap-1">
+            <Workflow size={11} className="shrink-0" />
+            <span className="truncate">{flow.name}</span>
+          </span>
         </span>
       </button>
     )
@@ -159,6 +174,22 @@ export function NewTicketComposer({ projects, defaultProjectId }: NewTicketCompo
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex min-w-0 items-center gap-1 rounded border border-zinc-800 bg-zinc-950/60 px-1.5 py-1 text-micro text-zinc-400">
+          <Workflow size={11} className="shrink-0 text-zinc-500" />
+          <select
+            value={flow.id}
+            onChange={(e) => setFlowId(e.target.value)}
+            aria-label="Flow for the new ticket"
+            title="The columns this ticket runs through. A ticket keeps the flow it was created with."
+            className="max-w-[140px] cursor-pointer truncate bg-transparent outline-none"
+          >
+            {flows.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
               </option>
             ))}
           </select>

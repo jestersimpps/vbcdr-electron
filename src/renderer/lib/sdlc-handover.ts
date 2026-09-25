@@ -6,7 +6,7 @@ import { useEditorStore } from '@/stores/editor-store'
 import { useLayoutStore } from '@/stores/layout-store'
 import { createTrackedWorktreeForProject, toWorktreeInfo, useWorktreeStore } from '@/stores/worktree-store'
 import { resolveStagePrompt } from '@/stores/sdlc-prompts-store'
-import { sdlcColumns } from '@/stores/sdlc-flow-store'
+import { ticketColumns, ticketFlow, useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { interpolatePrompt, prPromptValue, promptUsesVariable, type SdlcPromptVariables } from '@/lib/llm-instructions'
 import { clearSentinel, readSentinel } from '@/lib/sdlc-sentinel'
 import { attachmentsInstruction, writeAttachmentsToWorktree } from '@/lib/sdlc-attachments'
@@ -28,11 +28,11 @@ export interface StageHandoverResult {
 }
 
 export function ticketColumn(ticket: SdlcTicket): SdlcColumn | undefined {
-  return findColumn(sdlcColumns(ticket.projectId), ticket.stage)
+  return findColumn(ticketColumns(ticket), ticket.stage)
 }
 
 export function stageLabel(ticket: SdlcTicket, stage: SdlcStage = ticket.stage): string {
-  return findColumn(sdlcColumns(ticket.projectId), stage)?.label ?? stage
+  return findColumn(ticketColumns(ticket), stage)?.label ?? stage
 }
 
 export function sdlcProfileMeta(stage: SdlcStage, ticket: SdlcTicket, providerId: LlmProviderId): TabProfileMeta {
@@ -143,7 +143,7 @@ function promptVariables(
     diff: diff || EMPTY_PROMPT_VALUE,
     pr: pr || EMPTY_PROMPT_VALUE,
     outputs: Object.fromEntries(
-      sdlcColumns(ticket.projectId).map((c) => [c.id, ticket.artifacts.outputs[c.id] || EMPTY_PROMPT_VALUE])
+      ticketColumns(ticket).map((c) => [c.id, ticket.artifacts.outputs[c.id] || EMPTY_PROMPT_VALUE])
     )
   }
 }
@@ -224,7 +224,8 @@ export async function handOffStage(ticket: SdlcTicket, project: Project): Promis
   try {
     await window.api.git.ensureInfoExclude(project.path, `${SDLC_SENTINEL_DIR}/`)
     await clearSentinel(worktree.path)
-    prompt = await renderPrompt(resolveStagePrompt(project.id, stage).text, ticket, project, worktree)
+    const template = resolveStagePrompt(project.id, ticketFlow(useSdlcFlowStore.getState(), ticket).id, stage)
+    prompt = await renderPrompt(template.text, ticket, project, worktree)
     const attached = await writeAttachmentsToWorktree(worktree.path, ticket.attachments)
     if (attached.length > 0) prompt = `${prompt}\n\n${attachmentsInstruction(attached)}`
   } catch (err) {
@@ -359,7 +360,7 @@ export async function advanceAndHandOff(ticketId: string): Promise<void> {
   if (!project) return
 
   const captured = await captureStageOutput(current)
-  const next = nextColumn(sdlcColumns(captured.projectId), captured.stage)
+  const next = nextColumn(ticketColumns(captured), captured.stage)
   if (!next || next.kind === 'terminal') return
 
   await closeTicketTab(captured)
@@ -374,7 +375,7 @@ export async function advanceAndHandOff(ticketId: string): Promise<void> {
 export async function moveTicketOn(ticketId: string): Promise<void> {
   const ticket = useSdlcStore.getState().tickets.find((t) => t.id === ticketId)
   if (!ticket) return
-  if (nextColumn(sdlcColumns(ticket.projectId), ticket.stage)?.kind === 'terminal') {
+  if (nextColumn(ticketColumns(ticket), ticket.stage)?.kind === 'terminal') {
     await finishTicket(ticketId)
     return
   }
@@ -436,7 +437,7 @@ function leftoverCommitMessage(ticket: SdlcTicket): string {
 export async function finishTicket(ticketId: string): Promise<void> {
   const store = useSdlcStore.getState()
   const ticket = store.tickets.find((t) => t.id === ticketId)
-  if (!ticket || nextColumn(sdlcColumns(ticket.projectId), ticket.stage)?.kind !== 'terminal') return
+  if (!ticket || nextColumn(ticketColumns(ticket), ticket.stage)?.kind !== 'terminal') return
   const captured = await captureStageOutput(ticket)
   const tracked = captured.worktreeId ? await useWorktreeStore.getState().refreshOne(captured.worktreeId) : null
   if (tracked) {
@@ -481,7 +482,7 @@ async function launchDoneAction(ticketId: string, trigger: SdlcDoneTrigger): Pro
   if (!ticket || ticketColumn(ticket)?.kind !== 'terminal') return null
   const project = findProject(ticket)
   if (!project) return null
-  const template = resolveStagePrompt(project.id, ticket.stage).text
+  const template = resolveStagePrompt(project.id, ticketFlow(useSdlcFlowStore.getState(), ticket).id, ticket.stage).text
   if (!template.trim()) return null
   const { patchTicket } = useSdlcStore.getState()
 
@@ -585,7 +586,7 @@ export function pendingDoneTicketIds(projectId?: string): string[] {
     .tickets.filter(
       (t) =>
         (!projectId || t.projectId === projectId) &&
-        t.stage === sdlcColumns(t.projectId).at(-1)?.id &&
+        t.stage === ticketColumns(t).at(-1)?.id &&
         !t.doneActionAt
     )
     .map((t) => t.id)

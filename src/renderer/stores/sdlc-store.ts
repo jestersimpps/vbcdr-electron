@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { sdlcColumns } from '@/stores/sdlc-flow-store'
+import { flowColumns, projectFlow, ticketColumns, useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { nextColumn } from '@/models/sdlc-flow'
 import { EMPTY_ARTIFACTS, type NewSdlcTicketInput, type SdlcStage, type SdlcTicket } from '@/models/sdlc'
 
@@ -8,7 +8,7 @@ interface SdlcStore {
   tickets: SdlcTicket[]
   createTicket: (input: NewSdlcTicketInput) => SdlcTicket
   moveTicket: (id: string, stage: SdlcStage) => void
-  reassignStage: (from: SdlcStage, to: SdlcStage, inProject: (projectId: string) => boolean) => void
+  reassignStage: (from: SdlcStage, to: SdlcStage, matches: (ticket: SdlcTicket) => boolean) => void
   advanceTicket: (id: string) => void
   patchTicket: (id: string, patch: Partial<Omit<SdlcTicket, 'id' | 'projectId'>>) => void
   deleteTicket: (id: string) => void
@@ -83,12 +83,14 @@ export const useSdlcStore = create<SdlcStore>()(
       createTicket: (input: NewSdlcTicketInput) => {
         const description = input.description.trim()
         const timestamp = Date.now()
+        const flowId = input.flowId ?? projectFlow(useSdlcFlowStore.getState(), input.projectId).id
         const ticket: SdlcTicket = {
           id: `t-${timestamp}`,
           projectId: input.projectId,
+          flowId,
           title: titleFromDescription(description),
           description,
-          stage: sdlcColumns(input.projectId)[0].id,
+          stage: flowColumns(flowId)[0].id,
           status: 'idle',
           branch: branchNameFrom(description),
           worktreePath: '—',
@@ -123,10 +125,10 @@ export const useSdlcStore = create<SdlcStore>()(
       },
 
       /** A deleted column's tickets land idle: whatever ran there says nothing about the column they arrive in. */
-      reassignStage: (from: SdlcStage, to: SdlcStage, inProject: (projectId: string) => boolean) => {
+      reassignStage: (from: SdlcStage, to: SdlcStage, matches: (ticket: SdlcTicket) => boolean) => {
         set((state) => ({
           tickets: state.tickets.map((t) =>
-            t.stage === from && inProject(t.projectId) ? { ...t, stage: to, status: 'idle', blockedReason: null, updatedAt: Date.now() } : t
+            t.stage === from && matches(t) ? { ...t, stage: to, status: 'idle', blockedReason: null, updatedAt: Date.now() } : t
           )
         }))
       },
@@ -135,7 +137,7 @@ export const useSdlcStore = create<SdlcStore>()(
         set((state) => ({
           tickets: state.tickets.map((t) => {
             if (t.id !== id) return t
-            const stage = nextColumn(sdlcColumns(t.projectId), t.stage)?.id
+            const stage = nextColumn(ticketColumns(t), t.stage)?.id
             if (!stage) return t
             return {
               ...t,

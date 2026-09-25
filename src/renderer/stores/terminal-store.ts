@@ -8,7 +8,7 @@ import type { SdlcTicket } from '@/models/sdlc'
 import { useLayoutStore } from '@/stores/layout-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
 import { useSdlcStore } from '@/stores/sdlc-store'
-import { sdlcColumns } from '@/stores/sdlc-flow-store'
+import { ticketColumns } from '@/stores/sdlc-flow-store'
 import { disposeTerminal } from '@/components/terminal/TerminalInstance'
 
 type TabStatus = 'idle' | 'busy'
@@ -52,7 +52,7 @@ function isDescriptiveTitle(title: string): boolean {
 }
 
 function stageLabelFor(ticket: SdlcTicket): string {
-  return findColumn(sdlcColumns(ticket.projectId), ticket.stage)?.label ?? ticket.stage
+  return findColumn(ticketColumns(ticket), ticket.stage)?.label ?? ticket.stage
 }
 
 /**

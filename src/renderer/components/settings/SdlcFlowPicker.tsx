@@ -3,6 +3,8 @@ import { Copy, Trash2 } from 'lucide-react'
 import { DEFAULT_FLOW_ID, type SdlcFlow } from '@/models/sdlc-flow'
 import { projectFlow, useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useProjectStore } from '@/stores/project-store'
+import { useSdlcStore } from '@/stores/sdlc-store'
+import { ticketsOnFlow } from '@/lib/sdlc-flow'
 import { deleteFlow } from '@/lib/sdlc-flow'
 import { FLOW_INPUT_CLASS, Field, IconButton } from '@/components/settings/SdlcFlowControls'
 
@@ -67,10 +69,10 @@ function DeleteFlowConfirm({
   return (
     <div className="flex flex-wrap items-center gap-2 rounded border border-red-900/60 bg-red-950/20 px-3 py-2 text-xs text-zinc-300">
       <span>
-        Delete “{flow.name}”? Projects using it switch to the default flow, and their tickets in columns it lacks go back
-        to the start.
+        Delete “{flow.name}”? Its tickets move onto the default flow and start over in its first column, and projects
+        set to it fall back to the default for new tickets.
       </span>
-      {blocked && <span className="text-orange-400">An agent is still running in one of its columns.</span>}
+      {blocked && <span className="text-orange-400">A ticket on this flow still has an agent running.</span>}
       <button onClick={onCancel} className="ml-auto rounded px-2.5 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200">
         Cancel
       </button>
@@ -91,9 +93,10 @@ export function SdlcFlowPicker({
   const flows = useSdlcFlowStore((s) => s.flows)
   const flowPerProject = useSdlcFlowStore((s) => s.flowPerProject)
   const renameFlow = useSdlcFlowStore((s) => s.renameFlow)
-  const usedBy = useProjectStore((s) => s.projects).filter(
+  const defaultFor = useProjectStore((s) => s.projects).filter(
     (p) => projectFlow({ flows, flowPerProject }, p.id).id === flow.id
   )
+  const ticketCount = useSdlcStore((s) => ticketsOnFlow(s.tickets, flow.id).length)
   const [mode, setMode] = useState<'idle' | 'saving' | 'deleting'>('idle')
   const isDefault = flow.id === DEFAULT_FLOW_ID
 
@@ -153,11 +156,14 @@ export function SdlcFlowPicker({
       )}
 
       <p className="text-meta text-zinc-500">
-        {usedBy.length > 0
-          ? `Used by ${usedBy.map((p) => p.name).join(', ')}.`
-          : 'No project uses this flow yet.'}{' '}
+        {ticketCount > 0
+          ? `${ticketCount} ticket${ticketCount === 1 ? '' : 's'} run this flow.`
+          : 'No ticket runs this flow yet.'}{' '}
+        {defaultFor.length > 0
+          ? `New tickets in ${defaultFor.map((p) => p.name).join(', ')} start on it.`
+          : ''}{' '}
         {isDefault ? 'Projects that have not picked a flow use this one. ' : ''}
-        Pick a project's flow from its row on the board.
+        Every ticket keeps the flow it was created with, picked beside its project on the board.
       </p>
     </div>
   )

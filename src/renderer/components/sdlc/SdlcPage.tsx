@@ -18,10 +18,10 @@ import {
 } from 'lucide-react'
 import type { SdlcTicket, SdlcTicketStatus } from '@/models/sdlc'
 import type { Project } from '@/models/types'
-import { hasCommand, type SdlcColumn } from '@/models/sdlc-flow'
+import { hasCommand, type SdlcColumn, type SdlcFlow } from '@/models/sdlc-flow'
 import { useProjectStore } from '@/stores/project-store'
 import { summaryFromDescription, useSdlcStore } from '@/stores/sdlc-store'
-import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { ticketFlow, useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useNow } from '@/hooks/useNow'
 import { useTerminalStore } from '@/stores/terminal-store'
 import { useWorktreeStore } from '@/stores/worktree-store'
@@ -380,15 +380,72 @@ function DoneTimerSelect({ columnLabel }: { columnLabel: string }): React.ReactE
   )
 }
 
+/**
+ * Every flow's columns are on the board at all times, so a ticket always has
+ * the lane its own flow says it is in, whatever flow the other tickets run.
+ */
+function FlowLanes({
+  flow,
+  byStage,
+  projectsById
+}: {
+  flow: SdlcFlow
+  byStage: Map<string, SdlcTicket[]>
+  projectsById: Map<string, Project>
+}): React.ReactElement {
+  const last = flow.columns.length - 1
+  const count = flow.columns.reduce((n, c) => n + (byStage.get(laneId(flow.id, c.id))?.length ?? 0), 0)
+  return (
+    <div className="flex flex-col">
+      <div className="sticky top-0 z-20 flex items-center gap-2 bg-zinc-950 pb-1">
+        <Workflow size={11} className="shrink-0 text-zinc-600" />
+        <span className="truncate text-micro font-semibold uppercase tracking-wide text-zinc-500">{flow.name}</span>
+        <span className="font-mono text-micro text-zinc-700">{count}</span>
+        <div className="h-px flex-1 bg-zinc-800/80" />
+      </div>
+      <div className="flex flex-1 gap-2">
+        {flow.columns.map((column, index) => {
+          const laneTickets = byStage.get(laneId(flow.id, column.id)) ?? []
+          return (
+            <div key={column.id} className={cn('flex flex-1 flex-col gap-1.5', LANE_MIN_WIDTH)}>
+              <ColumnHeader column={column} tickets={laneTickets} isLast={index === last} />
+
+              <div className="flex min-h-[60px] flex-1 flex-col gap-1.5 rounded-md bg-zinc-900/20 p-1.5">
+                {laneTickets.length === 0 ? (
+                  <div className="flex flex-1 items-center justify-center py-3 text-micro text-zinc-700">empty</div>
+                ) : (
+                  laneTickets.map((ticket) => (
+                    <TicketCard
+                      key={ticket.id}
+                      ticket={ticket}
+                      place={placeOf(flow.columns, index)}
+                      column={column}
+                      project={projectsById.get(ticket.projectId)}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** Column ids repeat across flows, so a lane is a flow and a column together. */
+function laneId(flowId: string, columnId: string): string {
+  return `${flowId}\u0000${columnId}`
+}
+
 export function SdlcPage(): React.ReactElement {
   const tickets = useSdlcStore((s) => s.tickets)
   const projects = useProjectStore((s) => s.projects)
   const activeProjectId = useProjectStore((s) => s.activeProjectId)
   const showSdlcPromptsPage = useProjectStore((s) => s.showSdlcPromptsPage)
-  // Lanes for the default flow until they are drawn per template, below.
-  const columns = useSdlcFlowStore((s) => s.flows[0].columns)
-  const firstColumnId = columns[0].id
-  const lastColumn = columns[columns.length - 1]
+  const flows = useSdlcFlowStore((s) => s.flows)
+  const flowPerProject = useSdlcFlowStore((s) => s.flowPerProject)
+  const lastColumn = flows[0].columns[flows[0].columns.length - 1]
 
   const runningCount = tickets.filter((t) => t.status === 'running').length
   const attentionCount = tickets.filter(
@@ -404,13 +461,18 @@ export function SdlcPage(): React.ReactElement {
 
   const projectsById = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects])
 
-  // A ticket whose column no longer exists shows at the start rather than vanishing from the board.
+  // Keyed by flow and column, and a ticket whose column no longer exists shows
+  // at the start of its flow rather than vanishing from the board.
   const byStage = useMemo(() => {
     const map = new Map<string, SdlcTicket[]>()
-    for (const column of columns) map.set(column.id, [])
-    for (const ticket of tickets) (map.get(ticket.stage) ?? map.get(firstColumnId))?.push(ticket)
+    for (const flow of flows) for (const column of flow.columns) map.set(laneId(flow.id, column.id), [])
+    for (const ticket of tickets) {
+      const flow = ticketFlow({ flows, flowPerProject }, ticket)
+      const lane = map.get(laneId(flow.id, ticket.stage)) ?? map.get(laneId(flow.id, flow.columns[0].id))
+      lane?.push(ticket)
+    }
     return map
-  }, [tickets, columns, firstColumnId])
+  }, [tickets, flows, flowPerProject])
 
   return (
     <div className="flex h-full flex-col bg-zinc-950 text-zinc-200">
@@ -456,31 +518,10 @@ export function SdlcPage(): React.ReactElement {
       </div>
 
       <div className="flex-1 overflow-auto px-4 pb-4 pt-3">
-        <div className="flex min-h-full gap-2">
-          {columns.map((column, index) => {
-            const stageTickets = byStage.get(column.id) ?? []
-            return (
-              <div key={column.id} className={cn('flex flex-1 flex-col gap-1.5', LANE_MIN_WIDTH)}>
-                <ColumnHeader column={column} tickets={stageTickets} isLast={index === columns.length - 1} />
-
-                <div className="flex min-h-[60px] flex-col gap-1.5 rounded-md bg-zinc-900/20 p-1.5">
-                  {stageTickets.length === 0 ? (
-                    <div className="flex flex-1 items-center justify-center py-3 text-micro text-zinc-700">empty</div>
-                  ) : (
-                    stageTickets.map((ticket) => (
-                      <TicketCard
-                        key={ticket.id}
-                        ticket={ticket}
-                        place={placeOf(columns, index)}
-                        column={column}
-                        project={projectsById.get(ticket.projectId)}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            )
-          })}
+        <div className="flex min-h-full min-w-max gap-6">
+          {flows.map((flow) => (
+            <FlowLanes key={flow.id} flow={flow} byStage={byStage} projectsById={projectsById} />
+          ))}
         </div>
       </div>
     </div>

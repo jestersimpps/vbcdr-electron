@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { sdlcColumns, upgradeLegacyPrompt, useSdlcFlowStore } from './sdlc-flow-store'
+import { sdlcColumns, ticketColumns, upgradeLegacyPrompt, useSdlcFlowStore } from './sdlc-flow-store'
 import { upgradeLegacyArtifacts, useSdlcStore } from './sdlc-store'
 import { useSdlcPromptsStore } from './sdlc-prompts-store'
 import { deleteColumn, deleteFlow, resetFlow, switchProjectFlow } from '@/lib/sdlc-flow'
@@ -11,8 +11,9 @@ function ids(): string[] {
   return sdlcColumns('p1').map((c) => c.id)
 }
 
-function ticket(id: string, stage: string, status: SdlcTicket['status'] = 'idle'): SdlcTicket {
-  return { ...useSdlcStore.getState().createTicket({ projectId: 'p1', description: id, attachments: [] }), id, stage, status }
+function ticket(id: string, stage: string, status: SdlcTicket['status'] = 'idle', flowId?: string): SdlcTicket {
+  const created = useSdlcStore.getState().createTicket({ projectId: 'p1', flowId, description: id, attachments: [] })
+  return { ...created, id, stage, status }
 }
 
 beforeEach(() => {
@@ -150,31 +151,77 @@ describe('saved flows', () => {
     expect(sdlcColumns('p2').map((c) => c.id)).toEqual(['backlog', 'planning', 'implementing', 'review', 'done'])
   })
 
-  it('starts a switching project over in the new flow only for columns it lacks, leaving other projects alone', () => {
-    useSdlcStore.setState({ tickets: [ticket('a', 'review'), ticket('b', 'done'), { ...ticket('c', 'review'), projectId: 'p2' }] })
+  it('leaves the tickets already in flight where they are: each keeps the flow it was created with', () => {
+    useSdlcStore.setState({ tickets: [ticket('a', 'review'), ticket('b', 'done')] })
 
     switchProjectFlow('p1', saveBuildOnly())
 
-    expect(useSdlcStore.getState().tickets.map((t) => t.stage)).toEqual(['backlog', 'done', 'review'])
+    expect(useSdlcStore.getState().tickets.map((t) => t.stage)).toEqual(['review', 'done'])
+    expect(ticketColumns(useSdlcStore.getState().tickets[0]).map((c) => c.id)).toContain('review')
   })
 
-  it('refuses to switch while an agent runs in a column the new flow lacks', () => {
+  it('switches while an agent runs, since nothing in flight follows the project', () => {
     useSdlcStore.setState({ tickets: [ticket('a', 'review', 'running')] })
-    const flowId = saveBuildOnly()
 
-    expect(switchProjectFlow('p1', flowId)).toBe(false)
-    expect(ids()).toContain('review')
+    expect(switchProjectFlow('p1', saveBuildOnly())).toBe(true)
+    expect(useSdlcStore.getState().tickets[0].stage).toBe('review')
   })
 
-  it('deletes a column only for the projects on that flow', () => {
+  it('advances a ticket through its own flow, not the one its project is set to', () => {
+    const flowId = saveBuildOnly()
+    useSdlcStore.setState({ tickets: [ticket('a', 'backlog', 'idle', flowId)] })
+
+    useSdlcStore.getState().advanceTicket('a')
+
+    // The project still runs planning, implementing, review; this ticket does not.
+    expect(sdlcColumns('p1').map((c) => c.id)).toContain('planning')
+    expect(useSdlcStore.getState().tickets[0].stage).toBe('build')
+  })
+
+  it('two tickets in one project can sit in columns only their own flow has', () => {
+    const flowId = saveBuildOnly()
+    useSdlcStore.setState({ tickets: [ticket('a', 'review'), ticket('b', 'build', 'idle', flowId)] })
+
+    const [onDefault, onBuildOnly] = useSdlcStore.getState().tickets
+    expect(ticketColumns(onDefault).map((c) => c.id)).toContain('review')
+    expect(ticketColumns(onBuildOnly).map((c) => c.id)).toEqual(['backlog', 'build', 'done'])
+  })
+
+  it('files a new ticket under the flow its project switched to', () => {
+    const flowId = saveBuildOnly()
+    switchProjectFlow('p1', flowId)
+
+    const created = useSdlcStore.getState().createTicket({ projectId: 'p1', description: 'fresh', attachments: [] })
+
+    expect(created).toMatchObject({ flowId, stage: 'backlog' })
+    expect(ticketColumns(created).map((c) => c.id)).toEqual(['backlog', 'build', 'done'])
+  })
+
+  it('deletes a column only for the tickets running that flow', () => {
     const flowId = useSdlcFlowStore.getState().saveFlowAs(DEFAULT_FLOW_ID, 'Other').id
-    switchProjectFlow('p2', flowId)
-    useSdlcStore.setState({ tickets: [ticket('a', 'review'), { ...ticket('b', 'review'), projectId: 'p2' }] })
+    useSdlcStore.setState({ tickets: [ticket('a', 'review'), ticket('b', 'review', 'idle', flowId)] })
 
     expect(deleteColumn(flowId, 'review', 'implementing')).toBe(true)
 
     expect(ids()).toContain('review')
     expect(useSdlcStore.getState().tickets.map((t) => t.stage)).toEqual(['review', 'implementing'])
+  })
+
+  it('a deleted flow takes its tickets to the start of the default one', () => {
+    const flowId = useSdlcFlowStore.getState().saveFlowAs(DEFAULT_FLOW_ID, 'Other').id
+    useSdlcStore.setState({ tickets: [ticket('a', 'review', 'idle', flowId)] })
+
+    expect(deleteFlow(flowId)).toBe(true)
+
+    expect(useSdlcStore.getState().tickets[0]).toMatchObject({ flowId: DEFAULT_FLOW_ID, stage: 'backlog' })
+  })
+
+  it('will not delete a flow while one of its tickets has an agent running', () => {
+    const flowId = useSdlcFlowStore.getState().saveFlowAs(DEFAULT_FLOW_ID, 'Other').id
+    useSdlcStore.setState({ tickets: [ticket('a', 'review', 'running', flowId)] })
+
+    expect(deleteFlow(flowId)).toBe(false)
+    expect(useSdlcFlowStore.getState().flows.map((f) => f.id)).toContain(flowId)
   })
 
   it('moves the projects of a deleted flow back to the default one, and keeps the default flow', () => {
