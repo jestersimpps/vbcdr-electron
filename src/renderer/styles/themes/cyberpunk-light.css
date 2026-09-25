@@ -125,3 +125,28 @@
 :root.cyberpunk-light .hover\:text-zinc-300:hover { color: var(--vb-text-2); }
 :root.cyberpunk-light .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
 :root.cyberpunk-light .border-zinc-400 { border-color: var(--vb-border-2); }
+
+/* --- light-mode contrast gaps: dark surfaces, hairlines and faint text
+       that had no light mapping and rendered as dark blocks --- */
+:root.cyberpunk-light .bg-zinc-950\/40 { background-color: rgba(var(--vb-bg-elevated-rgb), 0.45); }
+:root.cyberpunk-light .bg-zinc-900\/90 { background-color: rgba(var(--vb-bg-secondary-rgb), 0.90); }
+:root.cyberpunk-light .hover\:bg-zinc-900\/60:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.60); }
+:root.cyberpunk-light .focus\:bg-zinc-800:focus { background-color: var(--vb-bg-elevated); }
+:root.cyberpunk-light .disabled\:bg-zinc-900:disabled { background-color: var(--vb-bg-secondary); }
+:root.cyberpunk-light .border-zinc-800\/40 { border-color: var(--vb-border-1); }
+:root.cyberpunk-light .border-zinc-800\/50 { border-color: var(--vb-border-1); }
+:root.cyberpunk-light .border-zinc-800\/60 { border-color: var(--vb-border-1); }
+:root.cyberpunk-light .border-zinc-800\/80 { border-color: var(--vb-border-1); }
+:root.cyberpunk-light .hover\:border-zinc-800:hover { border-color: var(--vb-border-1); }
+:root.cyberpunk-light .focus\:border-zinc-500:focus { border-color: var(--vb-border-2); }
+:root.cyberpunk-light .focus\:border-zinc-600:focus { border-color: var(--vb-border-2); }
+:root.cyberpunk-light .focus\:border-zinc-700:focus { border-color: var(--vb-border-2); }
+:root.cyberpunk-light .focus-visible\:border-zinc-500:focus-visible { border-color: var(--vb-border-2); }
+:root.cyberpunk-light .divide-zinc-800 > :not(:last-child) { border-color: var(--vb-border-1); }
+:root.cyberpunk-light .divide-zinc-800\/60 > :not(:last-child) { border-color: var(--vb-border-1); }
+:root.cyberpunk-light .divide-zinc-800\/80 > :not(:last-child) { border-color: var(--vb-border-1); }
+:root.cyberpunk-light .ring-zinc-600 { --tw-ring-color: var(--vb-border-2); }
+:root.cyberpunk-light .text-zinc-700 { color: var(--vb-text-3); }
+:root.cyberpunk-light .disabled\:text-zinc-600:disabled { color: var(--vb-text-3); }
+:root.cyberpunk-light .caret-zinc-200 { caret-color: var(--vb-text-1); }
+:root.cyberpunk-light .placeholder-zinc-600::placeholder { color: var(--vb-text-3); }
