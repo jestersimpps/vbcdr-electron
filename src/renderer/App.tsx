@@ -103,7 +103,16 @@ export function App(): React.ReactElement {
   }, [terminalThemeId, customDark, customLight])
 
   useEffect(() => {
-    applyFontToAll(terminalFontFamily, terminalFontSize)
+    let cancelled = false
+    document.fonts
+      .load(`${terminalFontSize}px ${terminalFontFamily}`)
+      .catch(() => [])
+      .then(() => {
+        if (!cancelled) applyFontToAll(terminalFontFamily, terminalFontSize)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [terminalFontFamily, terminalFontSize])
 
   useEffect(() => {

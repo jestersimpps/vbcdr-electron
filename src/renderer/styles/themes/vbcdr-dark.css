@@ -1,67 +1,83 @@
+/* Teletext: the broadcast eight on black, square cells, no greys.
+   Secondary text is cyan, dividers are cyan at low alpha, raised
+   surfaces are the blue of a Ceefax header bar. */
 :root.vbcdr-dark body {
-  background: #141414;
-  color: #f5f5f5;
+  background: #000000;
+  color: #f2f2ee;
 }
 
 :root.vbcdr-dark {
 }
 
+:root.vbcdr-dark *,
+:root.vbcdr-dark *::before,
+:root.vbcdr-dark *::after {
+  border-radius: 0 !important;
+}
+
+:root.vbcdr-dark body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(0, 0, 0, 0.08) 2px, rgba(0, 0, 0, 0.08) 3px);
+}
+
 :root.vbcdr-dark ::-webkit-scrollbar-thumb {
-  background: #ffd21e;
+  background: #3fd8f266;
 }
 
 :root.vbcdr-dark ::-webkit-scrollbar-thumb:hover {
-  background: #1ba0e0;
+  background: #ffe81a;
 }
 
 :root.vbcdr-dark .bg-zinc-950 {
-  background-color: #101010;
+  background-color: #000000;
 }
 
 :root.vbcdr-dark .bg-zinc-900\/80 {
-  background-color: rgba(20, 20, 20, 0.9);
+  background-color: rgba(0, 0, 0, 0.9);
 }
 
 :root.vbcdr-dark .bg-zinc-900\/50 {
-  background-color: rgba(20, 20, 20, 0.6);
+  background-color: rgba(0, 0, 0, 0.6);
 }
 
 :root.vbcdr-dark .bg-zinc-900\/30 {
-  background-color: rgba(20, 20, 20, 0.5);
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 :root.vbcdr-dark .bg-zinc-900 {
-  background-color: #141414;
+  background-color: #000000;
 }
 
 :root.vbcdr-dark .bg-zinc-800 {
-  background-color: #1f1f1f;
+  background-color: #060c33;
 }
 
 :root.vbcdr-dark .bg-zinc-800\/50 {
-  background-color: rgba(31, 31, 31, 0.5);
+  background-color: rgba(6, 12, 51, 0.6);
 }
 
 :root.vbcdr-dark .hover\:bg-zinc-800:hover {
-  background-color: #262626;
+  background-color: #0b1559;
 }
 
 :root.vbcdr-dark .hover\:bg-zinc-700:hover {
-  background-color: #2f2f2f;
+  background-color: #101e80;
 }
 
 :root.vbcdr-dark .hover\:bg-zinc-800\/50:hover {
-  background-color: rgba(38, 38, 38, 0.5);
+  background-color: rgba(11, 21, 89, 0.6);
 }
 
-/* Outlines carry the world: ink-black dividers, sun and sky where a border
-   is meant to be seen rather than merely separate two surfaces. */
 :root.vbcdr-dark .border-zinc-800 {
-  border-color: #000000;
+  border-color: #3fd8f259;
 }
 
 :root.vbcdr-dark .border-zinc-700 {
-  border-color: #ffd21e40;
+  border-color: #3fd8f28c;
 }
 
 :root.vbcdr-dark .text-zinc-50 {
@@ -69,81 +85,110 @@
 }
 
 :root.vbcdr-dark .text-zinc-200 {
-  color: #f5f5f5;
+  color: #f2f2ee;
 }
 
 :root.vbcdr-dark .text-zinc-300 {
-  color: #ffd21e;
+  color: #ffe81a;
 }
 
 :root.vbcdr-dark .text-zinc-400 {
-  color: #b8b8b8;
+  color: #3fd8f2;
 }
 
 :root.vbcdr-dark .text-zinc-500 {
-  color: #8a8a8a;
+  color: #2c97a9;
 }
 
 :root.vbcdr-dark .text-zinc-600 {
-  color: #8a8a8a;
+  color: #268291;
 }
 
 :root.vbcdr-dark .hover\:text-zinc-200:hover {
-  color: #ffd21e;
+  color: #ffe81a;
 }
 
 :root.vbcdr-dark .hover\:text-zinc-300:hover {
-  color: #1ba0e0;
+  color: #ffffff;
 }
 
-/* Palette law: green is done, red is stop, sun is the primary action.
-   Nothing here is colored decoratively. */
-:root.vbcdr-dark .bg-blue-500 { background-color: #1ba0e0; }
-:root.vbcdr-dark .bg-blue-600 { background-color: #0d7fb8; }
-:root.vbcdr-dark .hover\:bg-blue-500:hover { background-color: #3fb6ef; }
-:root.vbcdr-dark .bg-blue-500\/15 { background-color: rgba(27, 160, 224, 0.15); }
-:root.vbcdr-dark .bg-emerald-400 { background-color: #3cb44a; }
-:root.vbcdr-dark .bg-amber-400 { background-color: #ffd21e; }
-:root.vbcdr-dark .bg-amber-600 { background-color: #f0b400; }
-:root.vbcdr-dark .bg-amber-500\/15 { background-color: rgba(255, 210, 30, 0.15); }
-:root.vbcdr-dark .bg-red-500\/20 { background-color: rgba(227, 59, 46, 0.2); }
-:root.vbcdr-dark .bg-red-600 { background-color: #b8241a; }
-:root.vbcdr-dark .bg-green-400 { background-color: #3cb44a; }
-:root.vbcdr-dark .bg-green-400\/15 { background-color: rgba(60, 180, 74, 0.15); }
-:root.vbcdr-dark .bg-green-600 { background-color: #2e8b39; }
+/* Palette law: green is done, red is stop, yellow is the headline, blue is
+   a fill and never text (2.6:1 on black), so blue text reads as cyan. */
+:root.vbcdr-dark .bg-blue-500 { background-color: #1f3cff; }
+:root.vbcdr-dark .bg-blue-600 { background-color: #1f3cff; }
+:root.vbcdr-dark .hover\:bg-blue-500:hover { background-color: #3f58ff; }
+:root.vbcdr-dark .bg-blue-500\/15 { background-color: rgba(31, 60, 255, 0.3); }
+:root.vbcdr-dark .hover\:bg-blue-500\/25:hover { background-color: rgba(31, 60, 255, 0.45); }
+:root.vbcdr-dark .bg-indigo-600 { background-color: #1f3cff; }
+:root.vbcdr-dark .hover\:bg-indigo-500:hover { background-color: #3f58ff; }
+:root.vbcdr-dark .bg-emerald-400 { background-color: #33e05a; }
+:root.vbcdr-dark .bg-emerald-500 { background-color: #33e05a; }
+:root.vbcdr-dark .bg-emerald-500\/15 { background-color: rgba(51, 224, 90, 0.15); }
+:root.vbcdr-dark .bg-emerald-500\/10 { background-color: rgba(51, 224, 90, 0.1); }
+:root.vbcdr-dark .bg-emerald-950 { background-color: rgba(51, 224, 90, 0.12); }
+:root.vbcdr-dark .border-emerald-900 { border-color: rgba(51, 224, 90, 0.5); }
+:root.vbcdr-dark .bg-amber-400 { background-color: #ffe81a; }
+:root.vbcdr-dark .bg-amber-600 { background-color: #e0c800; }
+:root.vbcdr-dark .bg-amber-500\/15 { background-color: rgba(255, 232, 26, 0.15); }
+:root.vbcdr-dark .bg-amber-500\/10 { background-color: rgba(255, 232, 26, 0.1); }
+:root.vbcdr-dark .bg-yellow-500\/15 { background-color: rgba(255, 232, 26, 0.15); }
+:root.vbcdr-dark .hover\:bg-yellow-500\/25:hover { background-color: rgba(255, 232, 26, 0.25); }
+:root.vbcdr-dark .bg-red-500\/15 { background-color: rgba(255, 74, 58, 0.15); }
+:root.vbcdr-dark .bg-red-500\/20 { background-color: rgba(255, 74, 58, 0.2); }
+:root.vbcdr-dark .bg-red-950\/40 { background-color: rgba(255, 74, 58, 0.12); }
+:root.vbcdr-dark .border-red-900\/60 { border-color: rgba(255, 74, 58, 0.5); }
+:root.vbcdr-dark .bg-red-600 { background-color: #c8261a; }
+:root.vbcdr-dark .hover\:bg-red-500:hover { background-color: #ff4a3a; }
+:root.vbcdr-dark .bg-green-400 { background-color: #33e05a; }
+:root.vbcdr-dark .bg-green-400\/15 { background-color: rgba(51, 224, 90, 0.15); }
+:root.vbcdr-dark .bg-green-600 { background-color: #33e05a; }
+:root.vbcdr-dark .bg-purple-500\/15 { background-color: rgba(255, 92, 240, 0.15); }
 
-/* #e33b2e is 4.33 on this ground, under AA, so red text is lightened. */
-:root.vbcdr-dark .text-blue-400 { color: #1ba0e0; }
-:root.vbcdr-dark .text-emerald-400 { color: #3cb44a; }
-:root.vbcdr-dark .text-amber-300 { color: #ffd21e; }
-:root.vbcdr-dark .text-amber-400 { color: #ffd21e; }
-:root.vbcdr-dark .text-red-400 { color: #ff6b5e; }
-:root.vbcdr-dark .text-red-500 { color: #ff6b5e; }
-:root.vbcdr-dark .text-green-400 { color: #3cb44a; }
-:root.vbcdr-dark .text-yellow-400 { color: #ffd21e; }
-:root.vbcdr-dark .fill-yellow-400 { fill: #ffd21e; }
-:root.vbcdr-dark .hover\:text-red-400:hover { color: #ff8378; }
+:root.vbcdr-dark .text-blue-400 { color: #3fd8f2; }
+:root.vbcdr-dark .text-sky-400 { color: #3fd8f2; }
+:root.vbcdr-dark .text-teal-400 { color: #3fd8f2; }
+:root.vbcdr-dark .text-emerald-300 { color: #33e05a; }
+:root.vbcdr-dark .text-emerald-400 { color: #33e05a; }
+:root.vbcdr-dark .text-emerald-500 { color: #33e05a; }
+:root.vbcdr-dark .text-green-400 { color: #33e05a; }
+:root.vbcdr-dark .text-green-500 { color: #33e05a; }
+:root.vbcdr-dark .text-amber-300 { color: #ffe81a; }
+:root.vbcdr-dark .text-amber-400 { color: #ffe81a; }
+:root.vbcdr-dark .text-yellow-400 { color: #ffe81a; }
+:root.vbcdr-dark .text-orange-300 { color: #ffe81a; }
+:root.vbcdr-dark .text-orange-400 { color: #ffe81a; }
+:root.vbcdr-dark .fill-yellow-400 { fill: #ffe81a; }
+:root.vbcdr-dark .text-red-300 { color: #ff4a3a; }
+:root.vbcdr-dark .text-red-400 { color: #ff4a3a; }
+:root.vbcdr-dark .text-red-500 { color: #ff4a3a; }
+:root.vbcdr-dark .text-rose-400 { color: #ff4a3a; }
+:root.vbcdr-dark .text-purple-400 { color: #ff5cf0; }
+:root.vbcdr-dark .text-violet-400 { color: #ff5cf0; }
+:root.vbcdr-dark .text-indigo-400 { color: #ff5cf0; }
+:root.vbcdr-dark .hover\:text-red-300:hover { color: #ff7a6e; }
+:root.vbcdr-dark .hover\:text-red-400:hover { color: #ff7a6e; }
+:root.vbcdr-dark .hover\:text-amber-300:hover { color: #fff27a; }
 
-:root.vbcdr-dark .focus\:ring-zinc-600:focus { --tw-ring-color: #ffd21e; }
+:root.vbcdr-dark .focus\:ring-zinc-600:focus { --tw-ring-color: #ffe81a; }
 
 /* --- semantic tokens (derived from this theme's own values) --- */
 :root.vbcdr-dark {
-  --vb-bg-primary: #101010;
-  --vb-bg-primary-rgb: 16, 16, 16;
-  --vb-bg-secondary: #141414;
-  --vb-bg-secondary-rgb: 20, 20, 20;
-  --vb-bg-elevated: #1f1f1f;
-  --vb-bg-elevated-rgb: 31, 31, 31;
-  --vb-bg-subtle: #262626;
-  --vb-bg-subtle-rgb: 38, 38, 38;
-  --vb-text-1: #f5f5f5;
-  --vb-text-1-rgb: 245, 245, 245;
-  --vb-text-2: #b8b8b8;
-  --vb-text-2-rgb: 184, 184, 184;
-  --vb-text-3: #8a8a8a;
-  --vb-text-3-rgb: 138, 138, 138;
-  --vb-border-1: #000000;
-  --vb-border-2: #ffd21e40;
+  --vb-bg-primary: #000000;
+  --vb-bg-primary-rgb: 0, 0, 0;
+  --vb-bg-secondary: #000000;
+  --vb-bg-secondary-rgb: 0, 0, 0;
+  --vb-bg-elevated: #060c33;
+  --vb-bg-elevated-rgb: 6, 12, 51;
+  --vb-bg-subtle: #0b1559;
+  --vb-bg-subtle-rgb: 11, 21, 89;
+  --vb-text-1: #f2f2ee;
+  --vb-text-1-rgb: 242, 242, 238;
+  --vb-text-2: #3fd8f2;
+  --vb-text-2-rgb: 63, 216, 242;
+  --vb-text-3: #2c97a9;
+  --vb-text-3-rgb: 44, 151, 169;
+  --vb-border-1: #3fd8f259;
+  --vb-border-2: #3fd8f28c;
 }
 
 /* --- token-derived utilities (fills gaps the hand-written rules miss) --- */
@@ -167,13 +212,13 @@
 :root.vbcdr-dark .hover\:bg-zinc-800\/30:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.30); }
 :root.vbcdr-dark .hover\:bg-zinc-800\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
 :root.vbcdr-dark .hover\:bg-zinc-800\/60:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.60); }
-:root.vbcdr-dark .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-secondary); }
-:root.vbcdr-dark .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.40); }
-:root.vbcdr-dark .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-secondary-rgb), 0.50); }
+:root.vbcdr-dark .hover\:bg-zinc-900:hover { background-color: var(--vb-bg-elevated); }
+:root.vbcdr-dark .hover\:bg-zinc-900\/40:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.40); }
+:root.vbcdr-dark .hover\:bg-zinc-900\/50:hover { background-color: rgba(var(--vb-bg-elevated-rgb), 0.50); }
 :root.vbcdr-dark .hover\:border-zinc-500:hover { border-color: var(--vb-border-2); }
 :root.vbcdr-dark .hover\:border-zinc-600:hover { border-color: var(--vb-border-2); }
 :root.vbcdr-dark .hover\:border-zinc-700:hover { border-color: var(--vb-border-2); }
 :root.vbcdr-dark .hover\:text-zinc-100:hover { color: var(--vb-text-1); }
-:root.vbcdr-dark .hover\:text-zinc-400:hover { color: var(--vb-text-3); }
+:root.vbcdr-dark .hover\:text-zinc-400:hover { color: var(--vb-text-2); }
 :root.vbcdr-dark .text-zinc-100 { color: var(--vb-text-1); }
 :root.vbcdr-dark .border-zinc-400 { border-color: var(--vb-border-2); }

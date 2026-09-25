@@ -249,7 +249,7 @@ export function DashboardOverview(): React.ReactElement {
             </span>
             {usage.series.length > 1 && (
               <span className="shrink-0 opacity-70">
-                <Sparkline values={usage.series} width={48} height={12} />
+                <Sparkline values={usage.series} width={48} height={12} color={palette.good} />
               </span>
             )}
           </div>
@@ -271,6 +271,7 @@ export function DashboardOverview(): React.ReactElement {
           range={timelineRange}
           colorForProject={colorForProject}
           emptyColor={palette.emptyCell}
+          fallbackColor={palette.heatmapBase}
           showEmptyDays
         />
 
@@ -290,7 +291,7 @@ export function DashboardOverview(): React.ReactElement {
                 />
                 <Tooltip
                   wrapperStyle={{ zIndex: 1000, pointerEvents: 'none' }}
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                  cursor={{ fill: palette.cursorFill }}
                   contentStyle={{
                     background: palette.tooltipBg,
                     border: `1px solid ${palette.tooltipBorder}`,

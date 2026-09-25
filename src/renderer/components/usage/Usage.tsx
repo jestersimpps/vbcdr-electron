@@ -40,8 +40,10 @@ interface TabRowProps {
 
 function TabRow({ tabId, title, projectName, tokens, cap, isBusy }: TabRowProps): React.ReactElement {
   const { velocityPerSample, tokensPerMinute } = useTokenVelocity(tabId)
+  const themeId = useThemeStore((s) => s.getFullThemeId())
+  const palette = useMemo(() => getChartPalette(themeId), [themeId])
   const pct = Math.min(tokens / cap, 1)
-  const fill = pct < 0.5 ? '#7ee787' : pct < 0.75 ? '#ffa657' : '#ff7b72'
+  const fill = pct < 0.5 ? palette.good : pct < 0.75 ? palette.warn : palette.bad
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
@@ -315,7 +317,7 @@ interface ChartBucket {
 function UsageChart({ range, rangeLabel }: UsageChartProps): React.ReactElement {
   const themeId = useThemeStore((s) => s.getFullThemeId())
   const palette = useMemo(() => getChartPalette(themeId), [themeId])
-  const areaColor = palette.colors[2] ?? palette.colors[0] ?? '#7ee787'
+  const areaColor = palette.colors[2] ?? palette.colors[0] ?? palette.good
   const [events, setEvents] = useState<TokenEvent[]>([])
 
   useEffect(() => {
@@ -365,11 +367,11 @@ function UsageChart({ range, rangeLabel }: UsageChartProps): React.ReactElement 
         <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="usageFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={areaColor} stopOpacity={0.5} />
-              <stop offset="100%" stopColor={areaColor} stopOpacity={0.05} />
+              <stop offset="0%" stopColor={areaColor} stopOpacity={palette.areaTopOpacity} />
+              <stop offset="100%" stopColor={areaColor} stopOpacity={palette.areaBottomOpacity} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} />
+          <CartesianGrid strokeDasharray={palette.gridDash} stroke={palette.grid} strokeOpacity={palette.gridOpacity} />
           <XAxis
             dataKey="label"
             stroke={palette.axis}

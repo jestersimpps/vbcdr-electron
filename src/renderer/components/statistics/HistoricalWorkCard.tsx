@@ -201,6 +201,7 @@ export function HistoricalWorkCard({
           range={range}
           colorForProject={colorForProject}
           emptyColor={emptyColor}
+          fallbackColor={baseColor}
         />
       ) : hasCells ? (
         <YearHeatmap calendar={calendar} baseColor={baseColor} emptyColor={emptyColor} />

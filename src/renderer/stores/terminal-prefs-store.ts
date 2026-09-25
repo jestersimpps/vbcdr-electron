@@ -21,7 +21,8 @@ export const TERMINAL_FONT_PRESETS: { label: string; value: string }[] = [
   { label: 'Fira Code', value: 'Fira Code, Menlo, monospace' },
   { label: 'Cascadia Code', value: 'Cascadia Code, Menlo, monospace' },
   { label: 'Consolas', value: 'Consolas, Courier New, monospace' },
-  { label: 'Courier New', value: 'Courier New, monospace' }
+  { label: 'Courier New', value: 'Courier New, monospace' },
+  { label: 'Bedstead (teletext)', value: "'Bedstead', monospace" }
 ]
 
 function clampFontSize(px: number): number {

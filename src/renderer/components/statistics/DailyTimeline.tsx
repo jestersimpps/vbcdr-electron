@@ -7,10 +7,11 @@ interface DailyTimelineProps {
   range: HistoryRange
   colorForProject: Record<string, string>
   emptyColor: string
+  fallbackColor: string
   showEmptyDays?: boolean
 }
 
-export function DailyTimeline({ sessions, range, colorForProject, emptyColor, showEmptyDays = false }: DailyTimelineProps): React.ReactElement {
+export function DailyTimeline({ sessions, range, colorForProject, emptyColor, fallbackColor, showEmptyDays = false }: DailyTimelineProps): React.ReactElement {
   const rows = useMemo(() => {
     const built = buildDayRows(sessions, range)
     if (!showEmptyDays) return built
@@ -93,7 +94,7 @@ export function DailyTimeline({ sessions, range, colorForProject, emptyColor, sh
                   {row.blocks.map((b, i) => {
                     const left = (b.startHour / 24) * 100
                     const width = Math.max(((b.endHour - b.startHour) / 24) * 100, 0.4)
-                    const color = colorForProject[b.projectId] ?? '#60a5fa'
+                    const color = colorForProject[b.projectId] ?? fallbackColor
                     const tip = `${b.projectName} · ${formatHourMinute(b.start)}–${formatHourMinute(b.end)} · ${formatDuration(b.durationMs)}`
                     return (
                       <div
@@ -120,7 +121,7 @@ export function DailyTimeline({ sessions, range, colorForProject, emptyColor, sh
             <div key={p.projectId} className="flex items-center gap-1.5">
               <span
                 className="inline-block h-2 w-2 rounded-sm"
-                style={{ background: colorForProject[p.projectId] ?? '#60a5fa' }}
+                style={{ background: colorForProject[p.projectId] ?? fallbackColor }}
               />
               <span>{p.projectName}</span>
               <span className="text-zinc-500">· {formatDuration(p.ms)}</span>

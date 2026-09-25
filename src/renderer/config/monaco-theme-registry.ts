@@ -1340,7 +1340,97 @@ const AFTERNOON_LIGHT: editor.IStandaloneThemeData = {
   }
 }
 
+const VBCDR_DARK: editor.IStandaloneThemeData = {
+  base: 'vs-dark',
+  inherit: true,
+  rules: [
+    { token: '', foreground: 'f2f2ee' },
+    { token: 'comment', foreground: '2c97a9' },
+    { token: 'keyword', foreground: 'ffe81a' },
+    { token: 'keyword.control', foreground: 'ffe81a' },
+    { token: 'string', foreground: '33e05a' },
+    { token: 'number', foreground: '3fd8f2' },
+    { token: 'type', foreground: 'ff5cf0' },
+    { token: 'type.identifier', foreground: 'ff5cf0' },
+    { token: 'identifier', foreground: 'f2f2ee' },
+    { token: 'variable', foreground: 'f2f2ee' },
+    { token: 'constant', foreground: '3fd8f2' },
+    { token: 'function', foreground: '8ae8f8' },
+    { token: 'operator', foreground: 'ffe81a' },
+    { token: 'delimiter', foreground: 'f2f2ee' },
+    { token: 'tag', foreground: 'ffe81a' },
+    { token: 'attribute.name', foreground: '3fd8f2' },
+    { token: 'attribute.value', foreground: '33e05a' },
+    { token: 'metatag', foreground: 'f2f2ee' },
+    { token: 'regexp', foreground: 'ff4a3a' },
+    { token: 'invalid', foreground: 'ff4a3a' }
+  ],
+  colors: {
+    'editor.background': '#000000',
+    'editor.foreground': '#f2f2ee',
+    'editor.lineHighlightBackground': '#060c33',
+    'editor.selectionBackground': '#1f3cff99',
+    'editorCursor.foreground': '#ffe81a',
+    'editorWhitespace.foreground': '#0b1559',
+    'editorLineNumber.foreground': '#2c97a9',
+    'editorLineNumber.activeForeground': '#ffe81a',
+    'editorIndentGuide.background': '#0b1559',
+    'editorIndentGuide.activeBackground': '#1f3cff',
+    'editor.selectionHighlightBackground': '#1f3cff55',
+    'editorBracketMatch.background': '#33e05a33',
+    'editorBracketMatch.border': '#33e05a99',
+    'editorError.foreground': '#ff4a3a',
+    'editorWarning.foreground': '#ffe81a'
+  }
+}
+
+const VBCDR_LIGHT: editor.IStandaloneThemeData = {
+  base: 'vs',
+  inherit: true,
+  rules: [
+    { token: '', foreground: '000000' },
+    { token: 'comment', foreground: '4d6a70' },
+    { token: 'keyword', foreground: '7a6a00' },
+    { token: 'keyword.control', foreground: '7a6a00' },
+    { token: 'string', foreground: '0a7a2a' },
+    { token: 'number', foreground: '00707f' },
+    { token: 'type', foreground: 'b0189f' },
+    { token: 'type.identifier', foreground: 'b0189f' },
+    { token: 'identifier', foreground: '000000' },
+    { token: 'variable', foreground: '000000' },
+    { token: 'constant', foreground: '00707f' },
+    { token: 'function', foreground: '1f3cff' },
+    { token: 'operator', foreground: '7a6a00' },
+    { token: 'delimiter', foreground: '000000' },
+    { token: 'tag', foreground: '1f3cff' },
+    { token: 'attribute.name', foreground: '00707f' },
+    { token: 'attribute.value', foreground: '0a7a2a' },
+    { token: 'metatag', foreground: '000000' },
+    { token: 'regexp', foreground: 'c8261a' },
+    { token: 'invalid', foreground: 'c8261a' }
+  ],
+  colors: {
+    'editor.background': '#ffffff',
+    'editor.foreground': '#000000',
+    'editor.lineHighlightBackground': '#eef0ff',
+    'editor.selectionBackground': '#1f3cff33',
+    'editorCursor.foreground': '#1f3cff',
+    'editorWhitespace.foreground': '#dde2ff',
+    'editorLineNumber.foreground': '#4d6a70',
+    'editorLineNumber.activeForeground': '#000000',
+    'editorIndentGuide.background': '#dde2ff',
+    'editorIndentGuide.activeBackground': '#1f3cff',
+    'editor.selectionHighlightBackground': '#1f3cff22',
+    'editorBracketMatch.background': '#0a7a2a22',
+    'editorBracketMatch.border': '#0a7a2a99',
+    'editorError.foreground': '#c8261a',
+    'editorWarning.foreground': '#7a6a00'
+  }
+}
+
 export const MONACO_THEMES: Record<string, editor.IStandaloneThemeData> = {
+  'vbcdr-dark': VBCDR_DARK,
+  'vbcdr-light': VBCDR_LIGHT,
   'github-dark': GITHUB_DARK,
   'github-light': GITHUB_LIGHT,
   'dracula-dark': DRACULA_DARK,
@@ -1376,6 +1466,8 @@ export const MONACO_THEMES: Record<string, editor.IStandaloneThemeData> = {
 }
 
 export const MONACO_THEME_NAME: Record<string, string> = {
+  'vbcdr-dark': 'vbcdr-dark',
+  'vbcdr-light': 'vbcdr-light',
   'github-dark': 'github-dark',
   'github-light': 'github-light',
   'onedark-pro-dark': 'onedark-pro-dark',
