@@ -16,7 +16,7 @@ function selectColumn(label: string): void {
 
 beforeEach(() => {
   cleanup()
-  useSdlcFlowStore.setState(threeStageFlowState())
+  useSdlcFlowStore.setState({ ...threeStageFlowState(), autoStart: true })
   useSdlcStore.setState({ tickets: [] })
 })
 
@@ -65,8 +65,18 @@ describe('SdlcFlowSection', () => {
     render(<SdlcFlowSection />)
     selectColumn('Review')
     expect(screen.queryByLabelText(/model/i)).toBeNull()
-    expect(screen.queryAllByRole('switch')).toHaveLength(0)
+    // The only switch on the page is the flow-wide one, not a per-column setting.
+    expect(screen.queryAllByRole('switch').map((el) => el.getAttribute('aria-label'))).toEqual([
+      'Toggle Start tickets automatically from Backlog'
+    ])
     expect(screen.queryByLabelText('Description')).toBeNull()
+  })
+
+  it('switches automatic starting off for the whole flow', () => {
+    render(<SdlcFlowSection />)
+    fireEvent.click(screen.getByRole('switch', { name: 'Toggle Start tickets automatically from Backlog' }))
+
+    expect(useSdlcFlowStore.getState().autoStart).toBe(false)
   })
 
   it('edits the prompt on blur and resets it to the handover template for its place', () => {

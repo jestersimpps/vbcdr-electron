@@ -21,6 +21,8 @@ interface SdlcFlowState {
   flows: SdlcFlow[]
   /** A missing entry, or one naming a deleted flow, means the default flow. */
   flowPerProject: Record<string, string>
+  /** Whether a new ticket hands itself to the first agent column, or waits in the first column for its Start button. */
+  autoStart: boolean
   addColumn: (flowId: string, label: string, beforeId: string) => SdlcColumn
   updateColumn: (flowId: string, id: string, patch: SdlcColumnPatch) => void
   reorderColumn: (flowId: string, id: string, toIndex: number) => void
@@ -31,6 +33,7 @@ interface SdlcFlowState {
   removeFlow: (flowId: string) => void
   setProjectFlow: (projectId: string, flowId: string) => void
   removeProjectState: (projectId: string) => void
+  setAutoStart: (autoStart: boolean) => void
 }
 
 const LEGACY_PLAN_VARIABLE = /\{\{plan\}\}/g
@@ -56,6 +59,7 @@ export function projectFlow(state: Pick<SdlcFlowState, 'flows' | 'flowPerProject
 interface StoredFlowState {
   flows?: unknown
   flowPerProject?: Record<string, string>
+  autoStart?: unknown
   /** One global flow was all there was before flows could be saved. */
   columns?: unknown
 }
@@ -71,6 +75,7 @@ export const useSdlcFlowStore = create<SdlcFlowState>()(
     (set, get) => ({
       flows: [defaultSdlcFlow()],
       flowPerProject: {},
+      autoStart: true,
 
       addColumn: (flowId: string, label: string, beforeId: string) => {
         const columns = findFlow(get().flows, flowId)?.columns ?? []
@@ -163,14 +168,27 @@ export const useSdlcFlowStore = create<SdlcFlowState>()(
           delete flowPerProject[projectId]
           return { flowPerProject }
         })
+      },
+
+      setAutoStart: (autoStart: boolean) => {
+        set({ autoStart })
       }
     }),
     {
       name: 'vbcdr-sdlc-flow',
-      partialize: (state) => ({ flows: state.flows, flowPerProject: state.flowPerProject }),
+      partialize: (state) => ({
+        flows: state.flows,
+        flowPerProject: state.flowPerProject,
+        autoStart: state.autoStart
+      }),
       merge: (persisted, current) => {
         const incoming = (persisted ?? {}) as StoredFlowState
-        return { ...current, flows: storedFlows(incoming), flowPerProject: incoming.flowPerProject ?? {} }
+        return {
+          ...current,
+          flows: storedFlows(incoming),
+          flowPerProject: incoming.flowPerProject ?? {},
+          autoStart: typeof incoming.autoStart === 'boolean' ? incoming.autoStart : current.autoStart
+        }
       }
     }
   )
@@ -182,4 +200,8 @@ export function sdlcColumns(projectId: string): SdlcColumn[] {
 
 export function useProjectColumns(projectId: string): SdlcColumn[] {
   return useSdlcFlowStore((s) => projectFlow(s, projectId).columns)
+}
+
+export function autoStartsTickets(): boolean {
+  return useSdlcFlowStore.getState().autoStart
 }

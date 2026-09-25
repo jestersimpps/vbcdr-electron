@@ -22,40 +22,53 @@ export const DONE_TIMER_OPTIONS: readonly DoneTimerOption[] = [
 ]
 
 interface SdlcScheduleState {
-  schedulePerProject: Record<string, SdlcDoneSchedule>
-  setDoneInterval: (projectId: string, minutes: number) => void
-  markRun: (projectId: string, at: number) => void
+  /** Null while the timer is off. One board, one timer: it covers every project's finished tickets. */
+  schedule: SdlcDoneSchedule | null
+  setDoneInterval: (minutes: number) => void
+  markRun: (at: number) => void
+}
+
+interface LegacySchedules {
+  schedulePerProject?: Record<string, SdlcDoneSchedule>
+}
+
+/** The timer used to be set per project, in each swimlane's header; the most frequent of those becomes the board's one timer. */
+export function scheduleFromLegacy(schedules: Record<string, SdlcDoneSchedule>): SdlcDoneSchedule | null {
+  const running = Object.values(schedules).filter((s) => s.intervalMinutes > 0)
+  if (running.length === 0) return null
+  return running.reduce((fastest, s) => (s.intervalMinutes < fastest.intervalMinutes ? s : fastest))
 }
 
 /** Starting a timer counts as a run, so the first one fires a full interval later rather than the moment it is switched on. */
 export const useSdlcScheduleStore = create<SdlcScheduleState>()(
   persist(
     (set) => ({
-      schedulePerProject: {},
+      schedule: null,
 
-      setDoneInterval: (projectId: string, minutes: number) => {
-        set((state) => {
-          const schedulePerProject = { ...state.schedulePerProject }
-          if (minutes > 0) schedulePerProject[projectId] = { intervalMinutes: minutes, lastRunAt: Date.now() }
-          else delete schedulePerProject[projectId]
-          return { schedulePerProject }
-        })
+      setDoneInterval: (minutes: number) => {
+        set({ schedule: minutes > 0 ? { intervalMinutes: minutes, lastRunAt: Date.now() } : null })
       },
 
-      markRun: (projectId: string, at: number) => {
-        set((state) => {
-          const current = state.schedulePerProject[projectId]
-          if (!current) return state
-          return { schedulePerProject: { ...state.schedulePerProject, [projectId]: { ...current, lastRunAt: at } } }
-        })
+      markRun: (at: number) => {
+        set((state) => (state.schedule ? { schedule: { ...state.schedule, lastRunAt: at } } : state))
       }
     }),
-    { name: 'vbcdr-sdlc-schedule' }
+    {
+      name: 'vbcdr-sdlc-schedule',
+      partialize: (state) => ({ schedule: state.schedule }),
+      merge: (persisted, current) => {
+        const incoming = (persisted ?? {}) as Partial<SdlcScheduleState> & LegacySchedules
+        const schedule =
+          incoming.schedule !== undefined
+            ? incoming.schedule
+            : scheduleFromLegacy(incoming.schedulePerProject ?? {})
+        return { ...current, schedule }
+      }
+    }
   )
 )
 
-export function dueProjectIds(schedules: Record<string, SdlcDoneSchedule>, now: number): string[] {
-  return Object.entries(schedules)
-    .filter(([, s]) => s.intervalMinutes > 0 && now - s.lastRunAt >= s.intervalMinutes * 60_000)
-    .map(([projectId]) => projectId)
+export function isDoneDue(schedule: SdlcDoneSchedule | null, now: number): boolean {
+  if (!schedule || schedule.intervalMinutes <= 0) return false
+  return now - schedule.lastRunAt >= schedule.intervalMinutes * 60_000
 }

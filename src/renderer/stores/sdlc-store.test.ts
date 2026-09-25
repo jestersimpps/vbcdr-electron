@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useSdlcStore } from './sdlc-store'
+import { summaryFromDescription, titleFromDescription, useSdlcStore } from './sdlc-store'
 
 function persisted(): { tickets: Array<{ id: string; attachments: Array<{ dataUrl: string | null }> }> } {
   const raw = localStorage.getItem('vbcdr-sdlc')
@@ -58,5 +58,23 @@ describe('pruneOrphans', () => {
     useSdlcStore.getState().createTicket({ projectId: 'p2', description: 'Also keep me', attachments: [] })
     useSdlcStore.getState().pruneOrphans([])
     expect(useSdlcStore.getState().tickets).toHaveLength(2)
+  })
+})
+
+describe('card text', () => {
+  it('summarises with everything the title left behind', () => {
+    const description = 'Add a scoreboard\nIt sits under the header\nand counts wins.'
+    expect(titleFromDescription(description)).toBe('Add a scoreboard')
+    expect(summaryFromDescription(description)).toBe('It sits under the header and counts wins.')
+  })
+
+  it('has no summary for a one-liner the title already carries whole', () => {
+    expect(summaryFromDescription('Add a scoreboard')).toBe('')
+  })
+
+  it('repeats a one-liner too long for the title in full', () => {
+    const long = `Add a scoreboard ${'x'.repeat(80)}`
+    expect(titleFromDescription(long)).toMatch(/…$/)
+    expect(summaryFromDescription(long)).toBe(long)
   })
 })
