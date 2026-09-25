@@ -2,7 +2,7 @@ import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, Play, RotateCcw, Us
 import { useSdlcStore } from '@/stores/sdlc-store'
 import { useProjectStore } from '@/stores/project-store'
 import { useTerminalStore } from '@/stores/terminal-store'
-import { useProjectColumns } from '@/stores/sdlc-flow-store'
+import { useTicketColumns } from '@/stores/sdlc-flow-store'
 import { moveTicketOn, rerunStage, SDLC_TAB_COLOR } from '@/lib/sdlc-handover'
 import { ticketTransition } from '@/lib/sdlc-transitions'
 import type { SdlcTicket } from '@/models/sdlc'
@@ -50,7 +50,7 @@ export function SdlcStageBar({ tabId }: SdlcStageBarProps): React.ReactElement |
   const ticket = useSdlcStore((s) => (tabId ? s.tickets.find((t) => t.tabId === tabId) : undefined))
   const showSdlcPage = useProjectStore((s) => s.showSdlcPage)
   const tab = useTerminalStore((s) => (tabId ? s.tabs.find((t) => t.id === tabId) : undefined))
-  const columns = useProjectColumns(ticket?.projectId ?? '')
+  const columns = useTicketColumns({ projectId: ticket?.projectId ?? '', flowId: ticket?.flowId })
 
   if (!ticket || !tab) return null
 

@@ -17,6 +17,12 @@ import {
 
 export type SdlcColumnPatch = Partial<Omit<SdlcColumn, 'id'>>
 
+/** Enough of a ticket to say which flow it runs. */
+export interface TicketFlowRef {
+  projectId: string
+  flowId?: string
+}
+
 interface SdlcFlowState {
   flows: SdlcFlow[]
   /** A missing entry, or one naming a deleted flow, means the default flow. */
@@ -194,14 +200,24 @@ export const useSdlcFlowStore = create<SdlcFlowState>()(
   )
 )
 
+/** What a ticket without a flow of its own runs: whatever its project was set to. */
+export function ticketFlow(state: Pick<SdlcFlowState, 'flows' | 'flowPerProject'>, ticket: TicketFlowRef): SdlcFlow {
+  return (ticket.flowId && findFlow(state.flows, ticket.flowId)) || projectFlow(state, ticket.projectId)
+}
+
 export function sdlcColumns(projectId: string): SdlcColumn[] {
   return projectFlow(useSdlcFlowStore.getState(), projectId).columns
 }
 
-export function useProjectColumns(projectId: string): SdlcColumn[] {
-  return useSdlcFlowStore((s) => projectFlow(s, projectId).columns)
+export function flowColumns(flowId: string): SdlcColumn[] {
+  const { flows } = useSdlcFlowStore.getState()
+  return (findFlow(flows, flowId) ?? flows[0]).columns
 }
 
-export function autoStartsTickets(): boolean {
-  return useSdlcFlowStore.getState().autoStart
+export function ticketColumns(ticket: TicketFlowRef): SdlcColumn[] {
+  return ticketFlow(useSdlcFlowStore.getState(), ticket).columns
+}
+
+export function useTicketColumns(ticket: TicketFlowRef): SdlcColumn[] {
+  return useSdlcFlowStore((s) => ticketFlow(s, ticket).columns)
 }

@@ -1,7 +1,7 @@
 import { useSdlcStore } from '@/stores/sdlc-store'
-import { projectFlow, useSdlcFlowStore } from '@/stores/sdlc-flow-store'
+import { ticketFlow, useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { useSdlcPromptsStore } from '@/stores/sdlc-prompts-store'
-import { DEFAULT_FLOW_ID, defaultSdlcColumns, findFlow, type SdlcColumn } from '@/models/sdlc-flow'
+import { DEFAULT_FLOW_ID, defaultSdlcColumns, defaultSdlcFlow, findFlow, type SdlcColumn } from '@/models/sdlc-flow'
 import type { SdlcTicket } from '@/models/sdlc'
 
 export function ticketsInColumn(tickets: readonly SdlcTicket[], columnId: string): SdlcTicket[] {
@@ -13,15 +13,14 @@ export function columnHasRunningTickets(tickets: readonly SdlcTicket[], columnId
   return ticketsInColumn(tickets, columnId).some((t) => t.status === 'running')
 }
 
-/** Column ids repeat across flows, so a change to one flow may only touch the tickets of projects that use it. */
-export function usesFlow(flowId: string): (projectId: string) => boolean {
+/** Column ids repeat across flows, so a change to one flow may only touch the tickets running it. */
+export function usesFlow(flowId: string): (ticket: SdlcTicket) => boolean {
   const state = useSdlcFlowStore.getState()
-  return (projectId: string) => projectFlow(state, projectId).id === flowId
+  return (ticket: SdlcTicket) => ticketFlow(state, ticket).id === flowId
 }
 
 export function ticketsOnFlow(tickets: readonly SdlcTicket[], flowId: string): SdlcTicket[] {
-  const onFlow = usesFlow(flowId)
-  return tickets.filter((t) => onFlow(t.projectId))
+  return tickets.filter(usesFlow(flowId))
 }
 
 function columnsGone(from: readonly SdlcColumn[], to: readonly SdlcColumn[]): SdlcColumn[] {
@@ -34,9 +33,10 @@ export function deleteColumn(flowId: string, columnId: string, moveTicketsTo: st
   const columns = findFlow(useSdlcFlowStore.getState().flows, flowId)?.columns ?? []
   if (columnId === moveTicketsTo || !columns.some((c) => c.id === moveTicketsTo)) return false
   const onFlow = usesFlow(flowId)
+  const projectIds = new Set(ticketsOnFlow(useSdlcStore.getState().tickets, flowId).map((t) => t.projectId))
   useSdlcStore.getState().reassignStage(columnId, moveTicketsTo, onFlow)
   useSdlcFlowStore.getState().removeColumn(flowId, columnId)
-  useSdlcPromptsStore.getState().removeColumnState(columnId, onFlow)
+  useSdlcPromptsStore.getState().removeColumnState(columnId, (projectId) => projectIds.has(projectId))
   return true
 }
 
@@ -53,37 +53,32 @@ export function resetFlow(flowId: string): boolean {
   return true
 }
 
-/** A project may switch while none of its agents runs in a column the other flow lacks. */
-export function canSwitchProjectFlow(projectId: string, flowId: string): boolean {
-  const { flows } = useSdlcFlowStore.getState()
-  const target = findFlow(flows, flowId)
-  if (!target) return false
-  const removed = columnsGone(projectFlow(useSdlcFlowStore.getState(), projectId).columns, target.columns)
-  const tickets = useSdlcStore.getState().tickets.filter((t) => t.projectId === projectId)
-  return !removed.some((c) => columnHasRunningTickets(tickets, c.id))
-}
-
-/** The project's tickets in columns the new flow lacks start over in its first column. */
+/**
+ * A ticket keeps the flow it was created with, so changing a project's flow
+ * only decides what its next ticket runs. Nothing in flight can be stranded by
+ * it, which is why there is no longer anything to block.
+ */
 export function switchProjectFlow(projectId: string, flowId: string): boolean {
   const flowState = useSdlcFlowStore.getState()
-  const target = findFlow(flowState.flows, flowId)
-  if (!target || !canSwitchProjectFlow(projectId, flowId)) return false
-  const removed = columnsGone(projectFlow(flowState, projectId).columns, target.columns)
+  if (!findFlow(flowState.flows, flowId)) return false
   flowState.setProjectFlow(projectId, flowId)
-  const first = target.columns[0].id
-  const inProject = (id: string): boolean => id === projectId
-  for (const column of removed) useSdlcStore.getState().reassignStage(column.id, first, inProject)
   return true
 }
 
-/** The projects on a deleted flow go back to the default one, under the same rule as switching by hand. */
+/**
+ * A deleted flow's tickets name a flow that is gone, so they move onto the
+ * default one, landing in its first column: nothing about where they sat
+ * carries over to a flow that never had that column.
+ */
 export function deleteFlow(flowId: string): boolean {
   if (flowId === DEFAULT_FLOW_ID) return false
-  const projectIds = Object.entries(useSdlcFlowStore.getState().flowPerProject)
-    .filter(([, chosen]) => chosen === flowId)
-    .map(([projectId]) => projectId)
-  if (!projectIds.every((id) => canSwitchProjectFlow(id, DEFAULT_FLOW_ID))) return false
-  for (const projectId of projectIds) switchProjectFlow(projectId, DEFAULT_FLOW_ID)
+  const store = useSdlcStore.getState()
+  const tickets = ticketsOnFlow(store.tickets, flowId)
+  if (tickets.some((t) => t.status === 'running')) return false
+  const first = (findFlow(useSdlcFlowStore.getState().flows, DEFAULT_FLOW_ID) ?? defaultSdlcFlow()).columns[0].id
+  for (const ticket of tickets) {
+    store.patchTicket(ticket.id, { flowId: DEFAULT_FLOW_ID, stage: first, status: 'idle', blockedReason: null })
+  }
   useSdlcFlowStore.getState().removeFlow(flowId)
   return true
 }

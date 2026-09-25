@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { sdlcColumns, upgradeLegacyPrompt } from '@/stores/sdlc-flow-store'
+import { flowColumns, upgradeLegacyPrompt } from '@/stores/sdlc-flow-store'
 import { findColumn } from '@/models/sdlc-flow'
 import type { SdlcPromptResolution } from '@/models/sdlc-prompts'
 
@@ -88,8 +88,13 @@ export const useSdlcPromptsStore = create<SdlcPromptsState>()(
   )
 )
 
-export function resolveStagePrompt(projectId: string, stage: string): SdlcPromptResolution {
+/**
+ * An override belongs to the project and the column it names; the prompt it
+ * falls back to belongs to the flow the ticket runs, so two flows that both
+ * have a `build` column contribute their own default.
+ */
+export function resolveStagePrompt(projectId: string, flowId: string, stage: string): SdlcPromptResolution {
   const override = useSdlcPromptsStore.getState().promptsPerProject[projectId]?.[stage]
   if (typeof override === 'string') return { text: override, overridden: true }
-  return { text: findColumn(sdlcColumns(projectId), stage)?.prompt ?? '', overridden: false }
+  return { text: findColumn(flowColumns(flowId), stage)?.prompt ?? '', overridden: false }
 }
