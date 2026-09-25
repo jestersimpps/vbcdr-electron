@@ -221,3 +221,13 @@ describe('data from before columns were configurable', () => {
     expect(upgradeLegacyPrompt('Follow {{plan}} on {{branch}}')).toBe('Follow {{output.planning}} on {{branch}}')
   })
 })
+
+describe('auto-start', () => {
+  it('is on by default and survives being switched off', () => {
+    expect(useSdlcFlowStore.getState().autoStart).toBe(true)
+    useSdlcFlowStore.getState().setAutoStart(false)
+    expect(useSdlcFlowStore.getState().autoStart).toBe(false)
+    expect(JSON.parse(localStorage.getItem('vbcdr-sdlc-flow')!).state.autoStart).toBe(false)
+    useSdlcFlowStore.getState().setAutoStart(true)
+  })
+})

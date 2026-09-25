@@ -6,7 +6,7 @@ import { ChevronRight, Plus, RotateCcw } from 'lucide-react'
 import { DEFAULT_FLOW_ID, findFlow, isMiddleColumn, type SdlcColumn } from '@/models/sdlc-flow'
 import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { resetFlow } from '@/lib/sdlc-flow'
-import { SectionCard, useAccent } from '@/components/settings/SettingsControls'
+import { PrefToggle, SectionCard, useAccent } from '@/components/settings/SettingsControls'
 import { SdlcColumnEditor } from '@/components/settings/SdlcColumnEditor'
 import { SdlcFlowPicker } from '@/components/settings/SdlcFlowPicker'
 import { cn } from '@/lib/utils'
@@ -66,6 +66,8 @@ export function SdlcFlowSection(): React.ReactElement {
   const columns = flow.columns
   const addColumn = useSdlcFlowStore((s) => s.addColumn)
   const reorderColumn = useSdlcFlowStore((s) => s.reorderColumn)
+  const autoStart = useSdlcFlowStore((s) => s.autoStart)
+  const setAutoStart = useSdlcFlowStore((s) => s.setAutoStart)
   const [selectedId, setSelectedId] = useState(columns[0].id)
   const [confirmReset, setConfirmReset] = useState(false)
   const [resetBlocked, setResetBlocked] = useState(false)
@@ -154,6 +156,20 @@ export function SdlcFlowSection(): React.ReactElement {
             An agent is still running in a custom column. Wait for it to finish, then reset.
           </p>
         )}
+
+        <div className="mt-3 border-t border-zinc-800 pt-3">
+          <PrefToggle
+            label={`Start tickets automatically from ${columns[0].label}`}
+            description={
+              autoStart
+                ? `A new ticket goes straight to ${(columns[1] ?? last).label}, so creating it starts the flow.`
+                : `A new ticket waits in ${columns[0].label} until you press Start on its card.`
+            }
+            enabled={autoStart}
+            onToggle={() => setAutoStart(!autoStart)}
+            accent={accent}
+          />
+        </div>
       </SectionCard>
 
       <SectionCard title={selected.label}>

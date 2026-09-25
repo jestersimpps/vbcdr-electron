@@ -685,6 +685,13 @@ describe('done prompt', () => {
     expect(pendingDoneTicketIds('p1')).toEqual(['t1'])
   })
 
+  it('spans every project on the board when no project is named', () => {
+    useSdlcStore.setState({
+      tickets: [finished(), finished({ id: 't2', doneActionAt: 1 }), finished({ id: 't3', projectId: 'p2' })]
+    })
+    expect(pendingDoneTicketIds()).toEqual(['t1', 't3'])
+  })
+
   it('removing a finished ticket cleans up a reopened worktree and keeps the branch', async () => {
     vi.mocked(window.api.worktrees.finish).mockClear()
     vi.mocked(window.api.worktrees.remove).mockClear()

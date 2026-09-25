@@ -1,26 +1,47 @@
 import { useEffect, useRef, useState } from 'react'
-import { FileText, GitBranch, Paperclip, Plus, X } from 'lucide-react'
+import { FileText, FolderOpen, GitBranch, Paperclip, Plus, X } from 'lucide-react'
 import { branchNameFrom, useSdlcStore } from '@/stores/sdlc-store'
+import { useSdlcFlowStore } from '@/stores/sdlc-flow-store'
 import { attachmentsFromFiles } from '@/lib/sdlc-attachments'
 import { moveTicketOn } from '@/lib/sdlc-handover'
 import { cn } from '@/lib/utils'
 import type { SdlcAttachment } from '@/models/sdlc'
+import type { Project } from '@/models/types'
 
 const GHOST_BUTTON = 'rounded px-1.5 py-1 text-micro text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300'
 
-/** Creating a ticket starts it: there is no approval step anywhere in the flow, so there is nothing to wait for here either. */
-export function NewTicketComposer({ projectId, projectName }: { projectId: string; projectName: string }): React.ReactElement {
+interface NewTicketComposerProps {
+  projects: readonly Project[]
+  /** Which project the picker starts on: the one the rest of the app is working in. */
+  defaultProjectId?: string | null
+}
+
+/**
+ * Creating a ticket starts it: there is no approval step anywhere in the flow,
+ * so there is nothing to wait for here either. Unless auto-start is off in
+ * Settings, and then the ticket waits in the first column for its Start button.
+ */
+export function NewTicketComposer({ projects, defaultProjectId }: NewTicketComposerProps): React.ReactElement | null {
   const createTicket = useSdlcStore((s) => s.createTicket)
+  const autoStart = useSdlcFlowStore((s) => s.autoStart)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [description, setDescription] = useState('')
+  const [projectId, setProjectId] = useState('')
   const [attachments, setAttachments] = useState<SdlcAttachment[]>([])
   const [isDragging, setIsDragging] = useState(false)
 
   useEffect(() => {
     if (isOpen) textareaRef.current?.focus()
   }, [isOpen])
+
+  // The picker follows the app's project until the user picks another one here,
+  // and a project removed under it never leaves the ticket pointing nowhere.
+  const chosen = projects.find((p) => p.id === projectId)
+  const target = chosen ?? projects.find((p) => p.id === defaultProjectId) ?? projects[0]
+
+  if (!target) return null
 
   const close = (): void => {
     setIsOpen(false)
@@ -38,8 +59,8 @@ export function NewTicketComposer({ projectId, projectName }: { projectId: strin
 
   const handleSubmit = (): void => {
     if (!canSubmit) return
-    const ticket = createTicket({ projectId, description, attachments })
-    void moveTicketOn(ticket.id)
+    const ticket = createTicket({ projectId: target.id, description, attachments })
+    if (autoStart) void moveTicketOn(ticket.id)
     close()
   }
 
@@ -47,18 +68,21 @@ export function NewTicketComposer({ projectId, projectName }: { projectId: strin
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="flex items-center justify-center gap-1.5 rounded-md border border-dashed border-zinc-800 py-2 text-micro text-zinc-500 transition-colors hover:border-zinc-600 hover:bg-zinc-900/60 hover:text-zinc-300"
-        title={`New ticket in ${projectName}`}
+        className="flex w-full items-center gap-2 rounded-md border border-dashed border-zinc-800 px-3 py-2 text-left text-xs text-zinc-500 transition-colors hover:border-zinc-600 hover:bg-zinc-900/60 hover:text-zinc-300"
       >
-        <Plus size={11} />
+        <Plus size={13} className="shrink-0" />
         New ticket
+        <span className="ml-auto flex min-w-0 items-center gap-1 text-micro text-zinc-600">
+          <FolderOpen size={11} className="shrink-0" />
+          <span className="truncate">{target.name}</span>
+        </span>
       </button>
     )
   }
 
   return (
     <div
-      className="flex flex-col gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 p-1.5"
+      className="flex flex-col gap-1.5 rounded-md border border-zinc-700 bg-zinc-900 p-2"
       onDragOver={(e) => {
         e.preventDefault()
         setIsDragging(true)
@@ -73,7 +97,7 @@ export function NewTicketComposer({ projectId, projectName }: { projectId: strin
       <textarea
         ref={textareaRef}
         value={description}
-        aria-label={`New ticket in ${projectName}`}
+        aria-label="New ticket"
         onChange={(e) => setDescription(e.target.value)}
         onPaste={(e) => {
           const files = Array.from(e.clipboardData.files)
@@ -88,8 +112,12 @@ export function NewTicketComposer({ projectId, projectName }: { projectId: strin
           }
           if (e.key === 'Escape') close()
         }}
-        rows={4}
-        placeholder="What should the agents do? Enter starts it, Shift+Enter adds a line. Paste a screenshot to add context."
+        rows={3}
+        placeholder={
+          autoStart
+            ? 'What should the agents do? Enter starts it, Shift+Enter adds a line. Paste a screenshot to add context.'
+            : 'What should the agents do? Enter puts it in the first column, Shift+Enter adds a line. Paste a screenshot to add context.'
+        }
         className={cn(
           'w-full resize-none rounded border bg-zinc-950/60 px-2 py-1.5 text-xs leading-relaxed text-zinc-200 outline-none placeholder:text-zinc-600',
           isDragging ? 'border-indigo-500' : 'border-zinc-800 focus:border-zinc-600'
@@ -118,12 +146,30 @@ export function NewTicketComposer({ projectId, projectName }: { projectId: strin
         </div>
       )}
 
-      {canSubmit && (
-        <div className="flex min-w-0 items-center gap-1 text-micro text-zinc-600">
-          <GitBranch size={10} className="shrink-0" />
-          <span className="truncate font-mono text-green-400/80">{branchNameFrom(description)}</span>
-        </div>
-      )}
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <label className="flex min-w-0 items-center gap-1 rounded border border-zinc-800 bg-zinc-950/60 px-1.5 py-1 text-micro text-zinc-400">
+          <FolderOpen size={11} className="shrink-0 text-zinc-500" />
+          <select
+            value={target.id}
+            onChange={(e) => setProjectId(e.target.value)}
+            aria-label="Project for the new ticket"
+            title={target.path}
+            className="max-w-[180px] cursor-pointer truncate bg-transparent outline-none"
+          >
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {canSubmit && (
+          <div className="flex min-w-0 items-center gap-1 text-micro text-zinc-600">
+            <GitBranch size={10} className="shrink-0" />
+            <span className="truncate font-mono text-green-400/80">{branchNameFrom(description)}</span>
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center gap-1">
         <button onClick={() => fileInputRef.current?.click()} className={GHOST_BUTTON} title="Attach files" aria-label="Attach files">
@@ -136,9 +182,9 @@ export function NewTicketComposer({ projectId, projectName }: { projectId: strin
           disabled={!canSubmit}
           onClick={handleSubmit}
           className="rounded bg-indigo-600 px-2 py-1 text-micro font-medium text-white hover:bg-indigo-500 disabled:pointer-events-none disabled:opacity-40"
-          title="↵"
+          title={autoStart ? '↵' : '↵ — auto-start is off, so the ticket waits for its Start button'}
         >
-          Start
+          {autoStart ? 'Start' : 'Add'}
         </button>
       </div>
 

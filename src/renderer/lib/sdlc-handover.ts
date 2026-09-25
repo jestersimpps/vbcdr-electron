@@ -574,12 +574,20 @@ export async function runDoneActions(ticketIds: readonly string[], trigger: Sdlc
   }
 }
 
-/** Finished tickets whose last-column prompt has never run: what the column button and the project timer act on. */
-export function pendingDoneTicketIds(projectId: string): string[] {
-  const last = sdlcColumns(projectId).at(-1)
+/**
+ * Finished tickets whose last-column prompt has never run: what the column
+ * button and the board timer act on, for one project or all of them. Which
+ * column is last is per flow, so it is read per ticket rather than once.
+ */
+export function pendingDoneTicketIds(projectId?: string): string[] {
   return useSdlcStore
     .getState()
-    .tickets.filter((t) => t.projectId === projectId && t.stage === last?.id && !t.doneActionAt)
+    .tickets.filter(
+      (t) =>
+        (!projectId || t.projectId === projectId) &&
+        t.stage === sdlcColumns(t.projectId).at(-1)?.id &&
+        !t.doneActionAt
+    )
     .map((t) => t.id)
 }
 

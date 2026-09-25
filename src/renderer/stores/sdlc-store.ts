@@ -6,24 +6,39 @@ import { EMPTY_ARTIFACTS, type NewSdlcTicketInput, type SdlcStage, type SdlcTick
 
 interface SdlcStore {
   tickets: SdlcTicket[]
-  collapsedProjectIds: Record<string, boolean>
   createTicket: (input: NewSdlcTicketInput) => SdlcTicket
   moveTicket: (id: string, stage: SdlcStage) => void
   reassignStage: (from: SdlcStage, to: SdlcStage, inProject: (projectId: string) => boolean) => void
   advanceTicket: (id: string) => void
   patchTicket: (id: string, patch: Partial<Omit<SdlcTicket, 'id' | 'projectId'>>) => void
   deleteTicket: (id: string) => void
-  toggleProjectCollapsed: (projectId: string) => void
   removeProjectState: (projectId: string) => void
   pruneOrphans: (keepProjectIds: string[]) => void
   ticketsFor: (projectId: string, stage: SdlcStage) => SdlcTicket[]
   ticketForTab: (tabId: string) => SdlcTicket | undefined
 }
 
+const TITLE_LIMIT = 72
+const SUMMARY_LIMIT = 200
+
+function clamp(text: string, limit: number): string {
+  return text.length <= limit ? text : `${text.slice(0, limit - 1).trimEnd()}…`
+}
+
 export function titleFromDescription(description: string): string {
-  const firstLine = description.trim().split('\n')[0]?.trim() ?? ''
-  if (firstLine.length <= 72) return firstLine
-  return `${firstLine.slice(0, 69).trimEnd()}…`
+  return clamp(description.trim().split('\n')[0]?.trim() ?? '', TITLE_LIMIT)
+}
+
+/**
+ * The line under the title on a card: everything the title does not already
+ * carry. A one-liner too long for the title is repeated here in full rather
+ * than only as its cut-off start.
+ */
+export function summaryFromDescription(description: string): string {
+  const [first = '', ...rest] = description.trim().split('\n')
+  const body = rest.join(' ').replace(/\s+/g, ' ').trim()
+  if (body) return clamp(body, SUMMARY_LIMIT)
+  return first.trim().length > TITLE_LIMIT ? clamp(first.trim(), SUMMARY_LIMIT) : ''
 }
 
 export function branchNameFrom(description: string): string {
@@ -64,7 +79,6 @@ export const useSdlcStore = create<SdlcStore>()(
   persist(
     (set, get) => ({
       tickets: [],
-      collapsedProjectIds: {},
 
       createTicket: (input: NewSdlcTicketInput) => {
         const description = input.description.trim()
@@ -146,22 +160,8 @@ export const useSdlcStore = create<SdlcStore>()(
         set((state) => ({ tickets: state.tickets.filter((t) => t.id !== id) }))
       },
 
-      toggleProjectCollapsed: (projectId: string) => {
-        set((state) => ({
-          collapsedProjectIds: {
-            ...state.collapsedProjectIds,
-            [projectId]: !state.collapsedProjectIds[projectId]
-          }
-        }))
-      },
-
       removeProjectState: (projectId: string) => {
-        set((state) => {
-          const collapsedProjectIds = { ...state.collapsedProjectIds }
-          delete collapsedProjectIds[projectId]
-          const tickets = state.tickets.filter((t) => t.projectId !== projectId)
-          return { tickets, collapsedProjectIds }
-        })
+        set((state) => ({ tickets: state.tickets.filter((t) => t.projectId !== projectId) }))
       },
 
       pruneOrphans: (keepProjectIds: string[]) => {
@@ -190,10 +190,7 @@ export const useSdlcStore = create<SdlcStore>()(
         const state = (persisted ?? {}) as { tickets?: SdlcTicket[] }
         return { ...state, tickets: (state.tickets ?? []).map(upgradeLegacyArtifacts) }
       },
-      partialize: (state) => ({
-        tickets: state.tickets.map(stripAttachmentData),
-        collapsedProjectIds: state.collapsedProjectIds
-      })
+      partialize: (state) => ({ tickets: state.tickets.map(stripAttachmentData) })
     }
   )
 )
